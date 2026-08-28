@@ -15,8 +15,8 @@
 - 权威基线 `docs/模块设计规范.md`；协同框架 `docs/项目进度与协同开发框架.md`。
 
 ## 路线图
-Phase 0 脚手架 ✅ → Phase 1 垂直切片 ✅ → **M1 战斗逻辑内核 ✅(2026-08-29, 提交 3f30636)** → Phase 2 系统填充（难度✅；锻造/商店/门派叶子逻辑✅；背包P0/P1✅）→ Phase 3 内容扩张 → Phase 4 平台适配
-- 战斗下一步：M2 演出编排（BattleScene 瘦身 + Director/View + ATB 顺序条 + 加速/跳过）。
+Phase 0 脚手架 ✅ → Phase 1 垂直切片 ✅ → **M1 战斗逻辑内核 ✅(2026-08-29, 提交 3f30636)** → **M2 战斗演出编排 ✅(2026-08-29, 提交 9d6e5c3)** → Phase 2 系统填充（难度✅；锻造/商店/门派叶子逻辑✅；背包P0/P1✅）→ Phase 3 内容扩张 → Phase 4 平台适配
+- 战斗下一步：M3（敌人 AI 权重选技能 `enemies.json.abilities`；状态引擎扩护盾/反弹/复活；演出动效/音效令牌化）。⚠️ `ui_anim.json` 的 `battle` 令牌块待 UI 窗口补（M2 用 `_FALLBACK` 兜底）。
 
 ## GDScript 4.x 硬规（高频踩坑）
 - autoload 脚本**禁止**写与单例同名的 `class_name`；`const X = preload()` 与全局 `class_name X` 同名会 shadowed。
@@ -36,7 +36,7 @@ Phase 0 脚手架 ✅ → Phase 1 垂直切片 ✅ → **M1 战斗逻辑内核 �
 - 健康检查：`--headless --path "D:/武侠游戏" --quit 2>&1`
 - 单脚本：`--check-only --script res://<path>.gd`
 - ⚠️ `--check-only --script` **不加载 autoload**，引用单例必报 `Identifier not found`（假阳性）。真伪以完整 `--quit` 或实际启动为准。
-- **单元测试**：`Godot_v4.7.2_console --headless --path "D:/武侠游戏" res://tests/unit/run_all.tscn`（场景运行，autoload 全加载，退出码 0/1）。当前 战斗 13 + 存读档 6 全绿。
+- **单元测试**：`Godot_v4.7.2_console --headless --path "D:/武侠游戏" res://tests/unit/run_all.tscn`（场景运行，autoload 全加载，退出码 0/1）。当前 套件 5 · 失败 0（战斗 15 / 背包 12 / 存读档 6 / … 全绿）。
 - ⚠️ 验证**界面脚本**真编译：把 `tests/ui/m5_smoke.tscn` 当主场景跑（或真实打开工程），`--script` 模式不加载 autoload 会假阳性。
 - 多 Godot 进程抢 `.godot` 类缓存会玄学报错 → **验证必须串行**。
 
@@ -52,7 +52,8 @@ Phase 0 脚手架 ✅ → Phase 1 垂直切片 ✅ → **M1 战斗逻辑内核 �
 - **门面** `combat_service.gd`：保留全部旧接口零回归(`player_attack`/`player_cast`/`run_enemy_turns`/`finalize`/`try_escape`)，内部委托 `_core`；新增 `get_core`/`player_rest`/`player_use_item`。`player_use_item` 只结算战斗快照(CombatCharacter)，finalize 才回写 PlayerState——战斗内切勿直调 InventoryService.use_item。
 - **配置**：`skills.json` v1.2.0（普攻/二式/三式/绝世/轻功/心法/调息 七类，含 target/qi_cost/cooldown/effects）；`status_effects.json`（破甲/强攻/固守/灼烧/中毒/聚气/疾行）；`battles.json` 加 `turn_mode`（atb/se时)，`battle_bandit_001`=atb；`enemies.json` 的 `speed` 字段已被消费。
 - **枚举** `combat_enums.gd` 增 `TurnMode { SEQUENTIAL, ATB }`；`EventBus` 增 `item_used`（战斗内用药刷背包 UI 例外走总线）；`GameManager` 接 `cmd_start_combat`（任务/对话发令自动开战）。
-- **已知待做（M2/M3）**：BattleScene 流程编排仍未抽到 Director（仍是 UI 直接调门面）；敌人 AI 权重选技能（enemies.json `abilities` 字段已就位，M3 接）；状态引擎扩护盾/反弹/复活；演出层(顺序条/血条直设/飘字)待建；事件暂无 `target_hp_after`（M2 需补，属共享契约）。
+- **M2 已交付（提交 9d6e5c3）**：演出编排层建成——`battle_director.gd`(CombatDirector 顺序 await 播放 + 速度缩放/跳过/卡死防护) + `battle_view.gd`(BattleView 按事件分派飘字/血条/真气条) + `unit_hud.gd`(UnitHud) + `BattleScene.gd` 重写(只装配+输入转发，删内联编排)；`combat_service.gd` 增 `play_events` 事件流(`player_attack_events`/`player_cast_events`/`player_rest_events`/`enemy_phase_events`/`use_item_events`)；`CombatEvent` 末尾追加 `target_hp_after`/`target_max_hp`/`actor_mp_after`/`target_mp_after`（血条/真气条直设，规避加速/跳过错位）。
+- **已知待做（M3+）**：敌人 AI 权重选技能（`enemies.json.abilities` 已就位）；状态引擎扩护盾/反弹/复活；演出层动效/音效令牌化（飘字现直设色，待接 `ui_sfx.json`）；`ui_anim.json` 的 `battle` 令牌块待 UI 窗口补（M2 用 Director `_FALLBACK` 兜底）。
 - ⚠️ **确定性测试陷阱**：`combat_service` 是单例，确定性测试每个 run 必须「开战→行动→记录」自成一体；先开两次战再行动会让两次行动都作用在最后一次激活态上（已栽过，见 `test_deterministic_same_seed`）。
 
 ## 背包层现状（P0/P1 已修，详见 2026-08-29.md #149 段）
@@ -72,4 +73,4 @@ Phase 0 脚手架 ✅ → Phase 1 垂直切片 ✅ → **M1 战斗逻辑内核 �
 - **开工前**：读日期最新的 `docs/变更通告_*.md` + 读 `docs/契约总表.md`（gen_contract 自动生成，禁止手改；代码是唯一真源）。
 - **收尾时**：跑双闸门 → ① `--headless --quit` 零错误 ② `res://tests/unit/run_all.tscn` 零失败 → 写本窗口的《变更通告》→ 若动了接口则重跑 `gen_contract.gd` 并把 `契约总表.md` 入库。
 - **共享地基（冻结，只增不改）**：`core/enums/*_enums.gd`、`autoload/EventBus.gd`、`autoload/ConfigManager.gd`、`data/configs/ui/screens.json`、`strings.csv`。改动必须在当轮《变更通告》「共享地基增量」表里明示（信号/枚举末尾追加，绝不动已有项），并打招呼。
-- 已落地的《变更通告》：`变更通告_2026-08-29_背包窗口.md`（背包窗口）、`变更通告_2026-08-29_战斗逻辑层.md`（M1）、`变更通告_2026-08-29_UI主线整改.md`（#150–#154）、`变更通告_2026-08-29_设置弹窗整改.md`（设置弹窗独立化 + 美工规范 + 现存弹窗审计 + 分辨率加固 + 契约总表 UIManager 段大小写修复）。
+- 已落地的《变更通告》：`变更通告_2026-08-29_背包窗口.md`（背包窗口）、`变更通告_2026-08-29_战斗逻辑层.md`（M1）、`变更通告_2026-08-29_战斗演出编排.md`（M2 演出）、`变更通告_2026-08-29_UI主线整改.md`（#150–#154）、`变更通告_2026-08-29_设置弹窗整改.md`（设置弹窗独立化 + 美工规范 + 现存弹窗审计 + 分辨率加固 + 契约总表 UIManager 段大小写修复）。
