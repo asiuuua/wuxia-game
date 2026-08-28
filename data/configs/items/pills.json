@@ -3,6 +3,10 @@
   "items": [
     { "id": "pill_heal_xiaohuan_001", "name": "小还丹", "type": "pill", "rarity": "common", "max_stack": 10, "weight": 0.1, "price": 30, "flags": 51, "heal_hp": 50, "heal_mp": 0 },
     { "id": "pill_mp_huixue_001", "name": "回血丹", "type": "pill", "rarity": "common", "max_stack": 10, "weight": 0.1, "price": 25, "flags": 51, "heal_hp": 0, "heal_mp": 40 },
-    { "id": "pill_heal_dahuang_001", "name": "大还丹", "type": "pill", "rarity": "uncommon", "max_stack": 10, "weight": 0.1, "price": 60, "flags": 51, "heal_hp": 140, "heal_mp": 0 }
+    { "id": "pill_heal_dahuang_001", "name": "大还丹", "type": "pill", "rarity": "uncommon", "max_stack": 10, "weight": 0.1, "price": 60, "flags": 51, "heal_hp": 140, "heal_mp": 0 },
+    { "id": "pill_heal_jinchan_001", "name": "金疮药", "type": "pill", "rarity": "common", "max_stack": 10, "weight": 0.1, "price": 15, "flags": 51, "heal_hp": 30, "heal_mp": 0 },
+    { "id": "pill_mp_jingqi_001", "name": "静气丹", "type": "pill", "rarity": "uncommon", "max_stack": 10, "weight": 0.1, "price": 45, "flags": 51, "heal_hp": 0, "heal_mp": 60 },
+    { "id": "pill_heal_dahuang_002", "name": "大还丹·上", "type": "pill", "rarity": "uncommon", "max_stack": 10, "weight": 0.1, "price": 90, "flags": 51, "heal_hp": 200, "heal_mp": 0 },
+    { "id": "pill_heal_yujin_001", "name": "玉津丹", "type": "pill", "rarity": "rare", "max_stack": 10, "weight": 0.1, "price": 150, "flags": 51, "heal_hp": 120, "heal_mp": 80 }
   ]
 }

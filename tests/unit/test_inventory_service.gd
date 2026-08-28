@@ -342,3 +342,40 @@ func test_count_index_rebuild_on_load() -> void:
 	_service.load(data)
 	expect_eq(_service.get_item_count(PILL), 4, "load 后缓存应重建为 4")
 	expect_eq(_service.get_item_count("material_ore_001"), 7, "load 后缓存应重建为 7")
+
+func test_item_config_integrity() -> void:
+	# Phase 3 内容扩张：校验全部物品配置可被正确解析且字段自洽（防 JSON 写坏/flag 配错）
+	var files := ["weapons", "pills", "equipment", "materials"]
+	var valid_types := ["weapon", "armor", "pill", "material", "accessory", "quest"]
+	var valid_rarities := ["common", "uncommon", "rare", "epic", "legendary"]
+	var seen_ids := {}
+	for fname in files:
+		var path := "res://data/configs/items/%s.json" % fname
+		var fa := FileAccess.open(path, FileAccess.READ)
+		expect(fa != null, "能打开 %s.json" % fname)
+		if fa == null:
+			continue
+		var text := fa.get_as_text()
+		fa.close()
+		var parsed: Variant = JSON.parse_string(text)
+		expect(parsed is Dictionary, "%s.json 顶层为对象" % fname)
+		if not (parsed is Dictionary):
+			continue
+		var items: Array = parsed.get("items", [])
+		expect(items.size() > 0, "%s.json 至少含 1 条物品" % fname)
+		for entry in items:
+			var id: String = String(entry.get("id", ""))
+			expect(id != "", "%s 中每条都有 id" % fname)
+			expect(not seen_ids.has(id), "id 全局唯一: %s" % id)
+			seen_ids[id] = true
+			var t: String = String(entry.get("type", ""))
+			expect(valid_types.has(t), "%s type 合法(%s)" % [id, t])
+			var r: String = String(entry.get("rarity", ""))
+			expect(valid_rarities.has(r), "%s rarity 合法(%s)" % [id, r])
+			var flags: int = int(entry.get("flags", 0))
+			expect(flags > 0, "%s flags 为正整数" % id)
+			var max_stack: int = int(entry.get("max_stack", 1))
+			if (flags & ItemEnums.ItemFlag.EQUIPPABLE) != 0:
+				expect_eq(max_stack, 1, "%s 可装备必 max_stack=1" % id)
+			if (flags & ItemEnums.ItemFlag.STACKABLE) != 0:
+				expect(max_stack > 1, "%s 可堆叠必 max_stack>1" % id)

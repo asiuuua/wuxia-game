@@ -4,6 +4,11 @@
     { "id": "weapon_sword_iron_001", "name": "铁剑", "type": "weapon", "rarity": "common", "max_stack": 1, "weight": 3.5, "price": 100, "flags": 67, "attack": 15, "bonus_attack": 15, "durability": 100, "speed": 1.0, "equip_slot": "main_hand" },
     { "id": "weapon_blade_iron_001", "name": "铁刀", "type": "weapon", "rarity": "common", "max_stack": 1, "weight": 4.0, "price": 90, "flags": 67, "attack": 17, "bonus_attack": 17, "durability": 100, "speed": 0.9, "equip_slot": "main_hand" },
     { "id": "weapon_sword_steel_001", "name": "精钢剑", "type": "weapon", "rarity": "uncommon", "max_stack": 1, "weight": 4.2, "price": 180, "flags": 67, "attack": 24, "bonus_attack": 24, "durability": 120, "speed": 1.0, "equip_slot": "main_hand" },
-    { "id": "weapon_spear_001", "name": "长枪", "type": "weapon", "rarity": "common", "max_stack": 1, "weight": 4.5, "price": 105, "flags": 67, "attack": 19, "bonus_attack": 19, "durability": 100, "speed": 0.8, "equip_slot": "main_hand" }
+    { "id": "weapon_spear_001", "name": "长枪", "type": "weapon", "rarity": "common", "max_stack": 1, "weight": 4.5, "price": 105, "flags": 67, "attack": 19, "bonus_attack": 19, "durability": 100, "speed": 0.8, "equip_slot": "main_hand" },
+    { "id": "weapon_sword_bronze_001", "name": "青铜剑", "type": "weapon", "rarity": "common", "max_stack": 1, "weight": 3.0, "price": 50, "flags": 67, "attack": 10, "bonus_attack": 10, "durability": 80, "speed": 1.0, "equip_slot": "main_hand" },
+    { "id": "weapon_blade_steel_001", "name": "精钢刀", "type": "weapon", "rarity": "uncommon", "max_stack": 1, "weight": 4.2, "price": 200, "flags": 67, "attack": 22, "bonus_attack": 22, "durability": 110, "speed": 0.9, "equip_slot": "main_hand" },
+    { "id": "weapon_spear_steel_001", "name": "精钢枪", "type": "weapon", "rarity": "uncommon", "max_stack": 1, "weight": 4.8, "price": 210, "flags": 67, "attack": 21, "bonus_attack": 21, "durability": 110, "speed": 0.8, "equip_slot": "main_hand" },
+    { "id": "weapon_sword_silver_001", "name": "银鳞剑", "type": "weapon", "rarity": "rare", "max_stack": 1, "weight": 4.0, "price": 320, "flags": 67, "attack": 30, "bonus_attack": 30, "durability": 140, "speed": 1.0, "equip_slot": "main_hand" },
+    { "id": "weapon_staff_taomu_001", "name": "桃木杖", "type": "weapon", "rarity": "uncommon", "max_stack": 1, "weight": 2.5, "price": 160, "flags": 67, "attack": 16, "bonus_attack": 16, "durability": 90, "speed": 1.1, "equip_slot": "main_hand" }
   ]
 }

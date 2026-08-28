@@ -50,6 +50,66 @@
       "weight": 0.2,
       "price": 50,
       "flags": 3
+    },
+    {
+      "id": "material_ore_copper_001",
+      "name": "铜矿",
+      "type": "material",
+      "rarity": "common",
+      "max_stack": 99,
+      "weight": 1.0,
+      "price": 8,
+      "flags": 19
+    },
+    {
+      "id": "material_ore_silver_001",
+      "name": "银矿",
+      "type": "material",
+      "rarity": "common",
+      "max_stack": 99,
+      "weight": 1.2,
+      "price": 20,
+      "flags": 19
+    },
+    {
+      "id": "material_herb_qing_001",
+      "name": "青蒿",
+      "type": "material",
+      "rarity": "common",
+      "max_stack": 99,
+      "weight": 0.1,
+      "price": 6,
+      "flags": 19
+    },
+    {
+      "id": "material_silk_raw_001",
+      "name": "生丝",
+      "type": "material",
+      "rarity": "common",
+      "max_stack": 99,
+      "weight": 0.3,
+      "price": 14,
+      "flags": 19
+    },
+    {
+      "id": "material_bone_001",
+      "name": "兽骨",
+      "type": "material",
+      "rarity": "common",
+      "max_stack": 99,
+      "weight": 0.6,
+      "price": 10,
+      "flags": 19
+    },
+    {
+      "id": "material_pelt_wolf_001",
+      "name": "狼王皮",
+      "type": "material",
+      "rarity": "uncommon",
+      "max_stack": 99,
+      "weight": 0.8,
+      "price": 40,
+      "flags": 19
     }
   ]
 }

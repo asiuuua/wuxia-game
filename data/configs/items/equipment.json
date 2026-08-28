@@ -5,6 +5,10 @@
     { "id": "armor_leather_001", "name": "皮甲", "type": "armor", "rarity": "uncommon", "max_stack": 1, "weight": 3.0, "price": 150, "flags": 67, "equip_slot": "armor", "bonus_defense": 15, "bonus_hp": 40 },
     { "id": "armor_iron_001", "name": "铁甲", "type": "armor", "rarity": "uncommon", "max_stack": 1, "weight": 5.0, "price": 230, "flags": 67, "equip_slot": "armor", "bonus_defense": 20, "bonus_hp": 60 },
     { "id": "acc_jade_001", "name": "玉佩", "type": "accessory", "rarity": "uncommon", "max_stack": 1, "weight": 0.5, "price": 120, "flags": 67, "equip_slot": "accessory", "bonus_mp": 30, "bonus_defense": 5 },
-    { "id": "acc_ring_001", "name": "玄铁戒", "type": "accessory", "rarity": "rare", "max_stack": 1, "weight": 0.4, "price": 200, "flags": 67, "equip_slot": "accessory", "bonus_attack": 5, "bonus_defense": 5, "bonus_mp": 20 }
+    { "id": "acc_ring_001", "name": "玄铁戒", "type": "accessory", "rarity": "rare", "max_stack": 1, "weight": 0.4, "price": 200, "flags": 67, "equip_slot": "accessory", "bonus_attack": 5, "bonus_defense": 5, "bonus_mp": 20 },
+    { "id": "armor_silk_001", "name": "绸衫", "type": "armor", "rarity": "uncommon", "max_stack": 1, "weight": 1.5, "price": 130, "flags": 67, "equip_slot": "armor", "bonus_defense": 12, "bonus_hp": 30 },
+    { "id": "armor_chain_001", "name": "锁子甲", "type": "armor", "rarity": "rare", "max_stack": 1, "weight": 6.0, "price": 300, "flags": 67, "equip_slot": "armor", "bonus_defense": 28, "bonus_hp": 80 },
+    { "id": "acc_bell_001", "name": "辟邪铃", "type": "accessory", "rarity": "uncommon", "max_stack": 1, "weight": 0.5, "price": 140, "flags": 67, "equip_slot": "accessory", "bonus_defense": 8, "bonus_mp": 20 },
+    { "id": "acc_pendant_001", "name": "平安扣", "type": "accessory", "rarity": "rare", "max_stack": 1, "weight": 0.4, "price": 220, "flags": 67, "equip_slot": "accessory", "bonus_attack": 3, "bonus_defense": 6, "bonus_hp": 20 }
   ]
 }
