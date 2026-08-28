@@ -112,6 +112,21 @@ func get_defeat_cg_text_id() -> String:
 func get_defeat_lose_item_count() -> int:
 	return int(_current.get("defeat_lose_item_count", 0))
 
+## 团灭可丢弃的稀有度档位（默认 ["common"]；空数组=全部保护，一件不丢）
+func get_defeat_lose_rarities() -> Array:
+	var r = _current.get("defeat_lose_rarities", ["common"])
+	if r is Array:
+		return r
+	return ["common"]
+
+## 团灭是否可丢弃材料栏杂物（默认 false：材料栏不动，保护 crafting 资源）
+func get_defeat_lose_include_material() -> bool:
+	return bool(_current.get("defeat_lose_include_material", false))
+
+## 团灭是否可丢弃任务栏物品（默认 false：任务栏不动，保护进度物）
+func get_defeat_lose_include_quest() -> bool:
+	return bool(_current.get("defeat_lose_include_quest", false))
+
 ## 团灭 CG 是否仅在「没钱支付」分支触发（true 时只在 broke 时播 CG）
 func get_defeat_cg_when_broke_only() -> bool:
 	return bool(_current.get("defeat_cg_when_broke_only", false))

@@ -15,6 +15,7 @@ const CONTRACT_FILES := {
 	"autoload/GameManager.gd": "装配中枢：Service 容器 + 场景切换/存读档入口",
 	"autoload/SaveManager.gd": "多槽存档管理（ISaveable 注册制）",
 	"autoload/ConfigManager.gd": "全部 JSON 配置查询 + 容错校验",
+	"autoload/difficulty_manager.gd": "难度管理器（团灭死亡行为/惩罚系数/丢物规则配置入口；零难度 if）",
 	"autoload/ui_manager.gd": "UI 屏幕栈（screens.json 名->脚本）",
 	"data/runtime/player_state.gd": "玩家运行时状态（气血/属性/金钱/存档）",
 	"services/inventory/inventory_service.gd": "背包服务（三栏/堆叠/负重/事务API/用药）",

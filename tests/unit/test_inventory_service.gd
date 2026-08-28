@@ -18,6 +18,8 @@ func after_each() -> void:
 	var ps: PlayerState = GameManager.player_state
 	if ps != null:
 		ps.strength = 10
+	# 难度是全局单例，复位到 NORMAL 避免团灭丢物配置测试污染其他用例
+	EventBus.cmd_set_difficulty.emit("NORMAL", true)
 
 func test_add_item_success() -> void:
 	expect(_service.add_item(PILL, 5), "添加应成功")
@@ -205,3 +207,27 @@ func _first_iid(item_id: String) -> String:
 			if inst != null and inst.item_id == item_id:
 				return String(inst.instance_id)
 	return ""
+
+# ── 团灭丢物规则配置化回归（数值进 JSON，去除硬编码 rarity=="common"）──
+
+func test_lose_items_respects_rarity_config() -> void:
+	# 默认难度（NORMAL）defeat_lose_rarities 默认 ["common"]：只丢 common，非 common 保留
+	_service.add_item("pill_heal_xiaohuan_001", 3, "test")   # common
+	_service.add_item("pill_heal_dahuang_001", 1, "test")    # uncommon
+	var lost := _service.lose_some_non_rare_items(2)
+	expect_eq(_service.get_item_count("pill_heal_xiaohuan_001"), 1, "common 小还丹应被丢 2 件，剩 1")
+	expect_eq(_service.get_item_count("pill_heal_dahuang_001"), 1, "uncommon 大还丹应被保留")
+	expect_eq(lost.size(), 2, "应返回 2 个丢失 id")
+	for id in lost:
+		expect(String(id) == "pill_heal_xiaohuan_001", "丢失列表只应含 common 物品")
+
+func test_lose_items_slot_scope_follows_config() -> void:
+	# 切到 HARD：defeat_lose_include_material 默认 false → 材料栏不丢，主栏 common 照丢
+	EventBus.cmd_set_difficulty.emit("HARD", true)
+	expect_eq(DifficultyManager.get_defeat_lose_include_material(), false, "HARD 默认不波及材料栏")
+	_service.add_item("weapon_sword_iron_001", 3, "test")    # 主栏 common
+	_service.add_item("material_ore_001", 3, "test")         # 材料栏 common
+	var lost := _service.lose_some_non_rare_items(2)
+	expect_eq(_service.get_item_count("weapon_sword_iron_001"), 1, "主栏 common 武器应被丢 2 件")
+	expect_eq(_service.get_item_count("material_ore_001"), 3, "材料栏不应被波及（include_material=false）")
+	expect_eq(lost.size(), 2, "应只丢主栏 2 件")

@@ -288,8 +288,11 @@ func get_max_weight() -> float:
 		str_val = ps.strength
 	return BASE_MAX_WEIGHT + float(str_val) * ItemConstants.STRENGTH_WEIGHT_COEFF
 
-## 团灭惩罚：丢失 n 件「common 且非 quest 类型」的主栏物品，返回丢失的 item_id 列表
-## 设计：只丢主栏杂物，材料箱/任务栏不动（保护进度物）；同一类丢多件也只记一次 id 供抵押物清单去重
+## 团灭惩罚：丢失 n 件「符合难度表 defeat_lose_rarities 档位」的物品，返回丢失的 item_id 列表
+## 规则已全部配置化（数值进 JSON，去除硬编码 rarity=="common"）：
+##   - 可丢稀有度档位：DifficultyManager.get_defeat_lose_rarities()（默认 ["common"]，空数组=全部保护）
+##   - 槽位范围：主栏恒含；材料栏/任务栏由 get_defeat_lose_include_material()/include_quest() 决定（默认均不含）
+## 设计：只丢杂物，保护进度物；同一类丢多件也只记一次 id 供抵押物清单去重
 ## 注意：用带索引的 while 遍历（而非 for-in），确保堆叠物品（count>1）能在本轮被彻底扣空，
 ##       不会因 for-in 每实例只访问一次而少丢（例如 2 个丹药应丢 2 件而非 1 件）
 func lose_some_non_rare_items(n: int) -> Array:
@@ -297,26 +300,35 @@ func lose_some_non_rare_items(n: int) -> Array:
 	var lost_counts: Dictionary = {}    # item_id -> 数量（用于发事件）
 	if n <= 0:
 		return lost_ids
+	# 规则配置化：可丢稀有度 + 槽位范围全部读难度表（数值进 JSON）
+	var rarities: Array = DifficultyManager.get_defeat_lose_rarities()
+	var bags: Array = [main_slots]
+	if DifficultyManager.get_defeat_lose_include_material():
+		bags.append(material_slots)
+	if DifficultyManager.get_defeat_lose_include_quest():
+		bags.append(quest_slots)
 	var remaining := n
-	var i: int = 0
-	while remaining > 0 and i < main_slots.size():
-		var inst = main_slots[i]
-		i += 1
-		if inst == null:
-			continue
-		var data: Dictionary = ConfigManager.get_item(inst.item_id)
-		if data.get("rarity", "") != "common":
-			continue
-		if data.get("type", "") == "quest":
-			continue
-		# 从该实例尽量扣，直到满足需求或实例耗尽
-		while remaining > 0 and inst.count > 0:
-			inst.count -= 1
-			remaining -= 1
-			lost_ids.append(inst.item_id)
-			lost_counts[inst.item_id] = int(lost_counts.get(inst.item_id, 0)) + 1
-		if inst.count <= 0:
-			main_slots[i - 1] = null
+	var bag_idx: int = 0
+	while remaining > 0 and bag_idx < bags.size():
+		var bag: Array = bags[bag_idx]
+		bag_idx += 1
+		var i: int = 0
+		while remaining > 0 and i < bag.size():
+			var inst = bag[i]
+			i += 1
+			if inst == null:
+				continue
+			var data: Dictionary = ConfigManager.get_item(inst.item_id)
+			if not rarities.has(data.get("rarity", "")):
+				continue
+			# 从该实例尽量扣，直到满足需求或实例耗尽
+			while remaining > 0 and inst.count > 0:
+				inst.count -= 1
+				remaining -= 1
+				lost_ids.append(inst.item_id)
+				lost_counts[inst.item_id] = int(lost_counts.get(inst.item_id, 0)) + 1
+			if inst.count <= 0:
+				bag[i - 1] = null
 	if remaining < n:
 		_recalculate_weight()
 		_dirty = true
