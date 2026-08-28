@@ -13,11 +13,21 @@ func before_each() -> void:
 	_service = InventoryService.new()
 	_service.reset()
 
+func after_each() -> void:
+	# 力量是全局单例，复位避免污染其他用例/套件（负重相关测试会改它）
+	var ps: PlayerState = GameManager.player_state
+	if ps != null:
+		ps.strength = 10
+
 func test_add_item_success() -> void:
 	expect(_service.add_item(PILL, 5), "添加应成功")
 	expect_eq(_service.get_item_count(PILL), 5, "应有 5 个")
 
 func test_add_item_full_and_overflow_event() -> void:
+	# 拉高强度把负重上限顶高，隔离"槽位满"逻辑（武器单件 3.5 重，力量10时只能装 21 件）
+	var ps: PlayerState = GameManager.player_state
+	if ps != null:
+		ps.strength = 1000
 	for i in 30:
 		_service.add_item(WEAPON, 1, "test")
 	var overflow_count: Array = []
@@ -50,6 +60,9 @@ func test_query_add_stack_math() -> void:
 	expect_eq(int(q2["added"]), 0, "count=0 应 added=0")
 
 func test_can_add_false_when_full() -> void:
+	var ps: PlayerState = GameManager.player_state
+	if ps != null:
+		ps.strength = 1000
 	for i in 30:
 		_service.add_item(WEAPON, 1, "test")
 	expect(not _service.can_add(PILL, 1), "主栏满时 can_add 应 false")
@@ -76,6 +89,9 @@ func test_try_consume_atomic() -> void:
 	expect_eq(_service.get_item_count("material_herb_001"), 1, "失败时草药不应被扣")
 
 func test_instance_id_unique_on_batch() -> void:
+	var ps: PlayerState = GameManager.player_state
+	if ps != null:
+		ps.strength = 1000
 	var ids := {}
 	for i in 30:
 		_service.add_item(WEAPON, 1, "test")
@@ -145,6 +161,43 @@ func test_consume_instance_reclaims_slot() -> void:
 			slot_freed = true
 			break
 	expect(slot_freed, "耗尽的堆应回收格子")
+
+func test_get_max_weight_strength_coupling() -> void:
+	# 真负重：max = BASE(50) + strength * COEFF(2.5)
+	var ps: PlayerState = GameManager.player_state
+	expect(ps != null, "player_state 应存在")
+	if ps == null:
+		return
+	ps.strength = 10
+	expect_eq(_service.get_max_weight(), 75.0, "力量10时上限=50+10*2.5=75")
+	ps.strength = 20
+	expect_eq(_service.get_max_weight(), 100.0, "力量20时上限=50+20*2.5=100")
+	ps.strength = 10
+
+func test_query_add_weight_limited() -> void:
+	# 精铁矿石 weight=1.0；力量10时上限75 → 重量限制为 75 件（材料箱 200 格远大于此）
+	var ps: PlayerState = GameManager.player_state
+	if ps != null:
+		ps.strength = 10
+	var q: Dictionary = _service.query_add("material_ore_001", 1000)
+	expect_eq(int(q["added"]), 75, "重量上限应限制为 75 件")
+	expect_eq(int(q["overflow"]), 925, "溢出应为 925")
+
+func test_add_respects_weight_cap() -> void:
+	var ps: PlayerState = GameManager.player_state
+	if ps != null:
+		ps.strength = 10
+	var overflow_count: Array = []
+	var cb := func(item_id: String, lost: int) -> void:
+		overflow_count.append([item_id, lost])
+	EventBus.inventory_add_overflow.connect(cb)
+	var ok := _service.add_item("material_ore_001", 80, "test")
+	EventBus.inventory_add_overflow.disconnect(cb)
+	expect(not ok, "超重时 add 应返回 false（未全部装入）")
+	expect_eq(_service.get_item_count("material_ore_001"), 75, "实际装入应恰好 75 件（卡在负重上限）")
+	expect(overflow_count.size() == 1, "应发 1 次溢出事件")
+	if overflow_count.size() == 1:
+		expect_eq(int(overflow_count[0][1]), 5, "溢出量应为 5")
 
 func _first_iid(item_id: String) -> String:
 	for bag in [_service.main_slots, _service.material_slots, _service.quest_slots]:

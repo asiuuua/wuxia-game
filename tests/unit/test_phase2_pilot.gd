@@ -23,7 +23,12 @@ func before_each() -> void:
 	_equip.reset()
 	_ps.init_default("李十五", 1)
 
+func after_each() -> void:
+	_ps.strength = 10   # 复位力量，避免负重相关改动污染其他套件
+
 func _fill_main_bag() -> void:
+	# 拉高强度把负重上限顶高，使 30 把武器(105重)能入主栏，隔离"槽位满"逻辑
+	_ps.strength = 1000
 	for i in 30:
 		_inv.add_item(WEAPON, 1, "test")
 

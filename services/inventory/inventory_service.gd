@@ -46,14 +46,23 @@ func add_item(item_id: String, count: int, source: String = "") -> bool:
 		var idx: int = _find_empty(bag)
 		if idx == -1:
 			break
+		var unit_w: float = ConfigManager.get_item(item_id).get("weight", 0.0)
+		# 本件重量为正时，按"剩余重量还能容几件"限制单次放入量，避免整批被超重拒绝
+		var weight_fit: int = 2147483647
+		if unit_w > 0.0:
+			weight_fit = maxi(0, int((get_max_weight() - current_weight) / unit_w))
+		if weight_fit <= 0:
+			break   # 已达负重上限，停止放入，剩余走溢出事件
+		var put: int = mini(mini(max_stack, count), weight_fit)
 		var inst := ItemInstance.new()
 		inst.instance_id = _new_instance_id(item_id)
 		inst.item_id = item_id
-		inst.count = mini(max_stack, count)
+		inst.count = put
 		inst.acquired_source = source
 		inst.acquired_time = int(Time.get_unix_time_from_system())
 		bag[idx] = inst
 		count -= inst.count
+		current_weight += unit_w * float(put)
 		added += inst.count
 	_recalculate_weight()
 	_dirty = true
@@ -82,6 +91,8 @@ func query_add(item_id: String, count: int) -> Dictionary:
 		return result
 	var bag: Array = _bag_for_item(item_id)
 	var max_stack: int = int(ConfigManager.get_item(item_id).get("max_stack", 1))
+	var unit_w: float = ConfigManager.get_item(item_id).get("weight", 0.0)
+	# 槽位余量
 	var space: int = 0
 	for inst in bag:
 		if inst != null and max_stack > 1 and inst.item_id == item_id:
@@ -89,7 +100,12 @@ func query_add(item_id: String, count: int) -> Dictionary:
 	for slot in bag:
 		if slot == null:
 			space += max_stack
-	var added: int = mini(count, space)
+	# 重量余量：每单位重量为正时受负重上限约束；无重量物品不受限
+	var room: int = space
+	if unit_w > 0.0:
+		var weight_room: int = maxi(0, int((get_max_weight() - current_weight) / unit_w))
+		room = mini(space, weight_room)
+	var added: int = mini(count, room)
 	result["added"] = added
 	result["overflow"] = count - added
 	return result
@@ -263,6 +279,15 @@ func get_equippable_instances() -> Array:
 func get_weight() -> float:
 	return current_weight
 
+## 负重上限（真负重）：基础值 + 力量 × 系数
+## UI 窗口显示负重进度条必须调此接口，禁止再用 BASE_MAX_WEIGHT 常量（否则力量成长不反映）
+func get_max_weight() -> float:
+	var str_val: int = 10
+	var ps: PlayerState = GameManager.player_state
+	if ps != null:
+		str_val = ps.strength
+	return BASE_MAX_WEIGHT + float(str_val) * ItemConstants.STRENGTH_WEIGHT_COEFF
+
 ## 团灭惩罚：丢失 n 件「common 且非 quest 类型」的主栏物品，返回丢失的 item_id 列表
 ## 设计：只丢主栏杂物，材料箱/任务栏不动（保护进度物）；同一类丢多件也只记一次 id 供抵押物清单去重
 ## 注意：用带索引的 while 遍历（而非 for-in），确保堆叠物品（count>1）能在本轮被彻底扣空，
@@ -307,7 +332,7 @@ func _recalculate_weight() -> void:
 		for inst in bag:
 			if inst != null:
 				current_weight += ConfigManager.get_item(inst.item_id).get("weight", 0.0) * inst.count
-	inventory_weight_changed.emit(current_weight, BASE_MAX_WEIGHT)
+	inventory_weight_changed.emit(current_weight, get_max_weight())
 
 func reset() -> void:
 	main_slots.clear(); main_slots.resize(MAX_MAIN_SLOTS)
