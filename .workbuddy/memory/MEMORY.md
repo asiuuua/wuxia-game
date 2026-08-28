@@ -15,8 +15,8 @@
 - 权威基线 `docs/模块设计规范.md`；协同框架 `docs/项目进度与协同开发框架.md`。
 
 ## 路线图
-Phase 0 脚手架 ✅ → Phase 1 垂直切片 ✅ → **M1 战斗逻辑内核 ✅(2026-08-29, 提交 3f30636)** → **M2 战斗演出编排 ✅(2026-08-29, 提交 9d6e5c3)** → Phase 2 系统填充（难度✅；锻造/商店/门派叶子逻辑✅；背包P0/P1✅）→ Phase 3 内容扩张 → Phase 4 平台适配
-- 战斗下一步：M3（敌人 AI 权重选技能 `enemies.json.abilities`；状态引擎扩护盾/反弹/复活；演出动效/音效令牌化）。⚠️ `ui_anim.json` 的 `battle` 令牌块待 UI 窗口补（M2 用 `_FALLBACK` 兜底）。
+Phase 0 脚手架 ✅ → Phase 1 垂直切片 ✅ → **M1 战斗逻辑内核 ✅(2026-08-29, 提交 3f30636)** → **M2 战斗演出编排 ✅(2026-08-29, 提交 9d6e5c3)** → **M3-1 敌人 AI 权重选技能 ✅(2026-08-29)** → Phase 2 系统填充（难度✅；锻造/商店/门派叶子逻辑✅；背包P0/P1✅）→ Phase 3 内容扩张 → Phase 4 平台适配
+- 战斗下一步（M3）：M3-2 状态引擎扩护盾/反弹/复活；M3-3 演出动效/音效令牌化（飘字现直设色，待接 `ui_sfx.json`）。⚠️ `ui_anim.json` 的 `battle` 令牌块待 UI 窗口补（M2 用 Director `_FALLBACK` 兜底）。
 
 ## GDScript 4.x 硬规（高频踩坑）
 - autoload 脚本**禁止**写与单例同名的 `class_name`；`const X = preload()` 与全局 `class_name X` 同名会 shadowed。
@@ -37,7 +37,7 @@ Phase 0 脚手架 ✅ → Phase 1 垂直切片 ✅ → **M1 战斗逻辑内核 �
 - 健康检查：`--headless --path "D:/武侠游戏" --quit 2>&1`
 - 单脚本：`--check-only --script res://<path>.gd`
 - ⚠️ `--check-only --script` **不加载 autoload**，引用单例必报 `Identifier not found`（假阳性）。真伪以完整 `--quit` 或实际启动为准。
-- **单元测试**：`Godot_v4.7.2_console --headless --path "D:/武侠游戏" res://tests/unit/run_all.tscn`（场景运行，autoload 全加载，退出码 0/1）。当前 套件 5 · 失败 0（战斗 15 / 背包 12 / 存读档 6 / … 全绿）。
+- **单元测试**：`Godot_v4.7.2_console --headless --path "D:/武侠游戏" res://tests/unit/run_all.tscn`（场景运行，autoload 全加载，退出码 0/1）。当前 套件 5 · 失败 0（战斗 19 / 背包 15 / 存读档 6 / … 全绿）。
 - ⚠️ 验证**界面脚本**真编译：把 `tests/ui/m5_smoke.tscn` 当主场景跑（或真实打开工程），`--script` 模式不加载 autoload 会假阳性。
 - 多 Godot 进程抢 `.godot` 类缓存会玄学报错 → **验证必须串行**。
 
@@ -54,7 +54,9 @@ Phase 0 脚手架 ✅ → Phase 1 垂直切片 ✅ → **M1 战斗逻辑内核 �
 - **配置**：`skills.json` v1.2.0（普攻/二式/三式/绝世/轻功/心法/调息 七类，含 target/qi_cost/cooldown/effects）；`status_effects.json`（破甲/强攻/固守/灼烧/中毒/聚气/疾行）；`battles.json` 加 `turn_mode`（atb/se时)，`battle_bandit_001`=atb；`enemies.json` 的 `speed` 字段已被消费。
 - **枚举** `combat_enums.gd` 增 `TurnMode { SEQUENTIAL, ATB }`；`EventBus` 增 `item_used`（战斗内用药刷背包 UI 例外走总线）；`GameManager` 接 `cmd_start_combat`（任务/对话发令自动开战）。
 - **M2 已交付（提交 9d6e5c3）**：演出编排层建成——`battle_director.gd`(CombatDirector 顺序 await 播放 + 速度缩放/跳过/卡死防护) + `battle_view.gd`(BattleView 按事件分派飘字/血条/真气条) + `unit_hud.gd`(UnitHud) + `BattleScene.gd` 重写(只装配+输入转发，删内联编排)；`combat_service.gd` 增 `play_events` 事件流(`player_attack_events`/`player_cast_events`/`player_rest_events`/`enemy_phase_events`/`use_item_events`)；`CombatEvent` 末尾追加 `target_hp_after`/`target_max_hp`/`actor_mp_after`/`target_mp_after`（血条/真气条直设，规避加速/跳过错位）。
-- **已知待做（M3+）**：敌人 AI 权重选技能（`enemies.json.abilities` 已就位）；状态引擎扩护盾/反弹/复活；演出层动效/音效令牌化（飘字现直设色，待接 `ui_sfx.json`）；`ui_anim.json` 的 `battle` 令牌块待 UI 窗口补（M2 用 Director `_FALLBACK` 兜底）。
+- **M3-1 已交付（2026-08-29）**：敌人 AI 权重选技能——`enemies.json.abilities` schema 扩为 `{id,weight,condition}`（悬空 `sword_001`/`blade_001` 重定向到 `sword_qingsong_001`/`blade_duanshui_001`）；`combat_service._normalize_abilities` 归一化 + `CombatCharacter.ai_kit`；`combat_core` 抽 `_cast_skill`（玩家/敌人共用施法结算，**自buff 免自伤**）+ 重写 `enemy_phase`（按权重+条件选招、无可用招普攻兜底）+ `_pick_enemy_ability`/`_ability_usable`/`_condition_met`（确定性加权，rng 由内核 seed 驱动）；**顺带修 M1 冷却 bug**：`tick_unit` 开头递减 `cooldowns`（此前全工程只设置/判定从不减 1，招式永久进冷却，策略深度丧失）。战斗套件 15→19 全绿。变更通告 `变更通告_2026-08-29_敌人AI选技能.md`（战斗窗口主权，不自 commit，交 UI 模块）。
+- ⚠️ **测试编成坑**：`battle_bandit_001.enemy_ids = ["bandit_001","bandit_001"]`（两个山贼，无 `bandit_002`）。战斗单测别假设具体敌人编成——条件门控等用例改在测试内给 `enemy.ai_kit` 注入已知包 + 设 `mp`，而非依赖某敌人 id。
+- **已知待做（M3+）**：M3-2 状态引擎扩护盾/反弹/复活；M3-3 演出层动效/音效令牌化（飘字现直设色，待接 `ui_sfx.json`）；`ui_anim.json` 的 `battle` 令牌块待 UI 窗口补（M2 用 Director `_FALLBACK` 兜底）。
 - ⚠️ **确定性测试陷阱**：`combat_service` 是单例，确定性测试每个 run 必须「开战→行动→记录」自成一体；先开两次战再行动会让两次行动都作用在最后一次激活态上（已栽过，见 `test_deterministic_same_seed`）。
 
 ## 背包层现状（P0/P1 已修，详见 2026-08-29.md #149 段）
@@ -68,12 +70,12 @@ Phase 0 脚手架 ✅ → Phase 1 垂直切片 ✅ → **M1 战斗逻辑内核 �
 - **战斗窗口主权**：`services/combat/**` + `data/runtime/combat_*.gd` + `data/configs/scenes/battles.json` + `scenes/gameplay/battle/**` + `skills.json` + `enemies.json`。
 - **背包窗口主权**：`services/inventory/**` + `data/runtime/item_instance.gd` + `data/configs/items/**` + `core/constants/item_constants.gd` + `core/enums/item_enums.gd` + `tools/gen_contract.gd` + `docs/契约总表.md`。
 - **Git 精确提交铁律**：仓库为 master 单分支，提交信息格式 `[窗口名] 改动；影响：xxx；不影响：xxx`。⚠️ 教训：M1 提交(`3f30636`)曾把当时工作区全部文件（含背包窗口未提交的 EventBus/player_state/combat_service 改动）一起卷入——**各窗口必须逐个 `git add <自己的文件>`，严禁 `git add -A` / `git add .`**；开工前先 `git log --oneline -5` + `git status` 区分哪些改动是自己的。
-- ⚠️ **git 提交权（用户 2026-08-29 最新拍板「你（本对话/AI）负责 git 提交」）**：git 提交**统一由本对话(AI) 收口**，背包/战斗/UI 等窗口**不再自行 `git commit`**。各窗口收尾只做：产代码 + 跑双闸门 + 写本窗口《变更通告》（含「改动文件清单」）；本对话按清单逐个 `git add <文件>` 精确入库（仍禁 `git add -A` / `git add .`），提交信息 `[窗口名]` 前缀。此规取代前一条「UI 模块统一」表述。
+- ⚠️ **git 提交权（用户 2026-08-29 拍板收口到「UI 模块」）**：git 提交**统一由 UI 模块收口**，战斗/背包/设置等窗口**不再自行 `git commit`**。各窗口收尾只做：产代码 + 跑双闸门 + 写本窗口《变更通告》（含「改动文件清单」）；UI 模块按清单逐个 `git add <文件>` 精确入库（仍禁 `git add -A` / `git add .`），提交信息 `[窗口名]` 前缀。此规取代前「背包模块收口」「本对话(AI) 收口」两种表述——最终落到 UI 模块。
 - Godot 验证**必须串行**；`docs/` 不要两人改同一篇；提交按里程碑分开（M1 提交 `3f30636` 已与 UI 并发改动隔离）。
 
 ## 协同开发 SOP（开工 / 收尾双闸门 · 用户 2026-08-29 拍板）
 - **开工前**：读日期最新的 `docs/变更通告_*.md` + 读 `docs/契约总表.md`（gen_contract 自动生成，禁止手改；代码是唯一真源）。
 - **收尾时**：跑双闸门 → ① `--headless --quit` 零错误 ② `res://tests/unit/run_all.tscn` 零失败 → 写本窗口的《变更通告》→ 若动了接口则重跑 `gen_contract.gd` 并把 `契约总表.md` 入库。
-- **git 提交**：**统一由本对话(AI) 收口**（用户 2026-08-29 最新拍板「你负责 git 提交」）。背包/战斗/UI 窗口收尾不 commit，只产代码 + 双闸门 + 本窗口《变更通告》（含改动文件清单），交本对话精确 add 入库；仍禁 `git add -A` / `git add .`。
+- **git 提交**：**统一由 UI 模块收口**（用户 2026-08-29 拍板「git 提交只交给 UI 模块，其他窗口只列文件清单」）。UI/设置/战斗/背包窗口收尾不 commit，只产代码 + 双闸门 + 本窗口《变更通告》（含改动文件清单），交 UI 模块精确 add 入库；仍禁 `git add -A` / `git add .`。
 - **共享地基（冻结，只增不改）**：`core/enums/*_enums.gd`、`autoload/EventBus.gd`、`autoload/ConfigManager.gd`、`data/configs/ui/screens.json`、`strings.csv`。改动必须在当轮《变更通告》「共享地基增量」表里明示（信号/枚举末尾追加，绝不动已有项），并打招呼。
 - 已落地的《变更通告》：`变更通告_2026-08-29_背包窗口.md`（背包窗口）、`变更通告_2026-08-29_战斗逻辑层.md`（M1）、`变更通告_2026-08-29_战斗演出编排.md`（M2 演出）、`变更通告_2026-08-29_UI主线整改.md`（#150–#154）、`变更通告_2026-08-29_设置弹窗整改.md`（设置弹窗独立化 + 美工规范 + 现存弹窗审计 + 分辨率加固 + 契约总表 UIManager 段大小写修复）。
