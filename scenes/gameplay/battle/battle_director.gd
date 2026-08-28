@@ -17,13 +17,21 @@ var _view: BattleView = null
 var _speed_scale: float = 1.0
 var _instant: bool = false
 
-# 兜底时长（秒）：ui_anim.json 缺失 battle 块时使用，与 ui_anim 现有 durations 一致
+# 兜底时长（秒）：ui_anim.json 缺失 battle 块时使用。
+# 含 M3-3 补齐的战斗全量令牌意图值，确保 UI 窗口补 battle 块前手感也正确。
 const _FALLBACK := {
 	"instant": 0.0,
 	"fast": 0.08,
 	"normal": 0.12,
 	"gentle": 0.18,
 	"slow": 0.25,
+	"damage_pop": 0.12,
+	"hit_shake": 0.12,
+	"turn_gap": 0.1,
+	"death_fade": 0.4,
+	"shield_absorb": 0.12,
+	"reflect": 0.14,
+	"revive": 0.35,
 }
 var _anim: Dictionary = {}
 
@@ -84,6 +92,12 @@ func _token_for(ev: CombatEvent) -> String:
 			return "turn_gap"
 		CombatEvent.Type.COOLDOWN_SET:
 			return "instant"
+		CombatEvent.Type.SHIELD_ABSORB:
+			return "shield_absorb"
+		CombatEvent.Type.REFLECT:
+			return "reflect"
+		CombatEvent.Type.REVIVE:
+			return "revive"
 		CombatEvent.Type.OUTCOME:
 			return "death_fade"
 		_:

@@ -39,6 +39,12 @@ func play_event(ev: CombatEvent) -> void:
 			_pop(ev.target_id, "%d" % ev.value, Color(0.95, 0.5, 0.2))
 		CombatEvent.Type.STATUS_EXPIRED:
 			_pop(ev.target_id, "解除", Color(0.7, 0.7, 0.7))
+		CombatEvent.Type.SHIELD_ABSORB:
+			_play_shield(ev)
+		CombatEvent.Type.REFLECT:
+			_play_reflect(ev)
+		CombatEvent.Type.REVIVE:
+			_play_revive(ev)
 		_:
 			pass
 	anim_completed.emit()
@@ -51,8 +57,31 @@ func _play_damage(ev: CombatEvent) -> void:
 		_pop(ev.target_id, "Miss", Color(0.8, 0.8, 0.8))
 	elif ev.crit:
 		_pop(ev.target_id, "-%d!" % ev.value, Color(1.0, 0.85, 0.2))
-	else:
+	elif ev.value > 0:
+		# 护盾全吸收时 DAMAGE.value==0，跳过难看的 "-0"
 		_pop(ev.target_id, "-%d" % ev.value, Color(0.95, 0.3, 0.3))
+
+## 护盾吸收：设盾条宽度 + 青色飘字（吸收量）
+func _play_shield(ev: CombatEvent) -> void:
+	var hud: UnitHud = panels.get(ev.target_id)
+	if hud != null:
+		hud.set_shield(ev.target_shield_after)
+	_pop(ev.target_id, "盾%d" % ev.value, Color(0.4, 0.95, 0.95))
+
+## 反弹：REFLECT 不发独立 DAMAGE，须按 target_hp_after 更新攻击者血条 + 紫色飘字
+func _play_reflect(ev: CombatEvent) -> void:
+	var hud: UnitHud = panels.get(ev.target_id)
+	if hud != null and ev.target_max_hp > 0:
+		hud.set_hp(ev.target_hp_after)
+	_pop(ev.target_id, "反弹%d" % ev.value, Color(0.85, 0.4, 0.95))
+
+## 复活：设血条 + 金色闪光特效 + 金色飘字
+func _play_revive(ev: CombatEvent) -> void:
+	var hud: UnitHud = panels.get(ev.target_id)
+	if hud != null and ev.target_max_hp > 0:
+		hud.set_hp(ev.target_hp_after)
+		hud.play_revive()
+	_pop(ev.target_id, "复活!", Color(1.0, 0.85, 0.2))
 
 func _play_heal(ev: CombatEvent) -> void:
 	var uid: String = ev.target_id if ev.target_id != "" else ev.actor_id

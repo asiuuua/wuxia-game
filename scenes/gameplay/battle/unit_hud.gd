@@ -9,6 +9,7 @@ class_name UnitHud
 var _name: Label
 var _hp_bg: ColorRect
 var _hp_fill: ColorRect
+var _shield_fill: ColorRect
 var _mp_bg: ColorRect
 var _mp_fill: ColorRect
 var _status: HBoxContainer
@@ -26,6 +27,9 @@ func _ready() -> void:
 	_hp_bg.size = Vector2(BAR_W, 10); _hp_bg.position = Vector2(0, 22); add_child(_hp_bg)
 	_hp_fill = ColorRect.new(); _hp_fill.color = Color(0.9, 0.2, 0.2)
 	_hp_fill.size = Vector2(BAR_W, 10); _hp_fill.position = Vector2(0, 22); add_child(_hp_fill)
+	# 护盾条：血条上方一条青色细条，宽度按 shield/max_hp；初始宽 0（无盾隐藏）
+	_shield_fill = ColorRect.new(); _shield_fill.color = Color(0.4, 0.95, 0.95)
+	_shield_fill.size = Vector2(0, 4); _shield_fill.position = Vector2(0, 18); add_child(_shield_fill)
 	_mp_bg = ColorRect.new(); _mp_bg.color = Color(0.1, 0.15, 0.3)
 	_mp_bg.size = Vector2(BAR_W, 6); _mp_bg.position = Vector2(0, 34); add_child(_mp_bg)
 	_mp_fill = ColorRect.new(); _mp_fill.color = Color(0.3, 0.5, 0.95)
@@ -45,6 +49,24 @@ func set_hp(hp: int) -> void:
 func set_mp(mp: int) -> void:
 	var ratio: float = clampf(float(mp) / float(_max_mp), 0.0, 1.0)
 	_tween_bar(_mp_fill, BAR_W * ratio)
+
+## 护盾条：按 shield / max_hp 比例（盾以气血单位计，故相对 max_hp 显示）
+func set_shield(shield: int) -> void:
+	var ratio: float = clampf(float(shield) / max(1.0, float(_max_hp)), 0.0, 1.0)
+	_tween_bar(_shield_fill, BAR_W * ratio)
+
+## 复活特效：金色闪光覆盖 HUD 后淡出（服从 _instant）
+func play_revive() -> void:
+	if _instant:
+		return
+	var flash := ColorRect.new()
+	flash.color = Color(1.0, 0.85, 0.2, 0.55)
+	flash.size = Vector2(220, 64)
+	flash.position = Vector2(0, 0)
+	add_child(flash)
+	var t := create_tween()
+	t.tween_property(flash, "modulate:a", 0.0, 0.35)
+	t.tween_callback(flash.queue_free)
 
 func _tween_bar(bar: ColorRect, target_w: float) -> void:
 	if _instant:
