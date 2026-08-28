@@ -291,3 +291,88 @@ func test_condition_gates_enemy_skill() -> void:
 	if skill_ev == null:
 		return
 	expect(skill_ev.skill_id == "sword_qingsong_001", "应施展青松剑法而非被门控的凝神心法，实际 %s" % skill_ev.skill_id)
+
+## M3-2：护盾应先吸收伤害，气血不变、护盾减少；并产出 SHIELD_ABSORB 事件
+func test_shield_absorb_reduces_damage() -> void:
+	var st: CombatState = _start()
+	if st == null:
+		return
+	var target: CombatCharacter = st.enemies[0]
+	target.shield = 200
+	target.dodge_rate = 0.0
+	target.defense = 0
+	st.player.crit_rate = 0.0
+	var before_hp: int = target.hp
+	var events: Array[CombatEvent] = GameManager.combat_service.player_attack_events(target.character_id)
+	expect(target.hp == before_hp, "护盾完全吸收时敌人气血应不变（%d→%d）" % [before_hp, target.hp])
+	expect(target.shield == 150, "护盾应减少所受伤害(50)，实际 %d" % target.shield)
+	var absorbed: bool = false
+	for e in events:
+		if e.type == CombatEvent.Type.SHIELD_ABSORB:
+			absorbed = true
+	expect(absorbed, "应产生护盾吸收事件 SHIELD_ABSORB")
+
+## M3-2：玩家挂荆棘(REFLECT 30%)，受击时应把部分伤害反弹给攻击者
+func test_reflect_damages_attacker() -> void:
+	var st: CombatState = _start()
+	if st == null:
+		return
+	st.player.dodge_rate = 0.0
+	st.player.defense = 0
+	var refl := StatusEffect.new()
+	refl.effect_id = "jingci"; refl.name_key = "荆棘"; refl.type = CombatEnums.EffectType.REFLECT
+	refl.stat = ""; refl.mode = StatusEffect.MODE_FLAT; refl.value = 30.0
+	refl.stacks = 1; refl.max_stacks = 3; refl.remaining = 3; refl.dot_per_turn = 0
+	st.player.status_effects.append(refl)
+	st.enemies[1].is_dead = true            # 隔离：仅首敌出手
+	for e in st.enemies:
+		if e.is_alive():
+			e.attack = 20; e.defense = 0; e.crit_rate = 0.0; e.dodge_rate = 0.0; e.mp = 0
+	var before_player: int = st.player.hp
+	var before_enemy: int = st.enemies[0].hp
+	GameManager.combat_service.run_enemy_turns()
+	expect(st.player.hp == before_player - 20, "玩家应受 20 伤害（%d→%d）" % [before_player, st.player.hp])
+	expect(st.enemies[0].hp == before_enemy - 6, "首敌应受反弹 6 伤害（20×30%，%d→%d）" % [before_enemy, st.enemies[0].hp])
+
+## M3-2：玩家挂不屈(REVIVE 30%)，首次致死被拉起；二次致死（已无复活层）真正死亡
+func test_revive_on_lethal() -> void:
+	var st: CombatState = _start()
+	if st == null:
+		return
+	st.player.dodge_rate = 0.0
+	st.player.defense = 0
+	var rev := StatusEffect.new()
+	rev.effect_id = "buqu"; rev.name_key = "不屈"; rev.type = CombatEnums.EffectType.REVIVE
+	rev.stat = ""; rev.mode = StatusEffect.MODE_FLAT; rev.value = 30.0
+	rev.stacks = 1; rev.max_stacks = 1; rev.remaining = 99; rev.dot_per_turn = 0
+	st.player.status_effects.append(rev)
+	st.enemies[1].is_dead = true            # 隔离：仅首敌出手
+	for e in st.enemies:
+		if e.is_alive():
+			e.attack = 99999; e.defense = 0; e.crit_rate = 0.0; e.dodge_rate = 0.0; e.mp = 0
+	var events1: Array[CombatEvent] = GameManager.combat_service.enemy_phase_events()
+	var revive_ev: CombatEvent = null
+	for e in events1:
+		if e.type == CombatEvent.Type.REVIVE:
+			revive_ev = e
+	expect(revive_ev != null, "首次致死应产生复活事件 REVIVE")
+	expect(st.player.is_alive(), "首次致死应被不屈复活，仍存活")
+	expect(st.player.hp > 0, "复活后气血应 >0（%d）" % st.player.hp)
+	# 二次致死（已无复活层）→ 真正死亡
+	GameManager.combat_service.enemy_phase_events()
+	expect(st.player.is_dead, "二次致死且无复活层，应真正死亡")
+
+## M3-2（修致命 DoT 缺口）：挂致命 DoT 的玩家 tick 至 hp<=0 应真正倒地/死亡
+func test_dot_lethal_triggers_down() -> void:
+	var st: CombatState = _start()
+	if st == null:
+		return
+	var dot := StatusEffect.new()
+	dot.effect_id = "zhuoshao"; dot.name_key = "灼烧"; dot.type = CombatEnums.EffectType.DOT
+	dot.stat = ""; dot.mode = StatusEffect.MODE_FLAT; dot.value = 0.0
+	dot.stacks = 1; dot.max_stacks = 9; dot.remaining = 2; dot.dot_per_turn = -5000; dot.clear_on_rest = false
+	st.player.status_effects.append(dot)
+	st.player.hp = 10
+	st.player.dodge_rate = 0.0
+	GameManager.combat_service.get_core().tick_unit(st.player)
+	expect(not st.player.is_alive(), "致命 DoT 应触发倒地/死亡（此前缺口：不会致死）")

@@ -232,6 +232,7 @@ func tick_unit(unit: CombatCharacter) -> Array[CombatEvent]:
 			ev_tick.target_hp_after = unit.hp
 			ev_tick.target_max_hp = unit.max_hp
 			events.append(ev_tick)
+			_try_down(unit, events)        # 修致命 DoT 缺口：毒/灼致死也应触发死亡/复活
 		se.remaining -= 1
 		if se.remaining <= 0:
 			unit.status_effects.remove_at(i)
@@ -243,6 +244,12 @@ func _apply_status(unit: CombatCharacter, status_id: String, stacks: int) -> Com
 	var cfg: Dictionary = _get_status_cfg(status_id)
 	if cfg.is_empty() or unit == null:
 		return null
+	var stype: int = CombatEnums.EffectType.get(cfg.get("type", "BUFF"))
+	# SHIELD 特例：直接累加到 unit.shield 资源，不登记 StatusEffect（避免到期误扣已消耗护盾）
+	if stype == CombatEnums.EffectType.SHIELD:
+		var add: int = int(cfg.get("value", 0)) * stacks
+		unit.shield = min(unit.shield + add, unit.max_hp)
+		return _ev(CombatEvent.Type.STATUS_APPLIED, "", unit.character_id, 0, false, false, status_id, stacks)
 	for se in unit.status_effects:
 		if se.effect_id == status_id:
 			se.stacks = min(se.max_stacks, se.stacks + stacks)
@@ -251,7 +258,7 @@ func _apply_status(unit: CombatCharacter, status_id: String, stacks: int) -> Com
 	var se := StatusEffect.new()
 	se.effect_id = status_id
 	se.name_key = cfg.get("name", status_id)
-	se.type = CombatEnums.EffectType.get(cfg.get("type", "BUFF"))
+	se.type = stype
 	se.stat = cfg.get("stat", "")
 	se.mode = StatusEffect.mode_from_str(cfg.get("mode", "flat"))
 	se.value = float(cfg.get("value", 0))
@@ -302,19 +309,81 @@ func _resolve_hit(attacker: CombatCharacter, target: CombatCharacter, power: int
 	if crit:
 		dmg = int(dmg * attacker.crit_damage)
 	dmg = max(1, int(float(dmg) * target.damage_taken_mult))
-	target.hp = max(0, target.hp - dmg)
-	var ev_hit := _ev(CombatEvent.Type.DAMAGE, attacker.character_id, target.character_id, dmg, crit, false)
+	# ── 护盾吸收：伤害先扣盾再扣血，持续到被消耗 ──
+	var dealt: int = dmg
+	if target.shield > 0:
+		var absorbed: int = min(target.shield, dealt)
+		target.shield -= absorbed
+		dealt -= absorbed
+		var ev_sh := _ev(CombatEvent.Type.SHIELD_ABSORB, attacker.character_id, target.character_id, absorbed)
+		ev_sh.target_shield_after = target.shield
+		ev_sh.target_hp_after = target.hp
+		ev_sh.target_max_hp = target.max_hp
+		events.append(ev_sh)
+	target.hp = max(0, target.hp - dealt)
+	var ev_hit := _ev(CombatEvent.Type.DAMAGE, attacker.character_id, target.character_id, dealt, crit, false)
 	ev_hit.target_hp_after = target.hp
 	ev_hit.target_max_hp = target.max_hp
 	events.append(ev_hit)
+	# ── 反弹（荆棘）：把所承受伤害的一部分反弹给攻击者（直写，绕过 _resolve_hit 防连锁）──
+	if attacker != null and attacker != target and attacker.is_alive():
+		var rp: float = _reflect_pct(target)
+		if rp > 0.0:
+			var r: int = int(dealt * rp)
+			if r > 0:
+				attacker.hp = max(0, attacker.hp - r)
+				_try_down(attacker, events)
+				var ev_re := _ev(CombatEvent.Type.REFLECT, target.character_id, attacker.character_id, r)
+				ev_re.target_hp_after = attacker.hp
+				ev_re.target_max_hp = attacker.max_hp
+				events.append(ev_re)
 	return {"events": events, "damage": dmg, "crit": crit, "dodged": false}
 
 func _try_down(target: CombatCharacter, events: Array[CombatEvent]) -> void:
 	if target.hp <= 0 and target.is_alive():
+		# ── 复活（不屈）：消耗一层 REVIVE 状态，原地拉起 ──
+		var rv: int = _revive_amount(target)
+		if rv > 0:
+			target.hp = max(1, rv)
+			target.is_dead = false
+			target.is_downed = false
+			_consume_revive(target)
+			var ev_rv := _ev(CombatEvent.Type.REVIVE, target.character_id, target.character_id, target.hp)
+			ev_rv.target_hp_after = target.hp
+			ev_rv.target_max_hp = target.max_hp
+			events.append(ev_rv)
+			return
 		if target.can_be_downed and not target.is_player:
 			target.is_downed = true
 		else:
 			target.is_dead = true
+
+## 反弹百分比(0.0~1.0)：扫描目标身上 REFLECT 状态，sum(value*stacks)/100
+func _reflect_pct(target: CombatCharacter) -> float:
+	var total: float = 0.0
+	for se in target.status_effects:
+		if se.type == CombatEnums.EffectType.REFLECT:
+			total += se.value * se.stacks
+	return clampf(total / 100.0, 0.0, 1.0)
+
+## 复活量：扫描 REVIVE 状态，返回应复活到的气血（0=无复活）。不消耗。
+func _revive_amount(unit: CombatCharacter) -> int:
+	for se in unit.status_effects:
+		if se.type == CombatEnums.EffectType.REVIVE:
+			var v: int = int(se.value)
+			if v >= 100:
+				return min(v, unit.max_hp)
+			return int(unit.max_hp * v / 100.0)
+	return 0
+
+## 消耗一层 REVIVE 状态（递归删一层）
+func _consume_revive(unit: CombatCharacter) -> void:
+	for i in range(unit.status_effects.size() - 1, -1, -1):
+		if unit.status_effects[i].type == CombatEnums.EffectType.REVIVE:
+			unit.status_effects[i].stacks -= 1
+			if unit.status_effects[i].stacks <= 0:
+				unit.status_effects.remove_at(i)
+			return
 
 func _ev(type_: int, actor: String = "", target: String = "", val: int = 0,
 		crit: bool = false, dodged: bool = false, status_id: String = "",

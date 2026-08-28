@@ -21,6 +21,9 @@ enum Type {
 	STATUS_TICK,     # 状态每回合生效（DoT / HoT）
 	STATUS_EXPIRED,  # 状态消失
 	OUTCOME,         # 战斗结束（VICTORY / DEFEAT / FLEE）
+	SHIELD_ABSORB,   # 护盾吸收伤害（value=吸收量，target_shield_after=剩余护盾）
+	REFLECT,         # 反弹（荆棘）：承受伤害反弹给攻击者（value=反弹量）
+	REVIVE,          # 复活（不屈）：气血归零被拉起（value=复活后气血）
 }
 
 var type: int = Type.DAMAGE
@@ -39,6 +42,7 @@ var target_hp_after: int = 0     # 承受者行动后气血（DAMAGE/HEAL/STATUS
 var target_max_hp: int = 0       # 承受者气血上限
 var actor_mp_after: int = 0      # 发起者行动后真气（QI_COST）
 var target_mp_after: int = 0     # 承受者行动后真气（QI_GAIN / 调息回真气）
+var target_shield_after: int = 0  # 承受者行动后护盾（SHIELD_ABSORB / REFLECT，M3-2；M3-3 演出直设）
 
 func _to_string() -> String:
 	return "CombatEvent(%d %s→%s v=%d%s%s)" % [

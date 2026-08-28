@@ -80,6 +80,42 @@
       "max_stacks": 3,
       "duration": 4,
       "clear_on_rest": false
+    },
+    {
+      "id": "huti",
+      "name": "护体真气",
+      "type": "SHIELD",
+      "stat": "",
+      "mode": "flat",
+      "value": 20,
+      "max_stacks": 5,
+      "duration": 3,
+      "dot_per_turn": 0,
+      "clear_on_rest": false
+    },
+    {
+      "id": "jingci",
+      "name": "荆棘",
+      "type": "REFLECT",
+      "stat": "",
+      "mode": "flat",
+      "value": 30,
+      "max_stacks": 3,
+      "duration": 3,
+      "dot_per_turn": 0,
+      "clear_on_rest": false
+    },
+    {
+      "id": "buqu",
+      "name": "不屈",
+      "type": "REVIVE",
+      "stat": "",
+      "mode": "flat",
+      "value": 30,
+      "max_stacks": 1,
+      "duration": 99,
+      "dot_per_turn": 0,
+      "clear_on_rest": false
     }
   ]
 }
