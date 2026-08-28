@@ -1,0 +1,107 @@
+{
+  "version": "1.0.0",
+  "npcs": [
+    {
+      "id": "npc_village_chief",
+      "name": "村长",
+      "pos_x": 240,
+      "pos_y": 150,
+      "sprite": "res://assets/characters/village_chief.png",
+      "portrait": "res://assets/characters/village_chief_face.png",
+      "dialogs": [
+        {
+          "speaker": "村长",
+          "text": "壮士来得正好！城外山贼猖獗，扰得百姓不得安宁。"
+        },
+        {
+          "speaker": "李十五",
+          "text": "区区毛贼，何足道哉。"
+        },
+        {
+          "speaker": "村长",
+          "text": "善！替老朽除去这股山贼，必有重谢。"
+        }
+      ],
+      "quest_id": "q_bandit_001",
+      "battle_id": "battle_bandit_001"
+    },
+    {
+      "id": "demo_npc",
+      "name": "村口老乞丐",
+      "pos_x": 420,
+      "pos_y": 260,
+      "sprite": "res://assets/characters/beggar.png",
+      "portrait": "res://assets/characters/beggar_face.png",
+      "dialogs": [
+        {
+          "speaker": "村口老乞丐",
+          "text": "少侠，老朽的玉佩被野狗叼走了，可愿帮老朽寻回？"
+        },
+        {
+          "speaker": "李十五",
+          "text": "区区野狗，何足道哉。"
+        },
+        {
+          "speaker": "村口老乞丐",
+          "text": "善！城西荒地那条野狗最为凶悍，替老朽除了它。"
+        },
+        {
+          "speaker": "李十五",
+          "text": "包在在下身上。"
+        }
+      ],
+      "quest_id": "demo_quest",
+      "battle_id": "demo_battle"
+    },
+    {
+      "id": "npc_bandit",
+      "name": "山贼",
+      "pos_x": 700,
+      "pos_y": 100,
+      "sprite": "res://assets/characters/player.png",
+      "portrait": "res://assets/characters/village_chief_face.png",
+      "dialogs": [
+        {"speaker": "山贼", "text": "此路是我开！要想过此路，留下买路财！"}
+      ],
+      "quest_id": "q_bandit_001",
+      "battle_id": "battle_bandit_001"
+    },
+    {
+      "id": "npc_hunter",
+      "name": "猎户",
+      "pos_x": 320,
+      "pos_y": 320,
+      "sprite": "res://assets/characters/player.png",
+      "dialogs": [
+        { "speaker": "猎户", "text": "少侠！荒野里的恶狼又出来伤人了，可愿帮俺除了它们？" },
+        { "speaker": "李十五", "text": "带路。" }
+      ],
+      "quest_id": "q_wolf_001",
+      "battle_id": "battle_wolf_001"
+    },
+    {
+      "id": "npc_sect_elder",
+      "name": "青云剑宗长老",
+      "pos_x": 600,
+      "pos_y": 330,
+      "sprite": "res://assets/characters/player.png",
+      "dialogs": [
+        { "speaker": "青云剑宗长老", "text": "少侠骨骼清奇，可愿入我青云剑宗？先斩山贼头目为入门之礼。" },
+        { "speaker": "李十五", "text": "正合我意。" }
+      ],
+      "quest_id": "q_sect_join_001",
+      "battle_id": "battle_sect_trials"
+    },
+    {
+      "id": "npc_merchant",
+      "name": "货郎",
+      "pos_x": 480,
+      "pos_y": 170,
+      "sprite": "res://assets/characters/player.png",
+      "dialogs": [
+        { "speaker": "货郎", "text": "上好的丹药兵刃，少侠可要瞧瞧？城东铁匠铺也有好货。" },
+        { "speaker": "李十五", "text": "容后再看。" }
+      ]
+    }
+  ]
+}

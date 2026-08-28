@@ -1,0 +1,2 @@
+﻿npc_id,名字,x坐标,y坐标,立绘路径,头像路径,对话1说话人,对话1内容,对话2说话人,对话2内容,对话3说话人,对话3内容,对话4说话人,对话4内容,任务id,战斗id
+demo_npc,村口老乞丐,420,260,res://assets/characters/beggar.png,res://assets/characters/beggar_face.png,村口老乞丐,少侠，老朽的玉佩被野狗叼走了，可愿帮老朽寻回？,李十五,区区野狗，何足道哉。,村口老乞丐,善！城西荒地那条野狗最为凶悍，替老朽除了它。,李十五,包在在下身上。,demo_quest,demo_battle

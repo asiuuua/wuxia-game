@@ -1,0 +1,19 @@
+{
+  "version": "1.0.0",
+
+  "_comment": "UI 音效映射表。事件名 -> 音频路径 + 音量。音频文件缺失时静默跳过（不报错、不崩），换音色只改这张表不动代码。",
+
+  "bus": "SFX",
+  "pool_size": 4,
+
+  "events": {
+    "hover":   { "path": "res://resources/audio/sfx/ui_hover.wav",   "volume_db": -10.0 },
+    "click":   { "path": "res://resources/audio/sfx/ui_click.wav",   "volume_db": -8.0 },
+    "confirm": { "path": "res://resources/audio/sfx/ui_confirm.wav", "volume_db": -6.0 },
+    "cancel":  { "path": "res://resources/audio/sfx/ui_cancel.wav",  "volume_db": -8.0 },
+    "back":    { "path": "res://resources/audio/sfx/ui_back.wav",    "volume_db": -8.0 },
+    "open":    { "path": "res://resources/audio/sfx/ui_open.wav",    "volume_db": -10.0 },
+    "close":   { "path": "res://resources/audio/sfx/ui_close.wav",   "volume_db": -10.0 },
+    "error":   { "path": "res://resources/audio/sfx/ui_error.wav",   "volume_db": -6.0 }
+  }
+}

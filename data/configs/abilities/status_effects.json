@@ -1,0 +1,85 @@
+{
+  "version": "1.0.0",
+  "status_effects": [
+    {
+      "id": "pojia",
+      "name": "破甲",
+      "type": "DEBUFF",
+      "stat": "defense",
+      "mode": "flat",
+      "value": -5,
+      "max_stacks": 9,
+      "duration": 2,
+      "dot_per_turn": 0,
+      "clear_on_rest": false
+    },
+    {
+      "id": "qianggong",
+      "name": "强攻",
+      "type": "BUFF",
+      "stat": "attack",
+      "mode": "pct",
+      "value": 5,
+      "max_stacks": 9,
+      "duration": 2,
+      "clear_on_rest": false
+    },
+    {
+      "id": "gushou",
+      "name": "固守",
+      "type": "BUFF",
+      "stat": "defense",
+      "mode": "pct",
+      "value": 5,
+      "max_stacks": 9,
+      "duration": 2,
+      "clear_on_rest": false
+    },
+    {
+      "id": "zhuoshao",
+      "name": "灼烧",
+      "type": "DOT",
+      "stat": "",
+      "mode": "flat",
+      "value": 0,
+      "max_stacks": 9,
+      "duration": 2,
+      "dot_per_turn": -3,
+      "clear_on_rest": false
+    },
+    {
+      "id": "zhongdu",
+      "name": "中毒",
+      "type": "DOT",
+      "stat": "",
+      "mode": "flat",
+      "value": 0,
+      "max_stacks": 9,
+      "duration": 2,
+      "dot_per_turn": -3,
+      "clear_on_rest": false
+    },
+    {
+      "id": "juqi",
+      "name": "聚气",
+      "type": "BUFF",
+      "stat": "speed",
+      "mode": "pct",
+      "value": 5,
+      "max_stacks": 9,
+      "duration": 2,
+      "clear_on_rest": false
+    },
+    {
+      "id": "jixing",
+      "name": "疾行",
+      "type": "BUFF",
+      "stat": "speed",
+      "mode": "pct",
+      "value": 10,
+      "max_stacks": 3,
+      "duration": 4,
+      "clear_on_rest": false
+    }
+  ]
+}

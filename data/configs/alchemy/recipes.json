@@ -1,0 +1,21 @@
+{
+  "version": "1.0.0",
+  "recipes": [
+    {
+      "id": "recipe_xiaohuan",
+      "name": "炼制小还丹",
+      "inputs": [ { "item_id": "material_herb_001", "count": 2 } ],
+      "output_pill_id": "pill_heal_xiaohuan_001",
+      "output_count": 1,
+      "level_req": 1
+    },
+    {
+      "id": "recipe_huixue",
+      "name": "炼制回血丹",
+      "inputs": [ { "item_id": "material_herb_001", "count": 1 }, { "item_id": "material_root_001", "count": 1 } ],
+      "output_pill_id": "pill_mp_huixue_001",
+      "output_count": 1,
+      "level_req": 1
+    }
+  ]
+}

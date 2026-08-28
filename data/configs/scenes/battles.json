@@ -1,0 +1,37 @@
+{
+  "version": "1.0.0",
+  "battles": [
+    {
+      "id": "battle_bandit_001",
+      "name": "城外山贼",
+      "enemy_ids": [
+        "bandit_001",
+        "bandit_001"
+      ],
+      "turn_mode": "atb",
+      "reward_exp": 30
+    },
+    {
+      "id": "demo_battle",
+      "name": "乞丐的试炼",
+      "enemy_ids": [
+        "demo_enemy"
+      ],
+      "reward_exp": 0
+    },
+    {
+      "id": "battle_wolf_001",
+      "name": "荒野狼群",
+      "enemy_ids": ["wolf_001", "wolf_001"],
+      "turn_mode": "atb",
+      "reward_exp": 40
+    },
+    {
+      "id": "battle_sect_trials",
+      "name": "入宗试炼",
+      "enemy_ids": ["bandit_002"],
+      "turn_mode": "atb",
+      "reward_exp": 80
+    }
+  ]
+}

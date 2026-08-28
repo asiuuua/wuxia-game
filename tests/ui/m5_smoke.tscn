@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://bui5smoke0727"]
+
+[ext_resource type="Script" path="res://tests/ui/m5_smoke.gd" id="1"]
+
+[node name="M5Test" type="Node"]
+script = ExtResource("1")

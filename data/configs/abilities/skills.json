@@ -1,0 +1,109 @@
+{
+  "version": "1.2.0",
+  "skills": [
+    {
+      "id": "sword_qingsong_001",
+      "name": "青松剑法",
+      "tier": "form2",
+      "description": "基础剑招，攻敌上盘，破其甲",
+      "qi_cost": 5,
+      "cooldown": 1,
+      "target": "enemy",
+      "power": 18,
+      "effects": [
+        { "status_id": "pojia", "stacks": 1 }
+      ],
+      "learned_by_default": true
+    },
+    {
+      "id": "blade_duanshui_001",
+      "name": "断水刀法",
+      "tier": "form3",
+      "description": "刚猛一刀，势如断水",
+      "qi_cost": 10,
+      "cooldown": 2,
+      "target": "enemy",
+      "power": 28,
+      "effects": [],
+      "learned_by_default": true
+    },
+    {
+      "id": "inner_tuna_001",
+      "name": "吐纳诀",
+      "tier": "rest",
+      "description": "调息之术，稳固根基，回血回真气",
+      "qi_cost": 0,
+      "cooldown": 0,
+      "target": "self",
+      "power": 0,
+      "effects": [],
+      "learned_by_default": true
+    },
+    {
+      "id": "staff_panlong_001",
+      "name": "蟠龙棍法",
+      "tier": "ultimate",
+      "description": "横扫一片，群攻并破甲",
+      "qi_cost": 12,
+      "cooldown": 3,
+      "target": "all_enemies",
+      "power": 24,
+      "effects": [
+        { "status_id": "pojia", "stacks": 1 }
+      ],
+      "learned_by_default": false
+    },
+    {
+      "id": "qinggong_tiyun_001",
+      "name": "梯云纵",
+      "tier": "qinggong",
+      "description": "轻身之法，集气速率大增",
+      "qi_cost": 8,
+      "cooldown": 2,
+      "target": "self",
+      "power": 0,
+      "effects": [
+        { "status_id": "jixing", "stacks": 1 }
+      ],
+      "learned_by_default": false
+    },
+    {
+      "id": "xinfa_ningshen_001",
+      "name": "凝神心法",
+      "tier": "xinfa",
+      "description": "凝神运功，攻击提升",
+      "qi_cost": 6,
+      "cooldown": 3,
+      "target": "self",
+      "power": 0,
+      "effects": [
+        { "status_id": "qianggong", "stacks": 2 }
+      ],
+      "learned_by_default": false
+    },
+    {
+      "id": "sword_hanjian_001",
+      "name": "寒剑诀",
+      "tier": "form3",
+      "description": "寒气侵骨的一剑，破甲更破势",
+      "qi_cost": 14,
+      "cooldown": 2,
+      "target": "enemy",
+      "power": 34,
+      "effects": [],
+      "learned_by_default": false
+    },
+    {
+      "id": "inner_huatuo_001",
+      "name": "华陀养生术",
+      "tier": "rest",
+      "description": "吐故纳新，战复气血与真气",
+      "qi_cost": 0,
+      "cooldown": 0,
+      "target": "self",
+      "power": 0,
+      "effects": [],
+      "learned_by_default": false
+    }
+  ]
+}

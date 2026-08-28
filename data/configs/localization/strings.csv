@@ -1,0 +1,224 @@
+﻿keys,zh_CN,zh_TW,en
+menu_new_game,开始新的旅程,開始新的旅程,New Journey
+menu_continue,继续江湖路,繼續江湖路,Continue
+menu_load,读取旧梦,讀取舊夢,Load Game
+menu_settings,游戏设置,遊戲設定,Settings
+menu_archive,江湖图鉴,江湖圖鑑,Codex
+menu_quit,退出江湖,退出江湖,Quit
+studio_name,江湖梦华工作室,江湖夢華工作室,Jianghu Menghua Studio
+btn_settings,设置,設定,Settings
+btn_volume,音量,音量,Volume
+btn_language,语言,語言,Language
+save_title,读 取 旧 梦,讀 取 舊 夢,Load Game
+auto_save_section,自动存档,自動存檔,Auto Saves
+no_auto_save,暂无自动存档,暫無自動存檔,No auto saves
+confirm_load_title,读取存档,讀取存檔,Load Save
+confirm_load_content,确定读取此存档？当前进度将丢失。,確定讀取此存檔？當前進度將丟失。,Load this save? Current progress will be lost.
+confirm_delete_title,删除存档,刪除存檔,Delete Save
+confirm_delete_content,确定删除此存档？此操作不可撤销。,確定刪除此存檔？此操作不可撤銷。,Delete this save? This cannot be undone.
+confirm_newgame_title,新的旅程,新的旅程,New Journey
+confirm_newgame_content,将在此存档位开始新的旅程，确定吗？,將在此存檔位開始新的旅程，確定嗎？,Start a new journey in this slot?
+settings_title,游 戏 设 置,遊 戲 設 定,Settings
+cat_audio,音频设置,音訊設定,Audio
+cat_graphics,画面设置,畫面設定,Graphics
+cat_control,控制设置,控制設定,Controls
+cat_game,游戏设置,遊戲設定,Game
+cat_language,语言设置,語言設定,Language
+aud_master,主音量,主音量,Master Volume
+aud_music,背景音乐,背景音樂,Music
+aud_sfx,音效,音效,SFX
+aud_voice,语音,語音,Voice
+aud_test,播放测试音效,播放測試音效,Play Test Sound
+gfx_resolution,分辨率,解析度,Resolution
+gfx_display_mode,显示模式,顯示模式,Display Mode
+gfx_vsync,垂直同步,垂直同步,VSync
+gfx_fps,帧率限制,幀率限制,FPS Limit
+gfx_quality,画面质量,畫面品質,Quality
+ctrl_move_up,向上移动,向上移動,Move Up
+ctrl_move_down,向下移动,向下移動,Move Down
+ctrl_move_left,向左移动,向左移動,Move Left
+ctrl_move_right,向右移动,向右移動,Move Right
+ctrl_inventory,背包,背包,Inventory
+ctrl_map,地图,地圖,Map
+ctrl_attributes,属性面板,屬性面板,Attributes
+game_difficulty,难度,難度,Difficulty
+game_autosave,自动存档,自動存檔,Auto Save
+game_text_speed,文字速度,文字速度,Text Speed
+lang_ui,界面语言,介面語言,Interface Language
+reset_btn,恢复%s默认,恢復%s預設,Reset %s to Default
+loading_title,江 湖 梦 华,江 湖 夢 華,Jianghu Menghua
+aud_test_label,音频测试,音訊測試,Audio Test
+back_btn,← 返回,← 返回,← Back
+toggle_on,开,開,On
+toggle_off,关,關,Off
+rebind_hint,（按下新按键以绑定「%s」）,（按下新按鍵以綁定「%s」）,(Press a new key to bind '%s')
+rebind_prompt,…按键…,…按鍵…,…key…
+ui_confirm_ok,确定,確定,OK
+ui_confirm_cancel,取消,取消,Cancel
+ui_inventory_title,背包,背包,Backpack
+ui_inventory_weight,负重 %s / %s,負重 %s / %s,Weight %s / %s
+ui_inventory_main,主背包,主背包,Main Bag
+ui_inventory_material,材料箱,材料箱,Materials
+ui_inventory_quest,任务栏,任務欄,Quests
+ui_inventory_close,关闭 (B),關閉 (B),Close (B)
+ui_map_title,地图 · 世界概览,地圖 · 世界概覽,Map · World Overview
+ui_map_current,当前区域：%s,當前區域：%s,Current Region: %s
+ui_map_hub,区域枢纽,區域樞紐,Region Hub
+ui_map_hint,（区域间以读条切换，后续接入快速传送）,（區域間以讀條切換，後續接入快速傳送）,(Regions switch via loading screen; fast travel later)
+ui_map_close,关闭 (M),關閉 (M),Close (M)
+region_start_town,起始镇,起始鎮,Starting Town
+region_sect_gate,门派山门,門派山門,Sect Gate
+region_market,江湖市井,江湖市井,Jianghu Market
+region_frontier,边关烽燧,邊關烽燧,Frontier Beacon
+region_isle,海外仙岛,海外仙島,Overseas Immortal Isle
+region_secret,秘境洞天,秘境洞天,Secret Realm
+region_underworld,幽冥地府,幽冥地府,Underworld
+region_desert,西域大漠,西域大漠,Western Desert
+region_snow,北境雪原,北境雪原,Northern Snowfield
+ui_dialog_next,下一句,下一句,Next
+ui_dialog_accept,接受任务：%s,接受任務：%s,Accept Quest: %s
+ui_dialog_fight,开始战斗,開始戰鬥,Start Battle
+ui_dialog_end,结束,結束,End
+ui_hud_line1,Lv.%s  %s,Lv.%s  %s,Lv.%s  %s
+ui_hud_line2,气血 %s/%s   内力 %s/%s,氣血 %s/%s   內力 %s/%s,HP %s/%s   MP %s/%s
+ui_hud_line3,银两 %s,銀兩 %s,Silver %s
+ui_hud_no_quest,当前无任务,當前無任務,No active quest
+ui_hud_quest,任务：%s,任務：%s,Quest: %s
+ui_hud_objective,· %s %s/%s,· %s %s/%s,· %s %s/%s
+ui_equip_title,装备,裝備,Equipment
+ui_equip_main_hand,主手,主手,Main Hand
+ui_equip_armor,护甲,護甲,Armor
+ui_equip_accessory,饰品,飾品,Accessory
+ui_equip_bag,背包可装备：,背包可裝備：,Equippable in Bag:
+ui_equip_close,关闭,關閉,Close
+ui_equip_none,（无）,（無）,(None)
+ui_equip_equip,装备,裝備,Equip
+ui_equip_stat,攻 %s  防 %s  气血 %s/%s  内力 %s/%s,攻 %s  防 %s  氣血 %s/%s  內力 %s/%s,ATK %s  DEF %s  HP %s/%s  MP %s/%s
+ui_alchemy_title,炼药,煉藥,Alchemy
+ui_alchemy_empty,（暂无配方）,（暫無配方）,(No recipes yet)
+ui_alchemy_close,关闭,關閉,Close
+ui_alchemy_refine,炼制,煉製,Refine
+ui_save_thumb,江 湖,江 湖,Jianghu
+ui_save_empty,—— 空 ——,—— 空 ——,—— Empty ——
+ui_save_load,读取,讀取,Load
+ui_save_delete,删除,刪除,Delete
+ui_save_new,新的旅程,新的旅程,New Journey
+ui_save_slot,存档 %s,存檔 %s,Save %s
+ui_save_auto,自动存档 %s,自動存檔 %s,Auto Save %s
+ui_save_faction,门派：%s,門派：%s,Sect: %s
+ui_save_playtime,游戏时间：%s,遊戲時間：%s,Playtime: %s
+ui_save_savetime,保存时间：%s,保存時間：%s,Saved: %s
+ui_save_scene,所在场景：%s,所在場景：%s,Location: %s
+ui_save_default_name,侠客,俠客,Wanderer
+ui_save_no_sect,无门无派,無門無派,Unaffiliated
+ui_save_unknown_scene,江湖某处,江湖某處,Somewhere in Jianghu
+ui_save_dash,—,—,—
+ui_menu_item_placeholder,菜单项,菜單項,Menu Item
+ui_attr_title,人物属性 (Tab),人物屬性 (Tab),Attributes (Tab)
+ui_attr_overview,属性总览,屬性總覽,Attribute Overview
+ui_attr_close,关闭 (Tab),關閉 (Tab),Close (Tab)
+ui_attr_info,%s  Lv.%s    年龄 %s,%s  Lv.%s    年齡 %s,%s  Lv.%s    Age %s
+ui_attr_hp,气血,氣血,HP
+ui_attr_mp,内力,內力,MP
+ui_attr_atk,攻击,攻擊,Attack
+ui_attr_def,防御,防禦,Defense
+ui_attr_crit,暴击率,暴擊率,Crit Rate
+ui_attr_dodge,闪避率,閃避率,Dodge Rate
+ui_attr_str,力量,力量,Strength
+ui_attr_con,根骨,根骨,Constitution
+ui_attr_agi,敏捷,敏捷,Agility
+ui_attr_wis,悟性,悟性,Wisdom
+ui_attr_luck,福缘,福緣,Luck
+ui_attr_focus,定力,定力,Focus
+ui_attr_silver,银两,銀兩,Silver
+ui_loading_progress,加载中... %s,載入中... %s,Loading... %s
+ui_loading_ready,「点击进入江湖」,「點擊進入江湖」,Click to enter Jianghu
+ui_loading_tip_fallback,正在整理行囊，准备踏入江湖...,正在整理行囊，準備踏入江湖...,Packing up, ready to step into Jianghu...
+esc_return_game,返回游戏,返回遊戲,Return to Game
+esc_save_game,保存游戏,保存遊戲,Save Game
+esc_load_game,载入游戏,載入遊戲,Load Game
+esc_unstuck,脱离卡死,脫離卡死,Unstuck
+esc_settings,设置,設置,Settings
+esc_tutorial,教程,教程,Tutorial
+esc_achievements,成就,成就,Achievements
+esc_to_title,返回标题,返回標題,Return to Title
+esc_quit_game,退出游戏,退出遊戲,Quit Game
+esc_save_success,已保存至自动存档,已保存至自動存檔,Saved to auto-save
+esc_save_failed,保存失败,保存失敗,Save failed
+esc_tutorial_todo,教程功能开发中,教程功能開發中,Tutorial is under development
+esc_achievements_todo,成就功能开发中,成就功能開發中,Achievements are under development
+esc_confirm_to_title_title,返回标题,返回標題,Return to Title
+esc_confirm_to_title_content,确定要返回标题界面吗？当前进度将保存到自动存档。,確定要返回標題介面嗎？當前進度將保存到自動存檔。,Return to the title screen? Progress will be saved to auto-save.
+esc_confirm_quit_title,退出游戏,退出遊戲,Quit Game
+esc_confirm_quit_content,确定要离开江湖吗？,確定要離開江湖嗎？,Are you sure you want to leave?
+gfx_mode_windowed,窗口模式,視窗模式,Windowed
+gfx_mode_fullscreen,全屏模式,全螢幕模式,Fullscreen
+gfx_mode_maximized,最大化,最大化,Maximized
+gfx_render_scale,渲染分辨率,渲染解析度,Render Resolution
+gfx_rs_075,75%（更省电）,75%（更省電）,75% (faster)
+gfx_rs_100,100%（标准）,100%（標準）,100% (standard)
+gfx_rs_125,125%,125%,125%
+gfx_rs_150,150%,150%,150%
+gfx_rs_200,200%（更锐利）,200%（更銳利）,200% (sharper)
+save_title_save,保 存 游 戏,保 存 遊 戲,Save Game
+ui_save_save,保存,保存,Save
+ui_save_name_title,为此存档命名,為此存檔命名,Name this save
+ui_save_name_placeholder,输入存档名（如：初入江湖）,輸入存檔名（如：初入江湖）,Enter save name
+save_overwrite_title,覆盖存档,覆蓋存檔,Overwrite Save
+save_overwrite_content,该槽位已有存档，确定覆盖吗？,該槽位已有存檔，確定覆蓋嗎？,This slot already has a save. Overwrite?
+save_custom_success,已保存,已保存,Saved
+diff_easy_name,剧情,劇情,Story
+diff_easy_desc,最宽容的难度，适合体验剧情与江湖风光。,最寬容的難度，適合體驗劇情與江湖風光。,Most forgiving. For story and scenery.
+diff_normal_name,入门,入門,Novice
+diff_normal_desc,标准的江湖历练难度。,標準的江湖歷練難度。,Standard Jianghu experience.
+diff_hard_name,普通,普通,Ordinary
+diff_hard_desc,敌势渐强，需运筹帷幄。,敵勢漸強，需運籌帷幄。,Foes grow stronger; strategy required.
+diff_nightmare_name,苦难,苦難,Tribulation
+diff_nightmare_desc,非致命击倒与逃跑皆受限制，凶险异常。,非致命擊倒與逃跑皆受限製，凶險異常。,No non-lethal takedowns, escape hindered, brutal.
+diff_hell_name,地狱,地獄,Inferno
+diff_hell_desc,死亡即删档，无法回档。慎入。,死亡即刪檔，無法回檔。慎入。,Death deletes the save. No retry.
+diff_select_title,选择难度,選擇難度,Select Difficulty
+diff_select_confirm,确定选择,確定選擇,Confirm Selection
+diff_select_back,返回,返回,Back
+diff_select_hell_warn_title,地狱难度警告,地獄難度警告,Inferno Warning
+diff_select_hell_warn_content,地狱难度下，死亡将直接删除存档且不可回档。确定选择吗？,地獄難度下，死亡將直接刪除存檔且不可回檔。確定選擇嗎？,On Inferno, death deletes your save with no retry. Confirm?
+diff_penalty_prefix,死亡惩罚：,死亡懲罰：,Death penalty:
+pen_respawn,回到安全点（不损失）,回到安全點（不損失）,Return to safe point (no loss)
+pen_loadsave,读档重来并扣取资源,讀檔重來並扣取資源,Reload save and lose resources
+pen_delete,删除存档，返回主菜单,刪除存檔，返回主選單,Delete save, return to title
+pen_money,丢失 %d 银两,丟失 %d 銀兩,Lose %d silver
+pen_items,丢失 %d 件杂物,丟失 %d 件雜物,Lose %d junk items
+pen_debt,无钱则负债,無錢則負債,Debt if broke
+pen_cg,触发剧情CG,觸發劇情CG,Triggers story CG
+cg_lizhang_ransom,（小张CG）你被人从泥里拽起来，耳边是李村小张的笑：“钱没有？那这身家当先押我这儿，回头拿银子来赎。”,（小張CG）你被人從泥裡拽起來，耳邊是李村小張的笑：「錢沒有？那這身家當先押我這兒，回頭拿銀子來贖。」,(Xiao Zhang CG) You are hauled out of the mud; Xiao Zhang's laugh: "No money? These belongings stay with me as collateral. Come back with silver."
+cg_bully_extort,（恶霸CG）一只靴子踩在你背上，恶霸俯身狞笑：“穷光蛋也敢闯江湖？滚吧，这身破烂留这儿抵债。”,（惡霸CG）一隻靴子踩在你背上，惡霸俯身獰笑：「窮光蛋也敢闖江湖？滾吧，這身破爛留這兒抵債。」,(Bully CG) A boot presses your back; the bully snarls: "A pauper dares roam Jianghu? Scram, and leave your rags as payment."
+ui_forge_title,锻造,鍛造,Forge
+ui_forge_empty,（暂无配方）,（暫無配方）,(No recipes)
+ui_forge_forge,锻造,鍛造,Forge
+ui_forge_close,关闭,關閉,Close
+ui_forge_success,锻造成功,鍛造成功,Forged
+ui_forge_fail_material,材料不足,材料不足,Insufficient materials
+ui_forge_fail_level,锻造等级不足,鍛造等級不足,Forge level too low
+ui_forge_result_prefix,获得,獲得,Obtained
+ui_shop_title,商店,商店,Shop
+ui_shop_buy,购买,購買,Buy
+ui_shop_sell,出售,出售,Sell
+ui_shop_close,关闭,關閉,Close
+ui_shop_no_money,银两不足,銀兩不足,Not enough silver
+ui_shop_no_stock,库存不足,庫存不足,Out of stock
+ui_shop_no_item,背包无此物,背包無此物,Not in bag
+ui_shop_empty,（暂无货物）,（暫無貨物）,(No goods)
+ui_sect_title,门派,門派,Sect
+ui_sect_join,加入,加入,Join
+ui_sect_contribute,贡献,貢獻,Contribute
+ui_sect_close,关闭,關閉,Close
+ui_sect_rank,阶位,階位,Rank
+ui_sect_rep,声望,聲望,Reputation
+ui_sect_joined,已加入门派,已加入門派,Joined sect
+ui_sect_fail_rep,声望不足,聲望不足,Reputation too low
+ui_sect_fail_already,已在门派中,已在門派中,Already in a sect
+gfx_ui_scale,界面缩放,介面縮放,UI Scale
+gfx_ui_075,75%（界面更小）,75%（介面更小）,75% (smaller)
+gfx_ui_100,100%（标准）,100%（標準）,100% (standard)
+gfx_ui_125,125%（界面更大）,125%（介面更大）,125% (larger)
+gfx_ui_150,150%（字更大更清晰）,150%（字更大更清晰）,150% (largest)

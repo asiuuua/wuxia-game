@@ -1,0 +1,29 @@
+{
+  "version": "1.0.0",
+  "shops": [
+    {
+      "id": "shop_general_001",
+      "name": "杂货铺",
+      "buy_rate": 1.0,
+      "sell_rate": 0.5,
+      "stock": [
+        { "item_id": "pill_heal_xiaohuan_001", "price": 20, "stock_limit": 10, "restock": 10 },
+        { "item_id": "pill_heal_dahuang_001", "price": 60, "stock_limit": 5, "restock": 5 },
+        { "item_id": "material_herb_001", "price": 4, "stock_limit": 20, "restock": 20 },
+        { "item_id": "armor_cloth_001", "price": 50, "stock_limit": 3, "restock": 3 }
+      ]
+    },
+    {
+      "id": "shop_weapon_001",
+      "name": "铁匠铺",
+      "buy_rate": 1.0,
+      "sell_rate": 0.5,
+      "stock": [
+        { "item_id": "weapon_sword_iron_001", "price": 80, "stock_limit": 2, "restock": 1 },
+        { "item_id": "weapon_sword_steel_001", "price": 180, "stock_limit": 1, "restock": 1 },
+        { "item_id": "weapon_spear_001", "price": 105, "stock_limit": 2, "restock": 1 },
+        { "item_id": "armor_iron_001", "price": 230, "stock_limit": 1, "restock": 1 }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "version": "1.0.0",
+  "recipes": [
+    {
+      "id": "forge_iron_sword",
+      "name": "锻造铁剑",
+      "inputs": [ { "item_id": "material_iron_001", "count": 3 } ],
+      "output_item_id": "weapon_sword_iron_001",
+      "output_count": 1,
+      "level_req": 1,
+      "forge_type": "WEAPON"
+    }
+  ]
+}

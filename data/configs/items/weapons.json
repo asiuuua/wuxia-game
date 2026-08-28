@@ -1,0 +1,9 @@
+{
+  "version": "1.0.1",
+  "items": [
+    { "id": "weapon_sword_iron_001", "name": "铁剑", "type": "weapon", "rarity": "common", "max_stack": 1, "weight": 3.5, "price": 100, "flags": 67, "attack": 15, "bonus_attack": 15, "durability": 100, "speed": 1.0, "equip_slot": "main_hand" },
+    { "id": "weapon_blade_iron_001", "name": "铁刀", "type": "weapon", "rarity": "common", "max_stack": 1, "weight": 4.0, "price": 90, "flags": 67, "attack": 17, "bonus_attack": 17, "durability": 100, "speed": 0.9, "equip_slot": "main_hand" },
+    { "id": "weapon_sword_steel_001", "name": "精钢剑", "type": "weapon", "rarity": "uncommon", "max_stack": 1, "weight": 4.2, "price": 180, "flags": 67, "attack": 24, "bonus_attack": 24, "durability": 120, "speed": 1.0, "equip_slot": "main_hand" },
+    { "id": "weapon_spear_001", "name": "长枪", "type": "weapon", "rarity": "common", "max_stack": 1, "weight": 4.5, "price": 105, "flags": 67, "attack": 19, "bonus_attack": 19, "durability": 100, "speed": 0.8, "equip_slot": "main_hand" }
+  ]
+}

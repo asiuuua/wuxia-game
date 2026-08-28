@@ -1,0 +1,337 @@
+# scenes/ui/screens/main_menu/MainMenu.gd
+# 主菜单界面（代码构建 Control，挂在 UIManager.FULLSCREEN 层级；对齐 LoadingScreen 惯例，不依赖 .tscn）
+# M2 范围：6 选项 + 键盘/鼠标导航 + 快捷键 + 动态背景占位 + 主题常量
+# UI 只做展示与输入，业务逻辑调用 GameManager / SaveManager
+# 文案经 tr() 本地化（M6）：键在 data/configs/localization/strings.csv
+# 2026-08-29 迁移到 BaseScreen：铺满/安全区/键盘导航/返回 由基类统一处理，本文件只留业务与外观
+
+@warning_ignore("shadowed_global_identifier")
+
+extends BaseScreen
+
+const MenuItem = preload("res://scenes/ui/components/menu_item/MenuItem.gd")
+const UIBackground = preload("res://scenes/ui/components/ui_background/UIBackground.gd")
+
+const VERSION_TEXT := "v0.5.0 Build 20250827"
+const MENU_ITEMS := [
+	{"key": "new_game", "text": "menu_new_game", "shortcut": "N"},
+	{"key": "continue", "text": "menu_continue", "shortcut": "C"},
+	{"key": "load", "text": "menu_load", "shortcut": "L"},
+	{"key": "settings", "text": "menu_settings", "shortcut": "O"},
+	{"key": "archive", "text": "menu_archive", "shortcut": "G"},
+	{"key": "quit", "text": "menu_quit", "shortcut": "Q"},
+]
+
+# 主菜单背景图（数据驱动：把图放到该路径即生效，缺失则回退到程序化水墨背景）
+# 换背景：把图命名为 main_menu_bg.jpg（或改下面的路径）放进 assets/ui/ 即可。
+const BG_IMAGE_PATH := "res://assets/ui/main_menu_bg.jpg"
+# 背景图上的压暗层透明度（保证标题/菜单文字可读：0=不压暗，1=全黑）
+# 这张竹林图比较亮，调到 0.55 让金色字更清楚；想更亮就调小、更暗就调大。
+const BG_IMAGE_SCRIM := 0.55
+
+# 登录界面背景音乐（数据驱动：把 MP3 放到该路径即生效，缺失则静默不播）
+const LOGIN_BGM := "res://resources/audio/bgm/login_bgm.mp3"
+
+var _menu_items: Array = []   # MenuItem 实例（untyped，避免 --script 下 class_name 未注册的类型推断问题）
+var _has_save: bool = false
+var _vol_btn: Button = null        # 底部栏静音/恢复切换按钮
+var _last_music_vol: float = 0.6   # 静音前记录的 music 音量，恢复时使用
+
+func _init() -> void:
+	keyboard_nav_enabled = true   # 上下键在 6 项主菜单间导航（基类统一处理）
+
+# === 构建内容（基类 _ready 调用：铺满 + 安全区已就绪，本函数只堆内容） ===
+func _build_content() -> void:
+	_build_background()
+	_build_menu()
+	_build_bottom_bar()
+	_nav_items = _menu_items      # 填进基类导航列表，上下键由基类统一转发
+	_check_saves()
+	# 登录界面背景音乐（进入游戏时由 UIManager 统一转场关闭）
+	if ResourceLoader.exists(LOGIN_BGM):
+		AudioManager.play_bgm(LOGIN_BGM)
+	else:
+		GameLogger.warn("MainMenu", "登录 BGM 缺失: %s" % LOGIN_BGM)
+
+# === 背景（数据驱动：有图片用图片，无图片回退到程序化水墨占位） ===
+# 背景是「全屏铺底」，必须加在 self 上并压到最底层（ContentRoot 之下），
+# 否则会盖住菜单；且全屏铺底能填满刘海/挖孔区域，不留黑边。
+func _build_background() -> void:
+	var vw: float = maxf(get_viewport_rect().size.x, 1280.0)
+	var vh: float = maxf(get_viewport_rect().size.y, 720.0)
+	var holder: Control = Control.new()
+	holder.name = "BGHolder"
+	holder.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(holder)
+	move_child(holder, 0)   # 压到最底，内容层(ContentRoot)在其上
+	if ResourceLoader.exists(BG_IMAGE_PATH):
+		_add_image_background(holder, vw, vh)
+	else:
+		_add_procedural_background(holder, vw, vh)
+
+# 图片背景：统一走 UIBackground 组件
+# 内部层次：渐变垫底 → 背景图（STRETCH_KEEP_ASPECT 等比不裁切）→ 压暗层 → 落叶粒子
+# 渐变垫底解决等比缩放露黑边——空隙处露出的是与图片边缘同色系的渐变，而非项目清屏色
+func _add_image_background(parent: Control, _vw: float, _vh: float) -> void:
+	var bg: UIBackground = UIBackground.new()
+	bg.bg_image_path = BG_IMAGE_PATH
+	bg.scrim_alpha = BG_IMAGE_SCRIM
+	bg.leaves_enabled = true
+	parent.add_child(bg)
+
+# 程序化水墨占位（远山/云雾/水面/孤舟/落叶）；真实素材后同名覆盖
+func _add_procedural_background(parent: Control, vw: float, vh: float) -> void:
+	var bg: ColorRect = ColorRect.new()
+	bg.color = UIPalette.BG_DARK
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(bg)
+
+	var mountains: ColorRect = ColorRect.new()
+	mountains.color = UIPalette.ART_MOUNTAIN
+	mountains.position = Vector2(0, 0)
+	mountains.custom_minimum_size = Vector2(vw, 300)
+	mountains.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(mountains)
+
+	var cloud: ColorRect = ColorRect.new()
+	cloud.color = UIPalette.ART_CLOUD
+	cloud.position = Vector2(-vw * 0.3, 70)
+	cloud.custom_minimum_size = Vector2(vw, 150)
+	cloud.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(cloud)
+	var cloud_tween := create_tween()
+	cloud_tween.set_loops()
+	cloud_tween.tween_property(cloud, "position:x", vw * 0.3, 30.0)
+
+	var water: ColorRect = ColorRect.new()
+	water.color = UIPalette.ART_WATER
+	water.position = Vector2(0, vh - 200)
+	water.custom_minimum_size = Vector2(vw, 200)
+	water.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(water)
+	var water_tween := create_tween()
+	water_tween.set_loops()
+	water_tween.tween_property(water, "modulate:a", 0.6, 2.5)
+	water_tween.tween_property(water, "modulate:a", 1.0, 2.5)
+
+	var boat: ColorRect = ColorRect.new()
+	boat.color = UIPalette.GOLD_DARK
+	boat.position = Vector2(120, vh - 180)
+	boat.custom_minimum_size = Vector2(40, 14)
+	boat.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(boat)
+	var boat_tween := create_tween()
+	boat_tween.set_loops()
+	boat_tween.tween_property(boat, "position:x", vw - 160, 20.0)
+
+	parent.add_child(_build_leaves(vw, vh))
+
+# 落叶粒子（图片背景与程序化背景共用）
+func _build_leaves(vw: float, _vh: float) -> CPUParticles2D:
+	var leaves := CPUParticles2D.new()
+	leaves.emitting = true
+	leaves.amount = 24
+	leaves.lifetime = 9.0
+	leaves.gravity = Vector2(0, 26)
+	leaves.initial_velocity_min = 18.0
+	leaves.initial_velocity_max = 55.0
+	leaves.direction = Vector2(0.15, 1.0)
+	leaves.spread = 18.0
+	leaves.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+	leaves.emission_rect_extents = Vector2(vw / 2.0, 24.0)
+	leaves.position = Vector2(vw / 2.0, -24.0)
+	leaves.scale = Vector2(1.6, 1.6)
+	leaves.texture = _make_leaf_texture()
+	return leaves
+
+func _make_leaf_texture() -> Texture2D:
+	var img := Image.create(8, 8, false, Image.FORMAT_RGBA8)
+	img.fill(UIPalette.GOLD)
+	var tex := ImageTexture.create_from_image(img)
+	return tex
+
+# === 菜单（无顶部标题，菜单纵向居中） ===
+# 内容放 add_content()（ContentRoot，已套安全区），自动避开刘海/挖孔
+func _build_menu() -> void:
+	var container: VBoxContainer = VBoxContainer.new()
+	container.anchor_left = 0.12
+	container.anchor_top = 0.30
+	container.anchor_right = 0.46
+	container.anchor_bottom = 0.86
+	container.add_theme_constant_override("separation", 14)
+	add_content(container)
+	for i in MENU_ITEMS.size():
+		var item: MenuItem = MenuItem.new()
+		item.name = "MenuItem_%d" % i
+		item.set_text(tr(MENU_ITEMS[i]["text"]))
+		item.selected.connect(_on_item_selected.bind(i))
+		item.confirmed.connect(_on_confirm_selection.bind(i))
+		container.add_child(item)
+		_menu_items.append(item)
+
+# === 底部栏（左：版本/制作组；右：设置/音量/语言 占位按钮） ===
+# 设计原则：
+#   1) 按钮无棕色背景、无金边焦点框 — 走"图标式轻按钮"风格，与顶部 LOGO + 6 项主菜单留白呼吸感一致；
+#   2) 距离底部 1 指（MARGIN_TIP=32），距离右侧 2 指（2*MARIGN_WIDE=80），不上不下、不左不右；
+#   3) 不抢主菜单焦点（focus_mode=NONE），避免上下方向键在底部三键与主菜单六项之间"打架"。
+func _build_bottom_bar() -> void:
+	var bl: Label = Label.new()
+	bl.text = "%s  |  %s" % [VERSION_TEXT, tr("studio_name")]
+	bl.add_theme_font_size_override("font_size", UIPalette.FS_SMALL)
+	bl.add_theme_color_override("font_color", UIPalette.TEXT_SECONDARY)
+	bl.anchor_left = 0.0
+	bl.anchor_top = 1.0
+	bl.anchor_right = 0.0
+	bl.anchor_bottom = 1.0
+	bl.offset_left = UIPalette.MARGIN
+	bl.offset_top = -(UIPalette.MARGIN_TIP + 24)
+	bl.offset_right = 360.0
+	bl.offset_bottom = -UIPalette.MARGIN_TIP
+	add_content(bl)
+
+	var br: HBoxContainer = HBoxContainer.new()
+	br.anchor_left = 1.0
+	br.anchor_top = 1.0
+	br.anchor_right = 1.0
+	br.anchor_bottom = 1.0
+	br.offset_left = -360.0
+	br.offset_top = -(UIPalette.MARGIN_TIP + 36)
+	br.offset_right = -2 * UIPalette.MARGIN_WIDE
+	br.offset_bottom = -UIPalette.MARGIN_TIP
+	br.add_theme_constant_override("separation", 16)
+	br.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_content(br)
+
+	# 透明背景占位样式（不画底色、不画描边，仅留内边距避免文字贴紧）
+	var transparent_sb := StyleBoxFlat.new()
+	transparent_sb.bg_color = Color(0, 0, 0, 0)
+	transparent_sb.set_border_width_all(0)  # StyleBoxFlat 没有 border_width_all 属性，必须用 set_border_width_all 方法
+	transparent_sb.content_margin_left = 4
+	transparent_sb.content_margin_right = 4
+	transparent_sb.content_margin_top = 4
+	transparent_sb.content_margin_bottom = 4
+	# 焦点样式：完全不画（取代全局主题的金色描边，避免深棕色按钮外一圈黄边的丑感）
+	var focus_sb := StyleBoxEmpty.new()
+
+	var settings_btn: Button = Button.new()
+	settings_btn.text = tr("btn_settings")
+	settings_btn.pressed.connect(_on_open_settings)
+	_style_bottom_btn(settings_btn, transparent_sb, focus_sb)
+	br.add_child(settings_btn)
+
+	var vol_btn: Button = Button.new()
+	vol_btn.text = _music_vol_label()
+	vol_btn.pressed.connect(_toggle_mute)
+	_style_bottom_btn(vol_btn, transparent_sb, focus_sb)
+	br.add_child(vol_btn)
+	_vol_btn = vol_btn  # 成员化以便 _toggle_mute 改文字
+
+	var lang_btn: Button = Button.new()
+	lang_btn.text = tr("btn_language")
+	lang_btn.pressed.connect(_on_language_placeholder)
+	_style_bottom_btn(lang_btn, transparent_sb, focus_sb)
+	br.add_child(lang_btn)
+
+# 底部按钮统一样式：去棕色底 + 去金边焦点 + 小字号 + 不参与焦点导航
+func _style_bottom_btn(btn: Button, transparent_sb: StyleBoxFlat, focus_sb: StyleBoxEmpty) -> void:
+	btn.add_theme_stylebox_override("normal", transparent_sb)
+	btn.add_theme_stylebox_override("hover", transparent_sb)
+	btn.add_theme_stylebox_override("pressed", transparent_sb)
+	btn.add_theme_stylebox_override("disabled", transparent_sb)
+	btn.add_theme_stylebox_override("focus", focus_sb)
+	btn.focus_mode = Control.FOCUS_NONE  # 底部按钮不抢主菜单上下方向键焦点
+	btn.add_theme_font_size_override("font_size", UIPalette.FS_SUB)
+	btn.custom_minimum_size = Vector2(72, 30)
+
+# === 存档可用性（决定「继续游戏」是否可点） ===
+func _check_saves() -> void:
+	_has_save = SaveManager.has_any_save()
+	if _menu_items.size() > 1:
+		var continue_item: MenuItem = _menu_items[1] as MenuItem
+		continue_item.set_enabled(_has_save)
+	_selected_index = 1 if _has_save else 0
+
+# === 选中高亮（基类在导航移动后自动调用） ===
+func _update_selection() -> void:
+	for i in _menu_items.size():
+		var item: MenuItem = _menu_items[i] as MenuItem
+		item.set_selected(i == _selected_index)
+
+# 鼠标悬停：同步选中态（键盘导航共用 _selected_index）
+func _on_item_selected(index: int) -> void:
+	_selected_index = index
+	_update_selection()
+
+# === 确认：ui_accept 由基类转发到这里，鼠标点击也走这里 ===
+func _on_confirm_selection(index: int) -> void:
+	if index >= 0 and index < _menu_items.size():
+		_selected_index = index
+		_update_selection()
+	match _selected_index:
+		0: _new_game()
+		1: _continue_game()
+		2: _open_load()
+		3: _on_open_settings()
+		4: _open_archive()
+		5: _quit_game()
+
+# ESC 在主菜单 = 退出游戏（弹确认框）；基类输入流先过这里，消费后不再继续
+func _on_screen_input(event: InputEvent) -> bool:
+	if event.is_action_pressed("ui_cancel"):
+		_quit_game()
+		return true
+	return false
+
+# === 各选项行为 ===
+func _new_game() -> void:
+	# 新游戏前先选难度：打开难度选择界面，选定后再进入游戏
+	UIManager.open_screen("DifficultySelect", UIManager.Layer.FULLSCREEN)
+
+func _continue_game() -> void:
+	var slot: int = SaveManager.get_latest_save_slot()
+	if slot < 0:
+		GameLogger.warn("MainMenu", "无可用存档")
+		return
+	var target_slot: int = slot
+	AudioManager.stop_bgm()
+	# 委托 UIManager 统一淡出转场，淡出完成后再读档进入
+	UIManager.close_screen(self, func(): GameManager.load_game(target_slot))
+
+func _open_load() -> void:
+	UIManager.open_screen("SaveLoadScreen", UIManager.Layer.FULLSCREEN)
+
+func _on_open_settings() -> void:
+	# 设置为独立弹窗：叠在底层界面之上（POPUP 层），关闭后回到原界面
+	UIManager.show_popup("SettingsScreen")
+
+func _open_archive() -> void:
+	# TODO 后续里程碑：江湖图鉴
+	print("[MainMenu] 江湖图鉴（待实现）")
+
+func _quit_game() -> void:
+	var dlg: Control = UIManager.show_popup("ConfirmDialog")
+	if dlg == null:
+		return
+	dlg.setup(tr("menu_quit"), "确定要离开江湖吗？", func(): get_tree().quit())
+
+# 静音/恢复切换：复用 SettingsManager.audio.music，控制 "Music" 总线 → 作用于登录 BGM
+func _toggle_mute() -> void:
+	var cur: float = SettingsManager.get_audio_volume("music")
+	if cur > 0.001:
+		_last_music_vol = cur
+		_set_music(0.0)
+		_vol_btn.text = "静音"
+	else:
+		_set_music(_last_music_vol)
+		_vol_btn.text = "有声"
+
+func _set_music(v: float) -> void:
+	SettingsManager.set_audio_volume("music", v)
+
+func _music_vol_label() -> String:
+	return "有声" if SettingsManager.get_audio_volume("music") > 0.001 else "静音"
+
+func _on_language_placeholder() -> void:
+	print("[MainMenu] 语言（本地化待 M6 实现）")

@@ -1,0 +1,77 @@
+{
+  "version": "1.0.0",
+  "enemies": [
+    {
+      "id": "bandit_001",
+      "name": "山贼",
+      "hp": 45,
+      "attack": 12,
+      "speed": 8,
+      "abilities": [
+        "sword_001"
+      ],
+      "loot": [
+        {
+          "item_id": "pill_heal_xiaohuan_001",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "bandit_002",
+      "name": "山贼头目",
+      "hp": 75,
+      "attack": 17,
+      "speed": 11,
+      "abilities": [
+        "blade_001"
+      ],
+      "loot": [
+        {
+          "item_id": "weapon_sword_iron_001",
+          "count": 1
+        },
+        {
+          "item_id": "pill_heal_xiaohuan_001",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "demo_enemy",
+      "name": "城西野狗",
+      "hp": 30,
+      "attack": 8,
+      "speed": 6,
+      "abilities": [],
+      "loot": [
+        {
+          "item_id": "demo_item_jade",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "wolf_001",
+      "name": "荒野恶狼",
+      "hp": 38,
+      "attack": 14,
+      "speed": 12,
+      "abilities": ["sword_qingsong_001"],
+      "loot": [
+        { "item_id": "pill_heal_xiaohuan_001", "count": 1 }
+      ]
+    },
+    {
+      "id": "bandit_scout_001",
+      "name": "山贼斥候",
+      "hp": 52,
+      "attack": 13,
+      "speed": 9,
+      "abilities": ["blade_duanshui_001"],
+      "loot": [
+        { "item_id": "material_ore_001", "count": 1 }
+      ]
+    }
+  ]
+}

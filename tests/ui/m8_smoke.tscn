@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://bm8smoke0829"]
+
+[ext_resource type="Script" path="res://tests/ui/m8_smoke.gd" id="1"]
+
+[node name="M8Smoke" type="Node"]
+script = ExtResource("1")

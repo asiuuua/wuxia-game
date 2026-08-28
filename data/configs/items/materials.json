@@ -1,0 +1,55 @@
+{
+  "version": "1.0.1",
+  "items": [
+    {
+      "id": "material_herb_001",
+      "name": "草药",
+      "type": "material",
+      "rarity": "common",
+      "max_stack": 99,
+      "weight": 0.1,
+      "price": 5,
+      "flags": 19
+    },
+    {
+      "id": "material_root_001",
+      "name": "药根",
+      "type": "material",
+      "rarity": "common",
+      "max_stack": 99,
+      "weight": 0.1,
+      "price": 8,
+      "flags": 19
+    },
+    {
+      "id": "material_fur_001",
+      "name": "狼皮",
+      "type": "material",
+      "rarity": "common",
+      "max_stack": 99,
+      "weight": 0.5,
+      "price": 12,
+      "flags": 19
+    },
+    {
+      "id": "material_ore_001",
+      "name": "精铁矿石",
+      "type": "material",
+      "rarity": "common",
+      "max_stack": 99,
+      "weight": 1.0,
+      "price": 15,
+      "flags": 19
+    },
+    {
+      "id": "demo_item_jade",
+      "name": "老乞丐的玉佩",
+      "type": "material",
+      "rarity": "common",
+      "max_stack": 1,
+      "weight": 0.2,
+      "price": 50,
+      "flags": 3
+    }
+  ]
+}

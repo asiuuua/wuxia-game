@@ -1,0 +1,64 @@
+{
+  "version": "1.0.0",
+
+  "_comment": "UI 动效令牌。所有界面动画的时长/缓动/幅度一律引用此处，禁止在脚本里写裸数字。改手感只改这张表，不动代码。缓动遵循 Godot Tween 语义：trans=曲线类型，ease=进出方向。",
+
+  "durations": {
+    "instant": 0.0,
+    "fast": 0.08,
+    "normal": 0.12,
+    "gentle": 0.18,
+    "slow": 0.25,
+    "screen": 0.25,
+    "breath": 1.6
+  },
+
+  "easings": {
+    "linear":   { "trans": "LINEAR", "ease": "IN_OUT" },
+    "standard": { "trans": "QUAD",   "ease": "OUT" },
+    "smooth":   { "trans": "SINE",   "ease": "IN_OUT" },
+    "enter":    { "trans": "QUAD",   "ease": "OUT" },
+    "exit":     { "trans": "QUAD",   "ease": "IN" },
+    "bouncy":   { "trans": "BACK",   "ease": "OUT" }
+  },
+
+  "hover": {
+    "scale": 1.08,
+    "duration": "normal",
+    "easing": "standard",
+    "modulate": 1.12
+  },
+
+  "press": {
+    "scale": 0.96,
+    "duration": "fast",
+    "easing": "standard"
+  },
+
+  "focus": {
+    "scale": 1.05,
+    "duration": "normal",
+    "easing": "standard"
+  },
+
+  "screen": {
+    "fade_in_duration": "screen",
+    "fade_out_duration": "screen",
+    "easing": "smooth"
+  },
+
+  "toast": {
+    "fade_in": "gentle",
+    "hold": 2.2,
+    "fade_out": "slow"
+  },
+
+  "breath": {
+    "enabled": true,
+    "scale_y_amp": 0.025,
+    "scale_x_amp": 0.012,
+    "duration": "breath",
+    "easing": "smooth",
+    "random_phase": true
+  }
+}

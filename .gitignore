@@ -1,0 +1,21 @@
+# Godot 引擎缓存与导入产物（79MB，删了会自动重建，不进版本库）
+.godot/
+*.tmp
+*.log
+
+# 编辑器/系统杂项
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+
+# 导出产物
+export/
+build/
+*.exe
+*.pck
+*.zip
+
+# 场景临时日志（根目录 _*.log / _*.txt）
+/_*.log
+/_*.txt

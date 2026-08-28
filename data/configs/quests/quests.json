@@ -1,0 +1,77 @@
+{
+  "version": "1.0.0",
+  "quests": [
+    {
+      "id": "q_bandit_001",
+      "name": "清剿山贼",
+      "desc": "城外山贼作乱，替百姓除害。",
+      "type": "main",
+      "objectives": [
+        {
+          "id": "defeat",
+          "desc": "击败山贼",
+          "target_battle": "battle_bandit_001",
+          "need": 1
+        }
+      ],
+      "rewards": {
+        "exp": 60,
+        "items": [
+          {
+            "item_id": "pill_heal_xiaohuan_001",
+            "count": 3
+          }
+        ]
+      }
+    },
+    {
+      "id": "demo_quest",
+      "name": "失踪的玉佩",
+      "desc": "村口老乞丐的玉佩被野狗叼走了，替他寻回。",
+      "type": "side",
+      "objectives": [
+        {
+          "id": "obj1",
+          "desc": "击败城西野狗",
+          "target_battle": "demo_battle",
+          "need": 1
+        }
+      ],
+      "rewards": {
+        "exp": 100,
+        "silver": 30,
+        "items": [
+          {
+            "item_id": "demo_item_jade",
+            "count": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "q_wolf_001",
+      "name": "荒野狼患",
+      "desc": "荒野恶狼伤畜扰民，替猎户除去狼患。",
+      "type": "side",
+      "objectives": [
+        { "id": "defeat", "desc": "击败荒野恶狼", "target_battle": "battle_wolf_001", "need": 1 }
+      ],
+      "rewards": { "exp": 50, "items": [ { "item_id": "pill_heal_xiaohuan_001", "count": 2 } ] }
+    },
+    {
+      "id": "q_sect_join_001",
+      "name": "入宗试炼",
+      "desc": "青云剑宗入门试炼：斩山贼头目以证勇武。",
+      "type": "main",
+      "objectives": [
+        { "id": "defeat", "desc": "击败山贼头目", "target_battle": "battle_sect_trials", "need": 1 }
+      ],
+      "rewards": {
+        "exp": 120,
+        "silver": 50,
+        "items": [ { "item_id": "weapon_blade_iron_001", "count": 1 } ],
+        "abilities": ["staff_panlong_001"]
+      }
+    }
+  ]
+}

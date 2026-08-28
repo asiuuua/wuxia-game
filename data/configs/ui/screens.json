@@ -1,0 +1,18 @@
+{
+  "LoadingScreen": "res://scenes/ui/screens/loading/LoadingScreen.gd",
+  "MainMenu": "res://scenes/ui/screens/main_menu/MainMenu.gd",
+  "SaveLoadScreen": "res://scenes/ui/screens/save_load/SaveLoadScreen.gd",
+  "SettingsScreen": "res://scenes/ui/screens/settings/SettingsScreen.gd",
+  "ConfirmDialog": "res://scenes/ui/components/confirm_dialog/ConfirmDialog.gd",
+  "InventoryScreen": "res://scenes/ui/overlays/inventory/InventoryScreen.gd",
+  "MapScreen": "res://scenes/ui/overlays/map/MapScreen.gd",
+  "AttributesScreen": "res://scenes/ui/overlays/attributes/AttributesScreen.gd",
+  "DialogOverlay": "res://scenes/ui/overlays/dialog/DialogOverlay.gd",
+  "EquipmentScreen": "res://scenes/ui/screens/equipment/EquipmentScreen.gd",
+  "AlchemyScreen": "res://scenes/ui/screens/alchemy/AlchemyScreen.gd",
+  "EscMenu": "res://scenes/ui/screens/esc_menu/EscMenu.gd",
+  "DifficultySelect": "res://scenes/ui/screens/difficulty_select/DifficultySelect.gd",
+  "ForgeScreen": "res://scenes/ui/screens/forge/ForgeScreen.gd",
+  "ShopScreen": "res://scenes/ui/screens/shop/ShopScreen.gd",
+  "SectScreen": "res://scenes/ui/screens/sect/SectScreen.gd"
+}

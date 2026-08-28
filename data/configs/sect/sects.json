@@ -1,0 +1,33 @@
+{
+  "version": "1.0.0",
+  "sects": [
+    {
+      "id": "sect_sword_001",
+      "name": "青云剑宗",
+      "description": "以剑入道，重攻轻守。",
+      "join_reputation_req": 0,
+      "join_req_item": "",
+      "ranks": [
+        { "rank": "OUTSIDER", "rep_threshold": 0, "benefit": "外门弟子身份" },
+        { "rank": "INNER", "rep_threshold": 100, "benefit": "内门弟子，可学进阶剑法" },
+        { "rank": "CORE", "rep_threshold": 500, "benefit": "核心弟子，赐予本命飞剑" },
+        { "rank": "ELDER", "rep_threshold": 2000, "benefit": "长老，参与宗门决策" },
+        { "rank": "LEADER", "rep_threshold": 10000, "benefit": "掌门，执掌宗门" }
+      ]
+    },
+    {
+      "id": "sect_blade_001",
+      "name": "断水刀门",
+      "description": "以刀立派，刚猛霸烈，重守反击。",
+      "join_reputation_req": 0,
+      "join_req_item": "",
+      "ranks": [
+        { "rank": "OUTSIDER", "rep_threshold": 0, "benefit": "记名弟子" },
+        { "rank": "INNER", "rep_threshold": 120, "benefit": "内门弟子，可修刀法" },
+        { "rank": "CORE", "rep_threshold": 600, "benefit": "核心弟子，授本命宝刀" },
+        { "rank": "ELDER", "rep_threshold": 2500, "benefit": "长老" },
+        { "rank": "LEADER", "rep_threshold": 12000, "benefit": "门主" }
+      ]
+    }
+  ]
+}

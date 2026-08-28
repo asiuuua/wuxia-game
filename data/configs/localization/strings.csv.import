@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://svdchelqe3bg"
+
+[deps]
+
+files=["res://data/configs/localization/strings.zh_CN.translation", "res://data/configs/localization/strings.zh_TW.translation", "res://data/configs/localization/strings.en.translation"]
+
+source_file="res://data/configs/localization/strings.csv"
+dest_files=["res://data/configs/localization/strings.zh_CN.translation", "res://data/configs/localization/strings.zh_TW.translation", "res://data/configs/localization/strings.en.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true
