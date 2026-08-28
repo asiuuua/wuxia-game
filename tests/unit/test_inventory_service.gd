@@ -231,3 +231,80 @@ func test_lose_items_slot_scope_follows_config() -> void:
 	expect_eq(_service.get_item_count("weapon_sword_iron_001"), 1, "主栏 common 武器应被丢 2 件")
 	expect_eq(_service.get_item_count("material_ore_001"), 3, "材料栏不应被波及（include_material=false）")
 	expect_eq(lost.size(), 2, "应只丢主栏 2 件")
+
+# ── 物品锁定保护 + 容量查询 API（P2-3）回归 ──
+
+func _all_iids(item_id: String) -> Array:
+	var out: Array = []
+	for bag in [_service.main_slots, _service.material_slots, _service.quest_slots]:
+		for inst in bag:
+			if inst != null and inst.item_id == item_id:
+				out.append(String(inst.instance_id))
+	return out
+
+func test_lock_skips_passive_remove() -> void:
+	# WEAPON max_stack=1 → 3 次 add 得 3 个独立实例，便于测"跳过锁定实例"
+	_service.add_item(WEAPON, 1, "test")
+	_service.add_item(WEAPON, 1, "test")
+	_service.add_item(WEAPON, 1, "test")
+	var iids: Array = _all_iids(WEAPON)
+	expect_eq(iids.size(), 3, "应有 3 个独立实例")
+	# 锁第 1、3 个，留第 2 个未锁
+	expect(_service.set_item_locked(iids[0], true), "锁定实例1应成功")
+	expect(_service.set_item_locked(iids[2], true), "锁定实例3应成功")
+	expect(_service.is_item_locked(iids[0]), "查询应返回已锁定")
+	# 被动移除应跳过锁定实例，只扣未锁的第 2 个
+	expect(_service.remove_item_by_id(WEAPON, 1), "扣未锁实例应成功")
+	expect_eq(_service.get_item_count(WEAPON), 2, "应剩 2 个（2 个锁定）")
+	expect(_service.is_item_locked(iids[0]), "锁定实例仍在")
+	# 剩下的全是锁定的 → 被动移除应整体失败（保护关键物）
+	expect(not _service.remove_item_by_id(WEAPON, 1), "其余已锁定时移除应失败")
+	expect_eq(_service.get_item_count(WEAPON), 2, "锁定物不应被移除")
+
+func test_try_consume_respects_lock() -> void:
+	_service.add_item(WEAPON, 1, "test")
+	_service.add_item(WEAPON, 1, "test")
+	_service.add_item(WEAPON, 1, "test")
+	var locked_iid: String = _first_iid(WEAPON)
+	_service.set_item_locked(locked_iid, true)
+	# 非锁定可用量=2，批量扣料应只扣未锁的，不动锁定的
+	expect(_service.try_consume([{ "item_id": WEAPON, "count": 2 }], "test"), "扣 2 件未锁应成功")
+	expect_eq(_service.get_item_count(WEAPON), 1, "应剩 1 个锁定的")
+	expect(_service.is_item_locked(locked_iid), "锁定实例未被扣")
+	# 非锁定可用量=0 → 即便需求=1 也整体失败（锁保护 + 原子性）
+	expect(not _service.try_consume([{ "item_id": WEAPON, "count": 1 }], "test"), "全锁定时批量扣料应整体失败")
+	expect_eq(_service.get_item_count(WEAPON), 1, "失败时锁定物不被动")
+
+func test_lose_items_skips_locked() -> void:
+	# 团灭丢失应跳过锁定关键物（与 rarity 配置无关）
+	_service.add_item(WEAPON, 3, "test")   # 主栏 common，3 实例
+	var locked_iid: String = _first_iid(WEAPON)
+	_service.set_item_locked(locked_iid, true)
+	var lost := _service.lose_some_non_rare_items(2)
+	expect_eq(_service.get_item_count(WEAPON), 1, "锁定的 1 件应被保留，未锁 2 件被丢")
+	expect(_service.is_item_locked(locked_iid), "锁定实例团灭后仍在")
+	expect_eq(lost.size(), 2, "应丢 2 件未锁的")
+
+func test_capacity_api() -> void:
+	# 三栏总槽位：主30 + 材料200 + 任务50 = 280
+	expect_eq(_service.get_total_slots(), 280, "总槽位应为 280")
+	expect_eq(_service.get_used_slots(), 0, "空包已用 0")
+	expect_eq(_service.get_free_slots(), 280, "空包剩余 280")
+	_service.add_item(WEAPON, 1, "test")
+	_service.add_item(WEAPON, 1, "test")
+	_service.add_item(PILL, 5, "test")
+	expect_eq(_service.get_used_slots(), 3, "应已用 3 格")
+	expect_eq(_service.get_free_slots(), 277, "应剩 277 格")
+
+func test_lock_serialization_roundtrip() -> void:
+	_service.add_item(WEAPON, 1, "test")
+	var iid: String = _first_iid(WEAPON)
+	expect(_service.set_item_locked(iid, true), "锁定应成功")
+	var data: Dictionary = _service.save()
+	var s2 := InventoryService.new()
+	s2.load(data)
+	expect(s2.is_item_locked(iid), "读档后锁定状态应保留")
+	var data2: Dictionary = s2.save()
+	var s3 := InventoryService.new()
+	s3.load(data2)
+	expect(s3.is_item_locked(iid), "二次存读锁定状态仍保留")

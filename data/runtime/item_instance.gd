@@ -12,12 +12,14 @@ var max_durability: float = -1.0
 var acquired_source: String = ""   # 来源："drop:bandit_001" / "quest:q_001"
 var acquired_time: int = 0
 var is_new: bool = true
+var locked: bool = false           # 玩家手动锁定：防止被动移除（售卖/分解/丢弃/团灭丢失/批量扣料）；主动吃药/装备不受影响
 
 func serialize() -> Dictionary:
 	return {
 		"iid": instance_id, "id": item_id, "cnt": count,
 		"dur": durability, "mdur": max_durability,
 		"src": acquired_source, "time": acquired_time,
+		"lock": locked,
 	}
 
 func deserialize(data: Dictionary) -> void:
@@ -28,4 +30,5 @@ func deserialize(data: Dictionary) -> void:
 	max_durability = data.get("mdur", -1.0)
 	acquired_source = data.get("src", "")
 	acquired_time = data.get("time", 0)
+	locked = data.get("lock", false)   # 旧档无 lock 字段默认 false，向后兼容
 	is_new = false

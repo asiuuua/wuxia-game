@@ -125,7 +125,8 @@ func try_consume(items: Array, source: String = "") -> bool:
 		var need: int = int(entry.get("count", 1))
 		if item_id == "" or need <= 0:
 			return false
-		if get_item_count(item_id) < need:
+		# 锁定实例不可被动消耗：用「非锁定可用量」校验，锁定物被排除在批量扣料外
+		if get_unlocked_count(item_id) < need:
 			return false
 	for entry in items:
 		remove_item_by_id(String(entry.get("item_id", "")), int(entry.get("count", 1)))
@@ -165,7 +166,8 @@ func remove_item_by_id(item_id: String, count: int) -> bool:
 		for inst in bag:
 			if remaining <= 0:
 				break
-			if inst != null and inst.item_id == item_id:
+			# 锁定实例受保护：被动移除（售卖/分解/丢弃）跳过，避免误丢关键物
+			if inst != null and inst.item_id == item_id and not inst.locked:
 				var take := mini(remaining, inst.count)
 				inst.count -= take
 				remaining -= take
@@ -187,6 +189,60 @@ func get_item_count(item_id: String) -> int:
 			if inst != null and inst.item_id == item_id:
 				total += inst.count
 	return total
+
+## ===== 物品锁定（玩家保护关键物，防被动移除） =====
+## 未锁定的可用数量（锁定实例不计入，供 try_consume 校验与 UI 提示）
+func get_unlocked_count(item_id: String) -> int:
+	var total := 0
+	for bag in [main_slots, material_slots, quest_slots]:
+		for inst in bag:
+			if inst != null and inst.item_id == item_id and not inst.locked:
+				total += inst.count
+	return total
+
+## 已锁定的数量（供 UI 展示「N 件已锁定」）
+func get_locked_count(item_id: String) -> int:
+	var total := 0
+	for bag in [main_slots, material_slots, quest_slots]:
+		for inst in bag:
+			if inst != null and inst.item_id == item_id and inst.locked:
+				total += inst.count
+	return total
+
+## 设置/查询单实例锁定状态（UI 锁图标操作调此；锁定后被动移除被拦截，主动吃药不受影响）
+func set_item_locked(iid: String, locked: bool) -> bool:
+	var inst: ItemInstance = get_instance_by_id(iid)
+	if inst == null:
+		return false
+	inst.locked = locked
+	_dirty = true
+	return true
+
+func is_item_locked(iid: String) -> bool:
+	var inst: ItemInstance = get_instance_by_id(iid)
+	if inst == null:
+		return false
+	return inst.locked
+
+## ===== 容量查询 API（P2-3）=====
+## 三栏总槽位 / 已用格 / 剩余格；供 shop/forge/UI 预检与 HUD 提示
+func get_total_slots() -> int:
+	return MAX_MAIN_SLOTS + MAX_MATERIAL_SLOTS + MAX_QUEST_SLOTS
+
+func get_used_slots() -> int:
+	var used := 0
+	for bag in [main_slots, material_slots, quest_slots]:
+		for inst in bag:
+			if inst != null:
+				used += 1
+	return used
+
+func get_free_slots() -> int:
+	return get_total_slots() - get_used_slots()
+
+## 任一栏满（三栏任一无空位即视为满）；is_full() 保留主栏语义供旧调用方
+func is_any_bag_full() -> bool:
+	return _find_empty(main_slots) == -1 or _find_empty(material_slots) == -1 or _find_empty(quest_slots) == -1
 
 func is_full() -> bool:
 	return _find_empty(main_slots) == -1
@@ -318,6 +374,8 @@ func lose_some_non_rare_items(n: int) -> Array:
 			i += 1
 			if inst == null:
 				continue
+			if inst.locked:
+				continue   # 锁定关键物团灭不丢
 			var data: Dictionary = ConfigManager.get_item(inst.item_id)
 			if not rarities.has(data.get("rarity", "")):
 				continue
