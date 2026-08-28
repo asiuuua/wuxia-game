@@ -15,8 +15,8 @@
 - 权威基线 `docs/模块设计规范.md`；协同框架 `docs/项目进度与协同开发框架.md`。
 
 ## 路线图
-Phase 0 脚手架 ✅ → Phase 1 垂直切片 ✅ → **M1 战斗逻辑内核 ✅(2026-08-29, 提交 3f30636)** → **M2 战斗演出编排 ✅(2026-08-29, 提交 9d6e5c3)** → **M3-1 敌人 AI 权重选技能 ✅(2026-08-29)** → Phase 2 系统填充（难度✅；锻造/商店/门派叶子逻辑✅；背包P0/P1✅）→ Phase 3 内容扩张 → Phase 4 平台适配
-- 战斗下一步（M3）：M3-2 状态引擎扩护盾/反弹/复活；M3-3 演出动效/音效令牌化（飘字现直设色，待接 `ui_sfx.json`）。⚠️ `ui_anim.json` 的 `battle` 令牌块待 UI 窗口补（M2 用 Director `_FALLBACK` 兜底）。
+Phase 0 脚手架 ✅ → Phase 1 垂直切片 ✅ → **M1 战斗逻辑内核 ✅(2026-08-29, 提交 3f30636)** → **M2 战斗演出编排 ✅(2026-08-29, 提交 9d6e5c3)** → **M3-1 敌人 AI 权重选技能 ✅(2026-08-29)** → **M3-2 状态引擎扩护盾/反弹/复活 ✅(2026-08-29)** → Phase 2 系统填充（难度✅；锻造/商店/门派叶子逻辑✅；背包P0/P1✅）→ Phase 3 内容扩张 → Phase 4 平台适配
+- 战斗下一步（M3）：M3-3 演出动效/音效令牌化（护盾条/反弹飘字/复活特效 + `ui_anim.json` 的 `battle` 令牌块落地；飘字现直设色，待接 `ui_sfx.json`）。⚠️ `ui_anim.json` 的 `battle` 令牌块仍待 UI 窗口补（M2 起用 Director `_FALLBACK` 兜底）。
 
 ## GDScript 4.x 硬规（高频踩坑）
 - autoload 脚本**禁止**写与单例同名的 `class_name`；`const X = preload()` 与全局 `class_name X` 同名会 shadowed。
@@ -37,7 +37,7 @@ Phase 0 脚手架 ✅ → Phase 1 垂直切片 ✅ → **M1 战斗逻辑内核 �
 - 健康检查：`--headless --path "D:/武侠游戏" --quit 2>&1`
 - 单脚本：`--check-only --script res://<path>.gd`
 - ⚠️ `--check-only --script` **不加载 autoload**，引用单例必报 `Identifier not found`（假阳性）。真伪以完整 `--quit` 或实际启动为准。
-- **单元测试**：`Godot_v4.7.2_console --headless --path "D:/武侠游戏" res://tests/unit/run_all.tscn`（场景运行，autoload 全加载，退出码 0/1）。当前 套件 5 · 失败 0（战斗 19 / 背包 15 / 存读档 6 / … 全绿）。
+- **单元测试**：`Godot_v4.7.2_console --headless --path "D:/武侠游戏" res://tests/unit/run_all.tscn`（场景运行，autoload 全加载，退出码 0/1）。当前 套件 5 · 失败 0（战斗 23 / 背包 15 / 存读档 6 / … 全绿）。
 - ⚠️ 验证**界面脚本**真编译：把 `tests/ui/m5_smoke.tscn` 当主场景跑（或真实打开工程），`--script` 模式不加载 autoload 会假阳性。
 - 多 Godot 进程抢 `.godot` 类缓存会玄学报错 → **验证必须串行**。
 
@@ -48,15 +48,16 @@ Phase 0 脚手架 ✅ → Phase 1 垂直切片 ✅ → **M1 战斗逻辑内核 �
 - PIL venv：`C:\Users\Administrator\.workbuddy\binaries\python\envs\default\Scripts\python.exe`（已装 pillow）。
 
 ## 战斗层现状（M1 已交付 · 提交 3f30636）
-- **事件契约** `data/runtime/combat_event.gd`：`enum Type`（TURN_START/ACTION_BASIC/ACTION_SKILL/QI_COST/QI_GAIN/COOLDOWN_SET/DAMAGE/HEAL/STATUS_APPLIED/STATUS_TICK/STATUS_EXPIRED/OUTCOME）+ actor_id/target_id/value/crit/dodged/status_id/stacks/skill_id。
+- **事件契约** `data/runtime/combat_event.gd`：`enum Type`（TURN_START/ACTION_BASIC/ACTION_SKILL/QI_COST/QI_GAIN/COOLDOWN_SET/DAMAGE/HEAL/STATUS_APPLIED/STATUS_TICK/STATUS_EXPIRED/OUTCOME/SHIELD_ABSORB/REFLECT/REVIVE）+ actor_id/target_id/value/crit/dodged/status_id/stacks/skill_id + 演出直设(target_hp_after/target_max_hp/actor_mp_after/target_mp_after/target_shield_after)。
 - **逻辑内核** `services/combat/combat_core.gd`（纯 RefCounted，零 Node/零全局 randf/零 Tween）：ATB `action_order()`（按 `effective_charge_rate()`=speed+状态修正降序）、双资源(气血 hp + 真气 mp)、招式分阶与冷却(`qi_cost`/`cooldown`)、状态引擎(`tick_unit`：DoT/HoT+持续递减+到期移除；`StatusEffect` 有 flat/pct/层数/持续/clear_on_rest)、确定性随机(注入 `SeededRNG`)。`_resolve_hit` 经 rng 决定闪避/暴击。
 - **门面** `combat_service.gd`：保留全部旧接口零回归(`player_attack`/`player_cast`/`run_enemy_turns`/`finalize`/`try_escape`)，内部委托 `_core`；新增 `get_core`/`player_rest`/`player_use_item`。`player_use_item` 只结算战斗快照(CombatCharacter)，finalize 才回写 PlayerState——战斗内切勿直调 InventoryService.use_item。
 - **配置**：`skills.json` v1.2.0（普攻/二式/三式/绝世/轻功/心法/调息 七类，含 target/qi_cost/cooldown/effects）；`status_effects.json`（破甲/强攻/固守/灼烧/中毒/聚气/疾行）；`battles.json` 加 `turn_mode`（atb/se时)，`battle_bandit_001`=atb；`enemies.json` 的 `speed` 字段已被消费。
 - **枚举** `combat_enums.gd` 增 `TurnMode { SEQUENTIAL, ATB }`；`EventBus` 增 `item_used`（战斗内用药刷背包 UI 例外走总线）；`GameManager` 接 `cmd_start_combat`（任务/对话发令自动开战）。
 - **M2 已交付（提交 9d6e5c3）**：演出编排层建成——`battle_director.gd`(CombatDirector 顺序 await 播放 + 速度缩放/跳过/卡死防护) + `battle_view.gd`(BattleView 按事件分派飘字/血条/真气条) + `unit_hud.gd`(UnitHud) + `BattleScene.gd` 重写(只装配+输入转发，删内联编排)；`combat_service.gd` 增 `play_events` 事件流(`player_attack_events`/`player_cast_events`/`player_rest_events`/`enemy_phase_events`/`use_item_events`)；`CombatEvent` 末尾追加 `target_hp_after`/`target_max_hp`/`actor_mp_after`/`target_mp_after`（血条/真气条直设，规避加速/跳过错位）。
 - **M3-1 已交付（2026-08-29）**：敌人 AI 权重选技能——`enemies.json.abilities` schema 扩为 `{id,weight,condition}`（悬空 `sword_001`/`blade_001` 重定向到 `sword_qingsong_001`/`blade_duanshui_001`）；`combat_service._normalize_abilities` 归一化 + `CombatCharacter.ai_kit`；`combat_core` 抽 `_cast_skill`（玩家/敌人共用施法结算，**自buff 免自伤**）+ 重写 `enemy_phase`（按权重+条件选招、无可用招普攻兜底）+ `_pick_enemy_ability`/`_ability_usable`/`_condition_met`（确定性加权，rng 由内核 seed 驱动）；**顺带修 M1 冷却 bug**：`tick_unit` 开头递减 `cooldowns`（此前全工程只设置/判定从不减 1，招式永久进冷却，策略深度丧失）。战斗套件 15→19 全绿。变更通告 `变更通告_2026-08-29_敌人AI选技能.md`（战斗窗口主权，不自 commit，交 UI 模块）。
+- **M3-2 已交付（2026-08-29）**：状态引擎扩护盾/反弹/复活——`CombatCharacter.shield` + `EffectType.SHIELD/REFLECT/REVIVE` + `CombatEvent.Type.SHIELD_ABSORB/REFLECT/REVIVE` + `target_shield_after` 字段（枚举/事件类型/字段**纯追加**，共享地基零破坏）；`status_effects.json` 加 `huti`(护盾+20/层)/`jingci`(荆棘反弹30%)/`buqu`(不屈复活30%)；`combat_core` 实现 `_apply_status` SHIELD 特例(累加 shield 不登记 StatusEffect) + `_resolve_hit` 护盾吸收 + 反弹(直写攻击者防连锁) + `_try_down` 复活 + `tick_unit` 补 `_try_down`(**修致命 DoT 不致死缺口**)；辅助 `_reflect_pct`/`_revive_amount`/`_consume_revive`（私有）。战斗套件 19→23 全绿。⚠️ 盘上另有背包窗口未提交 WIP（`item_instance.gd`/`inventory_service.gd`/`test_inventory_service.gd`）与本窗口无关，提交时禁 `git add -A` 卷入。变更通告 `变更通告_2026-08-29_状态引擎扩护盾反弹复活.md`（战斗窗口主权，不自 commit，交 UI 模块）。
 - ⚠️ **测试编成坑**：`battle_bandit_001.enemy_ids = ["bandit_001","bandit_001"]`（两个山贼，无 `bandit_002`）。战斗单测别假设具体敌人编成——条件门控等用例改在测试内给 `enemy.ai_kit` 注入已知包 + 设 `mp`，而非依赖某敌人 id。
-- **已知待做（M3+）**：M3-2 状态引擎扩护盾/反弹/复活；M3-3 演出层动效/音效令牌化（飘字现直设色，待接 `ui_sfx.json`）；`ui_anim.json` 的 `battle` 令牌块待 UI 窗口补（M2 用 Director `_FALLBACK` 兜底）。
+- **已知待做（M3+）**：M3-3 演出层动效/音效令牌化（护盾条/反弹飘字/复活特效 + `ui_anim.json` 的 `battle` 令牌块落地；飘字现直设色，待接 `ui_sfx.json`）；`ui_anim.json` 的 `battle` 令牌块仍待 UI 窗口补（M2 起用 Director `_FALLBACK` 兜底）。
 - ⚠️ **确定性测试陷阱**：`combat_service` 是单例，确定性测试每个 run 必须「开战→行动→记录」自成一体；先开两次战再行动会让两次行动都作用在最后一次激活态上（已栽过，见 `test_deterministic_same_seed`）。
 
 ## 背包层现状（P0/P1 已修，详见 2026-08-29.md #149 段）
