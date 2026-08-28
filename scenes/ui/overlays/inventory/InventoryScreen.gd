@@ -65,7 +65,7 @@ func _refresh() -> void:
 	for child in _list.get_children():
 		child.queue_free()
 	var inv: InventoryService = GameManager.inventory_service
-	_weight_label.text = tr("ui_inventory_weight") % [inv.get_weight(), InventoryService.BASE_MAX_WEIGHT]
+	_weight_label.text = tr("ui_inventory_weight") % [inv.get_weight(), inv.get_max_weight()]
 	_add_section(tr("ui_inventory_main"), inv.main_slots)
 	_add_section(tr("ui_inventory_material"), inv.material_slots)
 	_add_section(tr("ui_inventory_quest"), inv.quest_slots)
