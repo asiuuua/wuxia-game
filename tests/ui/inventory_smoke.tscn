@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://binvsmoke0829"]
+
+[ext_resource type="Script" path="res://tests/ui/inventory_smoke.gd" id="1_invsmoke"]
+
+[node name="InvSmoke" type="Node"]
+script = ExtResource("1_invsmoke")
