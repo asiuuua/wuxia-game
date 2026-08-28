@@ -60,5 +60,18 @@
     "duration": "breath",
     "easing": "smooth",
     "random_phase": true
+  },
+
+  "battle": {
+    "damage_pop": 0.12,
+    "hit_shake": 0.12,
+    "gentle": 0.18,
+    "fast": 0.08,
+    "turn_gap": 0.1,
+    "instant": 0.0,
+    "death_fade": 0.4,
+    "shield_absorb": 0.12,
+    "reflect": 0.14,
+    "revive": 0.35
   }
 }
