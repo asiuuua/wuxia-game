@@ -105,14 +105,30 @@ func test_escape_never_crashes() -> void:
 	else:
 		expect(st.is_active, "逃跑失败后战斗应继续")
 
-## ATB 行动顺序应由集气速率(speed)决定：玩家 speed=10 > 山贼 speed=8，应排第一
+## ATB 行动顺序应由集气速率(speed)降序决定：speed 高者先动
+## （头目 bandit_002 speed=11 > 玩家 10 > 山贼 8，故顺序应为 bandit_002→player→bandit_001）
 func test_atb_order_by_speed() -> void:
 	var st: CombatState = _start()
 	if st == null:
 		return
 	expect(st.turn_mode == CombatEnums.TurnMode.ATB, "battle_bandit_001 应配置 ATB 模式")
 	var order: Array[String] = GameManager.combat_service.get_core().action_order()
-	expect(order[0] == "player", "集气速率高者(玩家)应排在行动顺序首位，实际 %s" % order[0])
+	expect(order.size() >= 2, "行动顺序应至少含 2 个单位（实际 %d）" % order.size())
+	# 顺序应严格按 speed 降序：任意相邻两者，前者 speed >= 后者
+	var prev_speed := 999999
+	for id in order:
+		var sp: int = _speed_of(st, id)
+		expect(sp <= prev_speed, "行动顺序应严格按 speed 降序：%s(%d) 不应排在其更快者之前" % [id, sp])
+		prev_speed = sp
+
+## 按 character_id 取单位 speed（测试辅助）
+func _speed_of(st: CombatState, id: String) -> int:
+	if st.player.character_id == id:
+		return st.player.speed
+	for e in st.enemies:
+		if e.character_id == id:
+			return e.speed
+	return -1
 
 ## 招式应消耗真气并进入冷却（对标逸剑二式/三式耗真气+冷却）
 func test_skill_costs_qi_and_cooldown() -> void:

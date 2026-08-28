@@ -6,7 +6,7 @@
       "name": "城外山贼",
       "enemy_ids": [
         "bandit_001",
-        "bandit_001"
+        "bandit_002"
       ],
       "turn_mode": "atb",
       "reward_exp": 30
