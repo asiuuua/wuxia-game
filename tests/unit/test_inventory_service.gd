@@ -308,3 +308,37 @@ func test_lock_serialization_roundtrip() -> void:
 	var s3 := InventoryService.new()
 	s3.load(data2)
 	expect(s3.is_item_locked(iid), "二次存读锁定状态仍保留")
+
+## ===== P2-7：count 缓存索引一致性 =====
+func test_count_index_tracks_add_remove() -> void:
+	_service.reset()
+	_service.add_item(PILL, 5)
+	expect_eq(_service.get_item_count(PILL), 5, "新增后缓存计数应=5")
+	_service.remove_item_by_id(PILL, 2)
+	expect_eq(_service.get_item_count(PILL), 3, "移除后缓存计数应=3")
+	_service.remove_item_by_id(PILL, 3)
+	expect_eq(_service.get_item_count(PILL), 0, "清空后缓存应归零")
+
+func test_count_index_lock_keeps_total() -> void:
+	_service.reset()
+	_service.add_item(WEAPON, 3)   # max_stack=1 -> 3 个主栏实例
+	var locked := 0
+	for inst in _service.main_slots:
+		if inst != null and inst.item_id == WEAPON and locked < 2:
+			_service.set_item_locked(String(inst.instance_id), true)
+			locked += 1
+	expect_eq(_service.get_item_count(WEAPON), 3, "锁定不改变总数，缓存应仍=3")
+	expect_eq(_service.get_unlocked_count(WEAPON), 1, "非锁定应=1")
+	_service.remove_item_by_id(WEAPON, 1)   # 只移未锁的那 1 个
+	expect_eq(_service.get_item_count(WEAPON), 2, "移除未锁后总数=2，缓存同步")
+	expect_eq(_service.get_unlocked_count(WEAPON), 0, "未锁应耗尽")
+
+func test_count_index_rebuild_on_load() -> void:
+	_service.reset()
+	_service.add_item(PILL, 4)
+	_service.add_item("material_ore_001", 7)
+	var data: Dictionary = _service.save()
+	_service.reset()
+	_service.load(data)
+	expect_eq(_service.get_item_count(PILL), 4, "load 后缓存应重建为 4")
+	expect_eq(_service.get_item_count("material_ore_001"), 7, "load 后缓存应重建为 7")

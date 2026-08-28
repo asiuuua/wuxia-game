@@ -5,13 +5,6 @@
 extends ISaveable
 class_name InventoryService
 
-@warning_ignore("unused_signal")
-signal inventory_item_added(item_id: String, count: int)
-@warning_ignore("unused_signal")
-signal inventory_item_removed(item_id: String, count: int)
-@warning_ignore("unused_signal")
-signal inventory_weight_changed(current: float, max_weight: float)
-
 const MAX_MAIN_SLOTS := ItemConstants.DEFAULT_MAX_SLOTS
 const MAX_MATERIAL_SLOTS := 200
 const MAX_QUEST_SLOTS := 50
@@ -23,6 +16,7 @@ var quest_slots: Array = []
 var current_weight: float = 0.0
 var _dirty: bool = false
 var _next_iid: int = 1   # 实例 ID 发号器：全局自增，随存档恢复，杜绝同毫秒撞车
+var _count_index: Dictionary = {}   # item_id -> 总数量（含锁定）缓存索引；P2-7 优化 get_item_count 全扫
 
 func _init() -> void:
 	main_slots.resize(MAX_MAIN_SLOTS)
@@ -65,9 +59,9 @@ func add_item(item_id: String, count: int, source: String = "") -> bool:
 		current_weight += unit_w * float(put)
 		added += inst.count
 	_recalculate_weight()
+	_bump_count(item_id, added)
 	_dirty = true
 	if added > 0:
-		inventory_item_added.emit(item_id, added)
 		EventBus.inventory_item_added.emit(item_id, added)
 	if count > 0:
 		# 溢出通知：走 can_add 预检的调用方不会到这里；掉落/发奖等未预检方据此提示玩家
@@ -176,19 +170,32 @@ func remove_item_by_id(item_id: String, count: int) -> bool:
 					bag[idx] = null
 	if remaining < count:
 		_recalculate_weight()
+		_bump_count(item_id, -(count - remaining))
 		_dirty = true
-		inventory_item_removed.emit(item_id, count - remaining)
 		EventBus.inventory_item_removed.emit(item_id, count - remaining)
 		return true
 	return false
 
+## 背包内某 item_id 的总数量（含锁定实例）；走缓存索引 O(1)（P2-7）
+## 锁定不改变总数，故缓存存 total 即可；非锁定量见 get_unlocked_count（需遍历 per-instance locked）
 func get_item_count(item_id: String) -> int:
-	var total := 0
+	return int(_count_index.get(item_id, 0))
+
+## 增量维护 _count_index（add 传正、remove/consume/lose/remove_instance 传负）
+func _bump_count(item_id: String, delta: int) -> void:
+	var v: int = int(_count_index.get(item_id, 0)) + delta
+	if v <= 0:
+		_count_index.erase(item_id)
+	else:
+		_count_index[item_id] = v
+
+## 从三栏重建数量索引（load/reset 后调用，确保缓存与实例一致）
+func _rebuild_count_index() -> void:
+	_count_index.clear()
 	for bag in [main_slots, material_slots, quest_slots]:
 		for inst in bag:
-			if inst != null and inst.item_id == item_id:
-				total += inst.count
-	return total
+			if inst != null:
+				_bump_count(inst.item_id, inst.count)
 
 ## ===== 物品锁定（玩家保护关键物，防被动移除） =====
 ## 未锁定的可用数量（锁定实例不计入，供 try_consume 校验与 UI 提示）
@@ -260,6 +267,7 @@ func remove_instance(iid: String) -> bool:
 	for bag in [main_slots, material_slots, quest_slots]:
 		for inst in bag:
 			if inst != null and inst.instance_id == iid:
+				_bump_count(inst.item_id, -inst.count)
 				var idx: int = bag.find(inst)
 				bag[idx] = null
 				_recalculate_weight()
@@ -312,8 +320,8 @@ func consume_instance(iid: String) -> bool:
 					var idx: int = bag.find(inst)
 					bag[idx] = null
 				_recalculate_weight()
+				_bump_count(inst.item_id, -1)
 				_dirty = true
-				inventory_item_removed.emit(inst.item_id, 1)
 				EventBus.inventory_item_removed.emit(inst.item_id, 1)
 				return true
 	return false
@@ -390,10 +398,10 @@ func lose_some_non_rare_items(n: int) -> Array:
 	if remaining < n:
 		_recalculate_weight()
 		_dirty = true
-		for item_id in lost_counts:
-			var c: int = lost_counts[item_id]
-			inventory_item_removed.emit(item_id, c)
-			EventBus.inventory_item_removed.emit(item_id, c)
+	for item_id in lost_counts:
+		var c: int = lost_counts[item_id]
+		_bump_count(item_id, -c)
+		EventBus.inventory_item_removed.emit(item_id, c)
 	return lost_ids
 
 func _recalculate_weight() -> void:
@@ -402,7 +410,7 @@ func _recalculate_weight() -> void:
 		for inst in bag:
 			if inst != null:
 				current_weight += ConfigManager.get_item(inst.item_id).get("weight", 0.0) * inst.count
-	inventory_weight_changed.emit(current_weight, get_max_weight())
+	EventBus.inventory_weight_changed.emit(current_weight, get_max_weight())
 
 func reset() -> void:
 	main_slots.clear(); main_slots.resize(MAX_MAIN_SLOTS)
@@ -410,6 +418,7 @@ func reset() -> void:
 	quest_slots.clear(); quest_slots.resize(MAX_QUEST_SLOTS)
 	current_weight = 0.0
 	_next_iid = 1
+	_count_index.clear()
 	_dirty = false
 
 func get_save_key() -> String:
@@ -442,6 +451,7 @@ func load(data: Dictionary) -> void:
 	_next_iid = maxi(int(data.get("next_iid", 1)), 1)
 	# 旧档不信任存档负重：配置可能已改物品重量，按当前配置重算
 	_recalculate_weight()
+	_rebuild_count_index()
 	_dirty = false
 
 func _deserialize_bag(arr: Array, bag: Array) -> void:
@@ -451,3 +461,108 @@ func _deserialize_bag(arr: Array, bag: Array) -> void:
 		var idx: int = bag.find(null)
 		if idx != -1:
 			bag[idx] = inst
+
+## === UI 窗口 P2-1 新增（纯追加，不改动既有方法；跨窗口协调见 UI 窗口《变更通告》）===
+
+## 取栏位数组（按名字）
+func _bag_by_name(name: String) -> Array:
+	match name:
+		"main": return main_slots
+		"material": return material_slots
+		"quest": return quest_slots
+	return []
+
+## 拆分实例：从 iid 拆出 count 个到新实例，原实例数量减少。
+## 约束：可堆叠(max_stack>1)、0<count<inst.count、count<=max_stack、目标栏有空槽。
+## 返回 { "ok": bool, "reason": String, "new_iid": String }
+func split_instance(iid: String, count: int) -> Dictionary:
+	var inst: ItemInstance = get_instance_by_id(iid)
+	if inst == null:
+		return { "ok": false, "reason": "NOT_FOUND", "new_iid": "" }
+	if count <= 0 or count >= int(inst.count):
+		return { "ok": false, "reason": "BAD_COUNT", "new_iid": "" }
+	var data: Dictionary = ConfigManager.get_item(inst.item_id)
+	if data.is_empty():
+		return { "ok": false, "reason": "UNKNOWN_ITEM", "new_iid": "" }
+	var max_stack: int = int(data.get("max_stack", 1))
+	if max_stack <= 1:
+		return { "ok": false, "reason": "NOT_STACKABLE", "new_iid": "" }
+	if count > max_stack:
+		return { "ok": false, "reason": "EXCEEDS_STACK", "new_iid": "" }
+	var bag: Array = []
+	for b in [main_slots, material_slots, quest_slots]:
+		if b.has(inst):
+			bag = b
+			break
+	if bag.is_empty():
+		return { "ok": false, "reason": "NO_BAG", "new_iid": "" }
+	var empty: int = _find_empty(bag)
+	if empty == -1:
+		return { "ok": false, "reason": "BAG_FULL", "new_iid": "" }
+	var new_inst := ItemInstance.new()
+	new_inst.instance_id = _new_instance_id(inst.item_id)
+	new_inst.item_id = inst.item_id
+	new_inst.count = count
+	new_inst.acquired_source = inst.acquired_source
+	new_inst.acquired_time = int(Time.get_unix_time_from_system())
+	bag[empty] = new_inst
+	inst.count -= count
+	_recalculate_weight()
+	_dirty = true
+	return { "ok": true, "reason": "SUCCESS", "new_iid": new_inst.instance_id }
+
+## 移动实例到目标栏位指定索引（拖拽排序/跨栏移动）。
+## target_bag: "main"/"material"/"quest"；target_index 越界自动夹紧。
+## 目标槽被占用则与源槽交换，保证实例总数不变。返回是否成功。
+func move_instance(iid: String, target_bag: String, target_index: int) -> bool:
+	var src_bag: Array = []
+	var found: ItemInstance = null
+	for b in [main_slots, material_slots, quest_slots]:
+		for it in b:
+			if it != null and it.instance_id == iid:
+				src_bag = b
+				found = it
+				break
+		if found != null:
+			break
+	if found == null:
+		return false
+	var src_idx: int = src_bag.find(found)
+	var tgt: Array = _bag_by_name(target_bag)
+	if tgt.is_empty():
+		return false
+	var clamped: int = clampi(target_index, 0, tgt.size() - 1)
+	src_bag[src_idx] = null
+	var displaced: ItemInstance = tgt[clamped]
+	tgt[clamped] = found
+	if displaced != null:
+		src_bag[src_idx] = displaced
+	_recalculate_weight()
+	_dirty = true
+	return true
+
+## 整理栏位：按 名称→类型→稀有度 排序，非空实例排前、空槽靠后。仅改顺序。
+func sort_bag(bag_name: String) -> void:
+	var bag: Array = _bag_by_name(bag_name)
+	if bag.is_empty():
+		return
+	var items: Array = []
+	for inst in bag:
+		if inst != null:
+			items.append(inst)
+	items.sort_custom(func(a, b):
+		var da: Dictionary = ConfigManager.get_item(a.item_id)
+		var db: Dictionary = ConfigManager.get_item(b.item_id)
+		var na: String = da.get("name", a.item_id)
+		var nb: String = db.get("name", b.item_id)
+		if na != nb:
+			return na < nb
+		var ta: String = da.get("type", "")
+		var tb: String = db.get("type", "")
+		if ta != tb:
+			return ta < tb
+		return da.get("rarity", "") < db.get("rarity", "")
+	)
+	for i in range(bag.size()):
+		bag[i] = items[i] if i < items.size() else null
+	_dirty = true
