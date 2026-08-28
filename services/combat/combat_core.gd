@@ -41,6 +41,7 @@ func player_basic(target_id: String = "") -> Array[CombatEvent]:
 	return events
 
 ## 玩家招式（slot=快捷栏位）→ 返回事件流（含真气消耗 / 冷却 / 状态施加）
+## 复用 _cast_skill 与敌人共用同一套施法结算，行为零变化（双闸门保护）
 func player_skill(slot: int, target_id: String = "") -> Array[CombatEvent]:
 	var events: Array[CombatEvent] = []
 	if state == null or not state.is_active:
@@ -50,40 +51,52 @@ func player_skill(slot: int, target_id: String = "") -> Array[CombatEvent]:
 	var ability_id: String = GameManager.ability_service.equipped_combat[slot]
 	if ability_id == "":
 		return events
+	events.append_array(tick_unit(state.player))          # 自己回合开始先 tick（含冷却递减）
+	events.append_array(_cast_skill(state.player, ability_id, target_id))
+	return events
+
+## 通用施法结算（玩家 / 敌人共用）：真气消耗 + 冷却 + 目标解析 + 伤害 + 状态施加
+## 返回事件流。mp 不足 / 冷却中 / 配置缺失 → 返回空（调用方据此普攻兜底）
+## 修复：self / all_allies 目标（调息 / 心法 / 轻功等自buff）只施加状态、不再对自身造成 power 伤害
+func _cast_skill(caster: CombatCharacter, ability_id: String, primary_target_id: String = "") -> Array[CombatEvent]:
+	var events: Array[CombatEvent] = []
+	if caster == null or not caster.is_alive():
+		return events
 	var cfg: Dictionary = ConfigManager.get_ability(ability_id)
 	if cfg.is_empty():
 		return events
 	var qi_cost: int = int(cfg.get("qi_cost", cfg.get("mp_cost", 0)))
-	if state.player.mp < qi_cost:
+	if caster.mp < qi_cost:
 		return events
 	var cd_key: String = ability_id
-	if state.player.cooldowns.has(cd_key) and state.player.cooldowns[cd_key] > 0:
+	if caster.cooldowns.has(cd_key) and caster.cooldowns[cd_key] > 0:
 		return events
-	state.player.mp -= qi_cost
-	var ev_qi := _ev(CombatEvent.Type.QI_COST, state.player.character_id, "", qi_cost)
-	ev_qi.actor_mp_after = state.player.mp
+	caster.mp -= qi_cost
+	var ev_qi := _ev(CombatEvent.Type.QI_COST, caster.character_id, "", qi_cost)
+	ev_qi.actor_mp_after = caster.mp
 	events.append(ev_qi)
 	var cd: int = int(cfg.get("cooldown", 0))
 	if cd > 0:
-		state.player.cooldowns[cd_key] = cd
-		events.append(_ev(CombatEvent.Type.COOLDOWN_SET, state.player.character_id, "", cd, false, false, "", 0, ability_id))
-	events.append_array(tick_unit(state.player))
-	events.append(_ev(CombatEvent.Type.ACTION_SKILL, state.player.character_id, target_id, 0, false, false, "", 0, ability_id))
+		caster.cooldowns[cd_key] = cd
+		events.append(_ev(CombatEvent.Type.COOLDOWN_SET, caster.character_id, "", cd, false, false, "", 0, ability_id))
+	events.append(_ev(CombatEvent.Type.ACTION_SKILL, caster.character_id, primary_target_id, 0, false, false, "", 0, ability_id))
 	var cfg_target: String = cfg.get("target", "enemy")
+	var is_self: bool = (cfg_target == "self" or cfg_target == "all_allies")
 	var targets: Array[CombatCharacter] = []
 	if cfg_target == "all_enemies":
-		targets = state.get_alive_enemies()
-	elif cfg_target == "self" or cfg_target == "all_allies":
-		targets = [state.player]
+		targets = state.get_alive_enemies() if caster.is_player else [state.player]   # 敌人群攻只打单人玩家
+	elif is_self:
+		targets = [caster]
 	else:
-		var t: CombatCharacter = _resolve(target_id)
-		if t != null:
+		var t: CombatCharacter = state.player if not caster.is_player else _resolve(primary_target_id)
+		if t != null and t.is_alive():
 			targets.append(t)
-	var power: int = int(cfg.get("power", 0)) + int(state.player.effective_attack() * 0.3)
+	var power: int = int(cfg.get("power", 0)) + int(caster.effective_attack() * 0.3)
 	for tgt in targets:
-		var res: Dictionary = _resolve_hit(state.player, tgt, power)
-		events.append_array(res.events)
-		_try_down(tgt, events)
+		if not is_self:
+			var res: Dictionary = _resolve_hit(caster, tgt, power)
+			events.append_array(res.events)
+			_try_down(tgt, events)
 		for eff in cfg.get("effects", []):
 			var ev: CombatEvent = _apply_status(tgt, eff.get("status_id", ""), int(eff.get("stacks", 1)))
 			if ev != null:
@@ -115,28 +128,101 @@ func player_rest() -> Array[CombatEvent]:
 
 # ───────────────────────── 敌人阶段 ─────────────────────────
 
-## 敌人阶段：所有存活敌人依次行动（M2 演出层会按事件逐个播放）
+## 敌人阶段：所有存活敌人依次行动（M2 演出层按事件逐个播放）
+## M3：每个敌人先用 _pick_enemy_ability 按权重 + 条件选招，无可用招则普攻兜底
 func enemy_phase() -> Array[CombatEvent]:
 	var events: Array[CombatEvent] = []
 	if state == null:
 		return events
 	for enemy in state.get_alive_enemies():
 		events.append(_ev(CombatEvent.Type.TURN_START, enemy.character_id))
-		events.append_array(tick_unit(enemy))
+		events.append_array(tick_unit(enemy))            # 含冷却递减
 		if not enemy.is_alive():
 			continue
-		var res: Dictionary = _resolve_hit(enemy, state.player, enemy.effective_attack())
-		events.append_array(res.events)
+		var ab: Dictionary = _pick_enemy_ability(enemy)
+		if ab.is_empty():
+			# 普攻兜底（ACTION_BASIC + DAMAGE）
+			events.append(_ev(CombatEvent.Type.ACTION_BASIC, enemy.character_id, state.player.character_id))
+			var res: Dictionary = _resolve_hit(enemy, state.player, enemy.effective_attack())
+			events.append_array(res.events)
+		else:
+			events.append_array(_cast_skill(enemy, ab.get("id", ""), "player"))
 		_try_down(state.player, events)
 		if state.player.is_dead:
 			break
 	return events
 
+## 按权重从敌人 AI 技能包里选一个可用招式（确定性：rng.randf() 由内核 seed 驱动）
+## 返回 {id, weight, condition} 或空字典（无可用的 → 调用方普攻兜底）
+func _pick_enemy_ability(enemy: CombatCharacter) -> Dictionary:
+	if enemy.ai_kit == null or enemy.ai_kit.is_empty():
+		return {}
+	var candidates: Array = []
+	var total: float = 0.0
+	for entry in enemy.ai_kit:
+		var id: String = entry.get("id", "")
+		if id == "":
+			continue
+		if not _ability_usable(enemy, id):
+			continue
+		if not _condition_met(enemy, entry.get("condition", "always")):
+			continue
+		var w: float = float(entry.get("weight", 1))
+		if w <= 0:
+			continue
+		candidates.append(entry)
+		total += w
+	if candidates.is_empty() or total <= 0:
+		return {}
+	var roll: float = rng.randf() * total
+	for entry in candidates:
+		roll -= float(entry.get("weight", 1))
+		if roll < 0:
+			return entry
+	return candidates[candidates.size() - 1]
+
+## 招式是否当前可用：配置存在 + 真气足够 + 不在冷却
+func _ability_usable(enemy: CombatCharacter, ability_id: String) -> bool:
+	var cfg: Dictionary = ConfigManager.get_ability(ability_id)
+	if cfg.is_empty():
+		return false
+	if enemy.mp < int(cfg.get("qi_cost", cfg.get("mp_cost", 0))):
+		return false
+	var cd: int = int(cfg.get("cooldown", 0))
+	if cd > 0 and enemy.cooldowns.has(ability_id) and enemy.cooldowns[ability_id] > 0:
+		return false
+	return true
+
+## 条件门控（M3 文法）：always | player_hp_below:<0-1> | self_hp_below:<0-1> | self_mp_above:<0-1>
+func _condition_met(enemy: CombatCharacter, cond: String) -> bool:
+	if cond == "" or cond == "always":
+		return true
+	var parts: PackedStringArray = cond.split(":", false)
+	if parts.size() < 2:
+		return true
+	var key: String = parts[0]
+	var thr: float = float(parts[1])
+	if key == "player_hp_below":
+		return state.player.hp <= state.player.max_hp * thr
+	if key == "self_hp_below":
+		return enemy.hp <= enemy.max_hp * thr
+	if key == "self_mp_above":
+		return enemy.mp >= enemy.max_mp * thr
+	return true
+
 # ───────────────────────── 状态 ─────────────────────────
 
-## 单位回合开始 tick：DoT/HoT 生效 + 持续回合递减 + 到期移除
+## 单位回合开始 tick：冷却递减(M1 修复) + DoT/HoT 生效 + 持续回合递减 + 到期移除
+## 冷却递减必须在「单位行动之前」执行：player_skill / enemy_phase 都在 tick 之后才写 cd，
+## 故此处递减不会误伤「刚设的 cd」，且能让上回合的招式在下一回合恢复可用。
 func tick_unit(unit: CombatCharacter) -> Array[CombatEvent]:
 	var events: Array[CombatEvent] = []
+	# ── 冷却递减（修复 M1：此前全工程从未递减 cooldowns，招式一旦放出即永久进冷却）──
+	var cd_keys := unit.cooldowns.keys()
+	for k in cd_keys:
+		unit.cooldowns[k] = max(0, int(unit.cooldowns[k]) - 1)
+		if unit.cooldowns[k] <= 0:
+			unit.cooldowns.erase(k)
 	for i in range(unit.status_effects.size() - 1, -1, -1):
 		var se: StatusEffect = unit.status_effects[i]
 		if se.dot_per_turn != 0:

@@ -212,3 +212,82 @@ func test_qi_cost_event_carries_actor_mp_after() -> void:
 	if qi_ev == null:
 		return
 	expect_eq(qi_ev.actor_mp_after, before_mp - 5, "事件 actor_mp_after 应等于扣后真气")
+
+## M3：敌人真气充足时应施展 ai_kit 中的招式（ACTION_SKILL + 真实技能 id），而非纯普攻
+## bandit_001 的 ai_kit 仅 sword_qingsong_001（weight3/always），应确定性施展该招
+func test_enemy_uses_skill_when_mp_ok() -> void:
+	var st: CombatState = _start()
+	if st == null:
+		return
+	st.player.dodge_rate = 0.0
+	for e in st.enemies:
+		e.dodge_rate = 0.0
+	var events: Array[CombatEvent] = GameManager.combat_service.enemy_phase_events()
+	var skill_ev: CombatEvent = null
+	for e in events:
+		if e.type == CombatEvent.Type.ACTION_SKILL and e.actor_id == "bandit_001":
+			skill_ev = e
+	expect(skill_ev != null, "山贼(bandit_001) 的 ai_kit 仅 sword_qingsong_001，应确定性施展该招")
+	if skill_ev == null:
+		return
+	expect(skill_ev.skill_id == "sword_qingsong_001", "施展的应是青松剑法，实际 %s" % skill_ev.skill_id)
+
+## M3：敌人真气为 0 时无可用招式，应普攻兜底（ACTION_BASIC，且无 ACTION_SKILL）
+func test_enemy_falls_back_to_basic_when_mp_zero() -> void:
+	var st: CombatState = _start()
+	if st == null:
+		return
+	st.player.dodge_rate = 0.0
+	for e in st.enemies:
+		e.dodge_rate = 0.0
+		e.mp = 0                    # 真气清零 → 所有招式不可用
+	var before: int = st.player.hp
+	var events: Array[CombatEvent] = GameManager.combat_service.enemy_phase_events()
+	var has_skill: bool = false
+	var has_basic: bool = false
+	for e in events:
+		if e.type == CombatEvent.Type.ACTION_SKILL:
+			has_skill = true
+		if e.type == CombatEvent.Type.ACTION_BASIC:
+			has_basic = true
+	expect(not has_skill, "mp=0 时不应有任何招式事件")
+	expect(has_basic, "mp=0 时应触发普攻兜底")
+	expect(st.player.hp < before, "普攻兜底仍应让玩家掉血（%d→%d）" % [before, st.player.hp])
+
+## M3（修 M1 冷却 bug）：玩家施展带冷却招式后，下个自己回合 tick 应把冷却减到 0
+func test_cooldown_decrements_on_tick() -> void:
+	var st: CombatState = _start()
+	if st == null:
+		return
+	GameManager.ability_service.learn("sword_qingsong_001")
+	GameManager.ability_service.equip_combat_skill(0, "sword_qingsong_001")
+	GameManager.combat_service.player_cast(0, "bandit_001")
+	expect_eq(int(st.player.cooldowns.get("sword_qingsong_001", 0)), 1, "施法当回合冷却应为 1")
+	GameManager.combat_service.get_core().tick_unit(st.player)
+	expect_eq(int(st.player.cooldowns.get("sword_qingsong_001", 0)), 0, "下个自己回合 tick 后冷却应归 0（修复后）")
+
+## M3：条件门控 self_mp_above 应排除真气不足的招式（battle_bandit_001 实际编成是两个 bandit_001，
+## 故运行时给首敌注入带条件门控的 ai_kit 验证门控逻辑，而非依赖某具体敌人编成）
+func test_condition_gates_enemy_skill() -> void:
+	var st: CombatState = _start()
+	if st == null:
+		return
+	st.player.dodge_rate = 0.0
+	for e in st.enemies:
+		e.dodge_rate = 0.0
+	# 给首敌注入：sword(always) + xinfa(self_mp_above:0.6)
+	var kit: Array = [
+		{"id": "sword_qingsong_001", "weight": 1.0, "condition": "always"},
+		{"id": "xinfa_ningshen_001", "weight": 1.0, "condition": "self_mp_above:0.6"}
+	]
+	st.enemies[0].ai_kit = kit
+	st.enemies[0].mp = 10          # 低于 0.6*30=18 → xinfa 被排除，只剩 sword（确定性）
+	var events: Array[CombatEvent] = GameManager.combat_service.enemy_phase_events()
+	var skill_ev: CombatEvent = null
+	for e in events:
+		if e.type == CombatEvent.Type.ACTION_SKILL and e.actor_id == "bandit_001":
+			skill_ev = e
+	expect(skill_ev != null, "首敌(mp=10, xinfa 被条件排除) 应确定性施展 sword")
+	if skill_ev == null:
+		return
+	expect(skill_ev.skill_id == "sword_qingsong_001", "应施展青松剑法而非被门控的凝神心法，实际 %s" % skill_ev.skill_id)

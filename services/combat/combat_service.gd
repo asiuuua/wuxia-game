@@ -63,6 +63,7 @@ func start_combat(battle_id: String) -> void:
 		ec.damage_taken_mult = pdm
 		ec.can_be_downed = allow_nl
 		ec.speed = int(edata.get("speed", 8))   # 消费 enemies.json.speed（此前全工程无人读取）
+		ec.ai_kit = _normalize_abilities(edata.get("abilities", []))   # M3：AI 技能包归一化（字符串→{id,weight,condition}）
 		state.enemies.append(ec)
 	_state = state
 	# 内核接管后续流程编排与结算；seed=0 由内核按时间派生（测试可改 get_core().rng.configure）
@@ -185,6 +186,20 @@ func _resolve_target(target_id: String) -> CombatCharacter:
 				return e
 	var alive: Array[CombatCharacter] = _state.get_alive_enemies()
 	return alive[0] if not alive.is_empty() else null
+
+## 归一化敌人 abilities 为 AI 技能包（M3）：向后兼容字符串元素
+## 字符串 → {id, weight:1, condition:"always"}；对象 → 透传 {id, weight, condition}
+func _normalize_abilities(raw: Array) -> Array:
+	var out: Array = []
+	for a in raw:
+		if typeof(a) == TYPE_STRING:
+			if a != "":
+				out.append({"id": a, "weight": 1.0, "condition": "always"})
+		elif a is Dictionary:
+			var id: String = a.get("id", "")
+			if id != "":
+				out.append({"id": id, "weight": float(a.get("weight", 1.0)), "condition": a.get("condition", "always")})
+	return out
 
 func is_over() -> bool:
 	return _state == null or _state.is_over()

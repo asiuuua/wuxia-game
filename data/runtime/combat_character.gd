@@ -31,6 +31,7 @@ var dodge_rate: float = 0.05
 
 var cooldowns: Dictionary = {}   # skill_id -> 剩余冷却回合
 var status_effects: Array[StatusEffect] = []   # 当前挂载状态
+var ai_kit: Array = []            # 敌人 AI 技能包（M3）：[{id, weight, condition}]；玩家恒为空
 
 # 受到伤害：命中/闪避/防御减伤/暴击（使用有效属性 + 可选注入随机源）
 # rng 为 null 时回退全局 randf()（兼容直接调用）；CombatCore 会注入 SeededRNG 保证可复现
