@@ -15,8 +15,9 @@
 - 权威基线 `docs/模块设计规范.md`；协同框架 `docs/项目进度与协同开发框架.md`。
 
 ## 路线图
-Phase 0 脚手架 ✅ → Phase 1 垂直切片 ✅ → **M1 战斗逻辑内核 ✅(2026-08-29, 提交 3f30636)** → **M2 战斗演出编排 ✅(2026-08-29, 提交 9d6e5c3)** → **M3-1 敌人 AI 权重选技能 ✅(2026-08-29)** → **M3-2 状态引擎扩护盾/反弹/复活 ✅(2026-08-29)** → Phase 2 系统填充（难度✅；锻造/商店/门派叶子逻辑✅；背包P0/P1✅）→ Phase 3 内容扩张 → Phase 4 平台适配
-- 战斗下一步（M3）：M3-3 演出动效/音效令牌化（护盾条/反弹飘字/复活特效 + `ui_anim.json` 的 `battle` 令牌块落地；飘字现直设色，待接 `ui_sfx.json`）。⚠️ `ui_anim.json` 的 `battle` 令牌块仍待 UI 窗口补（M2 起用 Director `_FALLBACK` 兜底）。
+Phase 0 脚手架 ✅ → Phase 1 垂直切片 ✅ → **M1 战斗逻辑内核 ✅(2026-08-29, 提交 3f30636)** → **M2 战斗演出编排 ✅(2026-08-29, 提交 9d6e5c3)** → **M3-1 敌人 AI 权重选技能 ✅(2026-08-29)** → **M3-2 状态引擎扩护盾/反弹/复活 ✅(2026-08-29)** → **M3-3 演出动效令牌化 ✅(2026-08-29)** → Phase 2 系统填充（难度✅；锻造/商店/门派叶子逻辑✅；背包P0/P1✅）→ Phase 3 内容扩张 → Phase 4 平台适配
+- 战斗 M3 全收口（逻辑 M1/M3-1/M3-2 + 演出 M2/M3-3）。下一步：Phase 3 内容扩张（扩敌人/技能/状态配置；补 `battle_bandit_001` 编成含 `bandit_002` 接 M3-1 条件门控样例）；或打磨 `BattleScene` 布局/美术。
+- ⚠️ `ui_anim.json` 的 `battle` 令牌块**仍待 UI 窗口纯增**（M2 起用 Director `_FALLBACK` 兜底，M3-3 已在 `_FALLBACK` 补三机制意图时长，UI 模块补块后无缝接管）。
 
 ## GDScript 4.x 硬规（高频踩坑）
 - autoload 脚本**禁止**写与单例同名的 `class_name`；`const X = preload()` 与全局 `class_name X` 同名会 shadowed。
@@ -40,6 +41,7 @@ Phase 0 脚手架 ✅ → Phase 1 垂直切片 ✅ → **M1 战斗逻辑内核 �
 - **单元测试**：`Godot_v4.7.2_console --headless --path "D:/武侠游戏" res://tests/unit/run_all.tscn`（场景运行，autoload 全加载，退出码 0/1）。当前 套件 5 · 失败 0（战斗 23 / 背包 15 / 存读档 6 / … 全绿）。
 - ⚠️ 验证**界面脚本**真编译：把 `tests/ui/m5_smoke.tscn` 当主场景跑（或真实打开工程），`--script` 模式不加载 autoload 会假阳性。
 - 多 Godot 进程抢 `.godot` 类缓存会玄学报错 → **验证必须串行**。
+- **⚠️ 跨窗口阻断（2026-08-29 末）：`services/inventory/inventory_service.gd`（背包窗口未提交 WIP）当前有 `Parse Error: Expected indented block after "for" block`**，导致 `InventoryService` 类无法解析 → `GameManager`/`save_validator`/`defeat_handler` autoload 全加载失败 → `run_all.tscn` 全体测试级联崩（含战斗套件）。**此非战斗窗口代码**。该文件不归战斗窗口，战斗窗口未改它；请 UI 模块修复/恢复后再统一收口各窗口提交。修复前：`--quit` 仍零错误（inventory_service 不被 --quit 触发解析），但 `run_all` 红。**排查模板**：`godot --check-only --script res://services/inventory/inventory_service.gd` 取精确错误行。
 
 ## 资源与主题
 - 中文靠工程默认主题下发：`project.godot [gui] theme/custom="res://resources/themes/ui_theme.tres"`；字体思源宋体 `resources/fonts/SiYuanSongTiRegular/`；主题由 `tools/gen_ui_theme.gd` 重生成。
@@ -70,6 +72,7 @@ Phase 0 脚手架 ✅ → Phase 1 垂直切片 ✅ → **M1 战斗逻辑内核 �
 - **UI 窗口主权**：`scenes/ui/**` + `data/configs/ui/**` + `core/constants/ui_theme.gd` + `resources/themes/**` + `autoload/ui_manager.gd`。
 - **战斗窗口主权**：`services/combat/**` + `data/runtime/combat_*.gd` + `data/configs/scenes/battles.json` + `scenes/gameplay/battle/**` + `skills.json` + `enemies.json`。
 - **背包窗口主权**：`services/inventory/**` + `data/runtime/item_instance.gd` + `data/configs/items/**` + `core/constants/item_constants.gd` + `core/enums/item_enums.gd` + `tools/gen_contract.gd` + `docs/契约总表.md`。
+- ⚠️ **背包系统 P2 整改表（`docs/背包系统设计评审与实现方案.md`）按窗口拆分**：**UI 窗口主权 = P2-1（InventoryScreen 只读聚合列表 / 缺使用·装备·丢弃·排序·拆分·拖拽 / item_slot+tooltip 组件空）、P2-2（`_refresh` 全量重建→脏刷新）、P2-9（`_serialize_bag` 槽位顺序不保真，做拖拽后须存 `{idx:inst}`）**——均与 InventoryScreen 表现/拖拽强耦合；**背包模块主权 = P2-3~P2-8**（容量查询 API / 团灭硬编码 / 读档信任 weight / signal 双发 / O(n) 扫描 / can_forge 未乘 count，纯逻辑层）。⚠️ P2-9 序列化代码在背包模块主权文件 `inventory_service.gd`，实现须与背包模块打招呼、改动写入 UI 窗口《变更通告》。
 - **Git 精确提交铁律**：仓库为 master 单分支，提交信息格式 `[窗口名] 改动；影响：xxx；不影响：xxx`。⚠️ 教训：M1 提交(`3f30636`)曾把当时工作区全部文件（含背包窗口未提交的 EventBus/player_state/combat_service 改动）一起卷入——**各窗口必须逐个 `git add <自己的文件>`，严禁 `git add -A` / `git add .`**；开工前先 `git log --oneline -5` + `git status` 区分哪些改动是自己的。
 - ⚠️ **git 提交权（用户 2026-08-29 拍板收口到「UI 模块」）**：git 提交**统一由 UI 模块收口**，战斗/背包/设置等窗口**不再自行 `git commit`**。各窗口收尾只做：产代码 + 跑双闸门 + 写本窗口《变更通告》（含「改动文件清单」）；UI 模块按清单逐个 `git add <文件>` 精确入库（仍禁 `git add -A` / `git add .`），提交信息 `[窗口名]` 前缀。此规取代前「背包模块收口」「本对话(AI) 收口」两种表述——最终落到 UI 模块。
 - Godot 验证**必须串行**；`docs/` 不要两人改同一篇；提交按里程碑分开（M1 提交 `3f30636` 已与 UI 并发改动隔离）。
