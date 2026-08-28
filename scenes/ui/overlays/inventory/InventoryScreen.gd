@@ -7,6 +7,7 @@ const Tooltip = preload("res://scenes/ui/components/tooltip/Tooltip.gd")
 
 var _weight_label: Label
 var _grids: Dictionary = {}
+var _slot_by_iid: Dictionary = {}
 var _tooltip: Tooltip
 var _context_menu: PopupMenu = null
 var _current_iid: String = ""
@@ -102,24 +103,47 @@ func _refresh() -> void:
 	for bag_name in _grids:
 		_fill_grid(bag_name, inv)
 
+# 脏刷新：复用已有槽位节点，仅对内容发生变化的槽调用 setup（避免每次全量 queue_free 重建）
 func _fill_grid(bag_name: String, inv: InventoryService) -> void:
 	var grid: GridContainer = _grids[bag_name]
-	for child in grid.get_children():
-		child.queue_free()
 	var bag: Array = _bag_array(bag_name, inv)
-	var shown: int = 0
+	var desired: Array = []  # 非空实例序列 + 末尾一个空槽（若有物品）
 	for inst in bag:
 		if inst != null:
-			var slot := ItemSlot.new()
-			slot.setup(inst)
+			desired.append(inst)
+	if desired.size() > 0:
+		desired.append(null)
+	for i in range(desired.size()):
+		var inst = desired[i]
+		var sig: String = _slot_sig(inst)
+		var slot: ItemSlot
+		if i < grid.get_child_count():
+			slot = grid.get_child(i) as ItemSlot
+		else:
+			slot = ItemSlot.new()
 			_connect_slot(slot)
 			grid.add_child(slot)
-			shown += 1
-	if shown > 0:
-		var empty := ItemSlot.new()
-		empty.setup(null)
-		_connect_slot(empty)
-		grid.add_child(empty)
+		if slot.get_meta("sig", "") != sig:
+			var old_iid: String = slot.get_iid()
+			if old_iid != "":
+				_slot_by_iid.erase(old_iid)
+			slot.setup(inst)
+			slot.set_meta("sig", sig)
+			if inst != null:
+				_slot_by_iid[inst.instance_id] = slot
+	while grid.get_child_count() > desired.size():
+		var extra: ItemSlot = grid.get_child(grid.get_child_count() - 1) as ItemSlot
+		var ei: String = extra.get_iid()
+		if ei != "":
+			_slot_by_iid.erase(ei)
+		grid.remove_child(extra)
+		extra.queue_free()
+
+# 槽位内容签名：iid + 数量 + 锁定；任一变化即触发 setup 重绘
+func _slot_sig(inst) -> String:
+	if inst == null:
+		return "EMPTY"
+	return "%s#%d#%d" % [inst.instance_id, int(inst.count), int(inst.locked)]
 
 func _connect_slot(slot: ItemSlot) -> void:
 	slot.slot_pressed.connect(_on_slot_pressed)
