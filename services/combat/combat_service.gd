@@ -159,6 +159,12 @@ func enemy_phase_events() -> Array[CombatEvent]:
 		return []
 	return _core.enemy_phase()
 
+## 单个敌人行动（回合顺序驱动，ATB 按速度插队使用）：返回事件流
+func enemy_act_events(enemy_id: String) -> Array[CombatEvent]:
+	if _state == null:
+		return []
+	return _core.enemy_act(enemy_id)
+
 ## 玩家战斗内用药：返回事件流（HEAL/QI_GAIN，带行动后直设值），供 Director 播放
 func use_item_events(instance_id: String) -> Array[CombatEvent]:
 	var events: Array[CombatEvent] = []
@@ -238,7 +244,12 @@ func try_escape() -> bool:
 		EventBus.notify_escape_fail.emit()
 		return false
 	var chance: float = clampf(0.5 + DifficultyManager.get_escape_bonus(), 0.05, 0.95)
-	if randf() < chance:
+	var roll_ok: bool = false
+	if _core != null and _core.rng != null:
+		roll_ok = _core.rng.randf() < chance      # 走内核 SeededRNG，保证可复现（非全局 randf）
+	else:
+		roll_ok = randf() < chance
+	if roll_ok:
 		_escaped = true
 		EventBus.notify_escape_success.emit()
 		finalize()

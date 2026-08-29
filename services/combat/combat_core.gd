@@ -128,29 +128,51 @@ func player_rest() -> Array[CombatEvent]:
 
 # ───────────────────────── 敌人阶段 ─────────────────────────
 
-## 敌人阶段：所有存活敌人依次行动（M2 演出层按事件逐个播放）
+## 敌人阶段：所有存活敌人按当前回合序列依次行动（ATB 按速度插队，SEQUENTIAL 玩家先）
 ## M3：每个敌人先用 _pick_enemy_ability 按权重 + 条件选招，无可用招则普攻兜底
 func enemy_phase() -> Array[CombatEvent]:
 	var events: Array[CombatEvent] = []
 	if state == null:
 		return events
-	for enemy in state.get_alive_enemies():
-		events.append(_ev(CombatEvent.Type.TURN_START, enemy.character_id))
-		events.append_array(tick_unit(enemy))            # 含冷却递减
-		if not enemy.is_alive():
+	for eid in get_round_sequence():
+		if eid == "player":
 			continue
-		var ab: Dictionary = _pick_enemy_ability(enemy)
-		if ab.is_empty():
-			# 普攻兜底（ACTION_BASIC + DAMAGE）
-			events.append(_ev(CombatEvent.Type.ACTION_BASIC, enemy.character_id, state.player.character_id))
-			var res: Dictionary = _resolve_hit(enemy, state.player, enemy.effective_attack())
-			events.append_array(res.events)
-		else:
-			events.append_array(_cast_skill(enemy, ab.get("id", ""), "player"))
-		_try_down(state.player, events)
+		var enemy: CombatCharacter = _enemy_by_id(eid)
+		if enemy == null or not enemy.is_alive():
+			continue
+		events.append_array(enemy_act(eid))
 		if state.player.is_dead:
 			break
 	return events
+
+## 单个敌人行动（供回合顺序驱动）：tick → 选招 / 普攻兜底 → 结算玩家受伤
+func enemy_act(enemy_id: String) -> Array[CombatEvent]:
+	var events: Array[CombatEvent] = []
+	if state == null:
+		return events
+	var enemy: CombatCharacter = _enemy_by_id(enemy_id)
+	if enemy == null or not enemy.is_alive():
+		return events
+	events.append(_ev(CombatEvent.Type.TURN_START, enemy.character_id))
+	events.append_array(tick_unit(enemy))            # 含冷却递减
+	if not enemy.is_alive():
+		return events
+	var ab: Dictionary = _pick_enemy_ability(enemy)
+	if ab.is_empty():
+		# 普攻兜底（ACTION_BASIC + DAMAGE）
+		events.append(_ev(CombatEvent.Type.ACTION_BASIC, enemy.character_id, state.player.character_id))
+		var res: Dictionary = _resolve_hit(enemy, state.player, enemy.effective_attack())
+		events.append_array(res.events)
+	else:
+		events.append_array(_cast_skill(enemy, ab.get("id", ""), "player"))
+	_try_down(state.player, events)
+	return events
+
+func _enemy_by_id(enemy_id: String) -> CombatCharacter:
+	for e in state.enemies:
+		if e.character_id == enemy_id:
+			return e
+	return null
 
 ## 按权重从敌人 AI 技能包里选一个可用招式（确定性：rng.randf() 由内核 seed 驱动）
 ## 返回 {id, weight, condition} 或空字典（无可用的 → 调用方普攻兜底）
@@ -272,15 +294,32 @@ func _apply_status(unit: CombatCharacter, status_id: String, stacks: int) -> Com
 
 # ───────────────────────── ATB ─────────────────────────
 
-## ATB 行动顺序（供 M2 顺序条）：按集气速率(effective_charge_rate)降序
+## ATB 行动顺序（供 M2 顺序条）：按集气速率(effective_charge_rate)降序（仅存活单位）
 func action_order() -> Array[String]:
 	var list: Array[CombatCharacter] = [state.player]
-	list.append_array(state.enemies)
+	for e in state.enemies:
+		if e.is_alive():
+			list.append(e)
 	list.sort_custom(func(a: CombatCharacter, b: CombatCharacter) -> bool:
 		return a.effective_charge_rate() > b.effective_charge_rate())
 	var ids: Array[String] = []
 	for u in list:
 		ids.append(u.character_id)
+	return ids
+
+## 单回合行动序列（供演出层回合驱动）：
+## SEQUENTIAL → 玩家先、再按编成顺序的存活敌人；ATB → 按 effective_charge_rate 降序（速度插队）
+func get_round_sequence() -> Array[String]:
+	var actors: Array[CombatCharacter] = [state.player]
+	for e in state.enemies:
+		if e.is_alive():
+			actors.append(e)
+	if state.turn_mode == CombatEnums.TurnMode.ATB:
+		actors.sort_custom(func(a: CombatCharacter, b: CombatCharacter) -> bool:
+			return a.effective_charge_rate() > b.effective_charge_rate())
+	var ids: Array[String] = []
+	for a in actors:
+		ids.append(a.character_id)
 	return ids
 
 # ───────────────────────── 内部 ─────────────────────────

@@ -32,6 +32,16 @@
       "enemy_ids": ["bandit_002"],
       "turn_mode": "atb",
       "reward_exp": 80
+    },
+    {
+      "id": "battle_bandit_elite",
+      "name": "入宗精英试炼",
+      "enemy_ids": [
+        "bandit_warden_001",
+        "bandit_fanatic_001"
+      ],
+      "turn_mode": "atb",
+      "reward_exp": 70
     }
   ]
 }

@@ -104,6 +104,48 @@
       "power": 0,
       "effects": [],
       "learned_by_default": false
+    },
+    {
+      "id": "huti_zhenqi_001",
+      "name": "护体真气",
+      "tier": "form2",
+      "description": "运起护体真气，凝成气盾抵挡伤害",
+      "qi_cost": 6,
+      "cooldown": 3,
+      "target": "self",
+      "power": 0,
+      "effects": [
+        { "status_id": "huti", "stacks": 1 }
+      ],
+      "learned_by_default": false
+    },
+    {
+      "id": "jingci_huwei_001",
+      "name": "荆棘护体",
+      "tier": "form2",
+      "description": "遍体生荆棘，反伤来犯之敌",
+      "qi_cost": 8,
+      "cooldown": 4,
+      "target": "self",
+      "power": 0,
+      "effects": [
+        { "status_id": "jingci", "stacks": 1 }
+      ],
+      "learned_by_default": false
+    },
+    {
+      "id": "buqu_yizhi_001",
+      "name": "不屈意志",
+      "tier": "xinfa",
+      "description": "临危不屈，气绝之际再度挺身",
+      "qi_cost": 10,
+      "cooldown": 6,
+      "target": "self",
+      "power": 0,
+      "effects": [
+        { "status_id": "buqu", "stacks": 1 }
+      ],
+      "learned_by_default": false
     }
   ]
 }

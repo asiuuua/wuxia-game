@@ -34,8 +34,9 @@ var cooldowns: Dictionary = {}   # skill_id -> 剩余冷却回合
 var status_effects: Array[StatusEffect] = []   # 当前挂载状态
 var ai_kit: Array = []            # 敌人 AI 技能包（M3）：[{id, weight, condition}]；玩家恒为空
 
-# 受到伤害：命中/闪避/防御减伤/暴击（使用有效属性 + 可选注入随机源）
-# rng 为 null 时回退全局 randf()（兼容直接调用）；CombatCore 会注入 SeededRNG 保证可复现
+# ⚠️ 非战斗遗留路径（供 AbilityService 等战斗外伤害结算）：不走护盾 / 反弹 / 复活，
+# 且 rng 为 null 时回退全局 randf()（不可复现）。【战斗内伤害必须走 CombatCore._resolve_hit】，
+# 切勿在战斗流程里调用本方法，否则会绕过 M3-2 的护盾 / 反弹 / 复活机制。
 func take_damage(amount: int, _damage_type: int, source: CombatCharacter, rng: SeededRNG = null) -> Dictionary:
 	if is_dead:
 		return {"hit": false, "damage": 0, "crit": false, "dodged": false}
@@ -59,12 +60,6 @@ func take_damage(amount: int, _damage_type: int, source: CombatCharacter, rng: S
 		else:
 			is_dead = true
 	return {"hit": true, "damage": final_damage, "crit": crit, "dodged": false}
-
-# 基础攻击一次：返回伤害结果（供 AI 与玩家普攻复用）
-func basic_attack(target: CombatCharacter, rng: SeededRNG = null) -> Dictionary:
-	if target == null or target.is_dead:
-		return {"hit": false, "damage": 0, "crit": false, "dodged": false}
-	return target.take_damage(effective_attack(), CombatEnums.DamageType.PHYSICAL, self, rng)
 
 func heal(amount: int) -> int:
 	var before: int = hp

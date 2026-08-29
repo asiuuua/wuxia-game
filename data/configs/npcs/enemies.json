@@ -73,6 +73,35 @@
       "loot": [
         { "item_id": "material_ore_001", "count": 1 }
       ]
+    },
+    {
+      "id": "bandit_warden_001",
+      "name": "山贼盾卫",
+      "hp": 65,
+      "attack": 15,
+      "speed": 8,
+      "abilities": [
+        { "id": "blade_duanshui_001", "weight": 2, "condition": "always" },
+        { "id": "huti_zhenqi_001", "weight": 3, "condition": "self_mp_above:0.3" },
+        { "id": "jingci_huwei_001", "weight": 2, "condition": "self_mp_above:0.5" }
+      ],
+      "loot": [
+        { "item_id": "pill_heal_xiaohuan_001", "count": 1 }
+      ]
+    },
+    {
+      "id": "bandit_fanatic_001",
+      "name": "山贼狂信徒",
+      "hp": 70,
+      "attack": 14,
+      "speed": 9,
+      "abilities": [
+        { "id": "sword_qingsong_001", "weight": 2, "condition": "always" },
+        { "id": "buqu_yizhi_001", "weight": 3, "condition": "self_mp_above:0.4" }
+      ],
+      "loot": [
+        { "item_id": "material_ore_001", "count": 2 }
+      ]
     }
   ]
 }
