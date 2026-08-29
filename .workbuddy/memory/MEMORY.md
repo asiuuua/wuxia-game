@@ -27,6 +27,7 @@ Phase 0 脚手架 ✅ → Phase 1 垂直切片 ✅ → 战斗 M1 逻辑内核 �
 - `@warning_ignore` 顶层声明**必须从列首无缩进开始**；类级注解必须在 `extends` 之前；autoload signal 必须**逐条**加 `@warning_ignore("unused_signal")`（类级不生效）。
 - **`mini`/`maxi` 仅 2 个参数**（Godot 4.x），多参必须嵌套 `mini(mini(a,b),c)`；写三参会 `Parse Error: Too many arguments` 并级联拖垮所有依赖脚本（含存档套件），双闸门必拦。
 - 4.7.2：`content_scale_mode`→`content_scale_stretch`；`Theme` 无 `bold_font` 属性（用 `theme.set_font("bold_font","RichTextLabel",f)`）；`mouse_filter` 是 Control 专属，Node2D 设了报错。
+- **节点创建时机陷阱**：若自定义 Control 在 `_ready()` 里创建子节点（如 `UnitHud` 的 `_name = Label.new()`），则外部必须在 `add_child()` 之后再调用依赖这些子节点的 `setup()`，否则会得到 `Nil` 并在 `.text = "..."` 时崩溃。修复：先 `add_child(hud)` 再 `hud.setup(...)`，或在 `_init()` 中创建子节点。
 - `.gdignore` 跳过整个目录。删 `.godot` 后必须先 `--headless --editor --quit` 重建 `global_script_class_cache.cfg`。
 - **`Invalid call. Nonexistent function 'new' in base 'GDScript'` 是级联误导**：真因是某脚本 Parse Error 编译失败。往上翻日志找第一条真正 Parse Error（常是 `Function "xxx()" not found in base self`，删函数后残留调用）。
 - **删函数必须全工程 grep 确认无残留**：同一函数常在 `if` 与 `elif` 分支各调一次，只删末尾一处会漏。
@@ -111,3 +112,19 @@ Phase 0 脚手架 ✅ → Phase 1 垂直切片 ✅ → 战斗 M1 逻辑内核 �
   - 婚礼演出 `scenes/gameplay/bond/WeddingScene.tscn`(Control 根, 镜像 BattleScene 格式, `--quit` 可导入)；"礼成" `change_scene_to_file(SCENE_TOWN)` 回城。
   - 变更通告 `docs/变更通告_2026-08-29_姻缘面板与婚礼演出.md`。双闸门全绿；`signal_audit` 仅余 1 条预存在 cross-window DEFINITE。
 - ~~`37c9ca18f539`~~ **[done]** `inventory_add_overflow` 信号无游戏内订阅方（满包静默丢物）→ UI 窗口已在 `autoload/ui_manager.gd` 全局订阅并弹 Toast（2026-08-29，变更通告 `docs/变更通告_2026-08-29_UI背包溢出订阅.md`）。
+
+## 进入游戏 UI 重构（2026-08-29，本会谈收口）
+- **需求**：用户（兼架构师）要"进入游戏后的整体 UI"——左上角头像框+气血/内力/六维属性条 + 一个分类功能菜单点开各子系统（姻缘/江湖技艺等）。纯展示层，符合 UIManager 屏幕栈架构。
+- **交付**：
+  - `Hud.gd` 重写（玻璃拟态状态卡：头像框+姓名/等级/银两+气血条(HP_FILL)+内力条(MP_FILL)+六维属性条(ATTR_FILL)；右上角"姻缘"(红点 BADGE_RED)+"菜单"按钮；订阅全部 player_* 信号 + bond_relationship_changed）。
+  - `GameMenuScreen.gd`（新，注册 `GameMenu`）：四大类（人物/江湖/技艺·生产/系统）按钮网格，姻缘条目挂红点；`_open` 先开屏后关己。
+  - `AbilitiesScreen.gd`（新，注册 `AbilitiesScreen`）：列已学武学（`GameManager.ability_service.learned` + `ConfigManager.get_ability`），空态提示去门派。
+  - `BondRomanceScreen.gd` 重写收口**数据源真 bug**：子嗣区原 `rs.get_children()`（RomanceService 无此方法，运行期崩）→ 改 `GameManager.relationship_service.get_relationship_graph()["children"]`（UI 关系网视图统一入口）。
+  - `ui_theme.gd` 纯追加：HP_FILL/MP_FILL/XP_FILL/ATTR_FILL/PREG_FILL + BADGE_RED（红点徽标，消除裸 Color 字面量）。
+  - `screens.json` 纯追加 `GameMenu`/`AbilitiesScreen`；`TownScene.gd` 低风险增强 `KEY_G` 开 `GameMenu`（cross-window，架构师指示）。
+- **运行时冒烟 m6 抓到静态门禁漏掉的 2 个真 bug**（均修）：① `rs.get_children()`（应为关系图 children）；② `Hud.gd` 的 `ps.get(key,0)`（Godot4.7 Object.get 仅 1 参）→ 改 null-safe `ps.get(key) or 0`。修后 m6 `ALL_M6_OK` + 双闸门全绿。
+- git 收口：UI 主权内精确 `git add` 仅 UI 文件（含 TownScene.gd 跨窗增强），禁 `git add -A`。
+
+## UI 构造统一路线（2026-08-29 拍板 · ADR）
+- 决策规范 `docs/UI构造统一路线规范_2026-08-29.md`：① 全屏屏保持 `script.new()`（`UIManager.open_screen` + `screens.json`）；② HUD 顶层面板用代码构建 `Control` 子类 + `setup()` 门面（沿用 `Hud.tscn` 壳 + 代码建内部 先例）；③ HUD 叶子组件（技能格/任务条目/血条）优先 `.tscn` 预制（`preload` 实例化）。核心判句：*机制服从团队拓扑，纪律重于机制*——混合流派允许，统一纪律对全部组件强制生效（单一职责/内部封闭/`preload`/`_exit_tree` 断信号/通信优先级 `EventBus`>信号>`@export`/禁轮询/禁硬编码业务 ID）。
+- 与 v2 HUD 落地方案 `docs/HUD常驻系统落地方案v2_2026-08-29.md` 配套：HUD 重构 = 拆 4 面板（状态卡/任务追踪/技能栏/右上菜单），`UIManager.mount_hud()` 进 `Layer.HUD`(layer=50) 解 `Camera2D` 耦合；新增 3 个 `notify_` 信号走契约总表；跨窗依赖派单（→任务窗补 `notify_quest_track_changed`、→武学窗补冷却 `notify_skill_cd_update`）。
