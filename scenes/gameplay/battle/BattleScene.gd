@@ -28,6 +28,7 @@ var _over: bool = false
 var _busy: bool = false
 var _speed_idx: int = 0
 var _speed_steps: Array[float] = [1.0, 2.0, 4.0]
+const MAX_AUTO_ROUNDS: int = 200   # 自动战斗回合上限：防双方互不可杀导致的死循环卡死
 
 func _ready() -> void:
 	_build_ui()
@@ -246,14 +247,24 @@ func _on_action_pressed(slot: int) -> void:
 	if _over or _state == null or _busy:
 		return
 	_busy = true
+	# ATB：速度高于玩家的敌人先于玩家行动（按回合序列插队）
+	var seq: Array[String] = GameManager.combat_service.get_core().get_round_sequence()
+	var player_idx: int = seq.find("player")
+	for i in range(0, player_idx):
+		var eid: String = seq[i]
+		if _is_alive(eid) and not GameManager.combat_service.is_over():
+			await _director.play_events(GameManager.combat_service.enemy_act_events(eid))
 	var events: Array[CombatEvent]
 	if slot == -1:
 		events = GameManager.combat_service.player_attack_events(_selected_enemy_id)
 	else:
 		events = GameManager.combat_service.player_cast_events(slot, _selected_enemy_id)
 	await _director.play_events(events)
-	if not GameManager.combat_service.is_over():
-		await _director.play_events(GameManager.combat_service.enemy_phase_events())
+	# 其余敌人（速度低于玩家）后行动
+	for i in range(player_idx + 1, seq.size()):
+		var eid: String = seq[i]
+		if _is_alive(eid) and not GameManager.combat_service.is_over():
+			await _director.play_events(GameManager.combat_service.enemy_act_events(eid))
 	_refresh()
 	_refresh_order()
 	_busy = false
@@ -265,11 +276,20 @@ func _on_auto_pressed() -> void:
 	if _over or _state == null or _busy:
 		return
 	_busy = true
-	while not GameManager.combat_service.is_over():
-		await _director.play_events(GameManager.combat_service.player_attack_events(""))
-		if GameManager.combat_service.is_over():
-			break
-		await _director.play_events(GameManager.combat_service.enemy_phase_events())
+	var rounds: int = 0
+	# 回合上限保护：双方均无法击杀对方时避免 while 死循环卡死
+	while not GameManager.combat_service.is_over() and rounds < MAX_AUTO_ROUNDS:
+		rounds += 1
+		var seq: Array[String] = GameManager.combat_service.get_core().get_round_sequence()
+		for eid in seq:
+			if GameManager.combat_service.is_over():
+				break
+			if eid == "player":
+				await _director.play_events(GameManager.combat_service.player_attack_events(""))
+			else:
+				await _director.play_events(GameManager.combat_service.enemy_act_events(eid))
+	if rounds >= MAX_AUTO_ROUNDS and not GameManager.combat_service.is_over():
+		GameLogger.warn("Battle", "自动战斗超过 %d 回合上限，已强制停手" % MAX_AUTO_ROUNDS)
 	_refresh()
 	_refresh_order()
 	_busy = false
