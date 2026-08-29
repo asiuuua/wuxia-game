@@ -116,7 +116,7 @@ func _refresh() -> void:
 		row.add_child(val)
 		_attr_grid.add_child(row)
 
-func _on_changed(_p: Variant = null) -> void:
+func _on_changed(_a: Variant = null, _b: Variant = null, _c: Variant = null) -> void:
 	_refresh()
 
 func _exit_tree() -> void:

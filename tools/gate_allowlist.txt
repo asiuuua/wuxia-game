@@ -1,0 +1,10 @@
+# gate_allowlist.txt — gate_check.sh 的"预期 ERROR"白名单
+# 每行一个固定子串；run_all 输出的 ERROR: 行若包含其中任意一条，视为负向测试的
+# 预期错误，不判负。若新增了合法的预期错误，把其特征串加进本文件即可。
+# 注意：真实 bug 产生的 ERROR 不应匹配这些串，否则会被放过——保持串具体。
+String formatting error
+配置不存在
+NPC 不存在
+物品不存在
+Parse JSON failed
+存档解析失败

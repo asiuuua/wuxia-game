@@ -39,7 +39,7 @@ func _build() -> void:
 	hint.text = tr("ui_hud_hint")
 	add_child(hint)
 
-func _refresh(_p: Variant = null) -> void:
+func _refresh(_a: Variant = null, _b: Variant = null, _c: Variant = null) -> void:
 	var ps: PlayerState = GameManager.player_state
 	if ps == null:
 		return
