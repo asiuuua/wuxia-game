@@ -5,6 +5,8 @@
 extends Node
 # 注：autoload 脚本不能写 class_name X 与 autoload 同名，会与单例冲突报错（已删除）
 
+const ResourceManager = preload("res://core/resource_manager.gd")
+
 var player_state: PlayerState = null
 var combat_service: CombatService = null
 var inventory_service: InventoryService = null
@@ -107,6 +109,7 @@ func start_new_game() -> void:
 
 ## 读取存档并进入游戏（主菜单"继续江湖路"调用，M2 新增）
 func load_game(slot: int) -> void:
+	ResourceManager.reclaim_all()
 	if SaveManager.load_from_slot(slot):
 		get_tree().change_scene_to_file(PathConstants.SCENE_TOWN)
 	else:
@@ -115,6 +118,8 @@ func load_game(slot: int) -> void:
 ## 开战：记录待打战斗并切换到战斗场景
 ## 战术战棋战斗（配置 tactical=true）路由到 TacticalBattleScene，其余走经典 BattleScene（旧战斗零影响）
 func start_battle(battle_id: String) -> void:
+	# 工业化扩容 P6：切场景前集中回收温存/冷资源（CG/语音/立绘/战斗实体池统一释放口）
+	ResourceManager.reclaim_all()
 	pending_battle_id = battle_id
 	if ConfigManager.get_battle(battle_id).get("tactical", false):
 		get_tree().change_scene_to_file(PathConstants.SCENE_TACTICAL_BATTLE)
@@ -137,11 +142,14 @@ func _on_cmd_start_combat(attacker_list: Array, defender_list: Array) -> void:
 
 ## 回城：从战斗/其他场景返回城镇
 func return_to_town() -> void:
+	# 工业化扩容 P6：回城前集中回收（战斗实体已在本窗 finalize 释放，此处清温存/冷资源 + 立绘缓存）
+	ResourceManager.reclaim_all()
 	get_tree().change_scene_to_file(PathConstants.SCENE_TOWN)
 
 ## 返回标题：清理 UI 栈并重新加载启动入口（Bootstrap 会再次打开加载界面并进入主菜单）
 func return_to_title() -> void:
 	UIManager.close_all_screens()
+	ResourceManager.reclaim_all()
 	get_tree().change_scene_to_file(PathConstants.SCENE_BOOTSTRAP)
 
 ## 读档/存档事件：记录当前槽位（仅真实槽位 >=1 才记；quick_save(-1) 忽略）
@@ -174,6 +182,7 @@ func return_to_safe_point() -> void:
 	var sp: Dictionary = GameState.get_last_safe_point()
 	# 当前所有安全点都映射到城镇场景；marker 预留给后续扩展（客栈/营地等不同场景）
 	GameLogger.info("GameManager", "回安全点: %s" % sp.get("marker", "town"))
+	ResourceManager.reclaim_all()
 	get_tree().change_scene_to_file(PathConstants.SCENE_TOWN)
 
 func _equip_starting_abilities() -> void:

@@ -108,6 +108,7 @@ var _relations: Dictionary = {}   # 结缘系统 NPC 关系数据（模块18 · 
 var _world_config: Dictionary = {}
 var _ui_anim: Dictionary = {}   # UI 动效令牌（整体 Dictionary，非 id 键控）
 var _ui_sfx: Dictionary = {}    # UI 音效映射（整体 Dictionary，非 id 键控）
+var _status_effects: Dictionary = {}   # 状态效果配置（战斗核心懒加载用；纯追加，零硬编码取用口）
 var _config_version: String = ""
 var _is_loaded: bool = false
 var _config_errors: Array[String] = []  # 配置容错层：累积加载/引用校验发现的问题
@@ -397,6 +398,35 @@ func get_ui_sfx_bus() -> String:
 ## 音效播放器池大小：避免鼠标快速划过多个按钮时后一个音切断前一个
 func get_ui_sfx_pool_size() -> int:
 	return int(_ui_sfx.get("pool_size", 4))
+
+# === 状态效果配置（战斗核心懒加载取用口 · 纯追加）===
+# 不暴露硬编码路径：由本方法内部按集中常量懒加载，调用方只传 id。
+const STATUS_EFFECTS_FILE := "res://data/configs/abilities/status_effects.json"
+var _status_effects_loaded: bool = false
+
+func get_status_effect(id: String) -> Dictionary:
+	if not _status_effects_loaded:
+		_load_status_effects()
+	if not _status_effects.has(id):
+		return {}
+	return _status_effects[id]
+
+## 状态效果整表（战斗核心本地缓存一次性填充用）
+func get_status_effect_table() -> Dictionary:
+	if not _status_effects_loaded:
+		_load_status_effects()
+	return _status_effects
+
+func _load_status_effects() -> void:
+	var data: Dictionary = _load_json(STATUS_EFFECTS_FILE)
+	for s in data.get("status_effects", []):
+		if s is Dictionary and s.has("id"):
+			_status_effects[str(s["id"])] = s
+	_status_effects_loaded = true
+
+## UI 动效整表（战斗演出等需要直接读 battle 令牌时长时取用，避免重复打开文件）
+func get_ui_anim_table() -> Dictionary:
+	return _ui_anim
 
 # === 配置容错层（阶段落地：异常容错）===
 # 目标：填错 ID / 配置写错 → 记录 + 跳过 + 继续运行，绝不崩溃

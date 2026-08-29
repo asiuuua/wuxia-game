@@ -199,6 +199,7 @@ func _render_line(line: Dictionary) -> Dictionary:
 		"is_player": is_player,
 		"text": line.get("text", ""),
 		"bust": bust,
+		"voice": line.get("voice", ""),   # 每行可选语音路径（工业化扩容 P5）：缺省空串不播放
 		"options": opts,
 		"ended": false,
 	}

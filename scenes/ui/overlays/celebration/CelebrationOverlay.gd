@@ -9,6 +9,8 @@
 extends Control
 class_name CelebrationOverlay
 
+const ResourceManager = preload("res://core/resource_manager.gd")
+
 const TABLE_PATH := "res://data/configs/bond/celebrations.json"
 const MAX_CG_SECONDS := 10.0
 const END_HOLD_SECONDS := 3.0
@@ -109,34 +111,54 @@ func _show_content(cfg: Dictionary) -> void:
 	_apply_media(cfg)
 	_play_bgm(cfg)
 
+## 媒体按类型异步流式加载（工业化扩容 P5/P6）：非阻塞发起后台加载，
+## 加载完成回调 _on_media_ready 再建播放节点，避免大视频/图片同步 load 卡开场。
+## 台词/文字仍立即显示，媒体"流式"补位。
 func _apply_media(cfg: Dictionary) -> void:
 	var mtype: String = String(cfg.get("media_type", "none"))
 	var mpath: String = String(cfg.get("media_path", ""))
 	if mpath == "" or not ResourceLoader.exists(mpath):
 		return
-	if mtype == "video":
-		# ⚠️ 必须用 full-rect 锚点铺满父容器：_on_open 时布局尚未结算，_media_box.size 可能是 (0,0)，
+	ResourceManager.acquire_async(mpath, _media_type_hint(mtype), _on_media_ready.bind(mpath))
+
+## 加载完成回调：依资源实际类型建节点（视频/图片），铺满媒体框。
+func _on_media_ready(path: String, res: Variant) -> void:
+	if res == null:
+		return
+	if res is VideoStream:
+		# ⚠️ 必须用 full-rect 锚点铺满父容器：布局尚未结算时 _media_box.size 可能是 (0,0)，
 		# 直接设 .size 会让视频节点尺寸为 0，导致“有声音但看不见画面”。
 		var vp := VideoStreamPlayer.new()
-		vp.stream = load(mpath)
+		vp.stream = res
 		vp.expand = true
 		vp.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		vp.play()
 		_media_box.add_child(vp)
-	elif mtype == "image":
+	elif res is Texture2D:
 		var tex := TextureRect.new()
-		tex.texture = load(mpath)
+		tex.texture = res
 		tex.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
 		tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		tex.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		_media_box.add_child(tex)
 
+## 媒体类型 → ResourceLoader 类型提示（视频需显式 VideoStream，图片/其它留空推断）。
+func _media_type_hint(mtype: String) -> String:
+	if mtype == "video":
+		return "VideoStream"
+	return ""
+
 func _play_bgm(cfg: Dictionary) -> void:
 	var bgm: String = String(cfg.get("bgm", ""))
 	if bgm == "" or not ResourceLoader.exists(bgm):
 		return
+	ResourceManager.acquire_async(bgm, "", _on_bgm_ready)
+
+func _on_bgm_ready(res: Variant) -> void:
+	if res == null or not (res is AudioStream):
+		return
 	_bgm_player = AudioStreamPlayer.new()
-	_bgm_player.stream = load(bgm)
+	_bgm_player.stream = res
 	add_child(_bgm_player)
 	_bgm_player.play()
 

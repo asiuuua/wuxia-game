@@ -554,11 +554,6 @@ func _ev(type_: int, actor: String = "", target: String = "", val: int = 0,
 
 func _get_status_cfg(id: String) -> Dictionary:
 	if _status_db.is_empty():
-		var f := FileAccess.open("res://data/configs/abilities/status_effects.json", FileAccess.READ)
-		if f != null:
-			var txt := f.get_as_text(); f.close()
-			var parsed = JSON.parse_string(txt)
-			if parsed != null:
-				for s in parsed.get("status_effects", []):
-					_status_db[s.get("id", "")] = s
+		# 工业化扩容 P7：经 ConfigManager 集中取用，杜绝硬编码数据路径
+		_status_db = ConfigManager.get_status_effect_table()
 	return _status_db.get(id, {})

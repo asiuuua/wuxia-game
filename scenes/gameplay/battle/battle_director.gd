@@ -118,11 +118,5 @@ func _duration(ev: CombatEvent) -> float:
 	return _FALLBACK.get(token, 0.12)
 
 func _load_anim() -> void:
-	var f := FileAccess.open("res://data/configs/ui/ui_anim.json", FileAccess.READ)
-	if f == null:
-		return
-	var txt := f.get_as_text()
-	f.close()
-	var parsed = JSON.parse_string(txt)
-	if parsed != null:
-		_anim = parsed
+	# 工业化扩容 P7：经 ConfigManager 集中取用 UI 动效整表，杜绝硬编码数据路径
+	_anim = ConfigManager.get_ui_anim_table()

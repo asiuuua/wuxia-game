@@ -5,6 +5,8 @@
 extends Node
 # 注：autoload 脚本不能写 class_name X 与 autoload 同名，会与单例冲突报错（已删除）
 
+const ResourceManager = preload("res://core/resource_manager.gd")
+
 const VOLUME_BGM := 0.6
 const VOLUME_SFX := 0.8
 const VOLUME_VOICE := 1.0
@@ -141,6 +143,58 @@ func _next_ui_sfx_player() -> AudioStreamPlayer:
 	var chosen: AudioStreamPlayer = _ui_sfx_pool[_ui_sfx_cursor % _ui_sfx_pool.size()]
 	_ui_sfx_cursor += 1
 	return chosen
+
+# === 语音（工业化扩容 P5）：每行台词可选 voice 字段，异步流式播放（不卡对话推进）===
+# 经 ResourceManager 后台线程加载，完成回调再播放；播放结束释放引用（可被分级回收）。
+# 小池复用避免快速切行时频繁创建/销毁节点。
+const VOICE_POOL_SIZE := 3
+var _voice_pool: Array[AudioStreamPlayer] = []
+var _voice_cursor: int = 0
+
+## 播放一句语音（path 来自对话 line 的 voice 字段）。缺失/空路径静默跳过。
+func play_voice(path: String) -> void:
+	if path == "" or not ResourceLoader.exists(path):
+		return
+	_ensure_voice_pool()
+	var player: AudioStreamPlayer = _next_voice_player()
+	if player == null:
+		return
+	# 引用计数 +1 并异步加载；完成后 _on_voice_loaded 接流播放
+	ResourceManager.acquire_async(path, "", _on_voice_loaded.bind(player, path))
+
+func _ensure_voice_pool() -> void:
+	ensure_bus("Voice")
+	while _voice_pool.size() < VOICE_POOL_SIZE:
+		var p := AudioStreamPlayer.new()
+		p.name = "Voice%d" % _voice_pool.size()
+		p.bus = "Voice"
+		add_child(p)
+		_voice_pool.append(p)
+
+func _next_voice_player() -> AudioStreamPlayer:
+	if _voice_pool.is_empty():
+		return null
+	for p in _voice_pool:
+		if not p.playing:
+			return p
+	var chosen: AudioStreamPlayer = _voice_pool[_voice_cursor % _voice_pool.size()]
+	_voice_cursor += 1
+	return chosen
+
+## 异步加载完成：接到播放器并播放（音量按规范 VOLUME_VOICE=1.0）；播完释放引用。
+func _on_voice_loaded(res: Variant, player: AudioStreamPlayer, path: String) -> void:
+	if res == null or not (res is AudioStream) or not is_instance_valid(player):
+		ResourceManager.release(path)
+		return
+	player.stream = res
+	player.volume_db = linear_to_db(VOLUME_VOICE)
+	# 播放结束释放引用（一次性连接，避免重复触发）
+	if not player.finished.is_connected(_on_voice_finished.bind(path)):
+		player.finished.connect(_on_voice_finished.bind(path), CONNECT_ONE_SHOT)
+	player.play()
+
+func _on_voice_finished(path: String) -> void:
+	ResourceManager.release(path)
 
 func play_bgm(path: String) -> void:
 	if path == "":

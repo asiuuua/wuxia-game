@@ -156,6 +156,10 @@ func _render(render: Dictionary) -> void:
 	_speaker_label.text = render.get("speaker_name", "")
 	_dialog_label.text = render.get("text", "")
 	_update_portraits(render.get("is_player", false), render.get("bust", ""))
+	# 工业化扩容 P5：每行可选语音，异步流式播放（缺省空串静默跳过，不卡对话）
+	var voice: String = String(render.get("voice", ""))
+	if voice != "":
+		AudioManager.play_voice(voice)
 
 	var opts: Array = render.get("options", [])
 	_clear(_option_container)
