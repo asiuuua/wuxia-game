@@ -8,7 +8,7 @@
 #
 # 设计：对齐 PortraitCacheManager / CombatEntityPool，纯工具 + class_name 全局调用。
 #   异步完成由 SceneTree.process_frame 信号驱动（_ensure_pump 连接一次），不注册 Autoload。
-#   大场景切换时调用 reclaim_all() 集中回收（含立绘缓存、战斗实体池的统一释放口）。
+#   大场景切换时调用 reclaim_all() 集中回收（通过 register_reclaim_hook 触发子系统清空口，不再反向耦合）。
 
 class_name ResourceManager
 
@@ -24,6 +24,7 @@ static var _cap: int = DEFAULT_CAP
 static var _warm_ttl: int = DEFAULT_WARM_TTL_MS
 static var _sweep_last: int = 0
 static var _pump_connected: bool = false
+static var _reclaim_hooks: Array[Callable] = []   # 集中回收钩子（子系统装配期登记，解耦反向依赖）
 
 
 ## 调整硬上限 / 温存时限（运行时配置用）。n<=0 忽略；上限下调立即触发回收。
@@ -66,7 +67,7 @@ static func acquire_async(path: String, type_hint: String = "", cb: Callable = C
 		_entries[path].refcount += 1
 		_touch(path)
 	else:
-		_entries[path] = {"res": null, "refcount": 1, "last_used": Time.get_ticks_msec()}
+		_entries[path] = {"res": null, "refcount": 1, "last_used": Time.get_ticks_msec(), "pinned": false}
 	if _entries[path].res != null:
 		# 已就绪：立即回调
 		var res: Variant = _entries[path].res
@@ -111,7 +112,9 @@ static func reclaim_idle() -> void:
 	for p in _entries.keys():
 		var e: Dictionary = _entries[p]
 		if e.refcount > 0:
-			continue   # L1 常驻，跳过
+			continue   # L1 常驻（被引用），跳过
+		if e.get("pinned", false):
+			continue   # L1 常驻（显式钉住），跳过
 		var idle: int = now - int(e.last_used)
 		if idle > _warm_ttl:
 			expired.append(p)
@@ -130,24 +133,44 @@ static func reclaim_idle() -> void:
 			_entries.erase(p)
 
 
-## 全量软回收：释放所有引用计数 == 0 的条目（大场景切换调用）。
-## 同时集中调用已落地的其它缓存释放口（立绘 LRU / 战斗实体池），一处管全部回收。
+## 全量软回收：释放所有「引用计数 == 0 且未钉住」的条目（大场景切换调用）。
+## 不再直接耦合具体子系统：通过 register_reclaim_hook 登记的钩子统一触发（默认仅立绘 LRU）。
+## 这样 ResourceManager 不反向依赖业务子系统，符合「单向依赖」铁律。
 static func reclaim_all() -> void:
 	var keys: Array = Array(_entries.keys())
 	for p in keys:
-		if _entries[p].refcount == 0:
+		if _entries[p].refcount == 0 and not _entries[p].get("pinned", false):
 			_entries.erase(p)
-	# 集中回收其它已落地缓存（纯追加式对接，不改动它们内部逻辑）
-	PortraitCacheManager.clear()
-	CombatEntityPool.clear()
+	for hook in _reclaim_hooks:
+		if hook.is_valid():
+			hook.call()
 
 
-## 强制全回收（含引用计数 > 0 的，仅用于彻底重启/切档等极端场景）。
-static func force_reclaim_all() -> void:
-	_entries.clear()
-	_pending.clear()
-	PortraitCacheManager.clear()
-	CombatEntityPool.clear()
+## 注册集中回收钩子（子系统在装配期登记自己的清空入口，如立绘 LRU）。
+## ResourceManager 只负责通用资源条目回收 + 触发钩子，不反向依赖任何具体子系统。
+static func register_reclaim_hook(cb: Callable) -> void:
+	if cb.is_valid() and not _reclaim_hooks.has(cb):
+		_reclaim_hooks.append(cb)
+
+
+## 即时释放（引用计数 -1；归零立即从表移除，不等 TTL）。
+## 用于 CG 视频 / 大贴图等大媒体关闭即回收，避免大资源在温存窗口常驻（命中 P5 目标）。
+static func evict(path: String) -> void:
+	_dec_ref(path)
+	if _entries.has(path) and _entries[path].refcount <= 0:
+		_entries.erase(path)
+
+
+## 常驻钉住：即使引用计数归零也不被回收（L1 常驻层）。用于核心常驻资源（如主 UI 图集）。
+static func pin(path: String) -> void:
+	if _entries.has(path):
+		_entries[path].pinned = true
+
+
+## 解除钉住（恢复为可被回收状态）。
+static func unpin(path: String) -> void:
+	if _entries.has(path):
+		_entries[path].pinned = false
 
 
 ## 诊断：当前条目数 / 在途数 / 已加载数。
@@ -162,7 +185,7 @@ static func get_stats() -> Dictionary:
 # ============ 内部 ============
 
 static func _store(path: String, res: Variant, refcount: int) -> void:
-	_entries[path] = {"res": res, "refcount": refcount, "last_used": Time.get_ticks_msec()}
+	_entries[path] = {"res": res, "refcount": refcount, "last_used": Time.get_ticks_msec(), "pinned": false}
 
 
 static func _touch(path: String) -> void:

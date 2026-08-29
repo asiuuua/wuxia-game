@@ -22,6 +22,9 @@ var _grid_node: BattleGridNode = null
 var _entities_node: Node2D = null
 var _entities: Dictionary = {}      # character_id -> BattleEntity
 
+# 战斗实体对象池（按场景作用域）：本场战斗持有实例，_exit_tree 时 clear() 释放空闲实例
+var _entity_pool: CombatEntityPool = CombatEntityPool.new()
+
 var _phase: int = Phase.PLAYER
 var _mode: int = Mode.MOVE
 var _turn: int = 1
@@ -89,7 +92,7 @@ func _spawn_entities() -> void:
 			_spawn_one(e.character_id, false, nm, e)
 
 func _spawn_one(uid: String, player: bool, nm: String, ch: CombatCharacter) -> void:
-	var ent := CombatEntityPool.acquire_entity(uid, player, nm, ch.max_hp, ch.max_mp, _grid_node)
+	var ent := _entity_pool.acquire_entity(uid, player, nm, ch.max_hp, ch.max_mp, _grid_node)
 	ent.place_at(ch.grid_pos)
 	_entities_node.add_child(ent)
 	_entities[uid] = ent
@@ -457,12 +460,17 @@ func _release_all() -> void:
 	for uid in _entities.keys():
 		var ent: BattleEntity = _entities[uid]
 		if ent != null:
-			CombatEntityPool.release_entity(ent)
+			_entity_pool.release_entity(ent)
 	_entities.clear()
 
 func _on_return_pressed() -> void:
 	_release_all()
 	GameManager.return_to_town()
+
+## 场景退出：释放对象池空闲实例（随场景销毁，无跨场景泄漏累积）
+func _exit_tree() -> void:
+	if _entity_pool != null:
+		_entity_pool.clear()
 
 # ───────────────────────── 工具 ─────────────────────────
 

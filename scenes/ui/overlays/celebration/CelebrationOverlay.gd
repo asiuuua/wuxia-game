@@ -174,10 +174,10 @@ func _clear_media() -> void:
 		c.queue_free()
 	# 归还媒体/音乐引用计数，使 ResourceManager 分级回收能真正释放 CG 大视频/贴图（修复常驻泄漏）。
 	if _media_path != "":
-		ResourceManager.release(_media_path)
+		ResourceManager.evict(_media_path)
 		_media_path = ""
 	if _bgm_path != "":
-		ResourceManager.release(_bgm_path)
+		ResourceManager.evict(_bgm_path)
 		_bgm_path = ""
 
 func _add_button(text: String, enabled: bool, cb: Callable) -> void:

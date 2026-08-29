@@ -31,6 +31,9 @@ var _speed_idx: int = 0
 var _speed_steps: Array[float] = [1.0, 2.0, 4.0]
 const MAX_AUTO_ROUNDS: int = 200   # 自动战斗回合上限：防双方互不可杀导致的死循环卡死
 
+# 战斗实体对象池（按场景作用域）：本场战斗持有实例，_exit_tree 时 clear() 释放空闲实例
+var _entity_pool: CombatEntityPool = CombatEntityPool.new()
+
 func _ready() -> void:
 	_build_ui()
 	EventBus.scene_changed.emit("battle_001")
@@ -101,13 +104,13 @@ func _build_ui() -> void:
 	_result_panel.add_child(_return_button)
 
 func _build_units() -> void:
-	_player_hud = CombatEntityPool.acquire_hud("李十五", _state.player.max_hp, _state.player.max_mp)
+	_player_hud = _entity_pool.acquire_hud("李十五", _state.player.max_hp, _state.player.max_mp)
 	_root_vb.add_child(_player_hud)
 	_player_hud.set_portrait("npc/player")
 	_view.register_unit("player", _player_hud)
 	for e in _state.enemies:
 		var nm: String = ConfigManager.get_enemy(e.character_id).get("name", e.character_id)
-		var hud := CombatEntityPool.acquire_hud(nm, e.max_hp, e.max_mp)
+		var hud := _entity_pool.acquire_hud(nm, e.max_hp, e.max_mp)
 		_enemy_box.add_child(hud)
 		hud.set_portrait("enemies/" + e.character_id)
 		_enemy_huds[e.character_id] = hud
@@ -344,12 +347,12 @@ func _show_result() -> void:
 ## 战斗结束回城前：把本场 HUD 归还对象池（脱离父节点 + 清零），供下一场复用
 func _release_all_huds() -> void:
 	if _player_hud != null:
-		CombatEntityPool.release_hud(_player_hud)
+		_entity_pool.release_hud(_player_hud)
 		_player_hud = null
 	for k in _enemy_huds.keys():
 		var h: UnitHud = _enemy_huds[k]
 		if h != null:
-			CombatEntityPool.release_hud(h)
+			_entity_pool.release_hud(h)
 	_enemy_huds.clear()
 	for k in _enemy_buttons.keys():
 		var b: Button = _enemy_buttons[k]
@@ -360,3 +363,8 @@ func _release_all_huds() -> void:
 func _on_return_pressed() -> void:
 	_release_all_huds()
 	GameManager.return_to_town()
+
+## 场景退出：释放对象池空闲实例（随场景销毁，无跨场景泄漏累积）
+func _exit_tree() -> void:
+	if _entity_pool != null:
+		_entity_pool.clear()

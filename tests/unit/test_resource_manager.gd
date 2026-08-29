@@ -15,6 +15,8 @@ var _cb_res: Variant = null
 
 func before_each() -> void:
 	ResourceManager.reset()
+	# 工业化 P6 重构：reclaim_all 改为钩子驱动；测试中显式登记立绘 LRU 清空钩子（不依赖 GameManager 启动顺序）
+	ResourceManager.register_reclaim_hook(PortraitCacheManager.clear)
 	_cb_fired = false
 	_cb_res = null
 
@@ -69,3 +71,11 @@ func test_acquire_async_completes_and_caches() -> void:
 func _on_res(res: Variant) -> void:
 	_cb_fired = true
 	_cb_res = res
+
+
+func test_evict_frees_immediately() -> void:
+	ResourceManager.acquire_sync(T1)
+	ResourceManager.release(T1)   # 引用归零，进入温存（未到 TTL 不回收）
+	ResourceManager.evict(T1)     # 即时释放
+	expect(ResourceManager.get_resource(T1) == null, "evict 应即时释放引用为 0 的条目（不等 TTL）")
+	expect(not ResourceManager.has(T1), "evict 后 has(T1) 应为 false")

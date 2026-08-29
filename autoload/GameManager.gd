@@ -6,6 +6,7 @@ extends Node
 # 注：autoload 脚本不能写 class_name X 与 autoload 同名，会与单例冲突报错（已删除）
 
 const ResourceManager = preload("res://core/resource_manager.gd")
+const PortraitCacheManager = preload("res://core/portrait_cache_manager.gd")
 
 var player_state: PlayerState = null
 var combat_service: CombatService = null
@@ -35,6 +36,9 @@ func _ready() -> void:
 	player_state = PlayerState.new()
 	player_state.init_default("李十五", 1)
 	_init_services()
+	# 工业化 P6：向全局资源管理器登记集中回收钩子（立绘 LRU）。
+	# ResourceManager 仅触发钩子、不再反向耦合子系统；战斗实体池已改为每场自建/自清。
+	ResourceManager.register_reclaim_hook(PortraitCacheManager.clear)
 	_register_saveables()
 	# 战斗结束 → 任务系统推进目标（事件闭环，替代原先战斗直调任务的反模式）
 	EventBus.combat_finished.connect(quest_service._on_combat_finished)
