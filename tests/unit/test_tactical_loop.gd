@@ -59,6 +59,9 @@ func test_full_action_loop() -> void:
 	# 把玩家放到敌人相邻，模拟"走位+普攻"
 	cs.deploy_unit("player", Vector2i(7, 4))
 	var enemy: CombatCharacter = cs.get_state().enemies[0]
+	# 消除随机：对齐项目约定（其他战斗测试均 dodge_rate/crit_rate 归零），避免闪避导致普攻未命中而 flaky
+	enemy.dodge_rate = 0.0
+	enemy.crit_rate = 0.0
 	var hp_before: int = enemy.hp
 	# 普攻（不依赖 ability_service，走核心 player_basic）
 	var atk_events: Array[CombatEvent] = cs.player_attack_events("bandit_001")
