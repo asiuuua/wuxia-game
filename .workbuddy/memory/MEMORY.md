@@ -58,7 +58,7 @@ Phase 0 脚手架 ✅ → Phase 1 垂直切片 ✅ → 战斗 M1 逻辑内核 �
 - **当前 open 派单（dashboard 实况）**：
   - `fed3f00da584` 战斗→`gameplay/town`：TownScene.gd:52 玩家掉血即崩（`player_hp_changed`(2)→`_on_player_changed`(1) 参数不匹配），待 town 窗认领。
   - `178267684159` 结缘→背包：游戏内"休息/睡觉"未驱动时间服务推进天数（子嗣孕期不流逝），待背包窗。
-  - `e769b689077d` UI→战斗：test_elite 非确定性（**已修复，待战斗窗 done 确认**）。
+  - ~~e769b689077d~~ **[done]** UI→战斗：test_elite 非确定性（combat_core 时间戳种子致 REFLECT/REVIVE/SHIELD_ABSORB 概率性出现）→ UI 窗口替战斗窗收口切片B cohesive 提交 `a8ae77f`（test_battle_status_content.gd + enemies/skills/battles json + combat_core/combat_service/combat_character），run_all 提交后 3 连跑 ✗0、13套件全绿。
   - `fb36b027ba06` UI→测试基建：run_all 退出码不传播（**不派单**，Godot headless 固有限制，gate 已以 `✗` 兜底）。
   - `37c9ca18f539` 背包→**UI**：`inventory_add_overflow` 信号无游戏内订阅方，满包时物品静默丢失（**to=UI，我窗待认领修复**）。
   - `acf2246fd5f2` 背包→结缘：romance_service.propose 聘礼扣除跳过锁定实例且不校验返回值，锁定聘礼时白结婚。
