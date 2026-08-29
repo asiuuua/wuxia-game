@@ -450,3 +450,4 @@ ui_item_use,使用,使用,Use
 ui_item_equip,装备,裝備,Equip
 ui_item_discard,丢弃,丟棄,Discard
 ui_item_split,拆分,拆分,Split
+ui_inventory_overflow,背包已满，%d 个%s未能放入,背包已滿，%d 個%s未能放入,Backpack full: %d %s could not be stored

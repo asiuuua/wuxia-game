@@ -30,6 +30,8 @@ func _ready() -> void:
 	_init_layers()
 	_load_screen_registry()
 	EventBus.notification_show.connect(show_tooltip)
+	# 背包溢出全局订阅：掉落/发奖/任何 add_item 满包时不再静默丢物，统一弹 Toast 提示玩家
+	EventBus.inventory_add_overflow.connect(_on_inventory_add_overflow)
 
 func _init_layers() -> void:
 	for layer_value in Layer.values():
@@ -240,6 +242,16 @@ func show_tooltip(text: String) -> void:
 	tween.tween_interval(2.2)
 	tween.tween_property(toast, "modulate:a", 0.0, 0.3)
 	tween.tween_callback(toast.queue_free)
+
+## 背包入包溢出（满包/超重导致物品丢失）：全局订阅，转成玩家可见的 Toast，避免静默丢物
+func _on_inventory_add_overflow(item_id: String, lost_count: int) -> void:
+	if lost_count <= 0:
+		return
+	var name_text: String = item_id
+	var data: Variant = ConfigManager.get_item(item_id)
+	if data != null and data is Dictionary:
+		name_text = String(data.get("name", String(data.get("name_key", item_id))))
+	EventBus.notification_show.emit(tr("ui_inventory_overflow") % [lost_count, name_text])
 
 func hide_tooltip() -> void:
 	pass
