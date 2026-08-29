@@ -1,6 +1,8 @@
 # scenes/ui/screens/bond_romance/BondRomanceScreen.gd
 # 姻缘面板（关系总览 + 求婚/结义/拜师/收徒/寝欢/婚礼 入口）
-# 铁律：UI 只展示与输入，数据来自 GameManager.bond_service / romance_service；
+# 铁律：UI 只展示与输入，数据来自 GameManager 各业务服务公开方法；
+#       数据源与关系中枢 relationship_service 对齐——结义走 sworn_service、师徒走 master_service，
+#       好感走 bond_service、姻缘走 romance_service，避免与关系图对不上。
 #       刷新监听 EventBus.bond_relationship_changed（0 参，必须 0 参处理器避免运行期崩溃）。
 
 extends Control
@@ -122,7 +124,7 @@ func _add_spouse_section() -> void:
 		return
 	var spouses: Array = rs.get_spouses()
 	if spouses.is_empty():
-		_add_note("（暂无配偶，可在「四、可发展」中求婚）")
+		_add_note("（暂无配偶，可在「五、可发展」中求婚）")
 		return
 	for npc_id in spouses:
 		var stage_name: String = rs.get_romance_stage_name(npc_id)
@@ -137,10 +139,12 @@ func _add_spouse_section() -> void:
 
 func _add_child_section() -> void:
 	_section("二、子嗣")
-	var rs = GameManager.romance_service
-	if rs == null:
+	# 子嗣记录走关系网数据中枢（UI 视图统一入口），避免直读 romance_service 私有 children 字典；
+	# get_relationship_graph()["children"] 每条为 {child_id,name,mother_id,...} 记录。
+	var rel = GameManager.relationship_service
+	if rel == null:
 		return
-	var graph: Dictionary = rs.get_relationship_graph()
+	var graph: Dictionary = rel.get_relationship_graph()
 	var kids: Array = graph.get("children", [])
 	if kids.is_empty():
 		_add_note("（尚无子嗣）")
@@ -155,41 +159,43 @@ func _add_child_section() -> void:
 
 func _add_sworn_section() -> void:
 	_section("三、结义")
-	var bs = GameManager.bond_service
-	if bs == null:
+	var sw = GameManager.sworn_service
+	if sw == null:
 		return
-	var sworn: Array = bs.get_sworn()
-	for npc_id in sworn:
-		_row(npc_id, "结义", bs.get_affection(npc_id), [])
-	if sworn.is_empty():
+	var brothers: Array = sw.get_sworn_brothers()
+	for npc_id in brothers:
+		_row(npc_id, "结义", GameManager.bond_service.get_affection(npc_id), [])
+	if brothers.is_empty():
 		_add_note("（暂未结义）")
+	# 可结义候选（数据中枢同款来源：sworn_service）
 	for npc_id in ConfigManager.get_all_relation_ids():
-		if bs.is_sworn(npc_id):
-			continue
 		var npc: Dictionary = ConfigManager.get_relation(npc_id)
 		if npc.is_empty() or not bool(npc.get("is_swornable", false)):
 			continue
-		_row(npc_id, "可结义", bs.get_affection(npc_id), [_btn("结义", bs.can_swear(npc_id), _on_swear.bind(npc_id))])
+		if sw.is_sworn(npc_id):
+			continue
+		_row(npc_id, "可结义", GameManager.bond_service.get_affection(npc_id),
+			[_btn("结义", sw.can_sworn(npc_id), _on_swear.bind(npc_id))])
 
 func _add_master_section() -> void:
 	_section("四、师徒")
-	var bs = GameManager.bond_service
-	if bs == null:
+	var ms = GameManager.master_service
+	if ms == null:
 		return
-	var masters: Array = bs.get_master()
-	for npc_id in masters:
-		_row(npc_id, "师父", bs.get_affection(npc_id), [])
-	var apprentices: Array = bs.get_apprentices()
-	for npc_id in apprentices:
-		_row(npc_id, "徒弟", bs.get_affection(npc_id), [])
-	if masters.is_empty() and apprentices.is_empty():
+	for npc_id in ms.get_masters():
+		_row(npc_id, "师父·%d阶" % ms.get_grade_level(npc_id), GameManager.bond_service.get_affection(npc_id), [])
+	for npc_id in ms.get_apprentices():
+		_row(npc_id, "徒弟·%d阶" % ms.get_grade_level(npc_id), GameManager.bond_service.get_affection(npc_id), [])
+	if ms.get_masters().is_empty() and ms.get_apprentices().is_empty():
 		_add_note("（尚无师徒关系）")
 
 func _add_candidate_section() -> void:
 	_section("五、可发展")
 	var bs = GameManager.bond_service
 	var rs = GameManager.romance_service
-	if bs == null or rs == null:
+	var sw = GameManager.sworn_service
+	var ms = GameManager.master_service
+	if bs == null or rs == null or sw == null or ms == null:
 		return
 	var any := false
 	for npc_id in ConfigManager.get_all_relation_ids():
@@ -199,12 +205,12 @@ func _add_candidate_section() -> void:
 		var btns := []
 		if bool(npc.get("is_romanceable", false)) and not rs.is_spouse(npc_id):
 			btns.append(_btn("求婚", rs.can_propose(npc_id), _on_propose.bind(npc_id)))
-		if bool(npc.get("is_swornable", false)) and not bs.is_sworn(npc_id):
-			btns.append(_btn("结义", bs.can_swear(npc_id), _on_swear.bind(npc_id)))
-		if bool(npc.get("is_masterable", false)) and not bs.get_master().has(npc_id):
-			btns.append(_btn("拜师", bs.can_become_apprentice(npc_id), _on_become_master.bind(npc_id)))
-		if not bs.get_apprentices().has(npc_id):
-			btns.append(_btn("收徒", bs.can_take_apprentice(npc_id), _on_take_apprentice.bind(npc_id)))
+		if bool(npc.get("is_swornable", false)) and not sw.is_sworn(npc_id):
+			btns.append(_btn("结义", sw.can_sworn(npc_id), _on_swear.bind(npc_id)))
+		if bool(npc.get("is_masterable", false)) and not ms.is_master(npc_id):
+			btns.append(_btn("拜师", ms.can_apprentice(npc_id), _on_become_master.bind(npc_id)))
+		if not ms.is_apprentice(npc_id):
+			btns.append(_btn("收徒", ms.can_take_apprentice(npc_id), _on_take_apprentice.bind(npc_id)))
 		if btns.is_empty():
 			continue
 		any = true
@@ -237,13 +243,13 @@ func _on_wedding(npc_id: String) -> void:
 		_refresh()
 
 func _on_swear(npc_id: String) -> void:
-	_act(GameManager.bond_service.swear(npc_id), "义结金兰！")
+	_act(GameManager.sworn_service.sworn(npc_id), "义结金兰！")
 
 func _on_become_master(npc_id: String) -> void:
-	_act(GameManager.bond_service.become_apprentice(npc_id), "拜师成功，习得真传！")
+	_act(GameManager.master_service.become_apprentice(npc_id), "拜师成功，习得真传！")
 
 func _on_take_apprentice(npc_id: String) -> void:
-	_act(GameManager.bond_service.take_apprentice(npc_id), "收徒成功！")
+	_act(GameManager.master_service.take_apprentice(npc_id), "收徒成功！")
 
 func _on_relationship_changed() -> void:
 	_refresh()

@@ -23,9 +23,15 @@ const GOLD := Color(0.831, 0.686, 0.216)          # 高亮/选中 金色 #D4AF37
 const GOLD_DARK := Color(0.788, 0.663, 0.380)      # 金色暗调 #C9A961
 const DANGER := Color(0.545, 0.227, 0.227)         # 危险/删除 暗红 #8B3A3A
 const SUCCESS := Color(0.290, 0.404, 0.255)        # 成功/确认 墨绿 #4A6741
+const BADGE_RED := Color(0.91, 0.20, 0.20)         # 红点徽标 醒目红（姻缘可求婚提示）
 
 # --- 进度条 ---
 const PROGRESS_FILL := Color(0.239, 0.204, 0.169)  # 墨色渐变起 #3D342B
+const HP_FILL := Color(0.78, 0.27, 0.27)           # 气血条 朱红
+const MP_FILL := Color(0.30, 0.58, 0.86)           # 内力条 靛蓝
+const XP_FILL := Color(0.831, 0.686, 0.216)        # 经验条 金
+const ATTR_FILL := Color(0.45, 0.74, 0.55)        # 六维属性条 竹青
+const PREG_FILL := Color(0.86, 0.55, 0.78)         # 孕期进度条 藕荷
 
 # --- 模态遮罩（半透明黑，覆盖在面板之下）---
 const DIM := Color(0.0, 0.0, 0.0, 0.5)             # 统一遮罩：原散落 0.45 / 0.55 → 收敛为一档

@@ -30,6 +30,7 @@ const _TOGGLE_ACTIONS := {
 	"toggle_inventory": [KEY_B],
 	"toggle_map": [KEY_M],
 	"toggle_attributes": [KEY_TAB],
+	"toggle_menu": [KEY_G],
 }
 
 var _player: Node2D
@@ -204,6 +205,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		_toggle_overlay("MapScreen")
 	elif event.is_action_pressed("toggle_attributes"):
 		_toggle_overlay("AttributesScreen")
+	elif event.is_action_pressed("toggle_menu"):
+		_toggle_overlay("GameMenu")
 	elif event.is_action_pressed("ui_cancel"):
 		_toggle_esc_menu()
 	elif event.is_action_pressed("ui_accept") and _nearby_npc != "":
