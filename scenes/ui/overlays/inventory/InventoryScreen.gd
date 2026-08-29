@@ -75,7 +75,10 @@ func _build() -> void:
 		_grids[bag_name] = grid
 	_tooltip = Tooltip.new()
 	_tooltip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# 抬升层级并置顶，避免贴边物品浮窗被面板/裁剪容器遮挡或裁切
+	_tooltip.z_index = 100
 	add_child(_tooltip)
+	_tooltip.move_to_front()
 
 func _refresh() -> void:
 	if _weight_label == null:
@@ -203,8 +206,12 @@ func _on_context_id(id: int) -> void:
 					GameLogger.info("Inventory", "丢弃被拒(保护生效): %s reason=%s" % [iid, res.get("reason", "")])
 			_refresh()
 		3:
-			var cnt: int = int(inv.get_instance_by_id(iid).count) / 2
-			inv.split_instance(iid, cnt)
+			# 拆分前判空：物品可能在并发移除后已不存在，get_instance_by_id 返回 null → .count 崩溃
+			var tgt: ItemInstance = inv.get_instance_by_id(iid)
+			if tgt != null:
+				var cnt: int = int(tgt.count) / 2
+				if cnt > 0:
+					inv.split_instance(iid, cnt)
 	_refresh()
 	if _context_menu != null:
 		_context_menu.queue_free()

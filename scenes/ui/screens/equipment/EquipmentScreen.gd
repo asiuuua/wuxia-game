@@ -2,28 +2,47 @@
 # 装备界面（Phase 2，纯代码构建）：展示三槽位与背包可装备物品，支持装卸
 # 铁律：UI 只做展示与输入，业务逻辑调用 GameManager / EquipmentService
 
-extends Control
+extends PopupBase
 class_name EquipmentScreen
+
+const UIPalette = preload("res://core/constants/ui_theme.gd")
 
 var _slot_labels: Dictionary = {}
 var _inv_list: VBoxContainer
 var _stat_label: Label
 
 func _ready() -> void:
+	popup_id = "EquipmentScreen"
 	_build_ui()
 	refresh()
 	EventBus.equipment_changed.connect(_on_equipment_changed)
 
 func _build_ui() -> void:
-	var root := VBoxContainer.new()
-	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(root)
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var dim := ColorRect.new()
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	dim.color = UIPalette.DIM
+	dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(dim)
+	var panel := make_glass_panel(Vector2(560, 560))
+	add_child(panel)
+	var margin := MarginContainer.new()
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	margin.add_theme_constant_override("margin_left", 18)
+	margin.add_theme_constant_override("margin_right", 18)
+	margin.add_theme_constant_override("margin_top", 16)
+	margin.add_theme_constant_override("margin_bottom", 16)
+	panel.add_child(margin)
+	var v := VBoxContainer.new()
+	v.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	v.add_theme_constant_override("separation", 10)
+	margin.add_child(v)
 	var title := Label.new()
 	title.text = tr("ui_equip_title")
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	root.add_child(title)
+	v.add_child(title)
 	_stat_label = Label.new()
-	root.add_child(_stat_label)
+	v.add_child(_stat_label)
 	for slot in EquipmentService.ALL_SLOTS:
 		var h := HBoxContainer.new()
 		var name_l := Label.new()
@@ -34,16 +53,21 @@ func _build_ui() -> void:
 		h.add_child(name_l)
 		h.add_child(item_l)
 		_slot_labels[slot] = item_l
-		root.add_child(h)
+		v.add_child(h)
 	var inv_title := Label.new()
 	inv_title.text = tr("ui_equip_bag")
-	root.add_child(inv_title)
+	v.add_child(inv_title)
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	v.add_child(scroll)
 	_inv_list = VBoxContainer.new()
-	root.add_child(_inv_list)
+	_inv_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(_inv_list)
 	var close := Button.new()
 	close.text = tr("ui_equip_close")
-	close.pressed.connect(UIManager.close_screen.bind(self))
-	root.add_child(close)
+	close.pressed.connect(request_close)
+	v.add_child(close)
 
 func _slot_name(slot: String) -> String:
 	match slot:
@@ -85,8 +109,9 @@ func refresh() -> void:
 		_inv_list.add_child(h)
 
 func _on_equip_pressed(instance_id: String) -> void:
+	# equip() 内部已 emit EventBus.equipment_changed → _on_equipment_changed → refresh()，
+	# 故此处不再显式 refresh()，避免双重刷新（非幂等、浪费一帧重建列表）。
 	GameManager.equipment_service.equip(instance_id)
-	refresh()
 
 func _on_equipment_changed() -> void:
 	refresh()

@@ -17,16 +17,17 @@ func _ready() -> void:
 	print("══════════════════════════════")
 	var suite_pass := 0
 	var suite_fail := 0
-	var skipped: Array[String] = []
 	for path in scripts:
 		var sc := load(path) as Script
 		if sc == null or not sc.can_instantiate():
-			print("  ! 脚本加载失败（缺失或存在解析错误）：%s" % path)
+			print("  ! 脚本加载失败（缺失/解析错误/类缓存未解析 class_name）：%s" % path)
+			print("    ↳ 若多文件同时报此错：类缓存可能损坏 —— 先 `godot --headless --editor --quit` 重建 .godot/global_script_class_cache.cfg，并确保无并发 Godot 进程抢缓存")
 			suite_fail += 1
 			continue
 		var inst := sc.new() as TestBase
 		if inst == null:
-			skipped.append(String(path.get_file()))
+			print("  ! 脚本实例化失败（未继承 TestBase 或 _init 抛错，绝不静默跳过）：%s" % path)
+			suite_fail += 1
 			continue
 		var code: int = inst.run()
 		if code == 0:
@@ -36,9 +37,7 @@ func _ready() -> void:
 			for line in inst.get_fail_log():
 				print("      ✗ %s" % line)
 	print("══════════════════════════════")
-	print("套件：通过 %d · 失败 %d · 跳过 %d" % [suite_pass, suite_fail, skipped.size()])
-	if not skipped.is_empty():
-		print("跳过（未继承 TestBase，暂不执行）：%s" % ", ".join(skipped))
+	print("套件：通过 %d · 失败 %d" % [suite_pass, suite_fail])
 	print("══════════════════════════════")
 	get_tree().quit(1 if suite_fail > 0 else 0)
 

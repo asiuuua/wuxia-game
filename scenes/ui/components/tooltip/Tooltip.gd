@@ -77,10 +77,10 @@ func show_for(item_id: String, global_pos: Vector2) -> void:
 
 func _rarity_color(r: String) -> Color:
 	match r:
-		"uncommon": return Color(0.30, 0.80, 0.40)
-		"rare": return Color(0.35, 0.65, 0.95)
-		"epic": return Color(0.70, 0.45, 0.95)
-		"legendary": return Color(0.95, 0.70, 0.25)
+		"uncommon": return UIPalette.RARITY_UNCOMMON
+		"rare": return UIPalette.RARITY_RARE
+		"epic": return UIPalette.RARITY_EPIC
+		"legendary": return UIPalette.RARITY_LEGENDARY
 	return UIPalette.GOLD
 
 func hide_tip() -> void:

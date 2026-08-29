@@ -67,6 +67,7 @@ func _ensure_built() -> void:
 
 
 func _build() -> void:
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var backdrop := ColorRect.new()
 	backdrop.color = UIPalette.DIM
 	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -74,14 +75,25 @@ func _build() -> void:
 	add_child(backdrop)
 
 	var panel := Panel.new()
-	panel.position = Vector2(80, 400)
-	panel.size = Vector2(880, 200)
+	panel.anchor_left = 0.1
+	panel.anchor_right = 0.9
+	panel.anchor_top = 1.0
+	panel.anchor_bottom = 1.0
+	panel.offset_top = -220.0
+	panel.offset_bottom = -20.0
+	UICenterUtils.apply_glass_style(panel)
 	add_child(panel)
 
 	# 左侧固定主角半身立绘
 	_left_bust = TextureRect.new()
-	_left_bust.position = Vector2(40, 180)
-	_left_bust.size = Vector2(150, 220)
+	_left_bust.anchor_left = 0.0
+	_left_bust.anchor_right = 0.0
+	_left_bust.anchor_top = 1.0
+	_left_bust.anchor_bottom = 1.0
+	_left_bust.offset_left = 24.0
+	_left_bust.offset_right = 174.0
+	_left_bust.offset_top = -460.0
+	_left_bust.offset_bottom = -240.0
 	_left_bust.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
 	_left_bust.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	var pbust: Texture2D = _load_tex(ConfigManager.get_player().get("bust", ""))
@@ -90,54 +102,105 @@ func _build() -> void:
 	_left_bust.visible = (pbust != null)
 	add_child(_left_bust)
 	_left_dim = ColorRect.new()
-	_left_dim.color = Color(0, 0, 0, 0.55)
-	_left_dim.position = _left_bust.position
-	_left_dim.size = _left_bust.size
+	_left_dim.color = UIPalette.DIM_STRONG
+	_left_dim.anchor_left = 0.0
+	_left_dim.anchor_right = 0.0
+	_left_dim.anchor_top = 1.0
+	_left_dim.anchor_bottom = 1.0
+	_left_dim.offset_left = 24.0
+	_left_dim.offset_right = 174.0
+	_left_dim.offset_top = -460.0
+	_left_dim.offset_bottom = -240.0
 	_left_dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_left_dim.visible = false
 	add_child(_left_dim)
 
 	# 右侧动态说话人半身立绘
 	_right_bust = TextureRect.new()
-	_right_bust.position = Vector2(890, 180)
-	_right_bust.size = Vector2(150, 220)
+	_right_bust.anchor_left = 1.0
+	_right_bust.anchor_right = 1.0
+	_right_bust.anchor_top = 1.0
+	_right_bust.anchor_bottom = 1.0
+	_right_bust.offset_left = -174.0
+	_right_bust.offset_right = -24.0
+	_right_bust.offset_top = -460.0
+	_right_bust.offset_bottom = -240.0
 	_right_bust.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
 	_right_bust.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_right_bust.visible = false
 	add_child(_right_bust)
 	_right_dim = ColorRect.new()
-	_right_dim.color = Color(0, 0, 0, 0.55)
-	_right_dim.position = _right_bust.position
-	_right_dim.size = _right_bust.size
+	_right_dim.color = UIPalette.DIM_STRONG
+	_right_dim.anchor_left = 1.0
+	_right_dim.anchor_right = 1.0
+	_right_dim.anchor_top = 1.0
+	_right_dim.anchor_bottom = 1.0
+	_right_dim.offset_left = -174.0
+	_right_dim.offset_right = -24.0
+	_right_dim.offset_top = -460.0
+	_right_dim.offset_bottom = -240.0
 	_right_dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_right_dim.visible = false
 	add_child(_right_dim)
 
 	_speaker_label = Label.new()
-	_speaker_label.position = Vector2(100, 410)
-	_speaker_label.size = Vector2(840, 28)
+	_speaker_label.add_theme_font_size_override("font_size", 18)
+	_speaker_label.add_theme_color_override("font_color", UIPalette.GOLD)
+	_speaker_label.anchor_left = 0.0
+	_speaker_label.anchor_right = 1.0
+	_speaker_label.anchor_top = 0.0
+	_speaker_label.anchor_bottom = 0.0
+	_speaker_label.offset_left = 20.0
+	_speaker_label.offset_right = -20.0
+	_speaker_label.offset_top = 10.0
 	panel.add_child(_speaker_label)
 
 	_dialog_label = Label.new()
-	_dialog_label.position = Vector2(100, 444)
-	_dialog_label.size = Vector2(840, 90)
+	_dialog_label.add_theme_font_size_override("font_size", 16)
+	_dialog_label.add_theme_color_override("font_color", UIPalette.TEXT_MAIN)
 	_dialog_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_dialog_label.anchor_left = 0.0
+	_dialog_label.anchor_right = 1.0
+	_dialog_label.anchor_top = 0.0
+	_dialog_label.anchor_bottom = 0.0
+	_dialog_label.offset_left = 20.0
+	_dialog_label.offset_right = -20.0
+	_dialog_label.offset_top = 44.0
 	panel.add_child(_dialog_label)
 
 	_next_button = Button.new()
 	_next_button.text = tr("ui_dialog_next")
-	_next_button.position = Vector2(800, 545)
+	_next_button.anchor_left = 1.0
+	_next_button.anchor_right = 1.0
+	_next_button.anchor_top = 1.0
+	_next_button.anchor_bottom = 1.0
+	_next_button.offset_left = -120.0
+	_next_button.offset_right = -20.0
+	_next_button.offset_top = -44.0
+	_next_button.offset_bottom = -12.0
 	_next_button.pressed.connect(_on_next_pressed)
 	panel.add_child(_next_button)
 
 	_option_container = VBoxContainer.new()
-	_option_container.position = Vector2(100, 540)
-	_option_container.size = Vector2(700, 56)
+	_option_container.anchor_left = 0.0
+	_option_container.anchor_right = 1.0
+	_option_container.anchor_top = 1.0
+	_option_container.anchor_bottom = 1.0
+	_option_container.offset_left = 20.0
+	_option_container.offset_right = -20.0
+	_option_container.offset_top = -64.0
+	_option_container.offset_bottom = -8.0
 	panel.add_child(_option_container)
 
 	_action_container = VBoxContainer.new()
-	_action_container.position = Vector2(100, 540)
-	_action_container.size = Vector2(700, 56)
+	_action_container.anchor_left = 0.0
+	_action_container.anchor_right = 1.0
+	_action_container.anchor_top = 1.0
+	_action_container.anchor_bottom = 1.0
+	_action_container.offset_left = 20.0
+	_action_container.offset_right = -20.0
+	_action_container.offset_top = -64.0
+	_action_container.offset_bottom = -8.0
 	_action_container.visible = false
 	panel.add_child(_action_container)
 
@@ -262,4 +325,4 @@ func _on_close_pressed() -> void:
 func _close_dialog() -> void:
 	EventBus.dialogue_ended.emit(_dialog_id)
 	GameManager.dialogue_service.end()
-	UIManager.close_screen(self)
+	EventBus.popup_close_requested.emit(self)

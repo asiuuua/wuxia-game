@@ -10,6 +10,7 @@
 extends BaseScreen
 
 const MenuItem = preload("res://scenes/ui/components/menu_item/MenuItem.gd")
+const UICenterUtils = preload("res://scenes/ui/ui_center_utils.gd")
 
 const MENU_ITEMS := [
 	{"key": "return_game", "text": "esc_return_game"},
@@ -33,14 +34,8 @@ func _build_content() -> void:
 	_add_backdrop(0.55)   # 压暗底铺满整屏（含刘海），透出底层游戏画面
 
 	var container: VBoxContainer = VBoxContainer.new()
-	container.anchor_left = 0.5
-	container.anchor_top = 0.5
-	container.anchor_right = 0.5
-	container.anchor_bottom = 0.5
-	container.offset_left = -200.0
-	container.offset_top = -230.0
-	container.offset_right = 200.0
-	container.offset_bottom = 230.0
+	container.size = Vector2(400, 460)
+	UICenterUtils.center_panel(container)   # 修复 Godot4.7.2 PRESET_CENTER 不居中
 	container.add_theme_constant_override("separation", 8)
 	add_content(container)
 

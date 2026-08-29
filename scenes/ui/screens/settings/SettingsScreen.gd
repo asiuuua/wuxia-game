@@ -9,7 +9,7 @@
 
 @warning_ignore("shadowed_global_identifier")
 
-extends Control
+extends PopupBase
 
 const UIPalette = preload("res://core/constants/ui_theme.gd")
 
@@ -49,6 +49,7 @@ var _rebinding_button: Button = null
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
+	popup_id = "Settings"
 	_build_backdrop()
 	_build_panel_frame()
 	_build_header()
@@ -444,7 +445,7 @@ func _add_reset_button(cat: String) -> void:
 
 # === 关闭 ===
 func _go_back() -> void:
-	UIManager.close_screen(self)
+	request_close()
 
 # === 键位重绑定捕获 + ESC 关闭 ===
 func _on_rebind_pressed(action: String, btn: Button) -> void:

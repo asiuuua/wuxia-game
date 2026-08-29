@@ -15,6 +15,8 @@
 
 class_name UICenterUtils
 
+const UIPalette = preload("res://core/constants/ui_theme.gd")
+
 ## 把 panel 真正居中到其父节点中心。调用前需已设置 panel.size。
 static func center_panel(p: Control) -> void:
 	if p == null:
@@ -28,3 +30,28 @@ static func center_panel(p: Control) -> void:
 	p.offset_top = -s.y * 0.5
 	p.offset_right = s.x * 0.5
 	p.offset_bottom = s.y * 0.5
+
+## 给面板套上统一的「磨砂玻璃」样式（与 ConfirmDialog / 菜单弹窗一致）。
+## 调用前 panel 应已 add 到父节点；本函数只覆盖 "panel" 主题的 StyleBox。
+static func apply_glass_style(p: Control) -> void:
+	if p == null:
+		return
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = UIPalette.GLASS_BG
+	sb.border_width_left = 1
+	sb.border_width_top = 1
+	sb.border_width_right = 1
+	sb.border_width_bottom = 1
+	sb.border_color = UIPalette.GLASS_BORDER
+	sb.corner_radius_top_left = 14
+	sb.corner_radius_top_right = 14
+	sb.corner_radius_bottom_left = 14
+	sb.corner_radius_bottom_right = 14
+	sb.shadow_size = 16
+	sb.shadow_offset = Vector2(0, 6)
+	sb.shadow_color = UIPalette.GLASS_SHADOW
+	sb.content_margin_left = 1
+	sb.content_margin_right = 1
+	sb.content_margin_top = 1
+	sb.content_margin_bottom = 1
+	p.add_theme_stylebox_override("panel", sb)

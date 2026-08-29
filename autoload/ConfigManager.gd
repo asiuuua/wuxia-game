@@ -86,6 +86,7 @@ const UI_ANIM_FILES: Array[String] = [
 const UI_SFX_FILES: Array[String] = [
 	"res://data/configs/ui/ui_sfx.json",
 ]
+const MENU_FILES: Array[String] = ["res://data/configs/ui/menu_config.json"]
 
 var _abilities: Dictionary = {}
 var _items: Dictionary = {}
@@ -133,6 +134,7 @@ func _ready() -> void:
 	_load_world()
 	_load_ui_anim()
 	_load_ui_sfx()
+	_load_menus()
 	_validate_references()
 	_flush_config_errors()
 	_is_loaded = true
@@ -773,6 +775,30 @@ func get_world_config() -> Dictionary:
 
 func get_config_version() -> String:
 	return _config_version
+
+# ---- 菜单配置（数据驱动菜单/按钮）：action_id → screen/badge/icon_id ----
+var _menus: Dictionary = {}
+
+func get_menu_config() -> Dictionary:
+	if _menus.is_empty():
+		_load_menus()
+	return _menus
+
+## 按 action_id 解析菜单项（screen/badge/icon_id/nav...）；找不到返回空 Dictionary
+func get_menu_item(action_id: String) -> Dictionary:
+	if _menus.is_empty():
+		_load_menus()
+	for cat in _menus.get("categories", []):
+		for item in cat.get("items", []):
+			if String(item.get("action_id", "")) == action_id:
+				return item
+	return {}
+
+func _load_menus() -> void:
+	var data: Dictionary = _load_json(MENU_FILES[0])
+	if data.is_empty():
+		return
+	_menus = data
 
 func _load_json(path: String) -> Dictionary:
 	if not FileAccess.file_exists(path):

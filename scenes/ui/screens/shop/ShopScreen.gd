@@ -3,13 +3,16 @@
 # 铁律：UI 只做展示与输入，业务逻辑调用 GameManager / ShopService
 # 2026-08-29 新建：补齐 screens.json 里已注册但缺失的界面
 
-extends Control
+extends PopupBase
 class_name ShopScreen
+
+const UIPalette = preload("res://core/constants/ui_theme.gd")
 
 var _list: VBoxContainer
 var _silver_label: Label
 
 func _ready() -> void:
+	popup_id = "ShopScreen"
 	_build_ui()
 	refresh()
 	EventBus.notify_trade_completed.connect(_on_trade_completed)
@@ -17,26 +20,43 @@ func _ready() -> void:
 	EventBus.player_money_changed.connect(_on_money_changed)
 
 func _build_ui() -> void:
-	var root := VBoxContainer.new()
-	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(root)
-
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var dim := ColorRect.new()
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	dim.color = UIPalette.DIM
+	dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(dim)
+	var panel := make_glass_panel(Vector2(640, 560))
+	add_child(panel)
+	var margin := MarginContainer.new()
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	margin.add_theme_constant_override("margin_left", 18)
+	margin.add_theme_constant_override("margin_right", 18)
+	margin.add_theme_constant_override("margin_top", 16)
+	margin.add_theme_constant_override("margin_bottom", 16)
+	panel.add_child(margin)
+	var v := VBoxContainer.new()
+	v.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	v.add_theme_constant_override("separation", 10)
+	margin.add_child(v)
 	var title := Label.new()
 	title.text = tr("ui_shop_title")
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	root.add_child(title)
-
+	v.add_child(title)
 	_silver_label = Label.new()
 	_silver_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	root.add_child(_silver_label)
-
+	v.add_child(_silver_label)
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	v.add_child(scroll)
 	_list = VBoxContainer.new()
-	root.add_child(_list)
-
+	_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(_list)
 	var close := Button.new()
 	close.text = tr("ui_shop_close")
-	close.pressed.connect(UIManager.close_screen.bind(self))
-	root.add_child(close)
+	close.pressed.connect(request_close)
+	v.add_child(close)
 
 func refresh() -> void:
 	var ps: PlayerState = GameManager.player_state

@@ -2,7 +2,7 @@
 # 江湖技艺（已学武学）面板：列出玩家习得的武学，展示名称/描述/内力消耗/修炼等级。
 # 数据来自 GameManager.ability_service.learned + ConfigManager.get_ability；纯展示，不修改业务。
 
-extends Control
+extends PopupBase
 class_name AbilitiesScreen
 
 const UIPalette = preload("res://core/constants/ui_theme.gd")
@@ -13,6 +13,7 @@ var _content: VBoxContainer
 func _ready() -> void:
 	focus_mode = Control.FOCUS_NONE
 	UIManager.apply_safe_area(self)
+	popup_id = "Abilities"
 	_build()
 	_refresh()
 
@@ -23,17 +24,7 @@ func _build() -> void:
 	dim.color = UIPalette.DIM
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(dim)
-	var panel := Panel.new()
-	panel.size = Vector2(720, 540)
-	UICenterUtils.center_panel(panel)   # 修复 Godot4.7.2 PRESET_CENTER 不居中
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = UIPalette.GLASS_BG
-	sb.border_color = UIPalette.GLASS_BORDER
-	sb.border_width_left = 1
-	sb.border_width_top = 1
-	sb.border_width_right = 1
-	sb.border_width_bottom = 1
-	panel.add_theme_stylebox_override("panel", sb)
+	var panel := make_glass_panel(Vector2(720, 540))
 	add_child(panel)
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -61,7 +52,7 @@ func _build() -> void:
 	var close := Button.new()
 	close.text = "关闭"
 	close.focus_mode = Control.FOCUS_NONE
-	close.pressed.connect(UIManager.close_screen.bind(self))
+	close.pressed.connect(request_close)
 	UIFeedback.attach(close)
 	v.add_child(close)
 

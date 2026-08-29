@@ -1,8 +1,8 @@
 {
   "LoadingScreen": "res://scenes/ui/screens/loading/LoadingScreen.gd",
   "MainMenu": "res://scenes/ui/screens/main_menu/MainMenu.gd",
-  "SaveLoadScreen": "res://scenes/ui/screens/save_load/SaveLoadScreen.gd",
-  "SettingsScreen": "res://scenes/ui/screens/settings/SettingsScreen.gd",
+  "SaveLoadScreen": {"path": "res://scenes/ui/screens/save_load/SaveLoadScreen.gd", "cache": true},
+  "SettingsScreen": {"path": "res://scenes/ui/screens/settings/SettingsScreen.gd", "cache": true},
   "ConfirmDialog": "res://scenes/ui/components/confirm_dialog/ConfirmDialog.gd",
   "InventoryScreen": "res://scenes/ui/overlays/inventory/InventoryScreen.gd",
   "MapScreen": "res://scenes/ui/overlays/map/MapScreen.gd",

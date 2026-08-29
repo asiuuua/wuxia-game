@@ -129,7 +129,7 @@ func _apply_glass_button_style(btn: Button, font_color: Color) -> void:
 	sb_hover.border_color = UIPalette.GLASS_BORDER_FOCUS
 
 	var sb_pressed := sb_normal.duplicate() as StyleBoxFlat
-	sb_pressed.bg_color = Color(0.05, 0.06, 0.09, 0.90)
+	sb_pressed.bg_color = UIPalette.GLASS_BG_PRESSED
 	sb_pressed.border_color = UIPalette.GLASS_BORDER_FOCUS
 
 	btn.add_theme_stylebox_override("normal", sb_normal)

@@ -5,7 +5,7 @@
 #       好感走 bond_service、姻缘走 romance_service，避免与关系图对不上。
 #       刷新监听 EventBus.bond_relationship_changed（0 参，必须 0 参处理器避免运行期崩溃）。
 
-extends Control
+extends PopupBase
 class_name BondRomanceScreen
 
 const UIPalette = preload("res://core/constants/ui_theme.gd")
@@ -17,6 +17,7 @@ var _scroll: ScrollContainer = null
 func _ready() -> void:
 	focus_mode = Control.FOCUS_NONE
 	UIManager.apply_safe_area(self)
+	popup_id = "BondRomance"
 	_build()
 	_refresh()
 	if not EventBus.bond_relationship_changed.is_connected(_on_relationship_changed):
@@ -29,20 +30,7 @@ func _build() -> void:
 	dim.color = UIPalette.DIM
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(dim)
-	var panel := Panel.new()
-	# ⚠️ Godot 4.7.2 的 set_anchors_and_offsets_preset(PRESET_CENTER) 会忽略当前尺寸、
-	# 把 offsets 强制清零（实测），导致面板不居中。手动锚 0.5 + 对称 offset 才真正居中。
-	var _psz := Vector2(760, 620)
-	panel.custom_minimum_size = _psz
-	panel.size = _psz
-	panel.anchor_left = 0.5
-	panel.anchor_top = 0.5
-	panel.anchor_right = 0.5
-	panel.anchor_bottom = 0.5
-	panel.offset_left = -_psz.x * 0.5
-	panel.offset_top = -_psz.y * 0.5
-	panel.offset_right = _psz.x * 0.5
-	panel.offset_bottom = _psz.y * 0.5
+	var panel := make_glass_panel(Vector2(760, 620))
 	add_child(panel)
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -68,7 +56,7 @@ func _build() -> void:
 	var close := Button.new()
 	close.text = "关闭"
 	close.focus_mode = Control.FOCUS_NONE
-	close.pressed.connect(UIManager.close_screen.bind(self))
+	close.pressed.connect(request_close)
 	UIFeedback.attach(close)
 	v.add_child(close)
 
@@ -215,8 +203,6 @@ func _add_candidate_section() -> void:
 	var ms = GameManager.master_service
 	if bs == null or rs == null or sw == null or ms == null:
 		return
-	# 测试辅助：一键拉满所有可结缘对象好感（调试/验收用，非正式玩法）
-	_content.add_child(_btn("测试：拉满所有好感", true, _on_debug_max_all_affection))
 	var any := false
 	for npc_id in ConfigManager.get_all_relation_ids():
 		var npc: Dictionary = ConfigManager.get_relation(npc_id)
@@ -224,7 +210,6 @@ func _add_candidate_section() -> void:
 			continue
 		var btns := []
 		if bool(npc.get("is_romanceable", false)) and not rs.is_spouse(npc_id):
-			btns.append(_btn("满好感(测试)", true, _on_debug_max_affection.bind(npc_id)))
 			btns.append(_btn("求婚", rs.can_propose(npc_id), _on_propose.bind(npc_id)))
 			# 欢庆：好感满即可用（用户需求：所有可结缘 NPC 好感满后都能欢庆）
 			if rs.can_celebrate(npc_id):
@@ -277,7 +262,7 @@ func _on_wedding(npc_id: String) -> void:
 	if r.get("ok", false):
 		# 婚礼演出由 GameManager 监听 bond_wedding_started 切到 WeddingScene；
 		# 先关闭本面板，避免覆盖层残留在婚礼场景之上。
-		UIManager.close_screen(self)
+		request_close()
 	else:
 		EventBus.notification_show.emit("未能举办：%s" % String(r.get("reason", "未知")))
 		_refresh()
@@ -292,18 +277,6 @@ func _on_take_apprentice(npc_id: String) -> void:
 	_act(GameManager.master_service.take_apprentice(npc_id), "收徒成功！")
 
 func _on_relationship_changed() -> void:
-	_refresh()
-
-# 测试辅助：一键拉满单个 NPC 好感（调试/验收用）
-func _on_debug_max_affection(npc_id: String) -> void:
-	GameManager.romance_service.debug_max_affection(npc_id)
-	EventBus.notification_show.emit("测试：%s 好感已拉满" % _npc_name(npc_id))
-	_refresh()
-
-# 测试辅助：一键拉满所有可结缘对象好感
-func _on_debug_max_all_affection() -> void:
-	GameManager.romance_service.debug_max_all_affection()
-	EventBus.notification_show.emit("测试：所有可结缘对象好感已拉满")
 	_refresh()
 
 func _exit_tree() -> void:

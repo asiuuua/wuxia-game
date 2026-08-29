@@ -3,7 +3,7 @@
 # 铁律：UI 只展示与输入，数据来自 GameManager.player_state
 
 @warning_ignore("shadowed_global_identifier")
-extends Control
+extends PopupBase
 
 class_name AttributesScreen
 
@@ -17,6 +17,7 @@ var _attr_grid: GridContainer
 
 func _ready() -> void:
 	focus_mode = Control.FOCUS_NONE
+	popup_id = "Attributes"
 	_build()
 	_refresh()
 	EventBus.player_stats_changed.connect(_on_changed)
@@ -32,9 +33,7 @@ func _build() -> void:
 	dim.color = UIPalette.DIM
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(dim)
-	var panel := Panel.new()
-	panel.size = Vector2(520, 560)
-	UICenterUtils.center_panel(panel)   # 修复 Godot4.7.2 PRESET_CENTER 不居中
+	var panel := make_glass_panel(Vector2(520, 560))
 	add_child(panel)
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -73,7 +72,7 @@ func _build() -> void:
 	var close := Button.new()
 	close.text = tr("ui_attr_close")
 	close.focus_mode = Control.FOCUS_NONE
-	close.pressed.connect(UIManager.close_screen.bind(self))
+	close.pressed.connect(request_close)
 	v.add_child(close)
 
 func _refresh() -> void:

@@ -4,53 +4,21 @@
 # 纯展示与导航：数据来自各业务服务的公开方法，跨模块只经 UIManager.open_screen；
 # 姻缘条目带"可求婚"红点，消费 EventBus.bond_relationship_changed 实时刷新。
 
-extends Control
+extends PopupBase
 class_name GameMenuScreen
 
 const UIPalette = preload("res://core/constants/ui_theme.gd")
 const UIFeedback = preload("res://scenes/ui/components/ui_feedback/UIFeedback.gd")
 
-# 分类目录（screen 名对应 data/configs/ui/screens.json 的注册键）
-const _CATEGORIES := [
-	{
-		"title": "人 物",
-		"items": [
-			{"name": "属性", "screen": "AttributesScreen"},
-			{"name": "背包", "screen": "InventoryScreen"},
-			{"name": "装备", "screen": "EquipmentScreen"},
-		],
-	},
-	{
-		"title": "江 湖",
-		"items": [
-			{"name": "姻缘 · 情缘录", "screen": "BondRomance", "badge": true},
-			{"name": "门派", "screen": "SectScreen"},
-			{"name": "江湖地图", "screen": "MapScreen"},
-		],
-	},
-	{
-		"title": "技 艺 · 生 产",
-		"items": [
-			{"name": "江湖技艺", "screen": "AbilitiesScreen"},
-			{"name": "锻造", "screen": "ForgeScreen"},
-			{"name": "炼药", "screen": "AlchemyScreen"},
-			{"name": "商铺", "screen": "ShopScreen"},
-		],
-	},
-	{
-		"title": "系 统",
-		"items": [
-			{"name": "设置", "screen": "SettingsScreen"},
-			{"name": "存档", "screen": "SaveLoadScreen"},
-		],
-	},
-]
+# 菜单清单改为数据驱动：data/configs/ui/menu_config.json（action_id → screen/badge/icon_id），
+# GameMenuScreen 读配置建按钮、按钮只 emit ui_action_requested，零硬编码跳转、加菜单零代码改动。
 
 var _romance_badge: Label
 
 func _ready() -> void:
 	focus_mode = Control.FOCUS_NONE
 	UIManager.apply_safe_area(self)
+	popup_id = "GameMenu"
 	_build()
 	if not EventBus.bond_relationship_changed.is_connected(_on_relationship_changed):
 		EventBus.bond_relationship_changed.connect(_on_relationship_changed)
@@ -63,28 +31,7 @@ func _build() -> void:
 	dim.color = UIPalette.DIM
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(dim)
-	var panel := Panel.new()
-	# ⚠️ Godot 4.7.2 的 set_anchors_and_offsets_preset(PRESET_CENTER) 会忽略当前尺寸、
-	# 把 offsets 强制清零（实测），导致面板不居中。手动锚 0.5 + 对称 offset 才真正居中。
-	var _psz := Vector2(760, 540)
-	panel.custom_minimum_size = _psz
-	panel.size = _psz
-	panel.anchor_left = 0.5
-	panel.anchor_top = 0.5
-	panel.anchor_right = 0.5
-	panel.anchor_bottom = 0.5
-	panel.offset_left = -_psz.x * 0.5
-	panel.offset_top = -_psz.y * 0.5
-	panel.offset_right = _psz.x * 0.5
-	panel.offset_bottom = _psz.y * 0.5
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = UIPalette.GLASS_BG
-	sb.border_color = UIPalette.GLASS_BORDER
-	sb.border_width_left = 1
-	sb.border_width_top = 1
-	sb.border_width_right = 1
-	sb.border_width_bottom = 1
-	panel.add_theme_stylebox_override("panel", sb)
+	var panel := make_glass_panel(Vector2(760, 540))
 	add_child(panel)
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -109,12 +56,12 @@ func _build() -> void:
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	content.add_theme_constant_override("separation", 14)
 	scroll.add_child(content)
-	for cat in _CATEGORIES:
+	for cat in ConfigManager.get_menu_config().get("categories", []):
 		content.add_child(_build_category(cat))
 	var close := Button.new()
 	close.text = "返回"
 	close.focus_mode = Control.FOCUS_NONE
-	close.pressed.connect(UIManager.close_screen.bind(self))
+	close.pressed.connect(request_close)
 	UIFeedback.attach(close)
 	v.add_child(close)
 
@@ -144,7 +91,10 @@ func _build_item(item: Dictionary) -> Control:
 	b.focus_mode = Control.FOCUS_NONE
 	b.custom_minimum_size = Vector2(210, 50)
 	UIFeedback.attach(b)
-	b.pressed.connect(_open.bind(screen_name))
+	var icon_id: String = String(item.get("icon_id", ""))
+	if icon_id != "" and UIManager.has_icon(icon_id):
+		b.icon = UIManager.get_icon(icon_id)
+	b.pressed.connect(func(): EventBus.ui_action_requested.emit(String(item.get("action_id", ""))))
 	if bool(item.get("badge", false)):
 		var badge := Label.new()
 		badge.name = "RomanceBadge"
@@ -164,10 +114,6 @@ func _build_item(item: Dictionary) -> Control:
 		b.add_child(badge)
 		_romance_badge = badge
 	return b
-
-func _open(screen_name: String) -> void:
-	UIManager.open_screen(screen_name, UIManager.Layer.FULLSCREEN)
-	UIManager.close_screen(self)
 
 func _on_relationship_changed() -> void:
 	_refresh_romance_badge()

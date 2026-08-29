@@ -3,6 +3,11 @@
 # 职责：维护 6 个 CanvasLayer 层级，提供全屏界面栈的打开/关闭。
 # 界面以「脚本路径」登记在 data/configs/ui/screens.json，open_screen 用 script.new() 实例化
 # （对齐本项目「代码构建 Control 覆盖层」的惯例，不依赖 .tscn）。
+#
+# 2026-08-29 P2 弹窗生命周期：screens.json 支持 {path, cache} 写法；cache=true 的界面关闭时
+# 仅隐藏、保留在层上（_screen_cache），重开复用，不销毁——高频弹窗（设置/存档）省重建开销；
+# cache=false（默认）关闭即 queue_free 彻底释放，避免内存堆积。弹窗关闭统一走
+# EventBus.popup_close_requested（PopupBase 发出），UIManager 收口，弹窗自身不销毁自己。
 
 @warning_ignore("shadowed_global_identifier")
 
@@ -26,11 +31,13 @@ const UIPalette = preload("res://core/constants/ui_theme.gd")
 const IconRegistry = preload("res://scenes/ui/icon_registry.gd")
 
 var _layers: Dictionary = {}         # int(layer) -> CanvasLayer
-var _screen_paths: Dictionary = {}   # 界面名 -> 脚本路径
+var _screen_paths: Dictionary = {}   # 界面名 -> 脚本路径（或 {path, cache} 对象）
 var _screen_stack: Array = []        # 打开中的全屏界面（Control）
 var _screen_layer: Dictionary = {}   # Control -> 所在层级（用于判断弹窗是否打开）
 var _current_screen: Control = null
 var _hud: Control = null             # 当前常驻 HUD（挂在 HUD 层；autoload 跨场景常驻，须显式 unmount 释放）
+var _screen_cache: Dictionary = {}   # 缓存模式弹窗实例（key=界面名）：关闭仅隐藏、保留层上，重开复用不销毁
+var _exit_tweens: Dictionary = {}    # 进行中的关闭补间（key=界面实例）；重开缓存实例时 kill，避免把复用实例误隐藏
 
 func _ready() -> void:
 	_init_layers()
@@ -38,6 +45,8 @@ func _ready() -> void:
 	EventBus.notification_show.connect(show_tooltip)
 	# 背包溢出全局订阅：掉落/发奖/任何 add_item 满包时不再静默丢物，统一弹 Toast 提示玩家
 	EventBus.inventory_add_overflow.connect(_on_inventory_add_overflow)
+	EventBus.ui_action_requested.connect(_on_ui_action_requested)
+	EventBus.popup_close_requested.connect(_on_popup_close_requested)
 
 func _init_layers() -> void:
 	for layer_value in Layer.values():
@@ -81,7 +90,7 @@ func mount_hud(hud: Control) -> void:
 func unmount_hud() -> void:
 	if _hud != null and is_instance_valid(_hud):
 		_hud.queue_free()
-	_hud = null
+		_hud = null
 
 ## 取图标纹理（美术接入预留接口）。id 形如 "skills/fire_sword"（不含扩展名）。
 ## 找不到返回占位图，绝不返回 null。其它窗口统一经此取图标，禁写死 load(png)。
@@ -136,24 +145,58 @@ func get_open_screen(screen_name: String) -> Control:
 			return s as Control
 	return null
 
-func open_screen(screen_name: String, layer: int = Layer.FULLSCREEN, init_data: Variant = null) -> Control:
+## 解析界面注册项（screens.json 兼容两种写法：纯路径字符串 或 {path, cache} 对象）
+## cache=true 表示「缓存模式」：关闭仅隐藏、保留在层上，重开复用，不销毁（省重建开销）
+func _resolve_screen(screen_name: String) -> Dictionary:
 	if not _screen_paths.has(screen_name):
+		return {}
+	var v: Variant = _screen_paths[screen_name]
+	if v is String:
+		return {"path": v, "cache": false}
+	if v is Dictionary:
+		var d: Dictionary = v
+		return {"path": String(d.get("path", "")), "cache": bool(d.get("cache", false))}
+	return {}
+
+func open_screen(screen_name: String, layer: int = Layer.FULLSCREEN, init_data: Variant = null) -> Control:
+	var entry: Dictionary = _resolve_screen(screen_name)
+	if entry.is_empty() or String(entry.get("path", "")) == "":
 		GameLogger.error("UIManager", "未注册界面: %s" % screen_name)
 		return null
-	var script: Script = load(_screen_paths[screen_name]) as Script
-	if script == null:
-		GameLogger.error("UIManager", "界面脚本加载失败: %s" % screen_name)
-		return null
-	var screen: Control = script.new() as Control
-	screen.name = screen_name
-	# 初始化数据（如界面模式 save/load）：若有 _on_open 方法则注入，避免界面硬编码打开上下文
-	if init_data != null and screen.has_method("_on_open"):
-		screen._on_open(init_data)
-	var canvas: CanvasLayer = get_layer(layer)
-	if canvas == null:
-		GameLogger.error("UIManager", "UI 层级不存在: %d" % layer)
-		return null
-	canvas.add_child(screen)
+	var cached: Control = _screen_cache.get(screen_name, null) as Control
+	var screen: Control
+	if bool(entry.get("cache", false)) and cached != null and is_instance_valid(cached):
+		# 缓存模式复用：实例已在层上（关闭时被隐藏），恢复显示并重跑打开钩子
+		screen = cached
+		screen.visible = true
+		screen.modulate.a = 0.0
+		# 重开时 kill 进行中的关闭补间，避免动画结束后把复用实例误隐藏
+		if _exit_tweens.has(screen):
+			var pt: Variant = _exit_tweens[screen]
+			if pt != null and is_instance_valid(pt):
+				(pt as Tween).kill()
+			_exit_tweens.erase(screen)
+		if init_data != null and screen.has_method("_on_open"):
+			screen._on_open(init_data)
+		elif screen.has_method("_on_reopen"):
+			screen._on_reopen()
+	else:
+		var script: Script = load(String(entry.get("path", ""))) as Script
+		if script == null:
+			GameLogger.error("UIManager", "界面脚本加载失败: %s" % screen_name)
+			return null
+		screen = script.new() as Control
+		screen.name = screen_name
+		# 初始化数据（如界面模式 save/load）：若有 _on_open 方法则注入，避免界面硬编码打开上下文
+		if init_data != null and screen.has_method("_on_open"):
+			screen._on_open(init_data)
+		var canvas: CanvasLayer = get_layer(layer)
+		if canvas == null:
+			GameLogger.error("UIManager", "UI 层级不存在: %d" % layer)
+			return null
+		canvas.add_child(screen)
+		if bool(entry.get("cache", false)):
+			_screen_cache[screen_name] = screen
 	_screen_stack.append(screen)
 	_screen_layer[screen] = layer
 	_current_screen = screen
@@ -165,6 +208,13 @@ func open_screen(screen_name: String, layer: int = Layer.FULLSCREEN, init_data: 
 	enter_tween.set_ease(ConfigManager.get_anim_ease(_screen_easing()))
 	enter_tween.tween_property(screen, "modulate:a", 1.0, _screen_fade_duration(true))
 	return screen
+
+## 取缓存模式实例（关闭后仍驻留内存、被隐藏）；非缓存/未打开返回 null（供测试与调试）
+func get_cached_screen(screen_name: String) -> Control:
+	var c: Variant = _screen_cache.get(screen_name, null)
+	if c != null and is_instance_valid(c):
+		return c as Control
+	return null
 
 ## 界面转场时长（秒），读 ui_anim.json 的 screen 预设；配置缺失时退回 0.25
 func _screen_fade_duration(is_enter: bool) -> float:
@@ -188,21 +238,34 @@ func close_screen(screen: Control = null, on_closed: Callable = Callable()) -> v
 		_current_screen = _screen_stack.back() as Control
 	else:
 		_current_screen = null
-	# 统一淡出转场：渐隐后释放，并触发 on_closed 回调（如切场景）；时长/缓动同读 screen 预设
-	target.modulate.a = 1.0
+	# 缓存模式判定：该实例是否仍登记在缓存里（关闭时只隐藏、不销毁）
+	var name: String = target.name
+	var is_cached: bool = _screen_cache.has(name) and is_instance_valid(_screen_cache.get(name, null)) and (_screen_cache[name] == target)
 	var exit_tween := create_tween()
 	exit_tween.set_trans(ConfigManager.get_anim_trans(_screen_easing()))
 	exit_tween.set_ease(ConfigManager.get_anim_ease(_screen_easing()))
 	exit_tween.tween_property(target, "modulate:a", 0.0, _screen_fade_duration(false))
-	exit_tween.tween_callback(func():
-		if is_instance_valid(target):
-			target.queue_free()
-		if on_closed.is_valid():
-			on_closed.call()
-	)
+	if is_cached:
+		# 缓存模式：淡出后仅隐藏（节点保留在层上，下次 open_screen 复用），不释放，省重建开销
+		exit_tween.tween_callback(func():
+			_exit_tweens.erase(target)
+			if is_instance_valid(target):
+				target.visible = false
+				target.modulate.a = 1.0   # 复位 alpha，下次打开直接显示，避免闪一下透明
+			if on_closed.is_valid():
+				on_closed.call()
+		)
+	else:
+		# 销毁模式：淡出后彻底 queue_free，从场景树移除并释放显存内存（现有行为，防内存堆积）
+		exit_tween.tween_callback(func():
+			_exit_tweens.erase(target)
+			if is_instance_valid(target):
+				target.queue_free()
+			if on_closed.is_valid():
+				on_closed.call()
+		)
+	_exit_tweens[target] = exit_tween
 
-## 清理界面栈中已销毁（freed）或失效的引用，避免后续访问销毁对象时触发 "Trying to cast a freed object"
-## 任何界面若绕过 close_screen 直接 queue_free（历史代码/组件自销毁），都会在此被兜底清除
 func _prune_invalid() -> void:
 	var valid: Array = []
 	for s in _screen_stack:
@@ -220,6 +283,7 @@ func show_popup(popup_name: String) -> Control:
 	return open_screen(popup_name, Layer.POPUP)
 
 ## 关闭栈内全部界面（读档/新游戏时调用：连同底层主菜单一并释放，避免残留遮挡）
+## 缓存弹窗一并释放，确保新游戏/读档后无残留隐藏节点（彻底释放，不占内存）
 func close_all_screens() -> void:
 	_prune_invalid()
 	for screen in _screen_stack:
@@ -228,14 +292,50 @@ func close_all_screens() -> void:
 	_screen_stack.clear()
 	_screen_layer.clear()
 	_current_screen = null
+	for c in _screen_cache.values():
+		if is_instance_valid(c):
+			(c as Control).queue_free()
+	_screen_cache.clear()
+	_exit_tweens.clear()
 
 ## 是否有弹窗（POPUP 层级界面）处于打开中；供底层界面在 _unhandled_input 判断是否让权
+## 菜单/按钮动作路由（数据驱动）：UI 只 emit ui_action_requested(action_id)，此处据 menu_config.json 解析并派发。
+## 不写死任何界面路径：screen 类走 open_screen；nav 类(battle/return_town)走 GameManager，绝不 change_scene（避"选2遍模式"类 bug）。
+func _on_ui_action_requested(action_id: String) -> void:
+	var item: Dictionary = ConfigManager.get_menu_item(action_id)
+	if item.is_empty():
+		GameLogger.warn("UIManager", "未知菜单动作: %s" % action_id)
+		return
+	var nav: String = String(item.get("nav", ""))
+	if nav == "battle":
+		GameManager.start_battle(String(item.get("battle_id", "")))
+		return
+	if nav == "return_town":
+		GameManager.return_to_town()
+		return
+	var screen: String = String(item.get("screen", ""))
+	if screen.is_empty():
+		return
+	var src: Control = get_open_screen("GameMenu")
+	open_screen(screen, Layer.FULLSCREEN)
+	if src != null and is_instance_valid(src):
+		close_screen(src)
+
 func is_popup_open() -> bool:
 	_prune_invalid()
 	for screen in _screen_stack:
 		if _screen_layer.get(screen, -1) == Layer.POPUP:
 			return true
 	return false
+
+## 弹窗请求关闭（PopupBase.request_close 发出）：只负责收口，弹窗自身绝不销毁自己
+func _on_popup_close_requested(popup: Control) -> void:
+	if popup == null or not is_instance_valid(popup):
+		return
+	close_screen(popup)
+
+# Toast 对象池：避免每次通知都 new Label+StyleBox+tween 产生瞬时 GC 压力（性能极致优化）
+var _toast_pool: Array = []
 
 ## 轻量通知 Toast（EventBus.notification_show 自动接入）：顶部居中淡入，2.2s 后淡出
 func show_tooltip(text: String) -> void:
@@ -244,38 +344,52 @@ func show_tooltip(text: String) -> void:
 	var layer: CanvasLayer = get_layer(Layer.TOOLTIP)
 	if layer == null:
 		return
-	var toast: Label = Label.new()
+	var toast: Label
+	if _toast_pool.is_empty():
+		toast = Label.new()
+		toast.add_theme_color_override("font_color", UIPalette.TEXT_MAIN)
+		toast.add_theme_font_size_override("font_size", 16)
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = UIPalette.TOAST_BG
+		sb.border_width_left = 1
+		sb.border_width_top = 1
+		sb.border_width_right = 1
+		sb.border_width_bottom = 1
+		sb.border_color = UIPalette.GOLD
+		toast.add_theme_stylebox_override("normal", sb)
+		toast.add_theme_constant_override("margin_left", 16)
+		toast.add_theme_constant_override("margin_top", 10)
+		toast.add_theme_constant_override("margin_right", 16)
+		toast.add_theme_constant_override("margin_bottom", 10)
+		toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		toast.anchor_left = 0.5
+		toast.anchor_top = 0.0
+		toast.anchor_right = 0.5
+		toast.anchor_bottom = 0.0
+		toast.offset_left = -160.0
+		toast.offset_top = 20.0
+		toast.offset_right = 160.0
+		toast.offset_bottom = 60.0
+	else:
+		toast = _toast_pool.pop_back()
+		if toast.get_parent() != null:
+			toast.get_parent().remove_child(toast)
 	toast.text = text
-	toast.add_theme_color_override("font_color", UIPalette.TEXT_MAIN)
-	toast.add_theme_font_size_override("font_size", 16)
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.0, 0.0, 0.0, 0.82)
-	sb.border_width_left = 1
-	sb.border_width_top = 1
-	sb.border_width_right = 1
-	sb.border_width_bottom = 1
-	sb.border_color = UIPalette.GOLD
-	toast.add_theme_stylebox_override("normal", sb)
-	toast.add_theme_constant_override("margin_left", 16)
-	toast.add_theme_constant_override("margin_top", 10)
-	toast.add_theme_constant_override("margin_right", 16)
-	toast.add_theme_constant_override("margin_bottom", 10)
-	toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	toast.anchor_left = 0.5
-	toast.anchor_top = 0.0
-	toast.anchor_right = 0.5
-	toast.anchor_bottom = 0.0
-	toast.offset_left = -160.0
-	toast.offset_top = 20.0
-	toast.offset_right = 160.0
-	toast.offset_bottom = 60.0
 	toast.modulate.a = 0.0
 	layer.add_child(toast)
 	var tween := create_tween()
 	tween.tween_property(toast, "modulate:a", 1.0, 0.25)
 	tween.tween_interval(2.2)
 	tween.tween_property(toast, "modulate:a", 0.0, 0.3)
-	tween.tween_callback(toast.queue_free)
+	tween.tween_callback(_recycle_toast.bind(toast))
+
+## Toast 回收：从场景树摘下、归还对象池，下次通知复用（不再 queue_free）
+func _recycle_toast(toast: Label) -> void:
+	if toast == null or not is_instance_valid(toast):
+		return
+	if toast.get_parent() != null:
+		toast.get_parent().remove_child(toast)
+	_toast_pool.append(toast)
 
 ## 背包入包溢出（满包/超重导致物品丢失）：全局订阅，转成玩家可见的 Toast，避免静默丢物
 func _on_inventory_add_overflow(item_id: String, lost_count: int) -> void:

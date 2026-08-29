@@ -10,6 +10,7 @@ extends Control
 class_name CelebrationOverlay
 
 const ResourceManager = preload("res://core/resource_manager.gd")
+const UIPalette = preload("res://core/constants/ui_theme.gd")
 
 const TABLE_PATH := "res://data/configs/bond/celebrations.json"
 const MAX_CG_SECONDS := 10.0
@@ -51,7 +52,7 @@ func _build() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var dim := ColorRect.new()
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	dim.color = Color(0.0, 0.0, 0.0, 0.92)
+	dim.color = UIPalette.CG_DIM
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(dim)
 	var panel := Panel.new()
@@ -62,8 +63,8 @@ func _build() -> void:
 	panel.offset_left = -_psz.x * 0.5; panel.offset_top = -_psz.y * 0.5
 	panel.offset_right = _psz.x * 0.5; panel.offset_bottom = _psz.y * 0.5
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.08, 0.10, 0.14, 0.98)
-	sb.border_color = Color(0.85, 0.7, 0.35, 0.9)
+	sb.bg_color = UIPalette.CG_PANEL_BG
+	sb.border_color = UIPalette.CG_BORDER
 	sb.border_width_left = 1; sb.border_width_top = 1; sb.border_width_right = 1; sb.border_width_bottom = 1
 	panel.add_theme_stylebox_override("panel", sb)
 	add_child(panel)
@@ -80,7 +81,7 @@ func _build() -> void:
 	title.text = "欢庆" if _mode != "over_limit" else "欢庆 · 今日已尽"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 22)
-	title.add_theme_color_override("font_color", Color(0.95, 0.85, 0.45))
+	title.add_theme_color_override("font_color", UIPalette.CG_TITLE)
 	v.add_child(title)
 	_media_box = Control.new()
 	_media_box.custom_minimum_size = Vector2(700, 280)
@@ -90,7 +91,7 @@ func _build() -> void:
 	_lines_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_lines_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_lines_label.add_theme_font_size_override("font_size", 18)
-	_lines_label.add_theme_color_override("font_color", Color(0.95, 0.95, 0.92))
+	_lines_label.add_theme_color_override("font_color", UIPalette.CG_TEXT)
 	v.add_child(_lines_label)
 	_btn_row = HBoxContainer.new()
 	_btn_row.alignment = BoxContainer.ALIGNMENT_CENTER

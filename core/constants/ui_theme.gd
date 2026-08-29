@@ -49,6 +49,22 @@ const ART_MOUNTAIN := Color(0.137, 0.157, 0.180)  # 远山剪影
 const ART_WATER := Color(0.078, 0.110, 0.137)      # 水面
 const ART_CLOUD := Color(0.941, 0.902, 0.820, 0.05) # 云雾（宣纸色低透明）
 
+# --- 叠加层专用色（收敛散落字面量：对话立绘变暗 / Toast 底 / 磨砂按钮按下 / 欢庆 / 稀有度）---
+const DIM_STRONG := Color(0.0, 0.0, 0.0, 0.55)              # 对话非说话人立绘变暗遮罩
+const TOAST_BG := Color(0.0, 0.0, 0.0, 0.82)                # 通知 Toast 底色
+const GLASS_BG_PRESSED := Color(0.05, 0.06, 0.09, 0.90)     # 磨砂玻璃按钮按下态
+const CG_DIM := Color(0.0, 0.0, 0.0, 0.92)                  # 欢庆遮罩
+const CG_PANEL_BG := Color(0.08, 0.10, 0.14, 0.98)          # 欢庆面板底
+const CG_BORDER := Color(0.85, 0.70, 0.35, 0.90)            # 欢庆金边
+const CG_TITLE := Color(0.95, 0.85, 0.45)                   # 欢庆标题金
+const CG_TEXT := Color(0.95, 0.95, 0.92)                    # 欢庆台词色
+
+# --- 物品稀有度色（Tooltip 标题着色，禁止在组件里裸写）---
+const RARITY_UNCOMMON := Color(0.30, 0.80, 0.40)
+const RARITY_RARE := Color(0.35, 0.65, 0.95)
+const RARITY_EPIC := Color(0.70, 0.45, 0.95)
+const RARITY_LEGENDARY := Color(0.95, 0.70, 0.25)
+
 # --- 字号（统一阶梯，界面覆盖字体大小时引用，禁止裸数字）---
 const FS_TITLE := 22     # 面板标题
 const FS_NAME := 20      # 卡片主名
