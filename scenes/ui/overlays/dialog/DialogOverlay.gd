@@ -14,6 +14,7 @@ extends Control
 class_name DialogOverlay
 
 const UIPalette = preload("res://core/constants/ui_theme.gd")
+const PortraitCache = preload("res://core/portrait_cache_manager.gd")
 
 var _npc_id: String = ""
 var _dialog_id: String = ""
@@ -44,6 +45,7 @@ func _on_open(data: Variant) -> void:
 	visible = true
 	var render: Dictionary = GameManager.dialogue_service.start(_npc_id, d.get("dialog_id", ""))
 	_dialog_id = GameManager.dialogue_service.get_dialog_id()
+	PortraitCache.preload_portrait(ConfigManager.get_npc(_npc_id).get("bust", ""))  # 预热 NPC 立绘，避免首帧卡顿
 	_render(render)
 
 
@@ -54,6 +56,7 @@ func show_for_npc(npc_data: Dictionary) -> void:
 	visible = true
 	var render: Dictionary = GameManager.dialogue_service.start(_npc_id, npc_data.get("dialog_id", ""))
 	_dialog_id = GameManager.dialogue_service.get_dialog_id()
+	PortraitCache.preload_portrait(ConfigManager.get_npc(_npc_id).get("bust", ""))  # 预热 NPC 立绘，避免首帧卡顿
 	_render(render)
 
 
@@ -142,9 +145,8 @@ func _build() -> void:
 
 
 func _load_tex(path: String) -> Texture2D:
-	if path == "" or not ResourceLoader.exists(path):
-		return null
-	return load(path) as Texture2D
+	# 工业化扩容 P2：走立绘 LRU 缓存，避免每次对话/每行重复 load 磁盘。
+	return PortraitCache.get_portrait(path)
 
 
 func _render(render: Dictionary) -> void:

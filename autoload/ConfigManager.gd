@@ -27,9 +27,11 @@ const QUEST_FILES: Array[String] = [
 const NPC_FILES: Array[String] = [
 	"res://data/configs/npcs/town_npcs.json",
 ]
-const DIALOG_FILES: Array[String] = [
-	"res://data/configs/npcs/dialogs.json",
-]
+# 对话分片（P1 工业化扩容）：单文件拆分为 per-dialog 分片 + 全局索引
+# 启动只加载 KB 级索引；get_dialog 按需懒加载分片、闲置自动卸载（pin 保护进行中对话）
+const DIALOG_INDEX_FILE: String = "res://data/configs/npcs/dialogs/_index.json"
+const DIALOG_CACHE_MAX: int = 256
+const DIALOG_IDLE_TTL_MS: int = 2000
 
 # 对话事件映射（事件键 -> 效果数组；trigger_events 引用）
 const DIALOG_EVENT_FILES: Array[String] = [
@@ -91,7 +93,11 @@ var _enemies: Dictionary = {}
 var _battles: Dictionary = {}
 var _quests: Dictionary = {}
 var _npcs: Dictionary = {}
-var _dialogs: Dictionary = {}
+var _dialog_index: Dictionary = {}
+var _dialog_cache: Dictionary = {}      # dialog_id -> 已加载分片（懒加载）
+var _dialog_pinned: Dictionary = {}     # dialog_id -> pin 计数（>0 时禁止卸载）
+var _dialog_last_access: Dictionary = {}
+var _dialog_last_sweep: int = 0
 var _dialog_events: Dictionary = {}   # 对话事件：事件键 -> 效果数组
 var _difficulties: Dictionary = {}
 var _recipes: Dictionary = {}
@@ -209,17 +215,21 @@ func _load_npcs() -> void:
 				_record_error("NPC %s 重复定义，后者覆盖" % id)
 			_npcs[id] = entry
 
+# 启动只加载全局索引（KB 级常驻）；分片内容按需懒加载
 func _load_dialogs() -> void:
-	for path in DIALOG_FILES:
-		var data: Dictionary = _load_json(path)
-		_config_version = data.get("version", _config_version)
-		for entry in data.get("dialogs", []):
-			if not _is_valid_entry(entry, path, "dialogs"):
-				continue
-			var id: String = str(entry["id"])
-			if _dialogs.has(id):
-				_record_error("对话 %s 重复定义，后者覆盖" % id)
-			_dialogs[id] = entry
+	var data: Dictionary = _load_json(DIALOG_INDEX_FILE)
+	if data.is_empty():
+		_record_error("对话索引缺失或解析失败: %s" % DIALOG_INDEX_FILE)
+		return
+	_config_version = data.get("version", _config_version)
+	for did in data.get("shards", {}).keys():
+		var entry: Dictionary = data["shards"][did]
+		if not (entry is Dictionary) or not entry.has("file"):
+			_record_error("对话索引 %s 条目缺 file 字段，已跳过" % did)
+			continue
+		if _dialog_index.has(did):
+			_record_error("对话 %s 索引重复定义，后者覆盖" % did)
+		_dialog_index[did] = entry
 
 func _load_dialog_events() -> void:
 	for path in DIALOG_EVENT_FILES:
@@ -440,9 +450,11 @@ func _validate_references() -> void:
 		var d_id: String = str(n.get("dialog_id", "")).strip_edges()
 		if not d_id.is_empty() and not has_dialog(d_id):
 			_record_error("NPC %s 引用了不存在的对话 %s" % [nid, d_id])
-	# 对话 → 任务（若对话带接取任务）
-	for did in _dialogs.keys():
-		var d: Dictionary = _dialogs[did]
+	# 对话 → 任务（若对话带接取任务）；遍历索引逐个懒加载校验
+	for did in _dialog_index.keys():
+		var d: Dictionary = get_dialog(did)
+		if d.is_empty():
+			continue
 		var q_id: String = str(d.get("quest_id", "")).strip_edges()
 		if not q_id.is_empty() and not has_quest(q_id):
 			_record_error("对话 %s 引用了不存在的任务 %s" % [did, q_id])
@@ -534,15 +546,89 @@ func get_all_npc_ids() -> Array[String]:
 	out.assign(_npcs.keys())
 	return out
 
-# === 对话 ===
+# === 对话（分片懒加载 + 闲置自动卸载 + pin 保护） ===
 func get_dialog(id: String) -> Dictionary:
-	if not _dialogs.has(id):
+	# 1) 命中缓存直接返回
+	if _dialog_cache.has(id):
+		_dialog_last_access[id] = Time.get_ticks_msec()
+		return _dialog_cache[id]
+	# 2) 索引中没有该 id
+	if not _dialog_index.has(id):
 		push_error("[Config] 对话不存在: %s" % id)
 		return {}
-	return _dialogs[id]
+	# 3) 按索引懒加载分片
+	var file: String = _dialog_index[id].get("file", "")
+	var entry: Dictionary = _load_json(file)
+	if entry.is_empty():
+		_record_error("对话分片加载失败: %s (%s)" % [id, file])
+		return {}
+	_dialog_cache[id] = entry
+	_dialog_last_access[id] = Time.get_ticks_msec()
+	_sweep_idle_dialogs()
+	return entry
 
 func has_dialog(id: String) -> bool:
-	return _dialogs.has(id)
+	return _dialog_index.has(id)
+
+## 钉住：进行中的对话禁止被闲置回收（引用计数）
+func pin_dialog(id: String) -> void:
+	_dialog_pinned[id] = int(_dialog_pinned.get(id, 0)) + 1
+
+## 解钉
+func unpin_dialog(id: String) -> void:
+	var n: int = int(_dialog_pinned.get(id, 0)) - 1
+	if n <= 0:
+		_dialog_pinned.erase(id)
+	else:
+		_dialog_pinned[id] = n
+
+## 主动卸载（pin 中则跳过）
+func unload_dialog(id: String) -> void:
+	if int(_dialog_pinned.get(id, 0)) > 0:
+		return
+	_dialog_cache.erase(id)
+	_dialog_last_access.erase(id)
+
+## 闲置回收：超过 TTL 或超出缓存上限的未 pin 分片自动释放
+func _sweep_idle_dialogs() -> void:
+	var now: int = Time.get_ticks_msec()
+	if now - _dialog_last_sweep < 250:
+		return
+	_dialog_last_sweep = now
+	var expired: Array[String] = []
+	for did in _dialog_cache.keys():
+		if int(_dialog_pinned.get(did, 0)) > 0:
+			continue
+		var last: int = int(_dialog_last_access.get(did, 0))
+		if now - last > DIALOG_IDLE_TTL_MS:
+			expired.append(did)
+	if _dialog_cache.size() > DIALOG_CACHE_MAX:
+		var sorted: Array = Array(_dialog_cache.keys())
+		sorted.sort_custom(func(a: String, b: String) -> bool: return int(_dialog_last_access.get(a, 0)) < int(_dialog_last_access.get(b, 0)))
+		for did in sorted:
+			if int(_dialog_pinned.get(did, 0)) > 0:
+				continue
+			if _dialog_cache.size() <= DIALOG_CACHE_MAX:
+				break
+			expired.append(did)
+	for did in expired:
+		if int(_dialog_pinned.get(did, 0)) > 0:
+			continue
+		_dialog_cache.erase(did)
+		_dialog_last_access.erase(did)
+
+## 取全部对话 id（基于索引，不触达分片）
+func get_all_dialog_ids() -> Array[String]:
+	var out: Array[String] = []
+	out.assign(_dialog_index.keys())
+	return out
+
+## 取某对话绑定的 NPC id（P1 分片索引的 npc_id 字段；用于多 NPC 剧情隔离与归属校验）。
+## 未绑定（如 dlg_tutorial 这类通用剧情）返回空串。
+func get_dialog_npc_id(dialog_id: String) -> String:
+	if _dialog_index.has(dialog_id):
+		return String(_dialog_index[dialog_id].get("npc_id", ""))
+	return ""
 
 ## 取某事件键对应的效果数组；未配置返回空数组
 func get_dialogue_event(key: String) -> Array:

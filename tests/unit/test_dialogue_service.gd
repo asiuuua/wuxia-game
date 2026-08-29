@@ -122,3 +122,33 @@ func test_event_demo_dialogue_loads() -> void:
 	expect(keys.has("sfx_elder_appear"), "演示对话应含音效事件 sfx_elder_appear")
 	expect(keys.has("bandit_threat_shake"), "演示对话应含震屏事件 bandit_threat_shake")
 	expect(keys.has("accept_demo_quest"), "演示对话应含接任务事件 accept_demo_quest")
+
+# === P1 工业化扩容：对话分片懒加载 / 闲置卸载 / pin 保护 ===
+func test_dialog_lazy_load_and_unload() -> void:
+	ConfigManager.unload_dialog("npc_merchant")  # 清掉可能来自其它测试的残留
+	expect(not ConfigManager._dialog_cache.has("npc_merchant"), "清理后分片不应在缓存")
+	var d: Dictionary = ConfigManager.get_dialog("npc_merchant")
+	expect(not d.is_empty(), "懒加载应取到 npc_merchant 分片")
+	expect(ConfigManager._dialog_cache.has("npc_merchant"), "取值后应进入缓存")
+	ConfigManager.unload_dialog("npc_merchant")
+	expect(not ConfigManager._dialog_cache.has("npc_merchant"), "unload 后应释放")
+	var d2: Dictionary = ConfigManager.get_dialog("npc_merchant")
+	expect(not d2.is_empty(), "重新懒加载应再次取到")
+
+func test_dialog_pin_blocks_unload() -> void:
+	ConfigManager.unload_dialog("npc_bandit")
+	ConfigManager.get_dialog("npc_bandit")
+	ConfigManager.pin_dialog("npc_bandit")
+	ConfigManager.unload_dialog("npc_bandit")  # pin 中不应释放
+	expect(ConfigManager._dialog_cache.has("npc_bandit"), "pin 中 unload 不释放")
+	ConfigManager.unpin_dialog("npc_bandit")
+	ConfigManager.unload_dialog("npc_bandit")
+	expect(not ConfigManager._dialog_cache.has("npc_bandit"), "unpin 后 unload 释放")
+
+func test_active_session_pins_shard() -> void:
+	ConfigManager.unload_dialog("npc_merchant")
+	var svc := DialogueService.new()
+	svc.start("npc_merchant", "")
+	expect(ConfigManager._dialog_pinned.has("npc_merchant"), "会话开始应 pin 当前分片")
+	svc.end()
+	expect(not ConfigManager._dialog_pinned.has("npc_merchant"), "会话结束应 unpin")

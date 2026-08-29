@@ -1,0 +1,27 @@
+{
+  "id": "dlg_tutorial",
+  "lines": [
+    {
+      "id": "tut_1",
+      "speaker_name": "神秘老者",
+      "text": "少侠初入江湖，可知刀光剑影皆由气血内力驱使？",
+      "next_id": "tut_2",
+      "trigger_events": [
+        "sfx_elder_appear"
+      ]
+    },
+    {
+      "id": "tut_2",
+      "speaker_name": "李十五",
+      "speaker_id": "player",
+      "text": "愿闻其详。",
+      "next_id": "tut_3"
+    },
+    {
+      "id": "tut_3",
+      "speaker_name": "神秘老者",
+      "text": "胜负在天，亦在招式与心境。去吧，城外山贼正待你历练。",
+      "next_id": ""
+    }
+  ]
+}

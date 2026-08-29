@@ -37,19 +37,58 @@ func set_bus_volume(bus_name: String, linear: float) -> void:
 	var idx: int = ensure_bus(bus_name)
 	AudioServer.set_bus_volume_db(idx, linear_to_db(linear))
 
+## SFX 播放器池（工业化扩容 P2）：复用节点，避免每次 play_sfx 都 new/queue_free 造成节点频繁创建销毁与内存碎片。
+## 配合 _sfx_stream_cache 复用已加载的 AudioStream，避免重复 load 磁盘（零重复资源）。
+const SFX_POOL_SIZE := 8
+var _sfx_pool: Array[AudioStreamPlayer] = []
+var _sfx_cursor: int = 0
+var _sfx_stream_cache: Dictionary = {}   # path -> AudioStream
+
 func play_sfx(path: String) -> void:
 	if path == "":
 		return
-	var sfx: AudioStream = load(path)
-	if sfx == null:
+	_ensure_sfx_pool()
+	var player: AudioStreamPlayer = _next_sfx_player()
+	if player == null:
+		return
+	var stream: AudioStream = _get_sfx_stream(path)
+	if stream == null:
 		push_warning("[Audio] 音效缺失: %s" % path)
 		return
-	var player := AudioStreamPlayer.new()
-	player.stream = sfx
+	player.stream = stream
 	player.volume_db = linear_to_db(VOLUME_SFX)
-	add_child(player)
-	player.play()
-	player.finished.connect(player.queue_free)
+	player.play()   # 池化播放器循环复用，不 queue_free
+
+## 确保 SFX 池达到配置数量，并挂到独立 SFX 总线
+func _ensure_sfx_pool() -> void:
+	ensure_bus("SFX")
+	while _sfx_pool.size() < SFX_POOL_SIZE:
+		var p := AudioStreamPlayer.new()
+		p.name = "Sfx%d" % _sfx_pool.size()
+		p.bus = "SFX"
+		add_child(p)
+		_sfx_pool.append(p)
+
+## 流缓存：同一 path 只 load 一次，后续复用（零重复资源）
+func _get_sfx_stream(path: String) -> AudioStream:
+	if _sfx_stream_cache.has(path):
+		return _sfx_stream_cache[path]
+	var s := load(path) as AudioStream
+	if s == null:
+		return null
+	_sfx_stream_cache[path] = s
+	return s
+
+## 优先返回空闲播放器；全忙则轮询复用（覆盖最旧一个，避免声音被完全吞掉）
+func _next_sfx_player() -> AudioStreamPlayer:
+	if _sfx_pool.is_empty():
+		return null
+	for p in _sfx_pool:
+		if not p.playing:
+			return p
+	var chosen: AudioStreamPlayer = _sfx_pool[_sfx_cursor % _sfx_pool.size()]
+	_sfx_cursor += 1
+	return chosen
 
 ## UI 音效（2026-08-29 配置表驱动）
 ## 事件名 -> 路径/音量，配置见 data/configs/ui/ui_sfx.json；换音色只改表不动代码。

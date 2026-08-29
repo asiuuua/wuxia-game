@@ -1,0 +1,61 @@
+{
+  "version": "1.0",
+  "_doc": "对话全局索引（KB级常驻）。dialog_id → {file, npc_id, chapter}。ConfigManager 启动只加载本索引，get_dialog 按需懒加载分片、闲置自动卸载（pin 保护进行中对话）。",
+  "shards": {
+    "dlg_tutorial": {
+      "file": "res://data/configs/npcs/dialogs/shards/dlg_tutorial.json",
+      "npc_id": "",
+      "chapter": "prologue"
+    },
+    "dlg_wolf": {
+      "file": "res://data/configs/npcs/dialogs/shards/dlg_wolf.json",
+      "npc_id": "",
+      "chapter": "prologue"
+    },
+    "dlg_sect": {
+      "file": "res://data/configs/npcs/dialogs/shards/dlg_sect.json",
+      "npc_id": "",
+      "chapter": "prologue"
+    },
+    "npc_village_chief": {
+      "file": "res://data/configs/npcs/dialogs/shards/npc_village_chief.json",
+      "npc_id": "npc_village_chief",
+      "chapter": "prologue"
+    },
+    "demo_npc": {
+      "file": "res://data/configs/npcs/dialogs/shards/demo_npc.json",
+      "npc_id": "demo_npc",
+      "chapter": "prologue"
+    },
+    "npc_bandit": {
+      "file": "res://data/configs/npcs/dialogs/shards/npc_bandit.json",
+      "npc_id": "npc_bandit",
+      "chapter": "prologue"
+    },
+    "npc_hunter": {
+      "file": "res://data/configs/npcs/dialogs/shards/npc_hunter.json",
+      "npc_id": "npc_hunter",
+      "chapter": "prologue"
+    },
+    "npc_sect_elder": {
+      "file": "res://data/configs/npcs/dialogs/shards/npc_sect_elder.json",
+      "npc_id": "npc_sect_elder",
+      "chapter": "prologue"
+    },
+    "npc_merchant": {
+      "file": "res://data/configs/npcs/dialogs/shards/npc_merchant.json",
+      "npc_id": "npc_merchant",
+      "chapter": "prologue"
+    },
+    "tactical_demo_master": {
+      "file": "res://data/configs/npcs/dialogs/shards/tactical_demo_master.json",
+      "npc_id": "tactical_demo_master",
+      "chapter": "prologue"
+    },
+    "dlg_event_demo": {
+      "file": "res://data/configs/npcs/dialogs/shards/dlg_event_demo.json",
+      "npc_id": "event_demo_npc",
+      "chapter": "prologue"
+    }
+  }
+}

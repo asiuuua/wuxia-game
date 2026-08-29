@@ -1,0 +1,24 @@
+{
+  "id": "dlg_sect",
+  "lines": [
+    {
+      "id": "sect_1",
+      "speaker_id": "npc_sect_elder",
+      "text": "我观少侠骨格清奇，可愿入我青云剑宗？",
+      "next_id": "sect_2"
+    },
+    {
+      "id": "sect_2",
+      "speaker_name": "李十五",
+      "speaker_id": "player",
+      "text": "入宗需得立下功劳？",
+      "next_id": "sect_3"
+    },
+    {
+      "id": "sect_3",
+      "speaker_id": "npc_sect_elder",
+      "text": "先过试炼一关，斩了那山贼头目，便算你入门之礼。",
+      "next_id": ""
+    }
+  ]
+}

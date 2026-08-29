@@ -1,0 +1,54 @@
+{
+  "id": "dlg_event_demo",
+  "_doc": "事件系统技术演示：一条龙触发 音效(sfx) / 震屏(shake) / 接任务(quest_accept)。与 event_demo_npc 绑定。",
+  "lines": [
+    {
+      "id": "ed_1",
+      "speaker_id": "event_demo_npc",
+      "text": "少侠，老夫乃「事件演示仙」。且看此间天地，如何因一言而震颤。",
+      "next_id": "ed_2",
+      "trigger_events": [
+        "sfx_elder_appear"
+      ]
+    },
+    {
+      "id": "ed_2",
+      "speaker_name": "李十五",
+      "speaker_id": "player",
+      "text": "前辈请演示。",
+      "next_id": "ed_3"
+    },
+    {
+      "id": "ed_3",
+      "speaker_id": "event_demo_npc",
+      "text": "（震屏）——这便是 trigger_events 的「震屏」之力，画面当真晃了一晃。",
+      "next_id": "ed_4",
+      "trigger_events": [
+        "bandit_threat_shake"
+      ]
+    },
+    {
+      "id": "ed_4",
+      "speaker_name": "李十五",
+      "speaker_id": "player",
+      "text": "地面确在颤动！",
+      "next_id": "ed_5"
+    },
+    {
+      "id": "ed_5",
+      "speaker_id": "event_demo_npc",
+      "text": "（接任务）——再赠你一桩「demo_quest」试炼，且去任务栏中观之。",
+      "next_id": "ed_6",
+      "trigger_events": [
+        "accept_demo_quest"
+      ]
+    },
+    {
+      "id": "ed_6",
+      "speaker_name": "李十五",
+      "speaker_id": "player",
+      "text": "受教了。",
+      "next_id": ""
+    }
+  ]
+}

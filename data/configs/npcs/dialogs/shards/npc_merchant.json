@@ -1,0 +1,18 @@
+{
+  "id": "npc_merchant",
+  "lines": [
+    {
+      "id": "mc_1",
+      "speaker_id": "npc_merchant",
+      "text": "上好的丹药兵刃，少侠可要瞧瞧？城东铁匠铺也有好货。",
+      "next_id": "mc_2"
+    },
+    {
+      "id": "mc_2",
+      "speaker_name": "李十五",
+      "speaker_id": "player",
+      "text": "容后再看。",
+      "next_id": ""
+    }
+  ]
+}

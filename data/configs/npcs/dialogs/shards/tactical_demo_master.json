@@ -1,0 +1,27 @@
+{
+  "id": "tactical_demo_master",
+  "lines": [
+    {
+      "id": "td_1",
+      "speaker_id": "tactical_demo_master",
+      "text": "少侠可愿与老夫演一场战术战棋？此乃生死相搏之阵。",
+      "next_id": "td_2",
+      "trigger_events": [
+        "sfx_tactical"
+      ]
+    },
+    {
+      "id": "td_2",
+      "speaker_name": "李十五",
+      "speaker_id": "player",
+      "text": "正要领教。",
+      "next_id": "td_3"
+    },
+    {
+      "id": "td_3",
+      "speaker_id": "tactical_demo_master",
+      "text": "善！布阵——",
+      "next_id": ""
+    }
+  ]
+}

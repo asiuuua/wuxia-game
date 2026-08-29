@@ -1,0 +1,18 @@
+{
+  "id": "npc_sect_elder",
+  "lines": [
+    {
+      "id": "se_1",
+      "speaker_id": "npc_sect_elder",
+      "text": "少侠骨骼清奇，可愿入我青云剑宗？先斩山贼头目为入门之礼。",
+      "next_id": "se_2"
+    },
+    {
+      "id": "se_2",
+      "speaker_name": "李十五",
+      "speaker_id": "player",
+      "text": "正合我意。",
+      "next_id": ""
+    }
+  ]
+}

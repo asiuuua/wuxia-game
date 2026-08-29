@@ -1,0 +1,14 @@
+{
+  "id": "npc_bandit",
+  "lines": [
+    {
+      "id": "bd_1",
+      "speaker_id": "npc_bandit",
+      "text": "此路是我开！要想过此路，留下买路财！",
+      "next_id": "",
+      "trigger_events": [
+        "sfx_bandit_threat"
+      ]
+    }
+  ]
+}

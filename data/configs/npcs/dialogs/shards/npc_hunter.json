@@ -1,0 +1,18 @@
+{
+  "id": "npc_hunter",
+  "lines": [
+    {
+      "id": "hn_1",
+      "speaker_id": "npc_hunter",
+      "text": "少侠！荒野里的恶狼又出来伤人了，可愿帮俺除了它们？",
+      "next_id": "hn_2"
+    },
+    {
+      "id": "hn_2",
+      "speaker_name": "李十五",
+      "speaker_id": "player",
+      "text": "带路。",
+      "next_id": ""
+    }
+  ]
+}

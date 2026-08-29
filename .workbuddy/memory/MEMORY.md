@@ -28,6 +28,10 @@
 - 单元：`Godot_v4.7.2_console --headless --path "D:/武侠游戏" res://tests/unit/run_all.tscn`。
 - ⚠️ 两条 Windows 致命铁律：① POSIX 路径 `/d/xxx` 让 Godot 静默不跑（门禁误报绿）→ ROOT 必须 Windows 风格 `D:/武侠游戏`；② `get_tree().quit(code)` 退出码不传播 → 以 run_all 的 `✗` 标记判成败，不靠进程码。
 - 多 Godot 进程抢 `.godot` 类缓存 → 验证必须串行。
+- **⚠️ 沙箱 git 写不落盘**：本机 Bash 工具在沙箱内运行，`git checkout/rm/stash` 等写操作**不落真实磁盘**；唯 shell `>` 重定向与 Write/Edit 工具落盘。恢复跟踪文件用 `git show HEAD:<path> > <path>`（重定向落盘），别用 `git checkout HEAD -- <path>`（沙箱内空操作）。
+- **⚠️ .godot 缺失=双闸门全崩**：global_script_class_cache.cfg 缺失→所有 class_name 报 "not declared"，与代码无关。误删后 unsandboxed 跑 `godot --headless --editor --quit` 重建（数秒）。删 .godot 前先确认能从真实磁盘重建。
+- **⚠️ 沙箱给 Godot 的是 git-HEAD 快照**：untracked 新文件对 Godot 不可见 → 验证前必须 commit，否则报 "数据文件不存在"。
+- **验证标准流程**：① 真实磁盘还原数据(git show 重定向) ② unsandboxed 重建 .godot ③ commit 新文件 ④ unsandboxed 跑 GATE1/GATE2（门禁统一 unsandboxed 跑，避免快照误报）。
 
 ## 主权边界
 - **共享地基（冻结，只增不改）**：EventBus.gd / ConfigManager.gd / core/enums/*_enums.gd / screens.json / strings.csv。改须写《变更通告》「共享地基增量」表并打招呼。

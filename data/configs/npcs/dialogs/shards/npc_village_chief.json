@@ -1,0 +1,63 @@
+{
+  "id": "npc_village_chief",
+  "lines": [
+    {
+      "id": "vc_1",
+      "speaker_id": "npc_village_chief",
+      "text": "壮士来得正好！城外山贼猖獗，扰得百姓不得安宁。",
+      "next_id": "vc_2"
+    },
+    {
+      "id": "vc_2",
+      "speaker_id": "npc_village_chief",
+      "text": "替老朽除去这股山贼，必有重谢。少侠可愿前往？",
+      "next_id": "",
+      "options": [
+        {
+          "text": "义不容辞，这就去",
+          "jump_id": "vc_yes"
+        },
+        {
+          "text": "（好感满）与村长把酒言欢",
+          "jump_id": "vc_toast",
+          "cond": {
+            "kind": "favor",
+            "arg": 50
+          }
+        },
+        {
+          "text": "容我想想",
+          "jump_id": "vc_no"
+        }
+      ]
+    },
+    {
+      "id": "vc_yes",
+      "speaker_name": "李十五",
+      "speaker_id": "player",
+      "text": "区区毛贼，何足道哉。",
+      "next_id": "vc_3"
+    },
+    {
+      "id": "vc_3",
+      "speaker_id": "npc_village_chief",
+      "text": "善！城西已布下天罗地网，去吧。",
+      "next_id": "",
+      "trigger_events": [
+        "sfx_quest_accept"
+      ]
+    },
+    {
+      "id": "vc_toast",
+      "speaker_id": "npc_village_chief",
+      "text": "哈哈，少侠爽快！老朽敬你一杯。",
+      "next_id": ""
+    },
+    {
+      "id": "vc_no",
+      "speaker_id": "npc_village_chief",
+      "text": "也罢，少侠随时可来寻老朽。",
+      "next_id": ""
+    }
+  ]
+}
