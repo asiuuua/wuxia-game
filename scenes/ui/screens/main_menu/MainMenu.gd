@@ -166,6 +166,7 @@ func _build_menu() -> void:
 		var item: MenuItem = MenuItem.new()
 		item.name = "MenuItem_%d" % i
 		item.set_text(tr(MENU_ITEMS[i]["text"]))
+		item.set_icon("menu/" + MENU_ITEMS[i]["key"])
 		item.selected.connect(_on_item_selected.bind(i))
 		item.confirmed.connect(_on_confirm_selection.bind(i))
 		container.add_child(item)

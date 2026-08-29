@@ -31,3 +31,26 @@ func test_bond_screen_builds() -> void:
 	var scr = load("res://scenes/ui/screens/bond_romance/BondRomanceScreen.gd").new()
 	scr._ready()
 	expect(scr.get_child_count() > 0, "BondRomanceScreen._build 应成功（含 NPC 头像接线）")
+
+func test_menu_item_icon_wired() -> void:
+	var item = load("res://scenes/ui/components/menu_item/MenuItem.gd").new()
+	item.set_icon("menu/save_game")
+	item.set_text("保存")
+	item._ready()   # _build 在 _ready 内跑
+	var ok := item._icon != null and item._icon is TextureRect and item._icon.texture != null
+	expect(ok, "MenuItem 设 set_icon 后 _build 应创建图标 TextureRect（UIManager.get_icon 占位图兜底）")
+	# 不设图标时不应创建图标（向后兼容旧菜单项）
+	var plain = load("res://scenes/ui/components/menu_item/MenuItem.gd").new()
+	plain.set_text("纯文字")
+	plain._ready()
+	expect(plain._icon == null, "未设 set_icon 的 MenuItem 不应创建图标（向后兼容旧菜单项）")
+
+func test_dialog_overlay_portrait_no_crash() -> void:
+	var dlg = load("res://scenes/ui/overlays/dialog/DialogOverlay.gd").new()
+	dlg.show_for_npc({"id": "npc_test_x", "dialogs": []})
+	expect(dlg.get_child_count() > 0, "DialogOverlay.show_for_npc 应成功构建（立绘双通道不崩）")
+
+func test_hud_builds() -> void:
+	var hud = load("res://scenes/ui/overlays/hud/Hud.gd").new()
+	hud._ready()
+	expect(hud.get_child_count() > 0, "Hud._build 应成功（含头像双通道接线）")

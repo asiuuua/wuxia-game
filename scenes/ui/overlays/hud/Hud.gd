@@ -80,6 +80,7 @@ var _name_label: Label
 var _lv_label: Label
 var _money_label: Label
 var _avatar_char: Label
+var _avatar_tex: TextureRect
 var _hp_bar: _Bar
 var _mp_bar: _Bar
 var _attr_bars: Dictionary = {}
@@ -184,6 +185,13 @@ func _build_avatar() -> Control:
 	_avatar_char.add_theme_font_size_override("font_size", 30)
 	_avatar_char.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	av.add_child(_avatar_char)
+	# 头像纹理层（可选）：npc/player 有真实图则显图盖住首字，否则首字兜底
+	_avatar_tex = TextureRect.new()
+	_avatar_tex.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_avatar_tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_avatar_tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_avatar_tex.visible = false
+	av.add_child(_avatar_tex)
 	return av
 
 # === 右上角按钮：姻缘（红点）+ 菜单 ===
@@ -248,6 +256,15 @@ func _refresh(_a: Variant = null, _b: Variant = null, _c: Variant = null) -> voi
 		_money_label.text = "银两 %d" % ps.silver
 	if _avatar_char != null:
 		_avatar_char.text = ps.player_name.left(1)
+	if _avatar_tex != null:
+		# 双通道：有玩家头像（resources/icons/npc/player.png）显图，否则首字兜底
+		if UIManager.has_icon("npc/player"):
+			_avatar_tex.texture = UIManager.get_icon("npc/player")
+			_avatar_tex.visible = true
+			_avatar_char.visible = false
+		else:
+			_avatar_tex.visible = false
+			_avatar_char.visible = true
 	_hp_bar.set_value(ps.hp, ps.max_hp)
 	_mp_bar.set_value(ps.mp, ps.max_mp)
 	for a in _ATTRS:

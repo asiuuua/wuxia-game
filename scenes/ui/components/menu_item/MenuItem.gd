@@ -20,6 +20,8 @@ const FONT_SIZE := 23
 
 var _label: Label = null
 var _arrow: Label = null
+var _icon: TextureRect = null    # 可选图标（menu/<key>），缺图不显示
+var _icon_id: String = ""        # 由消费方 set_icon() 传入；空=无图标（向后兼容）
 var _is_selected: bool = false
 var _is_enabled: bool = true
 var _pending_text: String = ""   # _build 创建 _label 之前调用 set_text 时暂存，建好后再应用
@@ -46,16 +48,29 @@ func _build() -> void:
 	_arrow.text = ARROW
 	_arrow.add_theme_font_size_override("font_size", FONT_SIZE)
 	_arrow.add_theme_color_override("font_color", UIPalette.GOLD)
-	_arrow.position = Vector2(2, 10)
+	# 有图标时箭头右移到图标右侧，避免与图标重叠
+	_arrow.position = Vector2(2 if _icon_id == "" else 34, 10)
 	_arrow.visible = false
 	add_child(_arrow)
+
+	# 可选图标：menu/<key>，由消费方 set_icon() 传入；缺图则不显示（不占位、不崩）
+	if _icon_id != "":
+		_icon = TextureRect.new()
+		_icon.texture = UIManager.get_icon(_icon_id)
+		_icon.custom_minimum_size = Vector2(24, 24)
+		_icon.size = Vector2(24, 24)
+		_icon.position = Vector2(6, 10)
+		_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		add_child(_icon)
 
 	_label = Label.new()
 	# 默认留空：任何漏 set_text 的 MenuItem 会显示空白，比"菜单项"占位符更易暴露 bug
 	_label.text = ""
 	_label.add_theme_font_size_override("font_size", FONT_SIZE)
 	_label.add_theme_color_override("font_color", UIPalette.TEXT_MAIN)
-	_label.position = Vector2(28, 10)
+	# 有图标时右移给图标留位（图标区约 6..30，label 从 56 起）
+	_label.position = Vector2(56 if _icon_id != "" else 28, 10)
 	add_child(_label)
 	# _label 已就绪：若 set_text 在 _build 之前（节点未进树时）被调用过，此刻补应用
 	if _pending_text != "":
@@ -67,6 +82,11 @@ func set_text(text: String) -> void:
 	else:
 		# 尚未进树、_label 未创建：暂存，待 _build 末尾应用
 		_pending_text = text
+
+## 设置图标 id（如 "menu/save_game"）。应在 add_child 之前调用，_build 时据此创建图标。
+## 留空则不显示图标（向后兼容旧菜单项）。美术按 id 丢 resources/icons/menu/<key>.png 即生效。
+func set_icon(icon_id: String) -> void:
+	_icon_id = icon_id
 
 func set_selected(value: bool) -> void:
 	_is_selected = value
@@ -84,11 +104,11 @@ func set_selected(value: bool) -> void:
 	if value:
 		_label.remove_theme_color_override("font_color")   # 落到全局默认 TEXT_MAIN
 		_label.modulate = Color(1.08, 1.06, 1.02)           # 极轻加亮，肉眼不易察觉但强化焦点
-		_label.position.x = 30.0
+		_label.position.x = 58.0 if _icon_id != "" else 30.0
 	else:
 		_label.remove_theme_color_override("font_color")
 		_label.modulate = Color.WHITE
-		_label.position.x = 28.0
+		_label.position.x = 56.0 if _icon_id != "" else 28.0
 
 func set_enabled(enabled: bool) -> void:
 	_is_enabled = enabled

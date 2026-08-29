@@ -29,9 +29,19 @@ func show_for_npc(npc_data: Dictionary) -> void:
 	_show_line()
 
 func _refresh_portrait() -> void:
-	var path: String = _npc_data.get("portrait", "")
-	if path != "" and ResourceLoader.exists(path):
-		_portrait.texture = load(path) as Texture2D
+	var tex: Texture2D = null
+	# 新通道（美术零代码）：icon id = npc/<npc_id>，真实存在才用
+	# （has_icon 不会把占位图误判为真实图，故不会误显品红占位图）
+	var npc_id: String = _npc_data.get("id", "")
+	if npc_id != "" and UIManager.has_icon("npc/" + npc_id):
+		tex = UIManager.get_icon("npc/" + npc_id)
+	# 旧通道（兼容存量 NPC 配置）：显式 portrait 资源路径
+	if tex == null:
+		var path: String = _npc_data.get("portrait", "")
+		if path != "" and ResourceLoader.exists(path):
+			tex = load(path) as Texture2D
+	if tex != null:
+		_portrait.texture = tex
 		_portrait.visible = true
 	else:
 		_portrait.visible = false
