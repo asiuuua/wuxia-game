@@ -33,27 +33,50 @@ func consume(iid: String, count: int = 1) -> void:
 func is_empty() -> bool:
 	return _ops.is_empty()
 
-## 提交：顺序 apply remove -> add -> consume，各段独立事务原子。
-## 任一段失败立即返回 false（前段已应用的不回滚；调用方应据返回值决定后续流程，失败即中止）
+## 提交：先预校验（不改状态），再 apply add -> remove -> consume。
+## 顺序保障原子性（P1-2 修复）：先 add（占空间/产出），再 remove（扣料）。若产出装不下已被预校验拦截，
+## 万一 add 成功而 remove 失败，回滚刚加入的产物，杜绝"扣了料、产物没进"的静默丢料。
+## 任一段失败立即返回 false，且已应用的前段会被回滚，确保整体要么全成、要么全不成。
 func commit(svc: InventoryService) -> bool:
-	# 1) 移除（批量扣料，尊重锁定，任一不足整体不扣）
 	var remove_list: Array = []
-	for op in _ops:
-		if op["op"] == "remove":
-			remove_list.append({ "item_id": op["item_id"], "count": int(op["count"]) })
-	if not remove_list.is_empty() and not svc.try_consume(remove_list):
-		return false
-	# 2) 添加（批量事务，要么全进要么不加）
 	var add_list: Array = []
+	var consume_list: Array = []
 	for op in _ops:
-		if op["op"] == "add":
-			add_list.append({ "item_id": op["item_id"], "count": int(op["count"]), "source": op.get("source", _source) })
+		match op["op"]:
+			"remove":
+				remove_list.append({ "item_id": op["item_id"], "count": int(op["count"]) })
+			"add":
+				add_list.append({ "item_id": op["item_id"], "count": int(op["count"]), "source": op.get("source", _source) })
+			"consume":
+				consume_list.append({ "iid": op["iid"], "count": int(op["count"]) })
+	# 预校验（不改动状态）：remove 用非锁定可用量；add 用 can_add；consume 用实例存在性
+	for r in remove_list:
+		if svc.get_unlocked_count(r["item_id"]) < int(r["count"]):
+			GameLogger.warn("InventoryTx", "预校验失败(remove 不足): %s" % r["item_id"])
+			return false
+	for a in add_list:
+		if not svc.can_add(a["item_id"], int(a["count"])):
+			GameLogger.warn("InventoryTx", "预校验失败(add 装不下): %s" % a["item_id"])
+			return false
+	for c in consume_list:
+		if svc.get_instance_by_id(c["iid"]) == null:
+			GameLogger.warn("InventoryTx", "预校验失败(consume 实例不存在): %s" % c["iid"])
+			return false
+	# 1) 添加（批量事务，要么全进要么不加）
 	if not add_list.is_empty() and not svc.add_items(add_list, _source):
+		GameLogger.warn("InventoryTx", "add 段失败")
+		return false
+	# 2) 移除（批量扣料，尊重锁定，任一不足整体不扣）
+	if not remove_list.is_empty() and not svc.try_consume(remove_list):
+		# 回滚已加入的产物（按 item_id 反向扣，刚加入物未锁定必可移除）
+		for a in add_list:
+			svc.remove_item_by_id(a["item_id"], int(a["count"]))
+		GameLogger.warn("InventoryTx", "remove 段失败，已回滚 add")
 		return false
 	# 3) 按实例消耗
-	for op in _ops:
-		if op["op"] == "consume":
-			for i in range(int(op["count"])):
-				if not svc.consume_instance(op["iid"]):
-					return false
+	for c in consume_list:
+		for i in range(int(c["count"])):
+			if not svc.consume_instance(c["iid"]):
+				GameLogger.warn("InventoryTx", "consume 段失败(实例耗尽): %s" % c["iid"])
+				return false
 	return true

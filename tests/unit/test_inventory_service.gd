@@ -542,3 +542,54 @@ func test_item_flags_static() -> void:
 	expect(ItemFlags.is_consumable(51), "丹药 flags=51 可消耗")
 	expect(not ItemFlags.is_equippable(51), "丹药 flags=51 不可装备")
 	expect(ItemFlags.is_stackable(19), "材料 flags=19 可堆叠")
+
+# ── 审查修复回归（2026-08-29 收口）──
+
+func test_transaction_no_silent_loss_on_add_fail() -> void:
+	# P1-2：事务先 add 后 remove；若产出装不下，材料绝不被静默扣除（杜绝"扣了料、产物没进"）
+	var ps: PlayerState = GameManager.player_state
+	if ps != null:
+		ps.strength = 1000   # 顶高负重，隔离重量，只测槽位满
+	_service.add_item("material_herb_001", 5, "test")
+	for i in 30:
+		_service.add_item(WEAPON, 1, "test")   # 主栏满
+	var before: int = _service.get_item_count("material_herb_001")
+	var tx := InventoryTransaction.new()
+	tx.set_source("test")
+	tx.add(WEAPON, 2)                  # 主栏满，add 必失败
+	tx.remove("material_herb_001", 1) # 材料充足
+	expect(not tx.commit(_service), "主栏满导致 add 失败，事务应整体失败")
+	expect_eq(_service.get_item_count("material_herb_001"), before, "add 失败后材料绝不被静默扣除（P1-2 原子）")
+
+func test_add_instance_preserves_identity() -> void:
+	# P1-4：原样归还实例应完整保留 iid / 耐久 / 锁定，不 mint 新 id、不重置身份
+	var inst := ItemInstance.new()
+	inst.instance_id = "weapon_sword_iron_001#999"
+	inst.item_id = WEAPON
+	inst.count = 1
+	inst.durability = 50.0
+	inst.max_durability = 100.0
+	inst.locked = true
+	expect(_service.add_instance(inst), "原样归还应成功")
+	var got: ItemInstance = _service.get_instance_by_id("weapon_sword_iron_001#999")
+	expect(got != null, "应能用原 iid 找回实例")
+	if got != null:
+		expect_eq(int(got.durability), 50, "耐久应保留")
+		expect(got.locked, "锁定状态应保留")
+	expect_eq(_service.get_item_count(WEAPON), 1, "计数应=1")
+
+func test_add_item_weight_accurate_multi_slot() -> void:
+	# P2-5：多槽位添加后重量由增量维护准确（移除循环内全栏重算）；计数正确
+	_service.add_item(WEAPON, 3, "test")   # 铁剑 weight=3.5
+	expect(abs(_service.get_weight() - 10.5) < 0.001, "3 把铁剑应计重 10.5（增量维护准确）")
+	expect_eq(_service.get_item_count(WEAPON), 3, "多槽位添加计数应=3")
+
+func test_query_add_overweight_clamped() -> void:
+	# P2-8：已超重时新增应=0 且不越界（需先丢物）
+	var ps: PlayerState = GameManager.player_state
+	if ps != null:
+		ps.strength = 10   # max_weight=75
+	_service.add_item("material_ore_001", 100, "test")   # 100 件矿石(1.0/件) 远超 75，必超重
+	var q: Dictionary = _service.query_add("material_ore_001", 10)
+	expect_eq(int(q["added"]), 0, "已超重时新增应为 0（需先丢物），且不越界")
+	expect_eq(int(q["overflow"]), 10, "溢出应=请求量")

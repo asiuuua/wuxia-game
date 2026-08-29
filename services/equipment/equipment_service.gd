@@ -13,6 +13,7 @@ const SLOT_ACCESSORY := "accessory"
 const ALL_SLOTS: Array[String] = ["main_hand", "armor", "accessory"]
 
 var equipped: Dictionary = {}   # 槽名(String) -> item_id(String)
+var _equipped_inst: Dictionary = {}   # 槽名(String) -> ItemInstance（运行时保留实例身份/耐久；存档只存 item_id，耐久不入档为预存限制）
 
 ## 装备：从背包抽出实例装入对应槽，重算加成
 ## 换装顺序保证不丢物（P0 修复）：先抽新装备（腾出 1 格）→ 再卸旧装备退包（必成功）
@@ -29,7 +30,7 @@ func equip(instance_id: String) -> bool:
 	if slot == "":
 		GameLogger.warn("Equipment", "物品不可装备: %s" % item_id)
 		return false
-	# 1) 先把新装备从背包抽出（同时腾出 1 格给旧装备退包用）
+	# 1) 先把新装备从背包抽出（保留实例引用，供卸下时原样归还——P1-4 修复根因）
 	if not GameManager.inventory_service.remove_instance(instance_id):
 		GameLogger.warn("Equipment", "从背包移除失败: %s" % instance_id)
 		return false
@@ -37,30 +38,49 @@ func equip(instance_id: String) -> bool:
 	if equipped.has(slot):
 		var old_id: String = equipped[slot]
 		equipped.erase(slot)
-		if not GameManager.inventory_service.add_item(old_id, 1, "unequip"):
-			# 回滚：旧装备回槽、新装备塞回背包
-			equipped[slot] = old_id
-			GameManager.inventory_service.add_item(item_id, 1, "equip_rollback")
-			GameLogger.warn("Equipment", "卸下旧装备失败，已回滚: %s" % old_id)
-			return false
+		var old_inst: ItemInstance = _equipped_inst.get(slot, null)
+		if old_inst != null:
+			# 原样归还旧装备（保留 iid/耐久），而非 add_item 重置身份
+			if not GameManager.inventory_service.add_instance(old_inst):
+				equipped[slot] = old_id
+				GameManager.inventory_service.add_instance(inst)   # 回滚：新装备退回背包
+				_equipped_inst.erase(slot)
+				GameLogger.warn("Equipment", "卸下旧装备失败，已回滚: %s" % old_id)
+				return false
+			_equipped_inst.erase(slot)
+		else:
+			if not GameManager.inventory_service.add_item(old_id, 1, "unequip"):
+				equipped[slot] = old_id
+				GameManager.inventory_service.add_instance(inst)
+				GameLogger.warn("Equipment", "卸下旧装备失败，已回滚: %s" % old_id)
+				return false
 		_recompute()
 		EventBus.equipment_unequipped.emit(slot, old_id)
 		GameLogger.info("Equipment", "卸下 %s 从槽位 %s" % [old_id, slot])
-	# 3) 装上新装备
+	# 3) 装上新装备（保留实例，供卸下归还）
 	equipped[slot] = item_id
+	_equipped_inst[slot] = inst
 	_recompute()
 	EventBus.equipment_equipped.emit(slot, item_id)
 	GameLogger.info("Equipment", "装备 %s 于槽位 %s" % [item_id, slot])
 	return true
 
-## 卸下：先退回背包（满包则失败，装备留在槽上不丢），成功后移除加成
+## 卸下：原样归还保留的实例（iid/耐久），满包则失败不丢（P1-4 修复：不再 add_item 重置身份）
 func unequip(slot: String) -> bool:
 	if not equipped.has(slot):
 		return false
 	var item_id: String = equipped[slot]
-	if not GameManager.inventory_service.add_item(item_id, 1, "unequip"):
-		GameLogger.warn("Equipment", "背包已满，无法卸下 %s" % item_id)
-		return false
+	var inst: ItemInstance = _equipped_inst.get(slot, null)
+	if inst != null:
+		if not GameManager.inventory_service.add_instance(inst):
+			GameLogger.warn("Equipment", "背包已满，无法卸下 %s" % item_id)
+			return false
+		_equipped_inst.erase(slot)
+	else:
+		# 旧档/无保留实例：退回新实例（耐久重置，兼容旧存档只存 item_id 的限制）
+		if not GameManager.inventory_service.add_item(item_id, 1, "unequip"):
+			GameLogger.warn("Equipment", "背包已满，无法卸下 %s" % item_id)
+			return false
 	equipped.erase(slot)
 	_recompute()
 	EventBus.equipment_unequipped.emit(slot, item_id)
@@ -122,6 +142,7 @@ func load(data: Dictionary) -> void:
 
 func reset() -> void:
 	equipped = {}
+	_equipped_inst = {}
 	if GameManager.player_state != null:
 		GameManager.player_state.equipment_bonuses = {}
 		GameManager.player_state.recalculate_stats()

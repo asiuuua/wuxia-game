@@ -41,7 +41,8 @@ func add_item(item_id: String, count: int, source: String = "") -> bool:
 		if idx == -1:
 			break
 		var unit_w: float = ConfigManager.get_item(item_id).get("weight", 0.0)
-		# 本件重量为正时，按"剩余重量还能容几件"限制单次放入量，避免整批被超重拒绝
+		# 本件重量为正时，按"剩余重量还能容几件"限制单次放入量，避免整批被超重拒绝。
+		# current_weight 在循环内增量更新（下方 +=），保证 weight_fit 基于实时负重，不会多放。
 		var weight_fit: int = 2147483647
 		if unit_w > 0.0:
 			weight_fit = maxi(0, int((get_max_weight() - current_weight) / unit_w))
@@ -58,9 +59,11 @@ func add_item(item_id: String, count: int, source: String = "") -> bool:
 		count -= inst.count
 		current_weight += unit_w * float(put)
 		added += inst.count
-	_recalculate_weight()
-	_bump_count(item_id, added)
-	_dirty = true
+	# 重量重算与计数索引只在末尾统一维护一次（P2-5 修复：原实现每新建一格都全栏重算 280 格并多发 weight-changed 事件）
+	if added > 0:
+		_bump_count(item_id, added)
+		_dirty = true
+		EventBus.inventory_weight_changed.emit(current_weight, get_max_weight())
 	if added > 0:
 		EventBus.inventory_item_added.emit(item_id, added)
 	if count > 0:
@@ -89,6 +92,40 @@ func add_items(items: Array, source: String = "") -> bool:
 			return false
 	for entry in items:
 		add_item(String(entry.get("item_id", "")), int(entry.get("count", 1)), source)
+	return true
+
+## 原样归还实例（P1-4 修复）：把已存在的 ItemInstance 重新入包，完整保留 instance_id / 耐久 / 来源 / 锁定，
+## 不 mint 新 iid、不重置身份。装备系统卸下时应调此而非 add_item(item_id,1)（后者会生成新实例、丢失耐久与 iid）。
+## 可堆叠物尽量并入同物实例（保留既有实例身份）；不可堆叠/无同物实例则放入空槽；满包返回 false。
+func add_instance(inst: ItemInstance) -> bool:
+	if inst == null or inst.item_id == "":
+		return false
+	var bag: Array = _bag_for_item(inst.item_id)
+	var max_stack: int = ConfigManager.get_item(inst.item_id).get("max_stack", 1)
+	if max_stack > 1:
+		var remaining: int = inst.count
+		for e in bag:
+			if remaining <= 0:
+				break
+			if e != null and e.item_id == inst.item_id and e.count < max_stack:
+				var put := mini(max_stack - e.count, remaining)
+				e.count += put
+				remaining -= put
+		if remaining <= 0:
+			_recalculate_weight()
+			_bump_count(inst.item_id, inst.count)
+			_dirty = true
+			EventBus.inventory_item_added.emit(inst.item_id, inst.count)
+			return true
+		inst.count = remaining   # 剩余部分另开新槽（保留原实例身份）
+	var idx: int = _find_empty(bag)
+	if idx == -1:
+		return false
+	bag[idx] = inst
+	_recalculate_weight()
+	_bump_count(inst.item_id, inst.count)
+	_dirty = true
+	EventBus.inventory_item_added.emit(inst.item_id, inst.count)
 	return true
 
 ## 实例 ID 发号器：全局自增序号，随存档 save/load 恢复，保证永不重复
@@ -120,9 +157,12 @@ func query_add(item_id: String, count: int) -> Dictionary:
 	# 重量余量：每单位重量为正时受负重上限约束；无重量物品不受限
 	var room: int = space
 	if unit_w > 0.0:
-		var weight_room: int = maxi(0, int((get_max_weight() - current_weight) / unit_w))
+		# 不抢先 maxi(0,...) 归零：已超重(current_weight>max_weight，如力量被 debuff 压低)时
+		# weight_room 为负，再经下方 maxi(0, mini(...)) 夹紧为 0 —— 语义明确：超重时不可再加正重量物品
+		# （需先丢物），且避免负 room 透传导致 added 为负、overflow 越界的边界陷阱（P2-8 修复）
+		var weight_room: int = int((get_max_weight() - current_weight) / unit_w)
 		room = mini(space, weight_room)
-	var added: int = mini(count, room)
+	var added: int = maxi(0, mini(count, room))
 	result["added"] = added
 	result["overflow"] = count - added
 	return result
@@ -189,6 +229,7 @@ func try_consume(items: Array, source: String = "") -> bool:
 
 func _stack_to_existing(bag: Array, item_id: String, count: int) -> int:
 	var max_stack: int = ConfigManager.get_item(item_id).get("max_stack", 1)
+	var unit_w: float = ConfigManager.get_item(item_id).get("weight", 0.0)
 	var remaining := count
 	for inst in bag:
 		if remaining <= 0:
@@ -196,6 +237,7 @@ func _stack_to_existing(bag: Array, item_id: String, count: int) -> int:
 		if inst != null and inst.item_id == item_id and inst.count < max_stack:
 			var put := mini(max_stack - inst.count, remaining)
 			inst.count += put
+			current_weight += unit_w * float(put)   # 增量同步负重（P2-5：移除循环内全栏重算后，堆叠路径也必须自更新）
 			remaining -= put
 	return count - remaining
 
@@ -396,18 +438,26 @@ func _apply_use_heal(inst: ItemInstance, data: Dictionary, context: String) -> D
 	var heal_mp: int = int(data.get("heal_mp", 0))
 	if heal_hp <= 0 and heal_mp <= 0:
 		return { "ok": false, "reason": "NO_EFFECT", "item_id": item_id }
+	var effect := { "hp": heal_hp, "mp": heal_mp }
+	if context == "battle":
+		# 战斗用药：不直接改 PlayerState（避免背包耦合战斗状态/护盾/溢出/HUD），
+		# 派发战斗用药请求，由战斗场景经战斗状态结算（P1-3 修复：原 context 仅用于日志，town/battle 同一直改）
+		consume_instance(inst.instance_id)
+		EventBus.item_used_in_battle.emit(item_id, effect)
+		GameLogger.info("Inventory", "战斗用药 %s 已派发战斗结算(不直接改PlayerState) hp+%d mp+%d" % [item_id, heal_hp, heal_mp])
+		return { "ok": true, "reason": "BATTLE_PENDING", "item_id": item_id, "effect": effect }
 	consume_instance(inst.instance_id)
+	var ps: PlayerState = GameManager.player_state
 	var healed: int = 0
 	var restored: int = 0
-	var ps: PlayerState = GameManager.player_state
 	if heal_hp > 0:
 		healed = ps.heal(heal_hp)
 	if heal_mp > 0:
 		restored = ps.restore_mp(heal_mp)
-	var effect := { "hp": healed, "mp": restored }
-	EventBus.item_used.emit(item_id, effect)
-	GameLogger.info("Inventory", "使用 %s (context=%s) hp+%d mp+%d" % [item_id, context, healed, restored])
-	return { "ok": true, "reason": "SUCCESS", "item_id": item_id, "effect": effect }
+	var applied := { "hp": healed, "mp": restored }
+	EventBus.item_used.emit(item_id, applied)
+	GameLogger.info("Inventory", "使用 %s (town) hp+%d mp+%d" % [item_id, healed, restored])
+	return { "ok": true, "reason": "SUCCESS", "item_id": item_id, "effect": applied }
 
 ## 增益类（预留）：读取 data.buff_stat/buff_value 应用至 PlayerState。当前库未配置，安全返回 NO_EFFECT 不消耗
 func _apply_use_buff(inst: ItemInstance, data: Dictionary, context: String) -> Dictionary:
@@ -427,13 +477,18 @@ func _apply_use_exp(inst: ItemInstance, data: Dictionary, context: String) -> Di
 	var gain: int = int(data.get("gain_exp", 0))
 	if gain <= 0:
 		return { "ok": false, "reason": "NO_EFFECT", "item_id": item_id }
+	var effect := { "exp": gain }
+	if context == "battle":
+		consume_instance(inst.instance_id)
+		EventBus.item_used_in_battle.emit(item_id, effect)
+		GameLogger.info("Inventory", "战斗用药 %s(经验) 已派发战斗结算" % item_id)
+		return { "ok": true, "reason": "BATTLE_PENDING", "item_id": item_id, "effect": effect }
 	consume_instance(inst.instance_id)
 	var ps: PlayerState = GameManager.player_state
 	if ps != null and ps.has_method("gain_exp"):
 		ps.gain_exp(gain)
-	var effect := { "exp": gain }
 	EventBus.item_used.emit(item_id, effect)
-	GameLogger.info("Inventory", "使用 %s (context=%s) 经验+%d" % [item_id, context, gain])
+	GameLogger.info("Inventory", "使用 %s (town) 经验+%d" % [item_id, gain])
 	return { "ok": true, "reason": "SUCCESS", "item_id": item_id, "effect": effect }
 
 ## 公共扣件：扣除指定实例 1 个数量；耗尽则回收格子。城镇用药/战斗用药共用

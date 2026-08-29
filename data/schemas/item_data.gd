@@ -8,13 +8,13 @@ class_name ItemData
 @export var id: String = ""
 @export var name: String = ""
 @export var description: String = ""
-@export var type: int = 0            # ItemEnums.ItemType
-@export var rarity: int = 0         # ItemEnums.ItemRarity
+@export var type: String = ""       # 与运行时/JSON 字符串契约一致（"weapon"/"pill"/"material"/...）；编辑器模板不再用 int 枚举，避免双真源漂移（P2-6 修复）
+@export var rarity: String = ""     # 与运行时/JSON 字符串契约一致（"common"/"uncommon"/...）
 @export var icon_path: String = ""
 @export var max_stack: int = 1
 @export var weight: float = 0.0
 @export var price: int = 0
-@export var flags: int = 0          # ItemEnums.ItemFlag 位标志
+@export var flags: int = 0          # ItemEnums.ItemFlag 位标志（位掩码，与字符串 type/rarity 解耦）
 
 func has_flag(flag: int) -> bool:
 	return (flags & flag) != 0

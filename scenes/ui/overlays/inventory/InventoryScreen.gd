@@ -1,5 +1,5 @@
 @warning_ignore("shadowed_global_identifier")
-extends Control
+extends PopupBase
 
 const UIPalette = preload("res://core/constants/ui_theme.gd")
 const ItemSlot = preload("res://scenes/ui/components/item_slot/ItemSlot.gd")
@@ -14,6 +14,7 @@ var _current_iid: String = ""
 
 func _ready() -> void:
 	focus_mode = Control.FOCUS_NONE
+	popup_id = "Inventory"
 	_build()
 	_refresh()
 	EventBus.inventory_item_added.connect(_on_inv_changed)
@@ -26,25 +27,7 @@ func _build() -> void:
 	dim.color = UIPalette.DIM
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(dim)
-	var panel := Panel.new()
-	panel.size = Vector2(720, 560)
-	panel.custom_minimum_size = Vector2(720, 560)
-	UICenterUtils.center_panel(panel)   # 修复 Godot4.7.2 PRESET_CENTER 不居中
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = UIPalette.GLASS_BG
-	sb.border_width_left = 1
-	sb.border_width_top = 1
-	sb.border_width_right = 1
-	sb.border_width_bottom = 1
-	sb.border_color = UIPalette.GLASS_BORDER
-	sb.corner_radius_top_left = 14
-	sb.corner_radius_top_right = 14
-	sb.corner_radius_bottom_left = 14
-	sb.corner_radius_bottom_right = 14
-	sb.shadow_size = 18
-	sb.shadow_offset = Vector2(0, 6)
-	sb.shadow_color = UIPalette.GLASS_SHADOW
-	panel.add_theme_stylebox_override("panel", sb)
+	var panel := make_glass_panel(Vector2(720, 560))
 	add_child(panel)
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -75,7 +58,7 @@ func _build() -> void:
 	var close := Button.new()
 	close.text = tr("ui_inventory_close")
 	close.focus_mode = Control.FOCUS_NONE
-	close.pressed.connect(UIManager.close_screen.bind(self))
+	close.pressed.connect(request_close)
 	header.add_child(close)
 	for bag_name in ["main", "material", "quest"]:
 		var head := Label.new()
@@ -211,7 +194,14 @@ func _on_context_id(id: int) -> void:
 		1:
 			GameManager.equipment_service.equip(iid)
 		2:
-			inv.remove_instance(iid)
+			# P0 修复：丢弃必须经 drop_item，受 DISCARDABLE/LOCKED 保护，绝不直接 remove_instance 绕过招牌锁定保护
+			var tgt: ItemInstance = inv.get_instance_by_id(iid)
+			if tgt != null:
+				var res: Dictionary = inv.drop_item(iid, tgt.count)
+				if not res.get("ok", false):
+					# 锁定/不可丢弃：保留物品，仅记录（不静默绕过保护）；提示层由 UI 窗口补全
+					GameLogger.info("Inventory", "丢弃被拒(保护生效): %s reason=%s" % [iid, res.get("reason", "")])
+			_refresh()
 		3:
 			var cnt: int = int(inv.get_instance_by_id(iid).count) / 2
 			inv.split_instance(iid, cnt)
@@ -238,7 +228,11 @@ func _on_slot_drop(target_iid: String, data: Dictionary) -> void:
 	if src_bag == "":
 		return
 	var tgt_bag: String = _bag_of_iid(target_iid) if target_iid != "" else src_bag
-	GameManager.inventory_service.move_instance(src_iid, tgt_bag, _index_in_bag(tgt_bag, target_iid))
+	# P2-9：服务层按类型不变式可能拒绝跨栏拖拽（返回 false）。这里不再静默 no-op，
+	# 落点非法时记录（预览"暗示允许"但落点非法的体验问题归 UI 窗口 ItemSlot._can_drop_data 处理）
+	var ok: bool = GameManager.inventory_service.move_instance(src_iid, tgt_bag, _index_in_bag(tgt_bag, target_iid))
+	if not ok:
+		GameLogger.info("Inventory", "拖拽被拒(服务层类型不变式): %s -> %s" % [src_iid, tgt_bag])
 	_refresh()
 
 func _on_sort() -> void:
@@ -288,7 +282,7 @@ func _on_inv_changed(_a: Variant = null, _b: Variant = null) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
-		UIManager.close_screen(self)
+		request_close()
 		get_viewport().set_input_as_handled()
 
 func _exit_tree() -> void:
