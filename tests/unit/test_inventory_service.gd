@@ -420,3 +420,31 @@ func test_load_legacy_save_without_idx_compat() -> void:
 	var s2 := InventoryService.new()
 	s2.load(legacy)
 	expect_eq(s2.get_item_count(WEAPON), 1, "旧档应能载入，物品数不变")
+
+func test_try_consume_duplicate_entries_aggregates() -> void:
+	# 同一 item_id 在 items 里出现两次：旧实现逐项校验各算各的、漏算总量，
+	# 第二处 remove_item_by_id 库存不足仍返回 true（少扣/误判成功）。修复后按 item_id 聚合需求。
+	_service.add_item("material_herb_001", 5, "test")
+	# 两条相同 item_id、各需 3（合计 6 > 库存 5）→ 聚合后校验应整体失败
+	var dup := _service.try_consume([
+		{ "item_id": "material_herb_001", "count": 3 },
+		{ "item_id": "material_herb_001", "count": 3 },
+	], "test")
+	expect(not dup, "重复条目聚合需求 6 > 库存 5 应整体失败")
+	expect_eq(_service.get_item_count("material_herb_001"), 5, "失败时一件都不扣")
+	# 两条合计正好等于库存 → 应成功且扣足
+	var ok := _service.try_consume([
+		{ "item_id": "material_herb_001", "count": 2 },
+		{ "item_id": "material_herb_001", "count": 3 },
+	], "test")
+	expect(ok, "重复条目聚合需求 5 == 库存 5 应成功")
+	expect_eq(_service.get_item_count("material_herb_001"), 0, "应扣足 5 件")
+
+func test_move_instance_rejects_cross_type() -> void:
+	# 类型不变式：物品只能落在与其 type 对应的栏（weapon->main, material->material, quest->quest）。
+	# 跨类型拖移会破坏 add_item 路由不变量，必须被拒；同栏内拖拽允许。
+	_service.add_item(WEAPON, 1, "t")
+	var iid: String = _first_iid(WEAPON)
+	expect(not _service.move_instance(iid, "material", 0), "武器拖进材料栏应被拒")
+	expect(not _service.move_instance(iid, "quest", 0), "武器拖进任务栏应被拒")
+	expect(_service.move_instance(iid, "main", 5), "同栏内拖拽应成功")

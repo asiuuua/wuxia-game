@@ -114,16 +114,24 @@ func can_add(item_id: String, count: int) -> bool:
 func try_consume(items: Array, source: String = "") -> bool:
 	if items.is_empty():
 		return false
+	# 聚合同 item_id 需求：避免同一物品在 items 里出现多条时，逐项校验各算各的、
+	# 漏算总量，导致第二处 remove_item_by_id 库存不足却仍返回 true（少扣/误判成功）
+	var need_by_id: Dictionary = {}
 	for entry in items:
 		var item_id: String = String(entry.get("item_id", ""))
 		var need: int = int(entry.get("count", 1))
-		if item_id == "" or need <= 0:
+		if item_id == "":
 			return false
-		# 锁定实例不可被动消耗：用「非锁定可用量」校验，锁定物被排除在批量扣料外
-		if get_unlocked_count(item_id) < need:
+		if need <= 0:
 			return false
-	for entry in items:
-		remove_item_by_id(String(entry.get("item_id", "")), int(entry.get("count", 1)))
+		need_by_id[item_id] = int(need_by_id.get(item_id, 0)) + need
+	# 锁定实例不可被动消耗：用「非锁定可用量」校验，锁定物被排除在批量扣料外（原子：任一不足整体失败）
+	for item_id in need_by_id:
+		if get_unlocked_count(item_id) < int(need_by_id[item_id]):
+			return false
+	# 统一扣除（已按聚合量校验，remove_item_by_id 跳过锁定实例与校验一致）
+	for item_id in need_by_id:
+		remove_item_by_id(item_id, int(need_by_id[item_id]))
 	return true
 
 func _stack_to_existing(bag: Array, item_id: String, count: int) -> int:
@@ -544,6 +552,11 @@ func move_instance(iid: String, target_bag: String, target_index: int) -> bool:
 		if found != null:
 			break
 	if found == null:
+		return false
+	# 类型不变式：物品只能落在与其 type 对应的栏（weapon/pill/armor/accessory -> main，
+	# material -> material，quest -> quest）。拒绝跨类型乱移，否则会破坏 add_item 路由不变量
+	# （如装备系统只扫主栏、_bag_for_item 按 type 归类），并造成重量/查询错乱。
+	if _bag_by_name(target_bag) != _bag_for_item(found.item_id):
 		return false
 	var src_idx: int = src_bag.find(found)
 	var tgt: Array = _bag_by_name(target_bag)
