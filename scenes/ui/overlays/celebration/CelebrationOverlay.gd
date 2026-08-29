@@ -24,6 +24,9 @@ var _btn_row: HBoxContainer = null
 var _bgm_player: AudioStreamPlayer = null
 var _timer: Timer = null
 var _built := false
+# 已 acquire_async 的媒体/音乐路径，关闭/退出时须 release 归还引用计数，否则 CG 大媒体常驻不释放（P5 目标落空）。
+var _media_path: String = ""
+var _bgm_path: String = ""
 
 func _ready() -> void:
 	focus_mode = Control.FOCUS_NONE
@@ -119,6 +122,7 @@ func _apply_media(cfg: Dictionary) -> void:
 	var mpath: String = String(cfg.get("media_path", ""))
 	if mpath == "" or not ResourceLoader.exists(mpath):
 		return
+	_media_path = mpath
 	ResourceManager.acquire_async(mpath, _media_type_hint(mtype), _on_media_ready.bind(mpath))
 
 ## 加载完成回调：依资源实际类型建节点（视频/图片），铺满媒体框。
@@ -152,6 +156,7 @@ func _play_bgm(cfg: Dictionary) -> void:
 	var bgm: String = String(cfg.get("bgm", ""))
 	if bgm == "" or not ResourceLoader.exists(bgm):
 		return
+	_bgm_path = bgm
 	ResourceManager.acquire_async(bgm, "", _on_bgm_ready)
 
 func _on_bgm_ready(res: Variant) -> void:
@@ -167,6 +172,13 @@ func _clear_media() -> void:
 		return
 	for c in _media_box.get_children():
 		c.queue_free()
+	# 归还媒体/音乐引用计数，使 ResourceManager 分级回收能真正释放 CG 大视频/贴图（修复常驻泄漏）。
+	if _media_path != "":
+		ResourceManager.release(_media_path)
+		_media_path = ""
+	if _bgm_path != "":
+		ResourceManager.release(_bgm_path)
+		_bgm_path = ""
 
 func _add_button(text: String, enabled: bool, cb: Callable) -> void:
 	var b := Button.new()
@@ -218,6 +230,7 @@ func _on_close_pressed() -> void:
 	if _bgm_player != null and is_instance_valid(_bgm_player):
 		_bgm_player.stop()
 		_bgm_player = null
+	_clear_media()
 	UIManager.close_screen(self)
 
 # === 读内容表（直接 FileAccess，不碰冻结的 ConfigManager） ===
@@ -238,3 +251,4 @@ func _exit_tree() -> void:
 	_stop_timer()
 	if _bgm_player != null and is_instance_valid(_bgm_player):
 		_bgm_player.stop()
+	_clear_media()
