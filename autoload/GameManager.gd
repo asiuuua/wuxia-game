@@ -15,9 +15,17 @@ var alchemy_service: AlchemyService = null
 var forge_service: ForgeService = null
 var shop_service: ShopService = null
 var sect_service: SectService = null
+var bond_service: BondService = null
+var romance_service: RomanceService = null
+var sworn_service: SwornService = null          # 结义服务（M4：结义分支）
+var master_service: MasterService = null        # 师徒服务（M4：师徒分支）
+var relationship_service: RelationshipService = null   # 关系网数据中枢（M3：聚合门面，无状态不存档）
 
 var pending_battle_id: String = ""     # 由 NPC/剧情设置，战斗场景读取
 var current_slot: int = -1             # 当前游戏所在存档槽位（-1 表示尚未存档）；HELL 删档时定点删除
+var _last_known_day: int = 1             # 姻缘子嗣推进用的天数基线（M3）             # 当前游戏所在存档槽位（-1 表示尚未存档）；HELL 删档时定点删除
+
+var last_wedding := {}
 
 func _ready() -> void:
 	player_state = PlayerState.new()
@@ -31,6 +39,11 @@ func _ready() -> void:
 	# 追踪当前存档槽位（读档/存档时更新），供 HELL 删档定点删除
 	EventBus.game_saved.connect(_on_slot_event)
 	EventBus.game_loaded.connect(_on_slot_event)
+	# 时间推进 → 姻缘子嗣（怀胎十月）随天数推进（M3：接 TimeService/WeatherTimeService）
+	EventBus.world_day_advanced.connect(_on_world_day_advanced)
+	# 婚礼演出：监听 bond_wedding_started 切到婚礼场景（M3：接 BondService.hold_wedding）
+	EventBus.bond_wedding_started.connect(_on_bond_wedding_started)
+	_sync_day_baseline()
 
 func _init_services() -> void:
 	combat_service = CombatService.new()
@@ -42,6 +55,11 @@ func _init_services() -> void:
 	forge_service = ForgeService.new()
 	shop_service = ShopService.new()
 	sect_service = SectService.new()
+	bond_service = BondService.new()
+	romance_service = RomanceService.new()
+	sworn_service = SwornService.new()
+	master_service = MasterService.new()
+	relationship_service = RelationshipService.new()
 
 func _register_saveables() -> void:
 	SaveManager.register_saveable(player_state)
@@ -51,6 +69,10 @@ func _register_saveables() -> void:
 	SaveManager.register_saveable(equipment_service)
 	# 门派系统有持久状态（当前门派 + 声望 + 阶位），需存档；锻造/商店为纯配置驱动无状态，不存档
 	SaveManager.register_saveable(sect_service)
+	SaveManager.register_saveable(bond_service)
+	SaveManager.register_saveable(romance_service)
+	SaveManager.register_saveable(sworn_service)
+	SaveManager.register_saveable(master_service)
 	# GameState 是全局状态中枢，作为存档序列化唯一来源之一
 	SaveManager.register_saveable(GameState)
 
@@ -62,8 +84,13 @@ func start_new_game() -> void:
 	quest_service.reset()
 	equipment_service.reset()
 	sect_service.reset()
+	bond_service.reset()
+	romance_service.reset()
+	sworn_service.reset()
+	master_service.reset()
 	GameState.reset()
 	WeatherTimeService.reset()
+	_sync_day_baseline()
 	_equip_starting_abilities()
 	get_tree().change_scene_to_file(PathConstants.SCENE_TOWN)
 
@@ -106,6 +133,26 @@ func return_to_title() -> void:
 func _on_slot_event(slot: int) -> void:
 	if slot >= 1:
 		current_slot = slot
+	_sync_day_baseline()  # 读档后天数可能跳变，重设基线避免子嗣孕期被错误快进（M3）
+
+## 时间推进时驱动姻缘子嗣（advance_days 随天数推进孕期）
+func _on_world_day_advanced(day: int) -> void:
+	var delta: int = day - _last_known_day
+	if delta > 0 and romance_service != null:
+		romance_service.advance_days(delta)
+	_last_known_day = day
+
+## 同步天数基线（新游戏/读档后避免子嗣孕期被错误快进）
+func _sync_day_baseline() -> void:
+	_last_known_day = WeatherTimeService.get_day()
+
+## 婚礼演出：监听 bond_wedding_started，记录婚礼信息并切换到婚礼场景（路径为空则仅提示）
+func _on_bond_wedding_started(npc_id: String, wedding_type: int, scene_path: String) -> void:
+	last_wedding = {"npc_id": npc_id, "wedding_type": wedding_type, "scene_path": scene_path}
+	if scene_path == null or scene_path.is_empty():
+		GameLogger.info("GameManager", "婚礼场景路径为空，跳过切换（npc=%s）" % npc_id)
+		return
+	get_tree().change_scene_to_file(scene_path)
 
 ## 回安全点（EASY 团灭）：切换到城镇场景并恢复队伍状态（由 DefeatHandler 调用）
 func return_to_safe_point() -> void:

@@ -14,5 +14,6 @@
   "DifficultySelect": "res://scenes/ui/screens/difficulty_select/DifficultySelect.gd",
   "ForgeScreen": "res://scenes/ui/screens/forge/ForgeScreen.gd",
   "ShopScreen": "res://scenes/ui/screens/shop/ShopScreen.gd",
-  "SectScreen": "res://scenes/ui/screens/sect/SectScreen.gd"
+  "SectScreen": "res://scenes/ui/screens/sect/SectScreen.gd",
+  "BondRomance": "res://scenes/ui/screens/bond_romance/BondRomanceScreen.gd"
 }
