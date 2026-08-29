@@ -42,7 +42,7 @@ Phase 0 脚手架 ✅ → Phase 1 垂直切片 ✅ → 战斗 M1 逻辑内核 �
   1. **POSIX 路径 `/d/xxx` 会让 Godot 静默不运行场景（零输出零报错）→ 门禁误报绿**。脚本 ROOT 必须归一化为 Windows 风格（`cygpath -w`，如 `D:/武侠游戏`）。
   2. **`get_tree().quit(code)` 退出码不被 Godot headless 传播（失败也返回 0）** → 不能靠进程退出码判测试成败；门禁以 `run_all.gd` 的 `✗` 标记为真实失败判据（负向用例合法「失败 N」小计不含 `✗`，不误报）。
 - 多 Godot 进程抢 `.godot` 类缓存会玄学报错 → **验证必须串行**。
-- ⚠️ **当前 gate[3] 红（待解）**：`inventory_smoke` 跨栏断言与背包窗口 `move_instance` 类型不变式冲突（见协同→ open 派单 `f1e8ac0c4ce7`，归背包窗口修，UI 窗口不自补）。
+- ✅ **gate[3] 已转绿（2026-08-29）**：原 `inventory_smoke` 跨栏断言与背包窗口 `move_instance` 类型不变式冲突（派单 `f1e8ac0c4ce7`）；根因是 UI 自有 smoke 用例断言过时行为，背包窗契约为有意设计（自带回归 `test_move_instance_rejects_cross_type`）。UI 主权内对齐 smoke 用例（武器→material 改负向断言 + 同栏重定位正向 + 装备改从 main）→ `ALL_INV_OK pass=13 fail=0`。背包窗契约保持不变。
 
 ## 资源与主题
 - 中文靠工程默认主题下发：`project.godot [gui] theme/custom="res://resources/themes/ui_theme.tres"`；字体思源宋体 `resources/fonts/SiYuanSongTiRegular/`；主题由 `tools/gen_ui_theme.gd` 重生成。
@@ -62,7 +62,7 @@ Phase 0 脚手架 ✅ → Phase 1 垂直切片 ✅ → 战斗 M1 逻辑内核 �
   - `fb36b027ba06` UI→测试基建：run_all 退出码不传播（**不派单**，Godot headless 固有限制，gate 已以 `✗` 兜底）。
   - `37c9ca18f539` 背包→**UI**：`inventory_add_overflow` 信号无游戏内订阅方，满包时物品静默丢失（**to=UI，我窗待认领修复**）。
   - `acf2246fd5f2` 背包→结缘：romance_service.propose 聘礼扣除跳过锁定实例且不校验返回值，锁定聘礼时白结婚。
-  - `f1e8ac0c4ce7` UI→背包：`inventory_smoke`[3] 门禁红（`move_instance` 类型不变式 vs UI 跨栏断言），待背包窗。
+  - ~~f1e8ac0c4ce7~~ **[done]** `inventory_smoke`[3] 门禁红（`move_instance` 类型不变式 vs UI 跨栏断言）→ UI 窗口对齐自有 smoke 用例到背包窗已确立契约（2026-08-29，变更通告 `docs/变更通告_2026-08-29_inventory_smoke对齐类型不变式.md`），背包窗契约不变。
 
 ## 主权边界
 - **共享地基（冻结，只增不改）**：`core/enums/*_enums.gd`、`autoload/EventBus.gd`、`autoload/ConfigManager.gd`、`data/configs/ui/screens.json`、`strings.csv`。改动须写入当轮《变更通告》「共享地基增量」表（信号/枚举末尾追加，绝不动已有项）并打招呼。
@@ -88,7 +88,7 @@ Phase 0 脚手架 ✅ → Phase 1 垂直切片 ✅ → 战斗 M1 逻辑内核 �
 
 ## 背包层现状（P0/P1 + Phase3 物品扩张）
 - `inventory_service.gd`：三栏（主30/材料200/任务50）+堆叠+负重+ISaveable；事务 API（`query_add`/`can_add`/`try_consume` 两遍式原子扣料）+ iid 发号器(`next_iid` 进存档)。
-- **背包窗口自查修复（1bab4f4）**：① `try_consume` 同 item_id 多条需求按 id 聚合校验/扣料（修旧逐项漏算总量）；② `move_instance` 加类型不变式守卫（拒绝武器/丹药拖入材料/任务栏，保持 add_item 路由不变量）→ **此守卫与 UI `inventory_smoke.gd` 跨栏断言冲突致 gate[3] 红（见协同 open `f1e8ac0c4ce7`，归背包窗修）**。补 2 条回归测试（库存 28→30 全绿）。
+- **背包窗口自查修复（1bab4f4）**：① `try_consume` 同 item_id 多条需求按 id 聚合校验/扣料（修旧逐项漏算总量）；② `move_instance` 加类型不变式守卫（拒绝武器/丹药拖入材料/任务栏，保持 add_item 路由不变量）→ **此守卫与 UI `inventory_smoke.gd` 跨栏断言冲突曾致 gate[3] 红（派单 `f1e8ac0c4ce7`）；2026-08-29 UI 窗口对齐自有 smoke 用例到该已确立契约，gate[3] 转绿，背包窗契约不变**。补 2 条回归测试（库存 28→30 全绿）。
 - 用药链路：城镇=InventoryService.use_item→PlayerState；战斗=CombatService.player_use_item→战斗快照。UI 入口：BattleScene"物品"菜单 + InventoryScreen"使用"按钮。
 - Phase 3 物品扩张两轮：17→36（`1862bda`）→ 64（`0720ba9`，武侠主题 +28 件）。
 - 已知协作风险（已派单）：A. `inventory_add_overflow` 满包溢出信号游戏内无订阅方→静默丢物（open `37c9ca18f539` 派 UI 窗）；B. `inventory_weight_changed` 信号无订阅方（死信号，非 bug）；C. `romance_service.propose` 聘礼跳过锁定（open `acf2246fd5f2` 派结缘窗）。

@@ -37,10 +37,12 @@ func _run() -> void:
 	var r: Dictionary = inv.split_instance(pill2, 2)
 	_assert(r.get("ok", false) == true, "split_instance 成功")
 	_assert(int(inv.get_item_count("pill_heal_xiaohuan_001")) == pre_split, "拆分后总数量不变(分布变化)")
-	# 跨栏移动（拖拽 P2-1）
+	# 跨栏移动（拖拽 P2-1）：类型不变式——武器不可入材料栏（背包窗 1bab4f4 有意设计）
 	var w_iid: String = _first_iid(inv, "weapon_sword_iron_001")
-	_assert(inv.move_instance(w_iid, "material", 0), "move_instance 跨栏成功")
-	_assert(_bag_of(inv, w_iid) == "material", "移动后位于 material 栏")
+	_assert(not inv.move_instance(w_iid, "material", 0), "move_instance 拒绝武器跨入材料栏(类型不变式)")
+	_assert(_bag_of(inv, w_iid) == "main", "武器仍留在 main 栏(未跨栏)")
+	# 同栏重定位（P2-1 拖拽重排仍可用）
+	_assert(inv.move_instance(w_iid, "main", 0), "move_instance 同栏重定位成功")
 	# 整理（P2-1）
 	inv.sort_bag("main")
 	inv.sort_bag("material")
@@ -48,8 +50,8 @@ func _run() -> void:
 	screen._refresh()
 	await get_tree().process_frame
 	# 装备（经既有 EquipmentService.equip）
-	var w_mat: String = _first_iid_in(inv, "material", "weapon_sword_iron_001")
-	_assert(GameManager.equipment_service.equip(w_mat), "装备武器成功")
+	var w_main: String = _first_iid_in(inv, "main", "weapon_sword_iron_001")
+	_assert(GameManager.equipment_service.equip(w_main), "装备武器成功")
 	# 丢弃（移除实例 P2-1）
 	var any_iid: String = _any_iid(inv)
 	_assert(inv.remove_instance(any_iid), "discard/remove_instance 成功")
