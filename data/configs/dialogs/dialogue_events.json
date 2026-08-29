@@ -1,0 +1,13 @@
+{
+	"version": "1.0",
+	"_doc": "对话事件键 -> 效果列表。对话行 trigger_events 引用这里的 key。效果 type：sfx(需 path) / shake(intensity,duration) / quest_accept(quest_id) / quest_complete(quest_id)。音频文件缺失时静默跳过。",
+	"events": {
+		"sfx_elder_appear":   [{ "type": "sfx", "path": "res://resources/audio/sfx/elder_appear.ogg" }],
+		"sfx_quest_accept":   [{ "type": "sfx", "path": "res://resources/audio/sfx/quest_accept.ogg" }],
+		"sfx_beggar":         [{ "type": "sfx", "path": "res://resources/audio/sfx/beggar.ogg" }],
+		"sfx_bandit_threat":  [{ "type": "sfx", "path": "res://resources/audio/sfx/bandit_threat.ogg" }],
+		"sfx_tactical":       [{ "type": "sfx", "path": "res://resources/audio/sfx/tactical.ogg" }],
+		"bandit_threat_shake": [{ "type": "shake", "intensity": 10.0, "duration": 0.4 }],
+		"accept_demo_quest":  [{ "type": "quest_accept", "quest_id": "demo_quest" }]
+	}
+}

@@ -222,8 +222,9 @@ func _open_name_dialog(slot: int) -> void:
 	dialog.add_child(dim)
 
 	var panel := Panel.new()
-	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	panel.size = Vector2(460, 190)
 	panel.custom_minimum_size = Vector2(460, 190)
+	UICenterUtils.center_panel(panel)   # 修复 Godot4.7.2 PRESET_CENTER 不居中
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = UIPalette.GLASS_BG
 	sb.border_width_left = 1

@@ -7,24 +7,49 @@
 2. 按"分类"丢进对应子文件夹，文件名用英文、见名知意：
    ```
    resources/icons/
-   ├─ items/        物品图标（丹药、武器、材料…）
-   │   ├─ heal_pill.png
+   ├─ items/        物品图标（丹药、武器、材料、任务品…）
+   │   ├─ heal_pill.png         ← 文件名 = 物品 id
    │   └─ iron_sword.png
    ├─ skills/       武学 / 技能图标
-   │   └─ fire_sword.png
-   ├─ npc/          NPC 头像
-   │   └─ su_waner.png
+   │   └─ fire_sword.png        ← 文件名 = 技能 id
+   ├─ npc/          NPC 头像 / 立绘（对话立绘 + HUD 头像都放这里）
+   │   ├─ su_waner.png          ← 对话立绘：文件名 = NPC 角色 id
+   │   └─ player.png            ← HUD 玩家头像：固定叫 player.png
+   ├─ enemies/      敌人头像 / 血条图标（战斗界面用）
+   │   └─ boss_yan.png          ← 文件名 = 敌人 id
    ├─ status/       状态（增益/减益）图标
    │   └─ burn.png
-   ├─ ui/           界面按钮 / 装饰图标（菜单、背包、地图…）
-   │   └─ menu.png
+   ├─ menu/         菜单按钮图标（主菜单 + ESC 菜单）
+   │   ├─ save_game.png         ← 文件名 = 菜单项 key
+   │   └─ settings.png
+   ├─ ui/           其它界面装饰图标（地图、背包标记等零碎按钮）
+   │   └─ map.png
    └─ _sample/      示例（sample_heart.png，可删）
    ```
-3. 告诉策划 / 程序这个图标的"名字"，例如 `skills/fire_sword`（**不带扩展名、带子文件夹**）。
-   程序会在物品/技能/NPC 的配置里写 `"icon": "skills/fire_sword"`，游戏自动显示。
+3. 告诉策划 / 程序这个图标的"名字"，格式是 `分类/文件名`（**不带扩展名**），例如：
+   - 技能图标：`skills/fire_sword`
+   - NPC 对话立绘：`npc/su_waner`
+   - 菜单按钮：`menu/save_game`
+   - 玩家头像：`npc/player`
+   
+   程序会在对应配置里挂上这个名字，游戏自动显示。**绝大多数图标名字直接就是游戏里已经有的"物品 id / 技能 id / 角色 id / 菜单 key"，你不用新造名字**——按上面的对照表丢文件即可。
 
 ## 怎么"替换"一个旧图标
 - 直接**用同名文件覆盖**即可（例如新的 `items/heal_pill.png` 盖掉旧的）。游戏里立刻生效，不用改任何配置。
+
+## 各位置该丢哪个目录（速查表）
+| 游戏里的位置 | 丢进目录 | 文件名怎么定 |
+|---|---|---|
+| 背包里的物品图标 | `items/` | = 物品 id（如 `heal_pill.png`） |
+| 武学屏技能行图标 | `skills/` | = 技能 id（如 `fire_sword.png`） |
+| 结缘屏 NPC 头像 | `npc/` | = NPC 角色 id（如 `su_waner.png`） |
+| **对话里的立绘** | `npc/` | = NPC 角色 id（同上，复用一张图即可） |
+| **HUD 左上玩家头像** | `npc/` | 固定叫 `player.png` |
+| 战斗里敌人头像/血条 | `enemies/` | = 敌人 id（如 `boss_yan.png`） |
+| 主菜单 / ESC 菜单按钮 | `menu/` | = 菜单项 key（如 `save_game.png`） |
+| 其它零碎界面装饰 | `ui/` | 见名知意 |
+
+> 记不住也没关系：**同一个人/物在对话和头像里共用 `npc/` 下同一张图**，不用画两张。
 
 ## 图片建议
 - 尺寸：正方形，建议 **64×64 或 128×128**（2 的幂最好），放大缩小都清晰。

@@ -27,6 +27,7 @@ func accept(quest_id: String) -> bool:
 		tracked_ids.append(quest_id)
 		state.tracked = true
 	EventBus.quest_accepted.emit(quest_id)
+	EventBus.notify_quest_track_changed.emit()
 	return true
 
 ## 战斗结束事件回调（订阅 EventBus.combat_finished，由 GameManager 连接）
@@ -107,6 +108,7 @@ func turn_in(quest_id: String) -> bool:
 	completed_quests[quest_id] = state
 	tracked_ids.erase(quest_id)
 	EventBus.quest_turned_in.emit(quest_id)
+	EventBus.notify_quest_track_changed.emit()
 	return true
 
 func get_tracked() -> Array[QuestState]:
@@ -135,6 +137,7 @@ func reset() -> void:
 	active_quests.clear()
 	completed_quests.clear()
 	tracked_ids.clear()
+	EventBus.notify_quest_track_changed.emit()
 
 func get_save_key() -> String:
 	return "quest"

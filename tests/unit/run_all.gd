@@ -20,8 +20,8 @@ func _ready() -> void:
 	var skipped: Array[String] = []
 	for path in scripts:
 		var sc := load(path) as Script
-		if sc == null:
-			print("  ! 脚本加载失败：%s" % path)
+		if sc == null or not sc.can_instantiate():
+			print("  ! 脚本加载失败（缺失或存在解析错误）：%s" % path)
 			suite_fail += 1
 			continue
 		var inst := sc.new() as TestBase

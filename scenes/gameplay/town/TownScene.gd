@@ -31,7 +31,23 @@ const _TOGGLE_ACTIONS := {
 	"toggle_map": [KEY_M],
 	"toggle_attributes": [KEY_TAB],
 	"toggle_menu": [KEY_G],
+	"rest": [KEY_R],
 }
+const _DEBUG_ACTIONS := {
+	"debug_tactical_battle": [KEY_F9],
+	"debug_celebration": [KEY_F10],
+}
+# 一次“休息/睡觉”推进的游戏天数：怀胎期 gestation_days=300，按月跳进（30天/次）
+# 约 10 次休息可分娩，贴合“怀胎十月”设定且玩家可快速验证子嗣出生。
+const REST_DAYS := 30
+
+# === 调试热键（正式发布前把 DEBUG_QUICK_BATTLE / DEBUG_QUICK_CELEBRATION 置 false 即可禁用）===
+# 城镇内按 F9 直接开战术战棋 demo，跳过“走过去→对话→战斗”链路，方便反复试战斗表现。
+const DEBUG_QUICK_BATTLE := true
+const DEBUG_TACTICAL_BATTLE_ID := "tactical_demo_001"
+# 城镇内按 F10 一键造配偶 + 触发欢庆：跳过求婚/结婚/好感流程，反复试受孕与 CG 表现。
+const DEBUG_QUICK_CELEBRATION := true
+const DEBUG_CELEBRATION_SPOUSE_ID := "npc_su_waner"
 
 var _player: Node2D
 var _npc_nodes: Dictionary = {}   # npc_id -> Node2D
@@ -142,9 +158,9 @@ func _build_world() -> void:
 	# 相机挂玩家身上，自动跟随
 	var cam := Camera2D.new()
 	_player.add_child(cam)
-	# 3) HUD（CanvasLayer，自带独立画布，不受本节点 Y-sort 影响）
+	# 3) HUD（常驻层，屏幕固定位置，不受本节点 Y-sort / Camera2D 影响）
 	var hud: Hud = load(PathConstants.SCENE_HUD).instantiate()
-	add_child(hud)
+	UIManager.mount_hud(hud)
 
 func _spawn_npcs() -> void:
 	for npc_id in ConfigManager.get_all_npc_ids():
@@ -207,10 +223,16 @@ func _unhandled_input(event: InputEvent) -> void:
 		_toggle_overlay("AttributesScreen")
 	elif event.is_action_pressed("toggle_menu"):
 		_toggle_overlay("GameMenu")
+	elif event.is_action_pressed("rest"):
+		_do_rest()
 	elif event.is_action_pressed("ui_cancel"):
 		_toggle_esc_menu()
 	elif event.is_action_pressed("ui_accept") and _nearby_npc != "":
 		_open_dialog(_nearby_npc)
+	elif event.is_action_pressed("debug_tactical_battle") and DEBUG_QUICK_BATTLE:
+		_launch_debug_tactical()
+	elif event.is_action_pressed("debug_celebration") and DEBUG_QUICK_CELEBRATION:
+		_launch_debug_celebration()
 
 func _toggle_overlay(screen_name: String) -> void:
 	var existing: Control = UIManager.get_open_screen(screen_name)
@@ -230,10 +252,49 @@ func _toggle_esc_menu() -> void:
 	UIManager.open_screen("EscMenu", UIManager.Layer.POPUP)
 
 func _open_dialog(npc_id: String) -> void:
-	var overlay: Control = UIManager.open_screen("DialogOverlay", UIManager.Layer.FULLSCREEN)
-	if overlay == null:
+	var npc_data: Dictionary = ConfigManager.get_npc(npc_id)
+	var dialog_id: String = npc_data.get("dialog_id", "")
+	UIManager.open_screen("DialogOverlay", UIManager.Layer.FULLSCREEN,
+		{"npc_id": npc_id, "dialog_id": dialog_id})
+
+# 休息/睡觉：推进游戏天数，驱动姻缘孕期倒计时与分娩（advance_days 内部广播事件刷新面板）
+func _do_rest() -> void:
+	if UIManager.is_any_screen_open():
 		return
-	overlay.show_for_npc(ConfigManager.get_npc(npc_id))
+	GameManager.romance_service.advance_days(REST_DAYS)
+	EventBus.notification_show.emit("你沉沉睡去，恍惚间过去了 %d 天" % REST_DAYS)
+
+# 调试：直接开战术战棋 demo（跳过 NPC 对话链路），反复试战斗表现用。由 F9 触发，受 DEBUG_QUICK_BATTLE 门控。
+func _launch_debug_tactical() -> void:
+	if UIManager.is_any_screen_open():
+		return
+	GameManager.start_battle(DEBUG_TACTICAL_BATTLE_ID)
+
+# 调试：一键造已婚配偶 + 触发欢庆，反复试受孕与 CG 表现。由 F10 触发，受 DEBUG_QUICK_CELEBRATION 门控。
+# 复用与面板 _on_celebration 完全一致的开界面流程（成功开 CG / 超配额开 over_limit 对话框 / 受孕弹喜讯）。
+func _launch_debug_celebration() -> void:
+	if UIManager.is_any_screen_open():
+		return
+	var sid: String = DEBUG_CELEBRATION_SPOUSE_ID
+	# 造已婚配偶（无聘礼/婚礼副作用）；已是配偶则跳过。好感拉满以满足任何前置。
+	GameManager.bond_service.set_affection(sid, 100)
+	GameManager.romance_service.debug_make_spouse(sid)
+	var r: Dictionary = GameManager.romance_service.begin_celebration(sid)
+	if not r.get("ok", false):
+		var reason: String = String(r.get("reason", "UNKNOWN"))
+		if reason == "QUOTA_EXCEEDED":
+			UIManager.open_screen("CelebrationOverlay", UIManager.Layer.FULLSCREEN, {"mode": "over_limit"})
+		else:
+			EventBus.notification_show.emit("未能欢庆：%s" % reason)
+		return
+	var nm: String = sid
+	var rel: Dictionary = ConfigManager.get_relation(sid)
+	if not rel.is_empty() and rel.has("name"):
+		nm = String(rel["name"])
+	UIManager.open_screen("CelebrationOverlay", UIManager.Layer.FULLSCREEN,
+		{"mode": "cg", "npc_id": sid, "cg_id": String(r.get("cg_id", "default"))})
+	if bool(r.get("conceived", false)):
+		EventBus.notification_show.emit("喜讯：与 %s 珠胎暗结……" % nm)
 
 # === 输入动作注册（仅首次注册，场景重载不重复添加） ===
 func _ensure_input_actions() -> void:
@@ -241,6 +302,8 @@ func _ensure_input_actions() -> void:
 		_register_action(action, _MOVE_ACTIONS[action])
 	for action in _TOGGLE_ACTIONS:
 		_register_action(action, _TOGGLE_ACTIONS[action])
+	for action in _DEBUG_ACTIONS:
+		_register_action(action, _DEBUG_ACTIONS[action])
 
 func _register_action(action: String, keys: Array) -> void:
 	if not InputMap.has_action(action):
@@ -256,6 +319,8 @@ func _exit_tree() -> void:
 		EventBus.player_hp_changed.disconnect(_on_player_changed)
 	if EventBus.player_level_up.is_connected(_on_player_changed):
 		EventBus.player_level_up.disconnect(_on_player_changed)
+	# HUD 挂在 autoload 的 HUD 层、不随本场景树销毁，须显式卸载，否则切场景后残留双 HUD
+	UIManager.unmount_hud()
 	UIManager.close_all_screens()
 
 func _on_player_changed(_p: Variant = null) -> void:

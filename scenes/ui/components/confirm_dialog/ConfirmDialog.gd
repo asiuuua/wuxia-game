@@ -37,8 +37,9 @@ func _build_ui() -> void:
 	add_child(dim)
 
 	var panel: Panel = Panel.new()
+	panel.size = Vector2(440, 220)
 	panel.custom_minimum_size = Vector2(440, 220)
-	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	UICenterUtils.center_panel(panel)   # 修复 Godot4.7.2 PRESET_CENTER 不居中
 	# === 磨砂玻璃面板（替代原棕底 + 金边）===
 	# 背景半透冷调深蓝黑 + 细白边 + 柔和阴影，营造"漂浮在背景之上"的玻璃质感
 	var sb := StyleBoxFlat.new()

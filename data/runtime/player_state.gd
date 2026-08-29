@@ -46,6 +46,9 @@ var debt: int = 0
 # === 年龄（生育系统依赖，阶段A 前置补齐） ===
 var age: int = 18
 
+# === 性别（姻缘系统异性结缘校验用；0=男 1=女） ===
+var gender: int = 0
+
 # === 队友槽位占位（CompanionService 阶段C 才落地，此处仅预留 ID 列表） ===
 # 用 untyped Array 规避从 Dictionary 读档时的 typed-array 赋值报错（见工程红线 #3）
 var companion_ids: Array = []
@@ -176,7 +179,7 @@ func save() -> Dictionary:
 		"wisdom": wisdom, "luck": luck, "focus": focus,
 		"silver": silver, "copper": copper, "gold": gold,
 		"debt": debt,
-		"age": age, "companion_ids": companion_ids,
+		"age": age, "gender": gender, "companion_ids": companion_ids,
 	}
 
 func load(data: Dictionary) -> void:
@@ -199,6 +202,7 @@ func load(data: Dictionary) -> void:
 	gold = data.get("gold", gold)
 	debt = int(data.get("debt", 0))
 	age = int(data.get("age", age))
+	gender = int(data.get("gender", gender))
 	# 从 Dictionary 取值为 Variant，赋给 untyped Array 不触发 typed-array 报错
 	companion_ids = data.get("companion_ids", companion_ids)
 	recalculate_stats()

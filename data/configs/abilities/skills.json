@@ -9,6 +9,8 @@
       "qi_cost": 5,
       "cooldown": 1,
       "target": "enemy",
+      "range": 1,
+      "range_shape": "diamond",
       "power": 18,
       "effects": [
         { "status_id": "pojia", "stacks": 1 }
@@ -23,6 +25,8 @@
       "qi_cost": 10,
       "cooldown": 2,
       "target": "enemy",
+      "range": 1,
+      "range_shape": "diamond",
       "power": 28,
       "effects": [],
       "learned_by_default": true
@@ -35,6 +39,8 @@
       "qi_cost": 0,
       "cooldown": 0,
       "target": "self",
+      "range": 0,
+      "range_shape": "self",
       "power": 0,
       "effects": [],
       "learned_by_default": true

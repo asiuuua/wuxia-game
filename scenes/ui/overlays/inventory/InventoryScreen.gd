@@ -27,8 +27,9 @@ func _build() -> void:
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(dim)
 	var panel := Panel.new()
+	panel.size = Vector2(720, 560)
 	panel.custom_minimum_size = Vector2(720, 560)
-	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	UICenterUtils.center_panel(panel)   # 修复 Godot4.7.2 PRESET_CENTER 不居中
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = UIPalette.GLASS_BG
 	sb.border_width_left = 1

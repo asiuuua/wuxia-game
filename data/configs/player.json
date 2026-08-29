@@ -1,0 +1,6 @@
+{
+  "id": "player",
+  "name": "李十五",
+  "bust": "res://assets/characters/player_bust.png",
+  "portrait": "res://assets/characters/player_face.png"
+}

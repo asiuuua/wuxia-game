@@ -448,3 +448,97 @@ func test_move_instance_rejects_cross_type() -> void:
 	expect(not _service.move_instance(iid, "material", 0), "武器拖进材料栏应被拒")
 	expect(not _service.move_instance(iid, "quest", 0), "武器拖进任务栏应被拒")
 	expect(_service.move_instance(iid, "main", 5), "同栏内拖拽应成功")
+
+func test_add_items_atomic() -> void:
+	# 两种都能装下 -> 整体成功
+	expect(_service.add_items([{ "item_id": PILL, "count": 3 }, { "item_id": WEAPON, "count": 2 }], "test"), "都能装下应成功")
+	expect_eq(_service.get_item_count(PILL), 3, "PILL 应 3")
+	expect_eq(_service.get_item_count(WEAPON), 2, "WEAPON 应 2")
+	# 部分装不下（主栏满）：add_items 应整体失败、一个不加（原子性）
+	var ps: PlayerState = GameManager.player_state
+	if ps != null:
+		ps.strength = 1000   # 顶高负重，隔离重量，只测槽位
+	for i in 30:
+		_service.add_item(WEAPON, 1, "test")   # 主栏 30 槽满
+	var before_pill: int = _service.get_item_count(PILL)
+	var before_weapon: int = _service.get_item_count(WEAPON)
+	var ok2 := _service.add_items([{ "item_id": WEAPON, "count": 1 }, { "item_id": PILL, "count": 1 }], "test")
+	expect(not ok2, "主栏满时 add_items 应整体失败")
+	expect_eq(_service.get_item_count(PILL), before_pill, "失败时不添加任何丹药（原子）")
+	expect_eq(_service.get_item_count(WEAPON), before_weapon, "失败时不添加任何武器（原子）")
+
+func test_drop_item_discardable() -> void:
+	# 当前物品库均含 DISCARDABLE，drop_item 可达 SUCCESS；锁定实例应被拒（LOCKED）
+	_service.add_item(PILL, 3, "test")
+	var iid: String = _first_iid(PILL)
+	var r := _service.drop_item(iid, 2)
+	expect(r["ok"], "可丢弃物应能主动丢弃")
+	expect_eq(int(r["dropped"]), 2, "应丢 2 个")
+	expect_eq(_service.get_item_count(PILL), 1, "应剩 1 个")
+	# 锁定后丢弃应被拒
+	var iid2: String = _first_iid(PILL)
+	_service.set_item_locked(iid2, true)
+	var r2 := _service.drop_item(iid2, 1)
+	expect(not r2["ok"], "锁定实例不可丢弃")
+	expect(String(r2["reason"]) == "LOCKED", "应返回 LOCKED")
+
+func test_get_free_capacity_and_weight_ratio() -> void:
+	expect_eq(_service.get_free_capacity("main"), 30, "初始主栏空槽 30")
+	expect_eq(_service.get_free_capacity("material"), 200, "初始材料栏空槽 200")
+	expect_eq(_service.get_free_capacity("quest"), 50, "初始任务栏空槽 50")
+	_service.add_item(WEAPON, 1, "test")
+	expect_eq(_service.get_free_capacity("main"), 29, "放 1 武器后主栏空槽 29")
+	expect(_service.get_weight_ratio() >= 0.0, "重量比应 >= 0")
+	expect(_service.get_weight_ratio() > 0.0, "有物品时重量比应 > 0")
+
+func test_use_item_kind_dispatch() -> void:
+	# 当前 PILL 无 kind 字段 -> 默认 heal，应正常生效并消耗
+	_service.add_item(PILL, 1, "test")
+	var iid: String = _first_iid(PILL)
+	var r := _service.use_item(iid, "town")
+	expect(r["ok"], "缺省 kind(heal) 应生效")
+	expect_eq(_service.get_item_count(PILL), 0, "用后应消耗 1")
+	# 非消耗品（武器）返回 NOT_CONSUMABLE（早于 kind 分发）
+	_service.add_item(WEAPON, 1, "test")
+	var wid: String = _first_iid(WEAPON)
+	var r2 := _service.use_item(wid, "town")
+	expect(not r2["ok"], "武器不可消耗")
+	expect(String(r2["reason"]) == "NOT_CONSUMABLE", "应返回 NOT_CONSUMABLE")
+
+func test_inventory_transaction_commit() -> void:
+	_service.add_item("material_herb_001", 5, "test")
+	var tx := InventoryTransaction.new()
+	tx.set_source("test")
+	tx.add(WEAPON, 2)                 # 添加 2 武器
+	tx.remove("material_herb_001", 3) # 移除 3 草药
+	expect(tx.commit(_service), "事务应提交成功")
+	expect_eq(_service.get_item_count(WEAPON), 2, "应新增 2 武器")
+	expect_eq(_service.get_item_count("material_herb_001"), 2, "草药应剩 2")
+	# 移除远超库存 -> 整体失败（remove 段原子失败，不改动）
+	var tx2 := InventoryTransaction.new()
+	tx2.remove("material_herb_001", 999)
+	expect(not tx2.commit(_service), "移除远超库存应失败")
+	expect_eq(_service.get_item_count("material_herb_001"), 2, "失败时不改动（原子）")
+
+func test_item_instance_serialize_ver() -> void:
+	var inst := ItemInstance.new()
+	inst.item_id = WEAPON
+	inst.count = 2
+	var d: Dictionary = inst.serialize()
+	expect(d.has("ver"), "序列化应包含 ver 字段")
+	expect_eq(int(d["ver"]), 1, "ver 应为 1")
+	var inst2 := ItemInstance.new()
+	inst2.deserialize(d)
+	expect(inst2.item_id == WEAPON, "反序列化 item_id 一致")
+	expect_eq(inst2.count, 2, "反序列化 count 一致")
+
+func test_item_flags_static() -> void:
+	# ItemFlags 静态类：消除裸位运算，覆盖各掩码判定（不依赖具体物品）
+	expect(ItemFlags.is_discardable(67), "武器 flags=67 应可丢弃")
+	expect(ItemFlags.is_sellable(67), "武器 flags=67 应可售")
+	expect(ItemFlags.is_equippable(67), "武器 flags=67 应可装备")
+	expect(not ItemFlags.is_discardable(8), "KEY_ITEM flags=8 不可丢弃")
+	expect(ItemFlags.is_key_item(8), "flags=8 是 key_item")
+	expect(ItemFlags.is_consumable(51), "丹药 flags=51 可消耗")
+	expect(not ItemFlags.is_equippable(51), "丹药 flags=51 不可装备")
+	expect(ItemFlags.is_stackable(19), "材料 flags=19 可堆叠")

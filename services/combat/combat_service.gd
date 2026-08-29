@@ -69,6 +69,10 @@ func start_combat(battle_id: String) -> void:
 	# 内核接管后续流程编排与结算；seed=0 由内核按时间派生（测试可改 get_core().rng.configure）
 	_core = CombatCore.new()
 	_core.configure(state)
+	# 战术战棋：构建网格并部署单位（纯增量，非战棋战斗无 tactical/grid 配置则跳过）
+	var grid_cfg: Dictionary = battle.get("grid", {})
+	if bool(battle.get("tactical", false)) and not grid_cfg.is_empty():
+		_build_grid(grid_cfg)
 	EventBus.combat_started.emit(battle_id)
 	print("[Combat] 战斗开始: %s，敌人 %d，模式 %s" % [battle_id, state.enemies.size(), "ATB" if state.turn_mode == CombatEnums.TurnMode.ATB else "顺序"])
 
@@ -221,6 +225,61 @@ func get_result() -> int:
 
 func get_state() -> CombatState:
 	return _state
+
+# ───────────────────────── 战术网格门面（M4 战棋 · 只增不改） ─────────────────────────
+
+func get_grid() -> BattleGrid:
+	if _core == null:
+		return null
+	return _core.grid
+
+func deploy_unit(unit_id: String, pos: Vector2i) -> void:
+	if _core != null:
+		_core.deploy_unit(unit_id, pos)
+
+func compute_reachable(unit_id: String) -> Array[Vector2i]:
+	if _core == null:
+		return []
+	return _core.compute_reachable(unit_id)
+
+func compute_skill_range(caster_id: String, ability_id: String) -> Array[Vector2i]:
+	if _core == null:
+		return []
+	return _core.compute_skill_range(caster_id, ability_id)
+
+func move_unit(unit_id: String, to_pos: Vector2i) -> Array[CombatEvent]:
+	if _core == null:
+		return []
+	return _core.move_unit(unit_id, to_pos)
+
+func enemy_tactical_plan(enemy_id: String) -> Dictionary:
+	if _core == null:
+		return {"move_to": Vector2i(-1, -1), "ability_id": "", "target_id": ""}
+	return _core.enemy_tactical_plan(enemy_id)
+
+func is_target_in_range(caster_id: String, target_id: String, ability_id: String) -> bool:
+	if _core == null:
+		return false
+	return _core.is_target_in_range(caster_id, target_id, ability_id)
+
+## 从战斗配置构建战术网格：尺寸 + 障碍 + 按 deployment 部署玩家/敌人
+func _build_grid(grid_cfg: Dictionary) -> void:
+	var g := BattleGrid.new()
+	g.width = int(grid_cfg.get("width", 10))
+	g.height = int(grid_cfg.get("height", 8))
+	for ob in grid_cfg.get("obstacles", []):
+		var parts: PackedStringArray = String(ob).split(",")
+		if parts.size() >= 2:
+			g.set_obstacle(Vector2i(int(parts[0]), int(parts[1])), true)
+	_core.set_grid(g)
+	var dep: Dictionary = grid_cfg.get("deployment", {})
+	if dep.has("player"):
+		var pp: Array = dep["player"]
+		_core.deploy_unit("player", Vector2i(int(pp[0]), int(pp[1])))
+	for e in _state.enemies:
+		if dep.has(e.character_id):
+			var ep: Array = dep[e.character_id]
+			_core.deploy_unit(e.character_id, Vector2i(int(ep[0]), int(ep[1])))
 
 ## 构造单个战斗事件（M2 事件流接口内部使用）
 func _mk_ev(type_: int, actor: String = "", target: String = "", val: int = 0) -> CombatEvent:

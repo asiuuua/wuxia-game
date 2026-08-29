@@ -9,6 +9,7 @@ const MAX_COMBAT_SKILLS := 6
 
 var learned: Dictionary = {}              # ability_id -> 修炼等级（>=1 表示已学）
 var equipped_combat: Array[String] = []   # 快捷栏武学 id，长度 MAX_COMBAT_SKILLS
+var cd_remaining: Dictionary = {}         # 快捷栏实时冷却（slot:int -> 剩余秒数:float），大世界/战斗桥接共用
 
 func _init() -> void:
 	equipped_combat.resize(MAX_COMBAT_SKILLS)
@@ -32,12 +33,16 @@ func equip_combat_skill(slot: int, ability_id: String) -> bool:
 	if not learned.has(ability_id):
 		return false
 	equipped_combat[slot] = ability_id
+	cd_remaining.erase(slot)
 	EventBus.combat_skill_equipped.emit(ability_id, slot)
+	EventBus.notify_skill_bar_changed.emit()
 	return true
 
 func unequip_combat_skill(slot: int) -> void:
 	if slot >= 0 and slot < MAX_COMBAT_SKILLS:
 		equipped_combat[slot] = ""
+		cd_remaining.erase(slot)
+		EventBus.notify_skill_bar_changed.emit()
 
 ## 战斗中施展快捷栏武学：返回伤害结果字典 {hit, damage, crit, dodged}
 func use_combat_skill(slot: int, caster: CombatCharacter, target: CombatCharacter) -> Dictionary:
@@ -59,12 +64,48 @@ func use_combat_skill(slot: int, caster: CombatCharacter, target: CombatCharacte
 	var damage: int = int((damage_base + caster.attack * 0.5) * level_mult)
 	var result: Dictionary = target.take_damage(damage, CombatEnums.DamageType.PHYSICAL, caster)
 	EventBus.ability_used.emit(ability_id, caster.character_id)
+	# 字段/大世界施展也进入冷却读秒（与战斗桥接共用 ability_service.cd_remaining；本方法目前非战斗主路径）
+	var cd: int = int(data.get("cooldown", 0))
+	if cd > 0:
+		set_cooldown(slot, float(cd))
 	return result
+
+## 设定某快捷栏槽位的实时冷却（秒）。归零/负值即清除并推送 remain=0。
+## 由战斗桥接（combat_core 玩家施展）与大世界施展调用；HUD 技能栏订阅 notify_skill_cd_update 展示。
+func set_cooldown(slot: int, seconds: float) -> void:
+	if slot < 0 or slot >= MAX_COMBAT_SKILLS:
+		return
+	var ability_id: String = equipped_combat[slot] if slot < equipped_combat.size() else ""
+	if ability_id == "":
+		return
+	if seconds <= 0.0:
+		cd_remaining.erase(slot)
+		EventBus.notify_skill_cd_update.emit(ability_id, 0.0)
+	else:
+		cd_remaining[slot] = seconds
+		EventBus.notify_skill_cd_update.emit(ability_id, seconds)
+
+## 每帧递减所有槽位冷却并推送；归零自动清除。由 GameManager._process 驱动。
+func tick_cooldowns(delta: float) -> void:
+	if cd_remaining.is_empty():
+		return
+	for slot in cd_remaining.keys():
+		var remain: float = cd_remaining[slot] - delta
+		var ability_id: String = equipped_combat[slot] if slot < equipped_combat.size() else ""
+		if remain <= 0.0:
+			cd_remaining.erase(slot)
+			if ability_id != "":
+				EventBus.notify_skill_cd_update.emit(ability_id, 0.0)
+		else:
+			cd_remaining[slot] = remain
+			if ability_id != "":
+				EventBus.notify_skill_cd_update.emit(ability_id, remain)
 
 func reset() -> void:
 	learned.clear()
 	equipped_combat.clear()
 	equipped_combat.resize(MAX_COMBAT_SKILLS)
+	cd_remaining.clear()
 
 func get_save_key() -> String:
 	return "ability"

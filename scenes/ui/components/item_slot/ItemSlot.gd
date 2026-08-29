@@ -139,7 +139,7 @@ func _get_drag_data(_pos: Vector2) -> Variant:
 	preview.add_theme_stylebox_override("panel", sb)
 	var pv := Label.new()
 	pv.text = _label.text
-	pv.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	UICenterUtils.center_panel(pv)   # 修复 Godot4.7.2 PRESET_CENTER 不居中（拖拽预览内文字居中）
 	preview.add_child(pv)
 	set_drag_preview(preview)
 	return { "iid": _iid }

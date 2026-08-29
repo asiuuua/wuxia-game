@@ -34,7 +34,7 @@ func _build() -> void:
 	add_child(dim)
 	var panel := Panel.new()
 	panel.size = Vector2(520, 560)
-	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	UICenterUtils.center_panel(panel)   # 修复 Godot4.7.2 PRESET_CENTER 不居中
 	add_child(panel)
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)

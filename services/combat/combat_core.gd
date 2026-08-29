@@ -52,13 +52,13 @@ func player_skill(slot: int, target_id: String = "") -> Array[CombatEvent]:
 	if ability_id == "":
 		return events
 	events.append_array(tick_unit(state.player))          # 自己回合开始先 tick（含冷却递减）
-	events.append_array(_cast_skill(state.player, ability_id, target_id))
+	events.append_array(_cast_skill(state.player, ability_id, target_id, slot))
 	return events
 
 ## 通用施法结算（玩家 / 敌人共用）：真气消耗 + 冷却 + 目标解析 + 伤害 + 状态施加
 ## 返回事件流。mp 不足 / 冷却中 / 配置缺失 → 返回空（调用方据此普攻兜底）
 ## 修复：self / all_allies 目标（调息 / 心法 / 轻功等自buff）只施加状态、不再对自身造成 power 伤害
-func _cast_skill(caster: CombatCharacter, ability_id: String, primary_target_id: String = "") -> Array[CombatEvent]:
+func _cast_skill(caster: CombatCharacter, ability_id: String, primary_target_id: String = "", slot: int = -1) -> Array[CombatEvent]:
 	var events: Array[CombatEvent] = []
 	if caster == null or not caster.is_alive():
 		return events
@@ -79,6 +79,9 @@ func _cast_skill(caster: CombatCharacter, ability_id: String, primary_target_id:
 	if cd > 0:
 		caster.cooldowns[cd_key] = cd
 		events.append(_ev(CombatEvent.Type.COOLDOWN_SET, caster.character_id, "", cd, false, false, "", 0, ability_id))
+		# 桥接大世界 HUD 技能栏实时冷却读秒（玩家施展且带 slot 时）：战斗计冷却(回合) → 大世界读秒(秒) 1:1 近似
+		if caster.is_player and slot >= 0:
+			GameManager.ability_service.set_cooldown(slot, float(cd))
 	events.append(_ev(CombatEvent.Type.ACTION_SKILL, caster.character_id, primary_target_id, 0, false, false, "", 0, ability_id))
 	var cfg_target: String = cfg.get("target", "enemy")
 	var is_self: bool = (cfg_target == "self" or cfg_target == "all_allies")
@@ -321,6 +324,123 @@ func get_round_sequence() -> Array[String]:
 	for a in actors:
 		ids.append(a.character_id)
 	return ids
+
+# ───────────────────────── 战术网格（M4 战棋）─────────────────────────
+# 网格只做"目标过滤 / 可移动范围"，绝不改动 _resolve_hit 的伤害结算。
+# 移动是单位行动内的子动作（先走位再出招），不单独消耗回合。
+
+var grid: BattleGrid = null   # 战术网格数据层（非战棋战斗为 null）
+
+func set_grid(g: BattleGrid) -> void:
+	grid = g
+
+func _unit_by_id(uid: String) -> CombatCharacter:
+	if state == null:
+		return null
+	if state.player != null and state.player.character_id == uid:
+		return state.player
+	for e in state.enemies:
+		if e.character_id == uid:
+			return e
+	return null
+
+## 部署单位到网格：设坐标 + 占格（重部署先清旧格）
+func deploy_unit(unit_id: String, pos: Vector2i) -> void:
+	var u := _unit_by_id(unit_id)
+	if u == null or grid == null:
+		return
+	grid.clear_occupant(u.grid_pos)
+	u.grid_pos = pos
+	grid.set_occupant(pos, unit_id)
+
+## 玩家可移动格（BFS 可达，不含自身当前格）
+func compute_reachable(unit_id: String) -> Array[Vector2i]:
+	var u := _unit_by_id(unit_id)
+	if u == null or grid == null:
+		return []
+	return grid.bfs_reachable(u.grid_pos, u.move_range)
+
+## 技能可染色范围格（菱形/方形/十字/自身），供视图红色高亮
+func compute_skill_range(caster_id: String, ability_id: String) -> Array[Vector2i]:
+	var u := _unit_by_id(caster_id)
+	if u == null or grid == null:
+		return []
+	var cfg: Dictionary = ConfigManager.get_ability(ability_id)
+	if cfg.is_empty():
+		return []
+	var range_val: int = int(cfg.get("range", 99))
+	var shape: String = String(cfg.get("range_shape", "diamond"))
+	return grid.skill_range(u.grid_pos, range_val, shape)
+
+## 目标是否在技能射程内（曼哈顿距离 <= range；无 range 配置视为经典模式全可达）
+func is_target_in_range(caster_id: String, target_id: String, ability_id: String) -> bool:
+	var c := _unit_by_id(caster_id)
+	var t := _unit_by_id(target_id)
+	if c == null or t == null or grid == null:
+		return false
+	var cfg: Dictionary = ConfigManager.get_ability(ability_id)
+	if cfg.is_empty():
+		return true
+	var range_val: int = int(cfg.get("range", 99))
+	var md: int = abs(c.grid_pos.x - t.grid_pos.x) + abs(c.grid_pos.y - t.grid_pos.y)
+	return md <= range_val
+
+## 移动单位到合法落点：校验在可达集合内 → 更新占用表 + 坐标 + 发 GRID_MOVE 事件
+func move_unit(unit_id: String, to_pos: Vector2i) -> Array[CombatEvent]:
+	var events: Array[CombatEvent] = []
+	var u := _unit_by_id(unit_id)
+	if u == null or grid == null:
+		return events
+	var reach: Array[Vector2i] = grid.bfs_reachable(u.grid_pos, u.move_range)
+	if not (to_pos in reach):
+		return events   # 非法落点（越界/障碍/他人格）→ 忽略，等待合法点击
+	grid.clear_occupant(u.grid_pos)
+	grid.set_occupant(to_pos, unit_id)
+	var from: Vector2i = u.grid_pos
+	u.grid_pos = to_pos
+	events.append(_ev_move(unit_id, from, to_pos))
+	return events
+
+## 敌人战术计划：走位到距玩家最近的可达格，并选一个射程内可用招（否则仅走位普攻）
+## 返回 {move_to, ability_id, target_id}；玩家托管与敌人共用本 AI，行为一致
+func enemy_tactical_plan(enemy_id: String) -> Dictionary:
+	var plan := {"move_to": Vector2i(-1, -1), "ability_id": "", "target_id": ""}
+	var e := _enemy_by_id(enemy_id)
+	if e == null or not e.is_alive() or grid == null:
+		return plan
+	var target: CombatCharacter = state.player
+	if target == null or not target.is_alive():
+		return plan
+	var reach: Array[Vector2i] = grid.bfs_reachable(e.grid_pos, e.move_range)
+	var best: Vector2i = e.grid_pos
+	var best_d: int = 999999
+	for c in reach:
+		var d: int = abs(c.x - target.grid_pos.x) + abs(c.y - target.grid_pos.y)
+		if d < best_d:
+			best_d = d
+			best = c
+	plan["move_to"] = best
+	plan["target_id"] = target.character_id
+	for ab in e.ai_kit:
+		var aid: String = String(ab.get("id", ""))
+		if aid == "":
+			continue
+		if not _ability_usable(e, aid):
+			continue
+		if not _condition_met(e, ab.get("condition", "always")):
+			continue
+		if is_target_in_range(e.character_id, target.character_id, aid):
+			plan["ability_id"] = aid
+			break
+	return plan
+
+func _ev_move(unit_id: String, from: Vector2i, to: Vector2i) -> CombatEvent:
+	var e := CombatEvent.new()
+	e.type = CombatEvent.Type.GRID_MOVE
+	e.actor_id = unit_id
+	e.from_grid = from
+	e.to_grid = to
+	return e
 
 # ───────────────────────── 内部 ─────────────────────────
 

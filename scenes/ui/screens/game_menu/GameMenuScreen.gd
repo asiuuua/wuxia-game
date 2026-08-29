@@ -64,8 +64,19 @@ func _build() -> void:
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(dim)
 	var panel := Panel.new()
-	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	panel.size = Vector2(760, 540)
+	# ⚠️ Godot 4.7.2 的 set_anchors_and_offsets_preset(PRESET_CENTER) 会忽略当前尺寸、
+	# 把 offsets 强制清零（实测），导致面板不居中。手动锚 0.5 + 对称 offset 才真正居中。
+	var _psz := Vector2(760, 540)
+	panel.custom_minimum_size = _psz
+	panel.size = _psz
+	panel.anchor_left = 0.5
+	panel.anchor_top = 0.5
+	panel.anchor_right = 0.5
+	panel.anchor_bottom = 0.5
+	panel.offset_left = -_psz.x * 0.5
+	panel.offset_top = -_psz.y * 0.5
+	panel.offset_right = _psz.x * 0.5
+	panel.offset_bottom = _psz.y * 0.5
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = UIPalette.GLASS_BG
 	sb.border_color = UIPalette.GLASS_BORDER

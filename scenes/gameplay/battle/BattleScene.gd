@@ -102,12 +102,14 @@ func _build_ui() -> void:
 
 func _build_units() -> void:
 	_player_hud.setup("李十五", _state.player.max_hp, _state.player.max_mp)
+	_player_hud.set_portrait("npc/player")
 	_view.register_unit("player", _player_hud)
 	for e in _state.enemies:
 		var hud := UnitHud.new()
+		_enemy_box.add_child(hud)
 		var nm: String = ConfigManager.get_enemy(e.character_id).get("name", e.character_id)
 		hud.setup(nm, e.max_hp, e.max_mp)
-		_enemy_box.add_child(hud)
+		hud.set_portrait("enemies/" + e.character_id)
 		_enemy_huds[e.character_id] = hud
 		_view.register_unit(e.character_id, hud)
 		var b := Button.new()
@@ -129,6 +131,7 @@ func _build_action_buttons() -> void:
 		var data: Dictionary = ConfigManager.get_ability(ability_id)
 		var b := Button.new()
 		b.text = "%s (真气%d)" % [data.get("name", ability_id), int(data.get("qi_cost", data.get("mp_cost", 0)))]
+		b.icon = UIManager.get_icon("skills/" + ability_id)
 		b.pressed.connect(_on_action_pressed.bind(i))
 		_actions_container.add_child(b)
 	var item_btn := Button.new()

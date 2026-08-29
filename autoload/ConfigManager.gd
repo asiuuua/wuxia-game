@@ -31,6 +31,15 @@ const DIALOG_FILES: Array[String] = [
 	"res://data/configs/npcs/dialogs.json",
 ]
 
+# 对话事件映射（事件键 -> 效果数组；trigger_events 引用）
+const DIALOG_EVENT_FILES: Array[String] = [
+	"res://data/configs/dialogs/dialogue_events.json",
+]
+
+const PLAYER_FILES: Array[String] = [
+	"res://data/configs/player.json",
+]
+
 # 难度配置表（阶段1 骨架：5 档完整参数，全部配置驱动，零硬编码）
 const DIFFICULTY_FILES: Array[String] = [
 	"res://data/configs/difficulty/difficulty_table.json",
@@ -56,6 +65,11 @@ const SECT_FILES: Array[String] = [
 	"res://data/configs/sect/sects.json",
 ]
 
+# 结缘系统 NPC 关系配置（模块18 · M1；字段前向兼容 M2+ 婚礼/结义/师徒）
+const RELATION_FILES: Array[String] = [
+	"res://data/configs/bond/relations.json",
+]
+
 # 世界环境配置（阶段A 基础设施：时间/天气/季节调参）
 const WORLD_FILES: Array[String] = [
 	"res://data/configs/world/world_config.json",
@@ -78,11 +92,13 @@ var _battles: Dictionary = {}
 var _quests: Dictionary = {}
 var _npcs: Dictionary = {}
 var _dialogs: Dictionary = {}
+var _dialog_events: Dictionary = {}   # 对话事件：事件键 -> 效果数组
 var _difficulties: Dictionary = {}
 var _recipes: Dictionary = {}
 var _forge: Dictionary = {}
 var _shops: Dictionary = {}
 var _sects: Dictionary = {}
+var _relations: Dictionary = {}   # 结缘系统 NPC 关系数据（模块18 · M1）
 var _world_config: Dictionary = {}
 var _ui_anim: Dictionary = {}   # UI 动效令牌（整体 Dictionary，非 id 键控）
 var _ui_sfx: Dictionary = {}    # UI 音效映射（整体 Dictionary，非 id 键控）
@@ -99,11 +115,14 @@ func _ready() -> void:
 	_load_quests()
 	_load_npcs()
 	_load_dialogs()
+	_load_dialog_events()
+	_load_player()
 	_load_difficulties()
 	_load_recipes()
 	_load_forge()
 	_load_shops()
 	_load_sects()
+	_load_relations()
 	_load_world()
 	_load_ui_anim()
 	_load_ui_sfx()
@@ -202,6 +221,19 @@ func _load_dialogs() -> void:
 				_record_error("对话 %s 重复定义，后者覆盖" % id)
 			_dialogs[id] = entry
 
+func _load_dialog_events() -> void:
+	for path in DIALOG_EVENT_FILES:
+		var data: Dictionary = _load_json(path)
+		var events: Dictionary = data.get("events", {})
+		for key in events.keys():
+			var lst: Array = events[key]
+			if not (lst is Array):
+				_record_error("对话事件 %s 效果须为数组" % key)
+				continue
+			if _dialog_events.has(key):
+				_record_error("对话事件 %s 重复定义，后者覆盖" % key)
+			_dialog_events[key] = lst
+
 func _load_difficulties() -> void:
 	for path in DIFFICULTY_FILES:
 		var data: Dictionary = _load_json(path)
@@ -261,6 +293,19 @@ func _load_sects() -> void:
 			if _sects.has(id):
 				_record_error("门派 %s 重复定义，后者覆盖" % id)
 			_sects[id] = entry
+
+# === 结缘系统 NPC 关系配置（模块18 · M1） ===
+func _load_relations() -> void:
+	for path in RELATION_FILES:
+		var data: Dictionary = _load_json(path)
+		_config_version = data.get("version", _config_version)
+		for entry in data.get("relations", []):
+			if not _is_valid_entry(entry, path, "relations"):
+				continue
+			var id: String = str(entry["id"])
+			if _relations.has(id):
+				_record_error("关系 NPC %s 重复定义，后者覆盖" % id)
+			_relations[id] = entry
 
 func _load_world() -> void:
 	for path in WORLD_FILES:
@@ -499,6 +544,23 @@ func get_dialog(id: String) -> Dictionary:
 func has_dialog(id: String) -> bool:
 	return _dialogs.has(id)
 
+## 取某事件键对应的效果数组；未配置返回空数组
+func get_dialogue_event(key: String) -> Array:
+	return _dialog_events.get(key, [])
+
+# === 玩家角色（双立绘左立绘来源；数据驱动，不硬编码）===
+var _player: Dictionary = {}
+
+func _load_player() -> void:
+	for path in PLAYER_FILES:
+		var data: Dictionary = _load_json(path)
+		if data.is_empty():
+			continue
+		_player = data
+
+func get_player() -> Dictionary:
+	return _player
+
 # === 难度配置（阶段1 骨架） ===
 func get_difficulty(id: String) -> Dictionary:
 	if not _difficulties.has(id):
@@ -572,6 +634,21 @@ func has_sect(id: String) -> bool:
 func get_all_sect_ids() -> Array[String]:
 	var out: Array[String] = []
 	out.assign(_sects.keys())
+	return out
+
+# === 结缘系统 NPC 关系（模块18 · M1） ===
+func get_relation(id: String) -> Dictionary:
+	if not _relations.has(id):
+		push_error("[Config] 关系 NPC 不存在: %s" % id)
+		return {}
+	return _relations[id]
+
+func has_relation(id: String) -> bool:
+	return _relations.has(id)
+
+func get_all_relation_ids() -> Array[String]:
+	var out: Array[String] = []
+	out.assign(_relations.keys())
 	return out
 
 # === 世界环境（阶段A 基础设施） ===

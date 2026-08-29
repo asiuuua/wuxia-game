@@ -27,6 +27,11 @@ const CONTRACT_FILES := {
 	"services/quest/quest_service.gd": "任务服务（接取/推进/发奖）",
 	"services/ability/ability_service.gd": "武学服务（学习/装备/施展）",
 	"services/sect/sect_service.gd": "门派服务（声望/阶位）",
+	"services/bond/bond_service.gd": "结缘服务（好感度/送礼/好感度事件；M1）",
+	"services/bond/romance_service.gd": "姻缘服务（姻缘/婚姻分支：无限配偶/求婚/结婚/关系网/子嗣预留；M2）",
+	"services/bond/sworn_service.gd": "结义服务（结义分支：无限结义兄弟/好感阈值/结义能力；M4）",
+	"services/bond/master_service.gd": "师徒服务（师徒分支：双向拜师收徒/阶位/可授武学；M4）",
+	"services/bond/relationship_service.gd": "关系网服务（聚合好感/配偶/子嗣/结义/师徒为统一关系图；M3，无状态门面）",
 }
 
 func _init() -> void:

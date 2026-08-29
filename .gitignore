@@ -22,3 +22,12 @@ build/
 
 # 多 AI 提交队列（各窗口入队、PM 出队，纯协同产物，不进版本库）
 .workbuddy/commits/
+
+# 跨窗口协作隐患传递板（派单/认领/交接，纯协同产物，不进版本库）
+.workbuddy/handovers/
+
+# Godot 脚本 .uid（无业务意义，引擎按 class_name 自动重建，不进版本库）
+*.gd.uid
+
+# 本地自动化运行时配置（含个人 automation id，不跨机共享）
+.workbuddy/automations/

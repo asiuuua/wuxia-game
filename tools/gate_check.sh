@@ -27,14 +27,14 @@ if [ ! -x "$GODOT" ]; then
 fi
 fail=0
 
-echo "=== [1/3] --quit 健康检查（零 SCRIPT/PARSE/COMPILE 错误）==="
+echo "=== [1/4] --quit 健康检查（零 SCRIPT/PARSE/COMPILE 错误）==="
 if "$GODOT" --headless --path "$ROOT" --quit 2>&1 | grep -qE "SCRIPT ERROR|Parse Error|Compile Error|Could not parse"; then
   echo "  --quit 存在硬错误"; fail=1
 else
   echo "  --quit 干净"
 fi
 
-echo "=== [2/3] run_all 单元套件（无 ✗ 真实失败 + 无非预期 ERROR）==="
+echo "=== [2/4] run_all 单元套件（无 ✗ 真实失败 + 无非预期 ERROR）==="
 # tee 落盘（tee 是管道消费者，不会丢输出）；再对落盘文件多次 grep
 "$GODOT" --headless --path "$ROOT" "res://tests/unit/run_all.tscn" 2>&1 | tee "$TMP/run_all.txt" >/dev/null
 if ! grep -q "发现 .* 个测试脚本" "$TMP/run_all.txt"; then
@@ -54,11 +54,19 @@ else
   echo "  ERROR 行均已命中白名单（均为预期负向用例）"
 fi
 
-echo "=== [3/3] 背包冒烟测试（ALL_INV_OK）==="
+echo "=== [3/4] 背包冒烟测试（ALL_INV_OK）==="
 if "$GODOT" --headless --path "$ROOT" "res://tests/ui/inventory_smoke.tscn" 2>&1 | grep -q "ALL_INV_OK"; then
   echo "  背包冒烟通过"
 else
   echo "  背包冒烟失败（缺 ALL_INV_OK 或含 INV_FAIL）"; fail=1
+fi
+
+echo "=== [4/4] 进入游戏UI冒烟测试（ALL_M6_OK）==="
+"$GODOT" --headless --path "$ROOT" "res://tests/ui/m6_ui_smoke.tscn" 2>&1 | tee "$TMP/m6.txt" >/dev/null
+if grep -q "ALL_M6_OK" "$TMP/m6.txt" && ! grep -qE "SCRIPT ERROR|\[M6Test\].*(失败|加载失败|instantiate 失败)" "$TMP/m6.txt"; then
+  echo "  进入游戏UI冒烟通过（HUD/GameMenu/BondRomance/AbilitiesScreen）"
+else
+  echo "  进入游戏UI冒烟失败（缺 ALL_M6_OK 或含运行期报错）"; fail=1
 fi
 
 rm -rf "$TMP" || true

@@ -34,6 +34,10 @@ var cooldowns: Dictionary = {}   # skill_id -> 剩余冷却回合
 var status_effects: Array[StatusEffect] = []   # 当前挂载状态
 var ai_kit: Array = []            # 敌人 AI 技能包（M3）：[{id, weight, condition}]；玩家恒为空
 
+# ── 战术网格（战棋模式，M4 增量）──
+var grid_pos: Vector2i = Vector2i.ZERO   # 战场网格坐标（非战棋模式恒为 0,0）
+var move_range: int = 3                   # 每回合可移动格数（BFS 步数上限）
+
 # ⚠️ 非战斗遗留路径（供 AbilityService 等战斗外伤害结算）：不走护盾 / 反弹 / 复活，
 # 且 rng 为 null 时回退全局 randf()（不可复现）。【战斗内伤害必须走 CombatCore._resolve_hit】，
 # 切勿在战斗流程里调用本方法，否则会绕过 M3-2 的护盾 / 反弹 / 复活机制。

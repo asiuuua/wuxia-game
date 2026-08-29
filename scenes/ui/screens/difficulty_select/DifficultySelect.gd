@@ -114,7 +114,11 @@ func _proceed(diff_id: String) -> void:
 	EventBus.cmd_set_difficulty.emit(diff_id, true)
 	EventBus.game_started.emit()
 	AudioManager.stop_bgm()
-	UIManager.close_screen(self, func(): GameManager.start_new_game())
+	# 一次性关掉所有 UI 屏幕（含 MainMenu）：autoload 的 CanvasLayer 跨场景常驻，
+	# 不关的话切到 TownScene 后 MainMenu 仍挡在 TownScene 上方 → 玩家看不到 TownScene 以为"没进游戏" → 重复点开始 → 选2遍模式。
+	# 与 SaveLoadScreen._do_new_game 行为一致（UI 入口自行清理 UI，符合主权边界）。
+	UIManager.close_all_screens()
+	GameManager.start_new_game()
 
 func _on_back() -> void:
 	UIManager.close_screen(self)

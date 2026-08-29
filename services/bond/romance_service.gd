@@ -12,6 +12,8 @@ class_name RomanceService
 # === 运行时状态（全部进存档） ===
 var spouses: Dictionary = {}          # npc_id -> {stage, wed_day, children: Array[String], pregnancy: Dictionary}
 var children: Dictionary = {}         # child_id -> {mother_id, born_day, name}
+# 欢庆每日配额（按 npc_id 独立，与配偶字典解耦：避免非配偶欢庆时误写进 spouses 污染配偶列表）
+var celebration_quotas: Dictionary = {}  # npc_id -> {day, quota, used}
 
 # === 配置读取辅助 ===
 func _romance_cfg(npc_id: String) -> Dictionary:
@@ -106,6 +108,26 @@ func get_marriageable_npc_ids() -> Array:
 			out.append(npc_id)
 	return out
 
+# === 欢庆可用性（用户需求：所有可结缘 NPC，好感度满了即可使用欢庆） ===
+# 好感是否已满（达到该 NPC 的 propose_affection 阈值，默认 100）
+func _is_affection_full(npc_id: String) -> bool:
+	var npc: Dictionary = ConfigManager.get_relation(npc_id)
+	if npc.is_empty():
+		return false
+	if not bool(npc.get("is_romanceable", false)):
+		return false
+	if GameManager.bond_service == null:
+		return false
+	var cfg: Dictionary = npc.get("romance", {})
+	var need: int = int(cfg.get("propose_affection", 100))
+	return GameManager.bond_service.get_affection(npc_id) >= need
+
+# 能否欢庆：可结缘 + 好感满（是否已婚均可；已婚配偶天然好感满，也会被本方法放行）
+func can_celebrate(npc_id: String) -> bool:
+	if not _is_romanceable(npc_id):
+		return false
+	return _is_affection_full(npc_id)
+
 # 求婚：通过则写入配偶名单、推进到已婚阶段、广播事件；聘礼不足则拒绝
 func propose(npc_id: String) -> Dictionary:
 	if is_spouse(npc_id):
@@ -118,11 +140,26 @@ func propose(npc_id: String) -> Dictionary:
 		return {"ok": false, "reason": "AFFECTION_NOT_FULL", "stage": -1}
 	var cfg: Dictionary = _romance_cfg(npc_id)
 	var dowry: Array = cfg.get("dowry_required", [])
+	# 统计每种聘礼所需总数量（dowry_required 可能含重复 item_id，如“龙鳞×2”）
+	var need: Dictionary = {}
 	for item_id in dowry:
-		if GameManager.inventory_service.get_item_count(String(item_id)) <= 0:
+		var k := String(item_id)
+		need[k] = int(need.get(k, 0)) + 1
+	# 校验「非锁定」可用数量是否足额：remove_item_by_id 会跳过锁定实例，
+	# 若只按总数校验，含锁定道具时会“扣不净却照样结婚”（白结婚 bug，见派单 acf2246fd5f2）。
+	for item_id in need.keys():
+		if GameManager.inventory_service.get_unlocked_count(item_id) < int(need[item_id]):
 			return {"ok": false, "reason": "DOWRY_MISSING", "stage": -1}
-	for item_id in dowry:
-		GameManager.inventory_service.remove_item_by_id(String(item_id), 1)
+	# 事务式扣除：逐项扣，任一失败则回滚已扣部分并拒绝，彻底杜绝白结婚。
+	var deducted: Array = []  # 记录已扣 [{item_id, count}] 用于回滚
+	for item_id in need.keys():
+		var req: int = int(need[item_id])
+		if GameManager.inventory_service.remove_item_by_id(item_id, req):
+			deducted.append({"item_id": item_id, "count": req})
+		else:
+			for d in deducted:
+				GameManager.inventory_service.add_item(String(d["item_id"]), int(d["count"]), "dowry_rollback")
+			return {"ok": false, "reason": "DOWRY_MISSING", "stage": -1}
 	var rec: Dictionary = {
 		"stage": BondEnums.RomanceStage.MARRIED,
 		"wed_day": int(Time.get_unix_time_from_system()),
@@ -161,6 +198,38 @@ func get_relationship_graph() -> Dictionary:
 		})
 	return graph
 
+# === 测试辅助（调试/验收用，非正式玩法；拉满好感以便快速试求婚/结婚流程） ===
+# 一键拉满单个 NPC 好感：直接写 BondService.set_affection（自带 clamp 0-100 与 bond_affection_changed 广播）。
+func debug_max_affection(npc_id: String) -> void:
+	if GameManager.bond_service == null:
+		return
+	GameManager.bond_service.set_affection(npc_id, 100)
+
+# 一键拉满所有可结缘对象好感（批量测试用）：遍历 relations.json 中 is_romanceable 的 NPC。
+func debug_max_all_affection() -> void:
+	if GameManager.bond_service == null:
+		return
+	for npc_id in ConfigManager.get_all_relation_ids():
+		var npc: Dictionary = ConfigManager.get_relation(npc_id)
+		if npc.is_empty() or not bool(npc.get("is_romanceable", false)):
+			continue
+		GameManager.bond_service.set_affection(npc_id, 100)
+
+# 一键造已婚配偶（调试/验收专用，非正式玩法；跳过求婚的聘礼/婚礼演出副作用，
+# 只写入已婚配偶记录，便于反复试欢庆/受孕/CG 表现）。已是配偶则跳过。
+func debug_make_spouse(npc_id: String) -> void:
+	if is_spouse(npc_id):
+		return
+	var rec: Dictionary = {
+		"stage": BondEnums.RomanceStage.MARRIED,
+		"wed_day": int(Time.get_unix_time_from_system()),
+		"children": [],
+		"pregnancy": {},
+	}
+	spouses[npc_id] = rec
+	EventBus.bond_romance_formed.emit(npc_id, rec["stage"])
+	EventBus.bond_relationship_changed.emit()
+
 # === 子嗣（预留数据层：寝欢 + 怀胎十月，时间源解耦） ===
 # 寝欢：配偶且已婚才可；启动孕期计时（游戏时间由 advance_days 推进）
 func begin_intimacy(npc_id: String) -> Dictionary:
@@ -179,6 +248,60 @@ func begin_intimacy(npc_id: String) -> Dictionary:
 	spouses[npc_id] = rec
 	EventBus.bond_relationship_changed.emit()
 	return {"ok": true, "reason": "SUCCESS"}
+
+# === 欢庆（原“寝欢”模块重构）：每日可点击，每配偶每自然日随机 2~3 次 ===
+# 设计：配额状态存于 spouses[npc_id]["celebration"] = {day, quota, used}，随存档自动保存。
+# 跨日（自然日，以系统时间戳按 86400s 取整）自动重置并重新随机配额。
+# 超出当日配额返回 QUOTA_EXCEEDED，由 UI 弹出预留接口的对话框；否则计数+1 并广播 celebration_started 触发 CG。
+# 注：欢庆与子嗣(孕期)对接——欢庆不再阻断于孕期（保持"每天都可以点击"），但若配偶当前未孕，则本次欢庆会启动孕期（受孕）；
+# 孕期进行中的后续欢庆仍可每天点击并播 CG，只是不再重复受孕（与"怀胎十月"子嗣链一致）。受孕判定见 begin_celebration。
+
+## 自然日键（按系统时间按天取整）
+func _day_key() -> int:
+	return int(Time.get_unix_time_from_system() / 86400)
+
+## 确保当日配额已初始化（跨日则重置并随机 2~3）；配额独立存于 celebration_quotas，不污染 spouses
+func _ensure_celebration_quota(npc_id: String) -> Dictionary:
+	var cel: Dictionary = celebration_quotas.get(npc_id, {})
+	var dk: int = _day_key()
+	if int(cel.get("day", -1)) != dk:
+		cel = {"day": dk, "quota": randi_range(2, 3), "used": 0}
+	celebration_quotas[npc_id] = cel
+	return cel
+
+## 查询某 NPC 今日欢庆剩余次数（UI 展示用；不可欢庆返回 0）
+func get_celebration_left(npc_id: String) -> int:
+	if not can_celebrate(npc_id):
+		return 0
+	var cel: Dictionary = _ensure_celebration_quota(npc_id)
+	return int(cel.get("quota", 0)) - int(cel.get("used", 0))
+
+## 欢庆：可结缘 + 好感满即可每天点击；每 NPC 每自然日随机 2~3 次；超配额返回 QUOTA_EXCEEDED
+## 同时对接子嗣链：若已是配偶且当前未孕，则本次欢庆启动孕期（受孕）；孕期进行中不影响后续欢庆点击（不再重复受孕）。
+## cg_id 返回 npc_id，供 CelebrationOverlay 按 per-NPC 内容查找、缺省回退 default。
+func begin_celebration(npc_id: String) -> Dictionary:
+	if not can_celebrate(npc_id):
+		return {"ok": false, "reason": "AFFECTION_NOT_FULL"}
+	var cel: Dictionary = _ensure_celebration_quota(npc_id)
+	if int(cel.get("used", 0)) >= int(cel.get("quota", 0)):
+		return {"ok": false, "reason": "QUOTA_EXCEEDED", "used": cel.get("used", 0), "quota": cel.get("quota", 0)}
+	cel["used"] = int(cel.get("used", 0)) + 1
+	celebration_quotas[npc_id] = cel
+	# 受孕：仅当已是配偶且未孕（非配偶的好感满 NPC 也能欢庆，但不受孕）
+	var conceived := false
+	if is_spouse(npc_id):
+		var rec: Dictionary = spouses[npc_id]
+		if rec.get("pregnancy", {}).is_empty():
+			rec["pregnancy"] = {
+				"start_day": int(Time.get_unix_time_from_system()),
+				"gestation_days": 300,
+				"progress": 0,
+			}
+			conceived = true
+		spouses[npc_id] = rec
+	EventBus.celebration_started.emit(npc_id, npc_id)
+	EventBus.bond_relationship_changed.emit()
+	return {"ok": true, "reason": "SUCCESS", "cg_id": npc_id, "used": cel["used"], "quota": cel["quota"], "conceived": conceived}
 
 # 推进游戏天数：孕期进度累加，满 gestation_days 则分娩（由 TimeService/休息动作喂天数）
 func advance_days(n: int) -> void:
@@ -216,13 +339,15 @@ func _birth(npc_id: String, rec: Dictionary) -> void:
 func reset() -> void:
 	spouses.clear()
 	children.clear()
+	celebration_quotas.clear()   # 同步重置当日欢庆配额，避免跨测试/新游戏残留配额污染
 
 func get_save_key() -> String:
 	return "romance"
 
 func save() -> Dictionary:
-	return {"spouses": spouses.duplicate(true), "children": children.duplicate(true)}
+	return {"spouses": spouses.duplicate(true), "children": children.duplicate(true), "celebration_quotas": celebration_quotas.duplicate(true)}
 
 func load(data: Dictionary) -> void:
 	spouses = data.get("spouses", {})
 	children = data.get("children", {})
+	celebration_quotas = data.get("celebration_quotas", {})

@@ -68,6 +68,29 @@ func add_item(item_id: String, count: int, source: String = "") -> bool:
 		EventBus.inventory_add_overflow.emit(item_id, count)
 	return count <= 0
 
+## 批量事务添加：items 为 [{ "item_id": String, "count": int }, ...]
+## 先聚合预检（每个 item_id 的全部数量都能装入）才逐个 add_item；任一装不下则整体返回 false、一个不加
+## 适用：一次发多奖励 / 批量合成产物 / 多掉落统一入库，避免部分添加造成的中间态与重复扣料
+func add_items(items: Array, source: String = "") -> bool:
+	if items.is_empty():
+		return false
+	var need_by_id: Dictionary = {}
+	for entry in items:
+		var item_id: String = String(entry.get("item_id", ""))
+		var need: int = int(entry.get("count", 1))
+		if item_id == "" or need <= 0:
+			return false
+		if not ConfigManager.has_item(item_id):
+			return false
+		need_by_id[item_id] = int(need_by_id.get(item_id, 0)) + need
+	# 事务预检：全部能装下才放行（add_item 是新增实例，不受锁定影响，故用 can_add 即可）
+	for item_id in need_by_id:
+		if not can_add(item_id, int(need_by_id[item_id])):
+			return false
+	for entry in items:
+		add_item(String(entry.get("item_id", "")), int(entry.get("count", 1)), source)
+	return true
+
 ## 实例 ID 发号器：全局自增序号，随存档 save/load 恢复，保证永不重复
 func _new_instance_id(item_id: String) -> String:
 	var id := "%s#%d" % [item_id, _next_iid]
@@ -108,6 +131,36 @@ func query_add(item_id: String, count: int) -> Dictionary:
 func can_add(item_id: String, count: int) -> bool:
 	var q: Dictionary = query_add(item_id, count)
 	return int(q["added"]) >= count
+
+## 主动丢弃物品：玩家手动丢掉垃圾/杂物（区别于被动移除）
+## 校验 DISCARDABLE flag（不可丢弃物如任务关键物会被拒）；锁定实例不可丢（提示先解锁）
+## 返回 { "ok": bool, "reason": String, "item_id": String, "dropped": int }
+func drop_item(iid: String, count: int = 1) -> Dictionary:
+	var inst: ItemInstance = get_instance_by_id(iid)
+	if inst == null:
+		return { "ok": false, "reason": "NOT_FOUND", "item_id": "" }
+	var item_id: String = inst.item_id
+	var data: Dictionary = ConfigManager.get_item(item_id)
+	var flags: int = int(data.get("flags", 0))
+	if not ItemFlags.is_discardable(flags):
+		return { "ok": false, "reason": "NOT_DISCARDABLE", "item_id": item_id }
+	if inst.locked:
+		return { "ok": false, "reason": "LOCKED", "item_id": item_id }
+	if count <= 0:
+		return { "ok": false, "reason": "BAD_COUNT", "item_id": item_id }
+	var take: int = mini(count, inst.count)
+	inst.count -= take
+	if inst.count <= 0:
+		for bag in [main_slots, material_slots, quest_slots]:
+			var idx: int = bag.find(inst)
+			if idx != -1:
+				bag[idx] = null
+				break
+	_recalculate_weight()
+	_bump_count(item_id, -take)
+	_dirty = true
+	EventBus.inventory_item_removed.emit(item_id, take)
+	return { "ok": true, "reason": "SUCCESS", "item_id": item_id, "dropped": take }
 
 ## 原子扣料（事务语义）：items 为 [{ "item_id": String, "count": int }, ...]
 ## 先全量校验、再统一扣除；任一不足则整体不扣返回 false。锻造/炼药/批量消耗一律走此接口
@@ -262,6 +315,25 @@ func is_any_bag_full() -> bool:
 func is_full() -> bool:
 	return _find_empty(main_slots) == -1
 
+## 指定栏位的剩余空槽数（分栏容量查询，UI/预检更精确）
+## bag_type: "main" / "material" / "quest"；非法名返回 0
+func get_free_capacity(bag_type: String) -> int:
+	var bag: Array = _bag_by_name(bag_type)
+	if bag.is_empty():
+		return 0
+	var free := 0
+	for slot in bag:
+		if slot == null:
+			free += 1
+	return free
+
+## 负重比：current_weight / max_weight，0~1+（>1 即超重）。UI 进度条直接乘 100 即可
+func get_weight_ratio() -> float:
+	var mw: float = get_max_weight()
+	if mw <= 0.0:
+		return 0.0
+	return current_weight / mw
+
 ## 按实例 ID 查找物品实例（装备系统装卸用）
 func get_instance_by_id(iid: String) -> ItemInstance:
 	for bag in [main_slots, material_slots, quest_slots]:
@@ -286,6 +358,8 @@ func remove_instance(iid: String) -> bool:
 ## 使用消耗品：pill 类型或 flags 含 CONSUMABLE 的物品，按配置 heal_hp/heal_mp 生效
 ## context: "town" / "battle"（当前结算一致，预留战斗限制扩展位）
 ## 返回 { "ok": bool, "reason": String, "item_id": String, "effect": {hp, mp} }
+## 使用消耗品：按配置 kind 分发到具体效果（heal/buff/cure/exp）
+## 当前物品库仅有 heal 类（heal_hp/heal_mp）；buff/cure/exp 为预留扩展位，未配置数据时安全返回 NO_EFFECT 且不消耗
 func use_item(instance_id: String, context: String = "town") -> Dictionary:
 	var inst: ItemInstance = get_instance_by_id(instance_id)
 	if inst == null:
@@ -302,12 +376,30 @@ func use_item(instance_id: String, context: String = "town") -> Dictionary:
 	var ps: PlayerState = GameManager.player_state
 	if ps == null:
 		return { "ok": false, "reason": "NO_PLAYER", "item_id": item_id }
-	# 先读效果数值，再扣 1 个，最后结算并广播
+	var kind: String = data.get("kind", "heal")
+	match kind:
+		"heal":
+			return _apply_use_heal(inst, data, context)
+		"buff":
+			return _apply_use_buff(inst, data, context)
+		"cure":
+			return _apply_use_cure(inst, data, context)
+		"exp":
+			return _apply_use_exp(inst, data, context)
+		_:
+			return { "ok": false, "reason": "UNKNOWN_KIND", "item_id": item_id, "kind": kind }
+
+## 治疗类：按 heal_hp/heal_mp 生效（原 use_item 逻辑；无效果数值返回 NO_EFFECT 不消耗）
+func _apply_use_heal(inst: ItemInstance, data: Dictionary, context: String) -> Dictionary:
+	var item_id: String = inst.item_id
 	var heal_hp: int = int(data.get("heal_hp", 0))
 	var heal_mp: int = int(data.get("heal_mp", 0))
-	consume_instance(instance_id)
+	if heal_hp <= 0 and heal_mp <= 0:
+		return { "ok": false, "reason": "NO_EFFECT", "item_id": item_id }
+	consume_instance(inst.instance_id)
 	var healed: int = 0
 	var restored: int = 0
+	var ps: PlayerState = GameManager.player_state
 	if heal_hp > 0:
 		healed = ps.heal(heal_hp)
 	if heal_mp > 0:
@@ -315,6 +407,33 @@ func use_item(instance_id: String, context: String = "town") -> Dictionary:
 	var effect := { "hp": healed, "mp": restored }
 	EventBus.item_used.emit(item_id, effect)
 	GameLogger.info("Inventory", "使用 %s (context=%s) hp+%d mp+%d" % [item_id, context, healed, restored])
+	return { "ok": true, "reason": "SUCCESS", "item_id": item_id, "effect": effect }
+
+## 增益类（预留）：读取 data.buff_stat/buff_value 应用至 PlayerState。当前库未配置，安全返回 NO_EFFECT 不消耗
+func _apply_use_buff(inst: ItemInstance, data: Dictionary, context: String) -> Dictionary:
+	var item_id: String = inst.item_id
+	# TODO(Phase 扩展): buff_stat/buff_value 应用至 PlayerState（如临时攻击/防御加成）
+	return { "ok": false, "reason": "NO_EFFECT", "item_id": item_id }
+
+## 治疗异常状态类（预留）：读取 data.cure_status 清除状态。当前库未配置，安全返回 NO_EFFECT 不消耗
+func _apply_use_cure(inst: ItemInstance, data: Dictionary, context: String) -> Dictionary:
+	var item_id: String = inst.item_id
+	# TODO(Phase 扩展): cure_status 清除 PlayerState 上的异常状态（中毒/眩晕等）
+	return { "ok": false, "reason": "NO_EFFECT", "item_id": item_id }
+
+## 经验类：读取 data.gain_exp 直接结算经验。当前库未配置，安全返回 NO_EFFECT 不消耗
+func _apply_use_exp(inst: ItemInstance, data: Dictionary, context: String) -> Dictionary:
+	var item_id: String = inst.item_id
+	var gain: int = int(data.get("gain_exp", 0))
+	if gain <= 0:
+		return { "ok": false, "reason": "NO_EFFECT", "item_id": item_id }
+	consume_instance(inst.instance_id)
+	var ps: PlayerState = GameManager.player_state
+	if ps != null and ps.has_method("gain_exp"):
+		ps.gain_exp(gain)
+	var effect := { "exp": gain }
+	EventBus.item_used.emit(item_id, effect)
+	GameLogger.info("Inventory", "使用 %s (context=%s) 经验+%d" % [item_id, context, gain])
 	return { "ok": true, "reason": "SUCCESS", "item_id": item_id, "effect": effect }
 
 ## 公共扣件：扣除指定实例 1 个数量；耗尽则回收格子。城镇用药/战斗用药共用

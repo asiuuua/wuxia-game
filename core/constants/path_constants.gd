@@ -7,6 +7,7 @@ class_name PathConstants
 const SCENE_BOOTSTRAP := "res://scenes/bootstrap/Bootstrap.tscn"
 const SCENE_TOWN := "res://scenes/gameplay/town/TownScene.tscn"
 const SCENE_BATTLE := "res://scenes/gameplay/battle/BattleScene.tscn"
+const SCENE_TACTICAL_BATTLE := "res://scenes/gameplay/battle/TacticalBattleScene.tscn"
 const SCENE_HUD := "res://scenes/ui/overlays/hud/Hud.tscn"
 const SCENE_DIALOG := "res://scenes/ui/overlays/dialog/DialogOverlay.tscn"
 const ICON_DIR := "res://resources/textures/icons/"

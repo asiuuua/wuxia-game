@@ -47,7 +47,8 @@ func test_menu_item_icon_wired() -> void:
 
 func test_dialog_overlay_portrait_no_crash() -> void:
 	var dlg = load("res://scenes/ui/overlays/dialog/DialogOverlay.gd").new()
-	dlg.show_for_npc({"id": "npc_test_x", "dialogs": []})
+	# 解耦后通过 dialog_id 绑定台词；npc_merchant 在 town_npcs.json 与 dialogs.json 均存在
+	dlg.show_for_npc({"id": "npc_merchant", "dialog_id": "npc_merchant"})
 	expect(dlg.get_child_count() > 0, "DialogOverlay.show_for_npc 应成功构建（立绘双通道不崩）")
 
 func test_hud_builds() -> void:

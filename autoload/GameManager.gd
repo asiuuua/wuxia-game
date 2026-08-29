@@ -15,6 +15,8 @@ var alchemy_service: AlchemyService = null
 var forge_service: ForgeService = null
 var shop_service: ShopService = null
 var sect_service: SectService = null
+var dialogue_service: DialogueService = null
+var dialogue_event_executor: DialogueEventExecutor = null   # 订阅对话事件演出音效/震屏/接任务
 var bond_service: BondService = null
 var romance_service: RomanceService = null
 var sworn_service: SwornService = null          # 结义服务（M4：结义分支）
@@ -36,6 +38,8 @@ func _ready() -> void:
 	EventBus.combat_finished.connect(quest_service._on_combat_finished)
 	# 指令接线：任务/对话发出 cmd_start_combat 后自动开战（解耦战斗入口，消除空壳）
 	EventBus.cmd_start_combat.connect(_on_cmd_start_combat)
+	# 对话事件演出：到达某行 trigger_events 经 EventBus 派发，由执行器演出音效/震屏/接任务
+	dialogue_event_executor.setup()
 	# 追踪当前存档槽位（读档/存档时更新），供 HELL 删档定点删除
 	EventBus.game_saved.connect(_on_slot_event)
 	EventBus.game_loaded.connect(_on_slot_event)
@@ -44,6 +48,11 @@ func _ready() -> void:
 	# 婚礼演出：监听 bond_wedding_started 切到婚礼场景（M3：接 BondService.hold_wedding）
 	EventBus.bond_wedding_started.connect(_on_bond_wedding_started)
 	_sync_day_baseline()
+
+# 每帧驱动武学快捷栏实时冷却递减（冷却状态源真值在 AbilityService.cd_remaining）
+func _process(delta: float) -> void:
+	if ability_service != null:
+		ability_service.tick_cooldowns(delta)
 
 func _init_services() -> void:
 	combat_service = CombatService.new()
@@ -55,6 +64,8 @@ func _init_services() -> void:
 	forge_service = ForgeService.new()
 	shop_service = ShopService.new()
 	sect_service = SectService.new()
+	dialogue_service = DialogueService.new()
+	dialogue_event_executor = DialogueEventExecutor.new()
 	bond_service = BondService.new()
 	romance_service = RomanceService.new()
 	sworn_service = SwornService.new()
@@ -102,9 +113,13 @@ func load_game(slot: int) -> void:
 		GameLogger.warn("GameManager", "读取存档失败: slot=%d" % slot)
 
 ## 开战：记录待打战斗并切换到战斗场景
+## 战术战棋战斗（配置 tactical=true）路由到 TacticalBattleScene，其余走经典 BattleScene（旧战斗零影响）
 func start_battle(battle_id: String) -> void:
 	pending_battle_id = battle_id
-	get_tree().change_scene_to_file(PathConstants.SCENE_BATTLE)
+	if ConfigManager.get_battle(battle_id).get("tactical", false):
+		get_tree().change_scene_to_file(PathConstants.SCENE_TACTICAL_BATTLE)
+	else:
+		get_tree().change_scene_to_file(PathConstants.SCENE_BATTLE)
 
 ## 指令接线：任务/对话发出 cmd_start_combat(attacker_list, defender_list) 后自动开战。
 ## defender_list 元素为 NPC id（或 enemy id），优先按 NPC 的 battle_id 解析战斗配置。

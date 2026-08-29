@@ -14,8 +14,12 @@ var acquired_time: int = 0
 var is_new: bool = true
 var locked: bool = false           # 玩家手动锁定：防止被动移除（售卖/分解/丢弃/团灭丢失/批量扣料）；主动吃药/装备不受影响
 
+# 实例存档 schema 版本：未来物品结构迁移时按此钩子识别旧档（ver 缺省=0 即旧档）
+const SCHEMA_VERSION := 1
+
 func serialize() -> Dictionary:
 	return {
+		"ver": SCHEMA_VERSION,
 		"iid": instance_id, "id": item_id, "cnt": count,
 		"dur": durability, "mdur": max_durability,
 		"src": acquired_source, "time": acquired_time,

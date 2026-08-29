@@ -8,13 +8,16 @@
 
 extends Node
 
+# 渲染层级：枚举值 * 10 = CanvasLayer.layer 真实值。
+# 注意：值已显式固定，新增层级只能"插入"，不可改动已有项的值（否则 get_layer / open_screen 调用错位）。
 enum Layer {
-	BACKGROUND,
-	TRANSITION,
-	FULLSCREEN,
-	POPUP,
-	TOOLTIP,
-	SYSTEM_OVERLAY,
+	BACKGROUND = 0,        # 0    游戏世界底（TileMap/角色/NPC/Camera2D）
+	HUD = 5,               # 50   常驻 HUD（状态卡/任务追踪/右上菜单/技能栏），屏幕固定、不受 Camera2D 影响
+	TRANSITION = 10,       # 100  场景淡入淡出转场遮罩
+	FULLSCREEN = 20,       # 200  全屏界面（背包/结缘/菜单/任务…）
+	POPUP = 30,            # 300  弹窗（确认框等）
+	TOOLTIP = 40,          # 400  Toast / 浮动提示
+	SYSTEM_OVERLAY = 50,   # 500  系统级浮层（严重告警）
 }
 
 const SCREENS_FILE := "res://data/configs/ui/screens.json"
@@ -27,6 +30,7 @@ var _screen_paths: Dictionary = {}   # 界面名 -> 脚本路径
 var _screen_stack: Array = []        # 打开中的全屏界面（Control）
 var _screen_layer: Dictionary = {}   # Control -> 所在层级（用于判断弹窗是否打开）
 var _current_screen: Control = null
+var _hud: Control = null             # 当前常驻 HUD（挂在 HUD 层；autoload 跨场景常驻，须显式 unmount 释放）
 
 func _ready() -> void:
 	_init_layers()
@@ -59,6 +63,25 @@ func _load_screen_registry() -> void:
 
 func get_layer(layer: int) -> CanvasLayer:
 	return _layers.get(layer, null) as CanvasLayer
+
+## 把常驻 HUD 根节点挂到 HUD 层（屏幕固定位置，Camera2D 无关）。
+## 该层是 autoload 的 CanvasLayer、跨场景常驻，HUD 不随场景树释放，故切场景时由挂载方在 _exit_tree 调 unmount_hud() 释放。
+## 重复挂载会先释放旧 HUD，避免"双 HUD"残留。
+func mount_hud(hud: Control) -> void:
+	var layer_canvas: CanvasLayer = get_layer(Layer.HUD)
+	if layer_canvas == null:
+		GameLogger.error("UIManager", "HUD 层不存在，无法挂载常驻 HUD")
+		return
+	if _hud != null and is_instance_valid(_hud):
+		_hud.queue_free()
+	_hud = hud
+	layer_canvas.add_child(hud)
+
+## 释放当前常驻 HUD（切场景 / 退主菜单时调用）。
+func unmount_hud() -> void:
+	if _hud != null and is_instance_valid(_hud):
+		_hud.queue_free()
+	_hud = null
 
 ## 取图标纹理（美术接入预留接口）。id 形如 "skills/fire_sword"（不含扩展名）。
 ## 找不到返回占位图，绝不返回 null。其它窗口统一经此取图标，禁写死 load(png)。

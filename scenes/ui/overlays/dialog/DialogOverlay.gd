@@ -1,6 +1,12 @@
 # scenes/ui/overlays/dialog/DialogOverlay.gd
-# 对话叠加层（规范 §8）：播放 NPC 对话，结束时提供 接受任务/开始战斗/结束 动作
-# 数据驱动：对话内容来自 NPC 配置；动作触发走 GameManager / QuestService
+# 对话叠加层（UI 主权 · 对话框外观/位置固定）：只负责"怎么呈现"。
+# 数据来源：
+#   - 台词、分支、条件、事件全部由 GameManager.dialogue_service 驱动（图模型）。
+#   - NPC 元数据（名字、立绘、任务/战斗入口）来自 ConfigManager.get_npc(npc_id)。
+# 双立绘规则（数据驱动，UI 零逻辑）：
+#   - 左侧：永久固定主角半身立绘（开局加载一次）。
+#   - 右侧：动态跟随说话人；NPC 说话显示其立绘、主角变暗；主角说话隐藏右侧。
+# 解耦目标：NPC / 台词 / 对话框三者独立；改台词只动 dialogs.json，改外观只动本脚本。
 
 @warning_ignore("shadowed_global_identifier")
 extends Control
@@ -9,99 +15,209 @@ class_name DialogOverlay
 
 const UIPalette = preload("res://core/constants/ui_theme.gd")
 
+var _npc_id: String = ""
+var _dialog_id: String = ""
 var _npc_data: Dictionary = {}
-var _lines: Array = []
-var _line_index: int = 0
+
 var _speaker_label: Label
 var _dialog_label: Label
 var _next_button: Button
 var _action_container: VBoxContainer
-var _portrait: TextureRect
+var _option_container: VBoxContainer
+var _left_bust: TextureRect
+var _right_bust: TextureRect
+var _left_dim: ColorRect
+var _right_dim: ColorRect
+var _built := false
 
-func show_for_npc(npc_data: Dictionary) -> void:
-	_npc_data = npc_data
-	_lines = npc_data.get("dialogs", [])
-	_line_index = 0
-	_build()
-	_refresh_portrait()
+
+func _ready() -> void:
+	focus_mode = Control.FOCUS_NONE
+	_ensure_built()
+
+
+## UIManager.open_screen 标准入口：data = {"npc_id": String, "dialog_id": String}
+func _on_open(data: Variant) -> void:
+	var d: Dictionary = data if data is Dictionary else {}
+	_npc_id = d.get("npc_id", "")
+	_ensure_built()
 	visible = true
-	EventBus.dialogue_started.emit(npc_data.get("id", ""), npc_data.get("id", ""))
-	_show_line()
+	var render: Dictionary = GameManager.dialogue_service.start(_npc_id, d.get("dialog_id", ""))
+	_dialog_id = GameManager.dialogue_service.get_dialog_id()
+	_render(render)
 
-func _refresh_portrait() -> void:
-	var tex: Texture2D = null
-	# 新通道（美术零代码）：icon id = npc/<npc_id>，真实存在才用
-	# （has_icon 不会把占位图误判为真实图，故不会误显品红占位图）
-	var npc_id: String = _npc_data.get("id", "")
-	if npc_id != "" and UIManager.has_icon("npc/" + npc_id):
-		tex = UIManager.get_icon("npc/" + npc_id)
-	# 旧通道（兼容存量 NPC 配置）：显式 portrait 资源路径
-	if tex == null:
-		var path: String = _npc_data.get("portrait", "")
-		if path != "" and ResourceLoader.exists(path):
-			tex = load(path) as Texture2D
-	if tex != null:
-		_portrait.texture = tex
-		_portrait.visible = true
-	else:
-		_portrait.visible = false
+
+## 兼容入口：直接传入 NPC 配置字典（含 id、可选 dialog_id）
+func show_for_npc(npc_data: Dictionary) -> void:
+	_npc_id = npc_data.get("id", "")
+	_ensure_built()
+	visible = true
+	var render: Dictionary = GameManager.dialogue_service.start(_npc_id, npc_data.get("dialog_id", ""))
+	_dialog_id = GameManager.dialogue_service.get_dialog_id()
+	_render(render)
+
+
+func _ensure_built() -> void:
+	if _built:
+		return
+	_build()
+
 
 func _build() -> void:
 	var backdrop := ColorRect.new()
 	backdrop.color = UIPalette.DIM
 	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(backdrop)
+
 	var panel := Panel.new()
-	panel.position = Vector2(200, 380)
-	panel.size = Vector2(640, 220)
+	panel.position = Vector2(80, 400)
+	panel.size = Vector2(880, 200)
 	add_child(panel)
-	# 头像（有 portrait 字段才显示，否则隐藏）
-	_portrait = TextureRect.new()
-	_portrait.position = Vector2(16, 40)
-	_portrait.size = Vector2(84, 84)
-	_portrait.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
-	_portrait.visible = false
-	panel.add_child(_portrait)
+
+	# 左侧固定主角半身立绘
+	_left_bust = TextureRect.new()
+	_left_bust.position = Vector2(40, 180)
+	_left_bust.size = Vector2(150, 220)
+	_left_bust.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+	_left_bust.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	var pbust: Texture2D = _load_tex(ConfigManager.get_player().get("bust", ""))
+	if pbust != null:
+		_left_bust.texture = pbust
+	_left_bust.visible = (pbust != null)
+	add_child(_left_bust)
+	_left_dim = ColorRect.new()
+	_left_dim.color = Color(0, 0, 0, 0.55)
+	_left_dim.position = _left_bust.position
+	_left_dim.size = _left_bust.size
+	_left_dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_left_dim.visible = false
+	add_child(_left_dim)
+
+	# 右侧动态说话人半身立绘
+	_right_bust = TextureRect.new()
+	_right_bust.position = Vector2(890, 180)
+	_right_bust.size = Vector2(150, 220)
+	_right_bust.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+	_right_bust.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_right_bust.visible = false
+	add_child(_right_bust)
+	_right_dim = ColorRect.new()
+	_right_dim.color = Color(0, 0, 0, 0.55)
+	_right_dim.position = _right_bust.position
+	_right_dim.size = _right_bust.size
+	_right_dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_right_dim.visible = false
+	add_child(_right_dim)
+
 	_speaker_label = Label.new()
-	_speaker_label.position = Vector2(116, 14)
-	_speaker_label.size = Vector2(504, 24)
+	_speaker_label.position = Vector2(100, 410)
+	_speaker_label.size = Vector2(840, 28)
 	panel.add_child(_speaker_label)
+
 	_dialog_label = Label.new()
-	_dialog_label.position = Vector2(116, 48)
-	_dialog_label.size = Vector2(504, 80)
+	_dialog_label.position = Vector2(100, 444)
+	_dialog_label.size = Vector2(840, 90)
+	_dialog_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	panel.add_child(_dialog_label)
+
 	_next_button = Button.new()
 	_next_button.text = tr("ui_dialog_next")
-	_next_button.position = Vector2(540, 180)
+	_next_button.position = Vector2(800, 545)
 	_next_button.pressed.connect(_on_next_pressed)
 	panel.add_child(_next_button)
+
+	_option_container = VBoxContainer.new()
+	_option_container.position = Vector2(100, 540)
+	_option_container.size = Vector2(700, 56)
+	panel.add_child(_option_container)
+
 	_action_container = VBoxContainer.new()
-	_action_container.position = Vector2(20, 135)
-	_action_container.size = Vector2(360, 80)
+	_action_container.position = Vector2(100, 540)
+	_action_container.size = Vector2(700, 56)
+	_action_container.visible = false
 	panel.add_child(_action_container)
 
-func _show_line() -> void:
-	if _line_index >= _lines.size():
+	_built = true
+
+
+func _load_tex(path: String) -> Texture2D:
+	if path == "" or not ResourceLoader.exists(path):
+		return null
+	return load(path) as Texture2D
+
+
+func _render(render: Dictionary) -> void:
+	if render.get("ended", false):
 		_show_actions()
 		return
-	var line: Dictionary = _lines[_line_index]
-	_speaker_label.text = line.get("speaker", "")
-	_dialog_label.text = line.get("text", "")
-	_next_button.visible = true
-	_action_container.visible = false
+	_speaker_label.text = render.get("speaker_name", "")
+	_dialog_label.text = render.get("text", "")
+	_update_portraits(render.get("is_player", false), render.get("bust", ""))
+
+	var opts: Array = render.get("options", [])
+	_clear(_option_container)
+	if opts.is_empty():
+		_next_button.visible = true
+		_option_container.visible = false
+	else:
+		_next_button.visible = false
+		_option_container.visible = true
+		for o in opts:
+			var btn := Button.new()
+			btn.text = o.get("text", "")
+			btn.pressed.connect(_on_option_pressed.bind(o.get("jump_id", "")))
+			_option_container.add_child(btn)
+
+
+func _update_portraits(is_player: bool, bust: String) -> void:
+	if is_player:
+		_right_bust.visible = false
+		_right_dim.visible = false
+		_left_dim.visible = false          # 主角说话：左侧高亮
+	else:
+		_left_dim.visible = true           # 主角变暗
+		var tex: Texture2D = _load_tex(bust)
+		if tex != null:
+			_fade_right_bust(tex)
+			_right_bust.visible = true
+			_right_dim.visible = false
+		else:
+			_right_bust.visible = false     # 无立绘 NPC：隐藏右侧
+
+
+func _fade_right_bust(tex: Texture2D) -> void:
+	if _right_bust.texture == tex:
+		return
+	var tw := create_tween()
+	tw.tween_property(_right_bust, "modulate:a", 0.0, 0.1)
+	tw.tween_callback(func(): _right_bust.texture = tex)
+	tw.tween_property(_right_bust, "modulate:a", 1.0, 0.1)
+
 
 func _on_next_pressed() -> void:
-	_line_index += 1
-	_show_line()
+	_render(GameManager.dialogue_service.next())
+
+
+func _on_option_pressed(jump_id: String) -> void:
+	_render(GameManager.dialogue_service.select_option(jump_id))
+
+
+func _clear(c: Container) -> void:
+	for child in c.get_children():
+		child.queue_free()
+
 
 func _show_actions() -> void:
 	_next_button.visible = false
+	_clear(_option_container)
+	_option_container.visible = false
 	_action_container.visible = true
-	for child in _action_container.get_children():
-		child.queue_free()
+	_clear(_action_container)
+	_npc_data = ConfigManager.get_npc(_npc_id)
 	var quest_id: String = _npc_data.get("quest_id", "")
 	var battle_id: String = _npc_data.get("battle_id", "")
-	if quest_id != "" and not GameManager.quest_service.is_active(quest_id):
+	if quest_id != "" and GameManager.quest_service != null and not GameManager.quest_service.is_active(quest_id):
 		var accept := Button.new()
 		accept.text = tr("ui_dialog_accept") % ConfigManager.get_quest(quest_id).get("name", "")
 		accept.pressed.connect(_on_accept_pressed.bind(quest_id, battle_id))
@@ -117,18 +233,27 @@ func _show_actions() -> void:
 		close.pressed.connect(_on_close_pressed)
 		_action_container.add_child(close)
 
+
 func _on_accept_pressed(quest_id: String, battle_id: String) -> void:
 	GameManager.quest_service.accept(quest_id)
-	EventBus.dialogue_ended.emit(_npc_data.get("id", ""))
 	if battle_id != "":
-		# 走指令总线：cmd_start_combat 由 GameManager 解析 NPC→battle_id 并开战（自动接线）
-		EventBus.cmd_start_combat.emit(["player"], [_npc_data.get("id", "")])
+		_close_dialog()
+		EventBus.cmd_start_combat.emit(["player"], [_npc_id])
 	else:
-		UIManager.close_screen(self)
+		_close_dialog()
+
 
 func _on_fight_pressed(battle_id: String) -> void:
-	EventBus.cmd_start_combat.emit(["player"], [_npc_data.get("id", "")])
+	_close_dialog()
+	EventBus.cmd_start_combat.emit(["player"], [_npc_id])
+
 
 func _on_close_pressed() -> void:
-	EventBus.dialogue_ended.emit(_npc_data.get("id", ""))
+	_close_dialog()
+
+
+## 对话真正关闭时统一发射一次 dialogue_ended（避免与台词行耗尽重复发射）
+func _close_dialog() -> void:
+	EventBus.dialogue_ended.emit(_dialog_id)
+	GameManager.dialogue_service.end()
 	UIManager.close_screen(self)

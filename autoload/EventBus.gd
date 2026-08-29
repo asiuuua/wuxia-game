@@ -30,6 +30,13 @@ signal combat_ended(combat_id: String, result: int)
 @warning_ignore("unused_signal")
 signal combat_character_died(character_id: String)
 
+# === 战术战棋网格（战斗窗口主权 · 共享地基纯追加） ===
+# 视图层（BattleGridNode/BattleEntity）订阅；逻辑层 CombatCore 产生，谁产生谁 emit
+@warning_ignore("unused_signal")
+signal grid_highlight_update(highlight_dict: Dictionary)   # 高亮刷新：{type:int -> Array[Vector2i]}（蓝/绿/红）
+@warning_ignore("unused_signal")
+signal grid_unit_moved(unit_id: String, from_grid: Vector2i, to_grid: Vector2i)  # 单位网格移动（驱动实体 Tween 动画）
+
 # === 蓝图中枢事件（严格区分 NOTIFY 通知 / CMD 指令） ===
 # NOTIFY：已发生事实，发出方不等待返回（战斗模块发完即结束）
 @warning_ignore("unused_signal")
@@ -121,6 +128,8 @@ signal player_money_changed(silver: int, copper: int, gold: int)
 signal dialogue_started(dialogue_id: String, npc_id: String)
 @warning_ignore("unused_signal")
 signal dialogue_ended(dialogue_id: String)
+@warning_ignore("unused_signal")
+signal dialogue_event_triggered(event_key: String)
 
 # === 游戏流程 ===
 @warning_ignore("unused_signal")
@@ -234,3 +243,20 @@ signal bond_master_set(npc_id: String, role: int)
 signal bond_apprentice_taken(npc_id: String)
 @warning_ignore("unused_signal")
 signal bond_wedding_started(npc_id: String, wedding_type: int, scene_path: String)
+
+# === 欢庆模块（结缘窗口主权 · 共享地基纯追加） ===
+# 由 romance_service.begin_celebration 在配额内 emit，UI 监听后打开 CelebrationOverlay 播放 CG。
+@warning_ignore("unused_signal")
+signal celebration_started(npc_id: String, cg_id: String)
+
+# === HUD 常驻系统（UI 窗口主权 · 共享地基纯追加） ===
+# 注意：本段为 UI 窗口补完 v2 HUD 四面板所需的跨窗通知信号。
+# 任务窗在 accept/turn_in/reset 处 emit notify_quest_track_changed；
+# 武学窗在装备/卸下/冷却推进处 emit notify_skill_bar_changed / notify_skill_cd_update。
+# 仅声明信号，不在此处 emit（谁产生谁 emit，铁律）。
+@warning_ignore("unused_signal")
+signal notify_quest_track_changed()                          # 任务追踪列表变化（接取/交付/重置）
+@warning_ignore("unused_signal")
+signal notify_skill_bar_changed()                            # 快捷栏武学装备变化
+@warning_ignore("unused_signal")
+signal notify_skill_cd_update(skill_id: String, remain_time: float)  # 快捷栏武学冷却推进（秒）

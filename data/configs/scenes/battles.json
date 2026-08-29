@@ -42,6 +42,25 @@
       ],
       "turn_mode": "atb",
       "reward_exp": 70
+    },
+    {
+      "id": "tactical_demo_001",
+      "name": "竹林遭遇（战棋）",
+      "enemy_ids": [
+        "bandit_001"
+      ],
+      "turn_mode": "sequential",
+      "tactical": true,
+      "reward_exp": 20,
+      "grid": {
+        "width": 10,
+        "height": 8,
+        "obstacles": ["4,3", "5,3", "4,4", "5,4"],
+        "deployment": {
+          "player": [1, 4],
+          "bandit_001": [8, 4]
+        }
+      }
     }
   ]
 }

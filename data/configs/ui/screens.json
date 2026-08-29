@@ -17,5 +17,6 @@
   "SectScreen": "res://scenes/ui/screens/sect/SectScreen.gd",
   "BondRomance": "res://scenes/ui/screens/bond_romance/BondRomanceScreen.gd",
   "GameMenu": "res://scenes/ui/screens/game_menu/GameMenuScreen.gd",
-  "AbilitiesScreen": "res://scenes/ui/screens/abilities/AbilitiesScreen.gd"
+  "AbilitiesScreen": "res://scenes/ui/screens/abilities/AbilitiesScreen.gd",
+  "CelebrationOverlay": "res://scenes/ui/overlays/celebration/CelebrationOverlay.gd"
 }

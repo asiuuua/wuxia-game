@@ -1,7 +1,7 @@
-[gd_resource type="Theme" format=3]
+[gd_resource type="Theme" format=3 uid="uid://bltdmrtn4pssy"]
 
-[ext_resource type="FontFile" path="res://resources/fonts/SiYuanSongTiRegular/SourceHanSerifCN-Bold-2.otf" id="1_555wp"]
-[ext_resource type="FontFile" path="res://resources/fonts/SiYuanSongTiRegular/SourceHanSerifCN-Regular-1.otf" id="2_3jxlk"]
+[ext_resource type="FontFile" uid="uid://cubs7nferc31e" path="res://resources/fonts/SiYuanSongTiRegular/SourceHanSerifCN-Bold-2.otf" id="1_555wp"]
+[ext_resource type="FontFile" uid="uid://qbb7ucvihylr" path="res://resources/fonts/SiYuanSongTiRegular/SourceHanSerifCN-Regular-1.otf" id="2_3jxlk"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_nlrje"]
 content_margin_left = 10.0

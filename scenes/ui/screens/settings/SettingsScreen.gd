@@ -111,8 +111,9 @@ func _fit_panel() -> void:
 	# 大屏封顶，小屏自适应留边（左右各 ~4%，上下各 ~5%）
 	var w: float = mini(vp.x * 0.92, 960.0)
 	var h: float = mini(vp.y * 0.90, 680.0)
+	_panel.size = Vector2(w, h)
 	_panel.custom_minimum_size = Vector2(w, h)
-	_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	UICenterUtils.center_panel(_panel)   # 修复 Godot4.7.2 PRESET_CENTER 不居中
 
 # === 顶部栏（返回 + 标题 + 重绑提示），位于面板内部 ===
 func _build_header() -> void:

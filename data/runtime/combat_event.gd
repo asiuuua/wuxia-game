@@ -24,6 +24,7 @@ enum Type {
 	SHIELD_ABSORB,   # 护盾吸收伤害（value=吸收量，target_shield_after=剩余护盾）
 	REFLECT,         # 反弹（荆棘）：承受伤害反弹给攻击者（value=反弹量）
 	REVIVE,          # 复活（不屈）：气血归零被拉起（value=复活后气血）
+	GRID_MOVE,       # 战术移动：单位在网格上从 from_grid 走到 to_grid（M4 战棋）
 }
 
 var type: int = Type.DAMAGE
@@ -35,6 +36,8 @@ var dodged: bool = false
 var status_id: String = ""       # 状态 id（STATUS_* 事件用）
 var stacks: int = 0              # 状态层数
 var skill_id: String = ""        # 招式 id（ACTION_SKILL 用）
+var from_grid: Vector2i = Vector2i.ZERO   # 移动起点（GRID_MOVE）
+var to_grid: Vector2i = Vector2i.ZERO     # 移动终点（GRID_MOVE）
 
 # ── M2 演出层直设值（只增不改共享契约）──
 # 视图层据此"直接设"血条/真气，无需回查 CombatState，避免加速/跳过/断线错位。
