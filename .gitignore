@@ -1,33 +1,43 @@
-# Godot 引擎缓存与导入产物（79MB，删了会自动重建，不进版本库）
+# ===== Godot 引擎缓存与导入产物（.godot 约 80MB，删了自动重建，不进版本库）=====
 .godot/
 *.tmp
 *.log
 
-# 编辑器/系统杂项
+# ===== 编辑器 / 系统杂项 =====
 .vscode/
 .idea/
 Thumbs.db
 desktop.ini
+*.swp
+*~
+*.swo
+*.bak
 
-# 导出产物
+# ===== 本地环境与密钥（绝不进版本库）=====
+.env
+*.env
+*.key
+*.pem
+
+# ===== 导出产物 / 构建产物 =====
 export/
 build/
 *.exe
 *.pck
 *.zip
 
-# 场景临时日志（根目录 _*.log / _*.txt）
+# ===== 场景临时日志（根目录 _*.log / _*.txt）=====
 /_*.log
 /_*.txt
 
-# 多 AI 提交队列（各窗口入队、PM 出队，纯协同产物，不进版本库）
+# ===== 多 AI 提交队列（各窗口入队、PM 出队，纯协同产物，不进版本库）=====
 .workbuddy/commits/
 
-# 跨窗口协作隐患传递板（派单/认领/交接，纯协同产物，不进版本库）
+# ===== 跨窗口协作隐患传递板（派单/认领/交接，纯协同产物，不进版本库）=====
 .workbuddy/handovers/
 
-# Godot 脚本 .uid（无业务意义，引擎按 class_name 自动重建，不进版本库）
+# ===== Godot 脚本 .uid（无业务意义，引擎按 class_name 自动重建，不进版本库）=====
 *.gd.uid
 
-# 本地自动化运行时配置（含个人 automation id，不跨机共享）
+# ===== 本地自动化运行时配置（含个人 automation id，不跨机共享）=====
 .workbuddy/automations/
