@@ -9,6 +9,12 @@
     { "id": "armor_silk_001", "name": "绸衫", "type": "armor", "rarity": "uncommon", "max_stack": 1, "weight": 1.5, "price": 130, "flags": 67, "equip_slot": "armor", "bonus_defense": 12, "bonus_hp": 30 },
     { "id": "armor_chain_001", "name": "锁子甲", "type": "armor", "rarity": "rare", "max_stack": 1, "weight": 6.0, "price": 300, "flags": 67, "equip_slot": "armor", "bonus_defense": 28, "bonus_hp": 80 },
     { "id": "acc_bell_001", "name": "辟邪铃", "type": "accessory", "rarity": "uncommon", "max_stack": 1, "weight": 0.5, "price": 140, "flags": 67, "equip_slot": "accessory", "bonus_defense": 8, "bonus_mp": 20 },
-    { "id": "acc_pendant_001", "name": "平安扣", "type": "accessory", "rarity": "rare", "max_stack": 1, "weight": 0.4, "price": 220, "flags": 67, "equip_slot": "accessory", "bonus_attack": 3, "bonus_defense": 6, "bonus_hp": 20 }
+    { "id": "acc_pendant_001", "name": "平安扣", "type": "accessory", "rarity": "rare", "max_stack": 1, "weight": 0.4, "price": 220, "flags": 67, "equip_slot": "accessory", "bonus_attack": 3, "bonus_defense": 6, "bonus_hp": 20 },
+    { "id": "armor_yexing_001", "name": "夜行衣", "type": "armor", "rarity": "uncommon", "max_stack": 1, "weight": 1.8, "price": 180, "flags": 67, "equip_slot": "armor", "bonus_defense": 14, "bonus_hp": 30 },
+    { "id": "armor_ruanrui_001", "name": "软猬甲", "type": "armor", "rarity": "rare", "max_stack": 1, "weight": 4.0, "price": 360, "flags": 67, "equip_slot": "armor", "bonus_defense": 24, "bonus_hp": 60 },
+    { "id": "armor_jinzhong_001", "name": "金钟罩衣", "type": "armor", "rarity": "rare", "max_stack": 1, "weight": 6.5, "price": 400, "flags": 67, "equip_slot": "armor", "bonus_defense": 30, "bonus_hp": 50 },
+    { "id": "armor_suoyi_001", "name": "蓑衣斗笠", "type": "armor", "rarity": "common", "max_stack": 1, "weight": 2.2, "price": 70, "flags": 67, "equip_slot": "armor", "bonus_defense": 6, "bonus_hp": 10 },
+    { "id": "acc_lingpai_001", "name": "武林令牌", "type": "accessory", "rarity": "rare", "max_stack": 1, "weight": 0.6, "price": 260, "flags": 67, "equip_slot": "accessory", "bonus_attack": 2, "bonus_defense": 4 },
+    { "id": "acc_changming_001", "name": "长命锁", "type": "accessory", "rarity": "uncommon", "max_stack": 1, "weight": 0.5, "price": 150, "flags": 67, "equip_slot": "accessory", "bonus_hp": 25, "bonus_mp": 10 }
   ]
 }

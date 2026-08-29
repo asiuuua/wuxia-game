@@ -110,6 +110,13 @@
       "weight": 0.8,
       "price": 40,
       "flags": 19
-    }
+    },
+    { "id": "material_xuantie_001", "name": "玄铁", "type": "material", "rarity": "uncommon", "max_stack": 99, "weight": 1.5, "price": 35, "flags": 19 },
+    { "id": "material_hantie_001", "name": "寒铁", "type": "material", "rarity": "uncommon", "max_stack": 99, "weight": 1.5, "price": 38, "flags": 19 },
+    { "id": "material_tiansi_001", "name": "天蚕丝", "type": "material", "rarity": "uncommon", "max_stack": 99, "weight": 0.2, "price": 40, "flags": 19 },
+    { "id": "material_renshen_001", "name": "百年人参", "type": "material", "rarity": "uncommon", "max_stack": 99, "weight": 0.3, "price": 50, "flags": 19 },
+    { "id": "material_xuelian_001", "name": "雪山雪莲", "type": "material", "rarity": "rare", "max_stack": 99, "weight": 0.2, "price": 90, "flags": 19 },
+    { "id": "material_guducao_001", "name": "蛊毒草", "type": "material", "rarity": "uncommon", "max_stack": 99, "weight": 0.2, "price": 30, "flags": 19 },
+    { "id": "material_xiaoshi_001", "name": "硝石", "type": "material", "rarity": "common", "max_stack": 99, "weight": 0.5, "price": 10, "flags": 19 }
   ]
 }
