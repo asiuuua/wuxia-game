@@ -154,23 +154,25 @@ func setup(title: String, content: String, confirm_callback: Callable = Callable
 	# 入场淡入已由 UIManager.open_screen 统一处理，此处仅聚焦首个按钮
 	_confirm_btn.grab_focus()
 
+# ⚠️ 去重：确认钮聚焦时按 Enter 会同时触发「pressed 信号」与「_unhandled_input(ui_accept)」两条路径。
+# 若仅在 _close() 里守 _closing，回调仍会被两条路径各执行一次（对破坏性回调是真实双执行 bug）。
+# 故将 _closing 守卫前置到 _on_confirm/_on_cancel 入口，确保回调与信号只触发一次。
 func _on_confirm() -> void:
-	if _confirm_callback.is_valid():
-		_confirm_callback.call()
-	confirmed.emit()
-	_close()
-
-func _on_cancel() -> void:
-	if _cancel_callback.is_valid():
-		_cancel_callback.call()
-	cancelled.emit()
-	_close()
-
-func _close() -> void:
 	if _closing:
 		return
 	_closing = true
-	# 淡出转场统一交由 UIManager.close_screen 处理（含渐隐与释放），避免与 open 的统一淡入双重淡出
+	if _confirm_callback.is_valid():
+		_confirm_callback.call()
+	confirmed.emit()
+	UIManager.close_screen(self)
+
+func _on_cancel() -> void:
+	if _closing:
+		return
+	_closing = true
+	if _cancel_callback.is_valid():
+		_cancel_callback.call()
+	cancelled.emit()
 	UIManager.close_screen(self)
 
 func _unhandled_input(event: InputEvent) -> void:

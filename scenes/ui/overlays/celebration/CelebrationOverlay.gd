@@ -24,6 +24,9 @@ var _btn_row: HBoxContainer = null
 var _bgm_player: AudioStreamPlayer = null
 var _timer: Timer = null
 var _built := false
+# 已进入关闭流程（跳过/超时/主动关闭/_exit_tree）。置位后所有在途异步回调直接丢弃，
+# 防止 CG 媒体/音乐在节点已 queue_free 后才加载完成、把节点挂到已释放容器上导致崩溃/泄漏。
+var _is_closing: bool = false
 # 已 acquire_async 的媒体/音乐路径，关闭/退出时须 release 归还引用计数，否则 CG 大媒体常驻不释放（P5 目标落空）。
 var _media_path: String = ""
 var _bgm_path: String = ""
@@ -127,6 +130,11 @@ func _apply_media(cfg: Dictionary) -> void:
 
 ## 加载完成回调：依资源实际类型建节点（视频/图片），铺满媒体框。
 func _on_media_ready(path: String, res: Variant) -> void:
+	# 竞态 guard：界面已关闭、节点/容器已释放、或这是被替换/清除的旧媒体回调，一律丢弃。
+	if _is_closing or not is_instance_valid(self) or not is_instance_valid(_media_box):
+		return
+	if path != _media_path:
+		return
 	if res == null:
 		return
 	if res is VideoStream:
@@ -160,6 +168,8 @@ func _play_bgm(cfg: Dictionary) -> void:
 	ResourceManager.acquire_async(bgm, "", _on_bgm_ready)
 
 func _on_bgm_ready(res: Variant) -> void:
+	if _is_closing or not is_instance_valid(self):
+		return
 	if res == null or not (res is AudioStream):
 		return
 	_bgm_player = AudioStreamPlayer.new()
@@ -226,6 +236,7 @@ func _finish_to_end() -> void:
 	_start_timer(END_HOLD_SECONDS, _on_close_pressed)
 
 func _on_close_pressed() -> void:
+	_is_closing = true
 	_stop_timer()
 	if _bgm_player != null and is_instance_valid(_bgm_player):
 		_bgm_player.stop()
@@ -248,6 +259,7 @@ func _load_table() -> Dictionary:
 	return {}
 
 func _exit_tree() -> void:
+	_is_closing = true
 	_stop_timer()
 	if _bgm_player != null and is_instance_valid(_bgm_player):
 		_bgm_player.stop()
