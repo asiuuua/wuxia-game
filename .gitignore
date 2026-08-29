@@ -19,3 +19,6 @@ build/
 # 场景临时日志（根目录 _*.log / _*.txt）
 /_*.log
 /_*.txt
+
+# 多 AI 提交队列（各窗口入队、PM 出队，纯协同产物，不进版本库）
+.workbuddy/commits/
