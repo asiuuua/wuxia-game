@@ -19,6 +19,8 @@ enum Layer {
 
 const SCREENS_FILE := "res://data/configs/ui/screens.json"
 const UIPalette = preload("res://core/constants/ui_theme.gd")
+# 图标解析引擎（美术接入预留接口）：任何图标只经此取，禁在代码里写死 load(png)
+const IconRegistry = preload("res://scenes/ui/icon_registry.gd")
 
 var _layers: Dictionary = {}         # int(layer) -> CanvasLayer
 var _screen_paths: Dictionary = {}   # 界面名 -> 脚本路径
@@ -57,6 +59,15 @@ func _load_screen_registry() -> void:
 
 func get_layer(layer: int) -> CanvasLayer:
 	return _layers.get(layer, null) as CanvasLayer
+
+## 取图标纹理（美术接入预留接口）。id 形如 "skills/fire_sword"（不含扩展名）。
+## 找不到返回占位图，绝不返回 null。其它窗口统一经此取图标，禁写死 load(png)。
+func get_icon(icon_id: String) -> Texture2D:
+	return IconRegistry.get_icon(icon_id)
+
+## 是否存在某图标文件（供 UI 判断是否绘制图标框）
+func has_icon(icon_id: String) -> bool:
+	return IconRegistry.has_icon(icon_id)
 
 ## 安全区边距（安卓刘海/挖孔/圆角）：返回 Vector4(left, top, right, bottom)，单位像素。
 ## 桌面平台与无挖孔设备返回全 0，无副作用。
