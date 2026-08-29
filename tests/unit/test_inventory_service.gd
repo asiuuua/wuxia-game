@@ -379,3 +379,44 @@ func test_item_config_integrity() -> void:
 				expect_eq(max_stack, 1, "%s 可装备必 max_stack=1" % id)
 			if (flags & ItemEnums.ItemFlag.STACKABLE) != 0:
 				expect(max_stack > 1, "%s 可堆叠必 max_stack>1" % id)
+
+## === P2-9(#163) 槽位顺序保真（为 UI 窗口 P2-1 拖拽 move_instance 做存档支撑）===
+
+func test_slot_order_preserved_after_drag_save_load() -> void:
+	# 拖拽 move_instance 的结果须能存读保真：index5 命中该实例、原 index1 空
+	var ps: PlayerState = GameManager.player_state
+	if ps != null:
+		ps.strength = 1000   # 拉高强度隔离负重干扰
+	_service.add_item(WEAPON, 1, "t")
+	_service.add_item(WEAPON, 1, "t")
+	expect(_service.main_slots[0] != null, "index0 应有武器")
+	expect(_service.main_slots[1] != null, "index1 应有武器")
+	var iid_at_1: String = _service.main_slots[1].instance_id
+	expect(_service.move_instance(iid_at_1, "main", 5), "拖拽到 index5 应成功")
+	expect(_service.main_slots[5] != null and _service.main_slots[5].instance_id == iid_at_1, "拖拽后 index5 应命中该实例")
+	expect(_service.main_slots[1] == null, "原 index1 应空")
+	var snap: Dictionary = _service.save()
+	var s2 := InventoryService.new()
+	s2.load(snap)
+	expect(s2.main_slots[5] != null and s2.main_slots[5].instance_id == iid_at_1, "读档后 index5 仍命中该实例（顺序保真）")
+	expect(s2.main_slots[1] == null, "读档后 index1 仍空")
+	expect_eq(s2.get_item_count(WEAPON), 2, "总数不变")
+
+func test_load_legacy_save_without_idx_compat() -> void:
+	# 兼容旧档（裸 ItemInstance 字典、无 idx 键）：不崩且物品数不变
+	var s := InventoryService.new()
+	s.add_item(WEAPON, 1, "t")
+	var snap: Dictionary = s.save()
+	var legacy_main: Array = []
+	for e in snap["main"]:
+		legacy_main.append(e["data"])   # 去掉 {idx,data} 包装，模拟旧格式
+	var legacy: Dictionary = {
+		"main": legacy_main,
+		"material": snap["material"],
+		"quest": snap["quest"],
+		"weight": snap["weight"],
+		"next_iid": snap["next_iid"],
+	}
+	var s2 := InventoryService.new()
+	s2.load(legacy)
+	expect_eq(s2.get_item_count(WEAPON), 1, "旧档应能载入，物品数不变")

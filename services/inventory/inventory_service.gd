@@ -433,11 +433,14 @@ func save() -> Dictionary:
 		"next_iid": _next_iid,
 	}
 
+## 序列化单栏：保真槽位顺序，存 {idx, data}（idx=原槽位下标）。
+## 旧档为裸 ItemInstance 字典数组（无 idx），_deserialize_bag 会兼容回退。
 func _serialize_bag(bag: Array) -> Array:
 	var out: Array = []
-	for inst in bag:
+	for i in range(bag.size()):
+		var inst = bag[i]
 		if inst != null:
-			out.append(inst.serialize())
+			out.append({"idx": i, "data": inst.serialize()})
 	return out
 
 func load(data: Dictionary) -> void:
@@ -454,13 +457,28 @@ func load(data: Dictionary) -> void:
 	_rebuild_count_index()
 	_dirty = false
 
+## 反序列化单栏：
+## - 新格式 {idx, data}：按 idx 直接放入保真槽位顺序（支持 UI 窗口 P2-1 拖拽 move_instance 的持久化）；
+##   idx 越界则兜底塞第一个空位，避免坏档崩存档。
+## - 旧格式（裸 ItemInstance 字典、无 idx 键）：按 find(null) 顺序塞回，兼容已发布存档。
 func _deserialize_bag(arr: Array, bag: Array) -> void:
 	for entry in arr:
 		var inst := ItemInstance.new()
-		inst.deserialize(entry)
-		var idx: int = bag.find(null)
-		if idx != -1:
-			bag[idx] = inst
+		if entry is Dictionary and entry.has("idx") and entry.has("data"):
+			inst.deserialize(entry.get("data", {}))
+			var idx: int = int(entry.get("idx", -1))
+			if idx >= 0 and idx < bag.size():
+				bag[idx] = inst
+			else:
+				var f: int = bag.find(null)
+				if f != -1:
+					bag[f] = inst
+		else:
+			# 旧格式兼容
+			inst.deserialize(entry)
+			var idx: int = bag.find(null)
+			if idx != -1:
+				bag[idx] = inst
 
 ## === UI 窗口 P2-1 新增（纯追加，不改动既有方法；跨窗口协调见 UI 窗口《变更通告》）===
 
