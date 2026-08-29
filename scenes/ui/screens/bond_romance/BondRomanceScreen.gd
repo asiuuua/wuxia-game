@@ -103,6 +103,13 @@ func _btn(text: String, enabled: bool, cb: Callable) -> Button:
 
 func _row(npc_id: String, tag: String, aff: int, buttons: Array) -> void:
 	var row := HBoxContainer.new()
+	# NPC 头像：美术按关系 id 丢 resources/icons/npc/<npc_id>.png 即可替换
+	var icon := TextureRect.new()
+	icon.texture = UIManager.get_icon("npc/" + npc_id)
+	icon.custom_minimum_size = Vector2(36, 36)
+	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	row.add_child(icon)
 	var name_l := Label.new()
 	name_l.custom_minimum_size = Vector2(150, 0)
 	name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL

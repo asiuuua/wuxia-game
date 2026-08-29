@@ -91,6 +91,14 @@ func _build_ability_row(id: String, level: int) -> Control:
 	row.add_theme_constant_override("separation", 2)
 	row.add_theme_constant_override("margin_bottom", 6)
 	var head := HBoxContainer.new()
+	# 技能图标：美术按 ability id 丢 resources/icons/skills/<id>.png 即可替换
+	var icon := TextureRect.new()
+	icon.texture = UIManager.get_icon("skills/" + id)
+	icon.custom_minimum_size = Vector2(40, 40)
+	icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	head.add_child(icon)
 	var name_l := Label.new()
 	name_l.text = String(data.get("name", id))
 	name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL

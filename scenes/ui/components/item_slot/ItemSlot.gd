@@ -12,6 +12,7 @@ const SIZE := 64
 
 var _iid: String = ""
 var _bg: Panel
+var _icon: TextureRect
 var _label: Label
 var _badge: Label
 var _lock_icon: Label
@@ -29,11 +30,23 @@ func _build() -> void:
 	_bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_apply_bg(false)
 	add_child(_bg)
+	# 图标：占满槽位核心区；缺图时 UIManager.get_icon 返回占位图，
+	# 美术后续按 item_id 丢 resources/icons/items/<item_id>.png 即可替换，无需改代码。
+	_icon = TextureRect.new()
+	_icon.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_icon.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_icon.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_icon.custom_minimum_size = Vector2(SIZE - 14, SIZE - 14)
+	add_child(_icon)
 	_label = Label.new()
 	_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_label.add_theme_font_size_override("font_size", 11)
+	_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 1))
+	_label.add_theme_constant_override("outline_size", 2)
 	add_child(_label)
 	_badge = Label.new()
 	_badge.position = Vector2(SIZE - 32, 2)
@@ -57,11 +70,13 @@ func setup(inst) -> void:
 	if inst == null:
 		_iid = ""
 		_label.text = ""
+		_icon.texture = null
 		_badge.text = ""
 		_lock_icon.visible = false
 		_apply_bg(false)
 		return
 	_iid = inst.instance_id
+	_icon.texture = UIManager.get_icon("items/" + inst.item_id)
 	var data: Dictionary = ConfigManager.get_item(inst.item_id)
 	var nm: String = data.get("name", inst.item_id)
 	_label.text = nm
