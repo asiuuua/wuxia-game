@@ -160,7 +160,7 @@ func enemy_act(enemy_id: String) -> Array[CombatEvent]:
 	events.append_array(tick_unit(enemy))            # 含冷却递减
 	if not enemy.is_alive():
 		return events
-	var ab: Dictionary = _pick_enemy_ability(enemy)
+	var ab: Dictionary = _pick_enemy_ability(enemy, grid != null)
 	if ab.is_empty():
 		# 普攻兜底（ACTION_BASIC + DAMAGE）
 		events.append(_ev(CombatEvent.Type.ACTION_BASIC, enemy.character_id, state.player.character_id))
@@ -179,7 +179,9 @@ func _enemy_by_id(enemy_id: String) -> CombatCharacter:
 
 ## 按权重从敌人 AI 技能包里选一个可用招式（确定性：rng.randf() 由内核 seed 驱动）
 ## 返回 {id, weight, condition} 或空字典（无可用的 → 调用方普攻兜底）
-func _pick_enemy_ability(enemy: CombatCharacter) -> Dictionary:
+## respect_range=true（网格战术模式）：额外要求"技能射程内能命中玩家"，杜绝够不到仍出手的越界施法（P2-8）
+## respect_range=false（经典模式 / grid==null）：与原逻辑完全一致
+func _pick_enemy_ability(enemy: CombatCharacter, respect_range: bool = false) -> Dictionary:
 	if enemy.ai_kit == null or enemy.ai_kit.is_empty():
 		return {}
 	var candidates: Array = []
@@ -191,6 +193,8 @@ func _pick_enemy_ability(enemy: CombatCharacter) -> Dictionary:
 		if not _ability_usable(enemy, id):
 			continue
 		if not _condition_met(enemy, entry.get("condition", "always")):
+			continue
+		if respect_range and grid != null and not is_target_in_range(enemy.character_id, state.player.character_id, id):
 			continue
 		var w: float = float(entry.get("weight", 1))
 		if w <= 0:

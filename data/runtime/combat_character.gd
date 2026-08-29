@@ -21,7 +21,6 @@ var mp: int = 50                 # 真气(Qi)：招式消耗、调息回复（�
 var shield: int = 0             # 护盾(Shield)：吸收伤害，优先于气血扣减，持续到被消耗（M3-2）
 
 var speed: int = 8               # 集气速率（=逸剑「集气速率」），驱动 ATB 行动顺序
-var charge: float = 0.0          # 当前集气值（ATB 运行时累积，M2 顺序条可视化用）
 
 var attack: int = 10
 var defense: int = 5

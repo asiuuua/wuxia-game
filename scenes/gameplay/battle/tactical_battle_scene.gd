@@ -11,6 +11,9 @@
 extends Node2D
 class_name TacticalBattleScene
 
+# P0-2：显式 preload 渲染器（不依赖编辑器全局类缓存，headless 验证可确定性解析）
+const CombatEventRenderer = preload("res://core/combat_event_renderer.gd")
+
 const BASIC_RANGE: int = 1     # 普攻射程（曼哈顿<=1，近身）
 
 enum Phase { PLAYER, ENEMY, OVER }
@@ -21,9 +24,18 @@ var _grid: BattleGrid = null
 var _grid_node: BattleGridNode = null
 var _entities_node: Node2D = null
 var _entities: Dictionary = {}      # character_id -> BattleEntity
+# P0-2：统一渲染查找闭包（character_id -> BattleEntity），供 CombatEventRenderer 委托
+var _entity_lookup: Callable = func(id): return _entities.get(id)
 
 # 战斗实体对象池（按场景作用域）：本场战斗持有实例，_exit_tree 时 clear() 释放空闲实例
 var _entity_pool: CombatEntityPool = CombatEntityPool.new()
+
+# 演出节奏控制（P0-1）：加速倍率 / 跳过模式；_aborted 为场景退出标志，用于打断在途协程防 use-after-free（P1-4）
+var _speed_scale: float = 1.0
+var _instant: bool = false
+var _aborted: bool = false
+var _speed_btn: Button
+var _skip_btn: Button
 
 var _phase: int = Phase.PLAYER
 var _mode: int = Mode.MOVE
@@ -116,6 +128,8 @@ func _on_cell_clicked(gp: Vector2i) -> void:
 			_busy = true
 			var evs: Array[CombatEvent] = GameManager.combat_service.move_unit("player", gp)
 			await _play_events(evs)
+			if _aborted:
+				return
 			_busy = false
 			_show_reachable()
 			_refresh_hud()
@@ -150,6 +164,8 @@ func _on_skill_pressed(slot: int, ability_id: String) -> void:
 		_busy = true
 		var evs: Array[CombatEvent] = GameManager.combat_service.player_cast_events(slot, "player")
 		await _play_events(evs)
+		if _aborted:
+			return
 		_busy = false
 		_after_player_action()
 	else:
@@ -168,6 +184,8 @@ func _execute_pending_on(target_id: String) -> void:
 	else:
 		evs = GameManager.combat_service.player_cast_events(int(p.get("slot", 0)), target_id)
 	await _play_events(evs)
+	if _aborted:
+		return
 	_busy = false
 	_after_player_action()
 
@@ -217,6 +235,8 @@ func _on_item_menu_index(index: int) -> void:
 	_busy = true
 	var evs: Array[CombatEvent] = GameManager.combat_service.use_item_events(iid)
 	await _play_events(evs)
+	if _aborted:
+		return
 	_busy = false
 	_after_player_action()
 
@@ -234,9 +254,35 @@ func _on_auto_pressed() -> void:
 	if _auto and _phase == Phase.PLAYER and not _busy:
 		_auto_player_turn()
 
+## P0-1 加速：在 ×1/×2/×4 间循环，作用于所有 _wait 时长
+func _on_speed_pressed() -> void:
+	var scales := [1.0, 2.0, 4.0]
+	var idx: int = scales.find(_speed_scale)
+	idx = (idx + 1) % scales.size()
+	_speed_scale = scales[idx]
+	if _skip_btn != null and _instant:
+		# 跳过模式下倍率已无意义，仅更新文案提示
+		pass
+	if _speed_btn != null:
+		_speed_btn.text = "加速x%d" % int(_speed_scale)
+
+## P0-1 跳过：拉满节奏 + 通知实体瞬移/不飘字，整场演出瞬间完成
+func _on_skip_pressed() -> void:
+	_instant = not _instant
+	if _skip_btn != null:
+		_skip_btn.text = "跳过: 开" if _instant else "跳过: 关"
+	if _instant:
+		_speed_scale = 999.0
+	else:
+		_speed_scale = 1.0
+	if _speed_btn != null:
+		_speed_btn.text = "加速x%d" % int(_speed_scale)
+
 # ───────────────────────── 回合驱动 ─────────────────────────
 
 func _start_player_turn() -> void:
+	if _aborted:
+		return
 	if GameManager.combat_service.is_over():
 		_finish()
 		return
@@ -259,6 +305,8 @@ func _start_enemy_phase() -> void:
 	EventBus.grid_highlight_update.emit({})
 	_refresh_hud()
 	await _enemy_phase_impl()
+	if _aborted:
+		return
 	if GameManager.combat_service.is_over():
 		_finish()
 		return
@@ -289,6 +337,8 @@ func _enemy_phase_impl() -> void:
 		if GameManager.combat_service.is_over():
 			return
 		await _wait(0.15)
+		if _aborted:
+			return
 
 func _auto_player_turn() -> void:
 	if GameManager.combat_service.is_over():
@@ -303,9 +353,13 @@ func _auto_player_turn() -> void:
 		if best != _state.player.grid_pos:
 			var evs: Array[CombatEvent] = GameManager.combat_service.move_unit("player", best)
 			await _play_events(evs)
-	if not GameManager.combat_service.is_over():
+			if _aborted:
+				return
+		if not GameManager.combat_service.is_over():
 		var evs2: Array[CombatEvent] = GameManager.combat_service.player_attack_events("")
 		await _play_events(evs2)
+		if _aborted:
+			return
 	_busy = false
 	if GameManager.combat_service.is_over():
 		_finish()
@@ -313,6 +367,8 @@ func _auto_player_turn() -> void:
 	_start_enemy_phase()
 
 func _after_player_action() -> void:
+	if _aborted:
+		return
 	_pending = {}
 	_mode = Mode.MOVE
 	_target_id = _nearest_alive_enemy_id()
@@ -358,82 +414,37 @@ func _show_skill_range(ability_id: String) -> void:
 # ───────────────────────── 事件播放（驱动实体表现）─────────────────────────
 
 func _play_events(events: Array[CombatEvent]) -> void:
+	if _aborted:
+		return
 	for ev in events:
-		match ev.type:
-			CombatEvent.Type.GRID_MOVE:
-				var e = _entities.get(ev.actor_id)
-				if e != null:
-					e.move_to(ev.to_grid)
-				await _wait(0.28)
-			CombatEvent.Type.DAMAGE:
-				var e2 = _entities.get(ev.target_id)
-				if e2 != null and ev.target_max_hp > 0:
-					e2.set_hp(ev.target_hp_after)
-				if ev.dodged:
-					_pop(ev.target_id, "Miss", Color(0.8, 0.8, 0.8))
-				elif ev.crit:
-					_pop(ev.target_id, "-%d!" % ev.value, Color(1.0, 0.85, 0.2))
-				elif ev.value > 0:
-					_pop(ev.target_id, "-%d" % ev.value, Color(0.95, 0.3, 0.3))
-				await _wait(0.12)
-			CombatEvent.Type.HEAL:
-				var uid: String = ev.target_id if ev.target_id != "" else ev.actor_id
-				var e3 = _entities.get(uid)
-				if e3 != null and ev.target_max_hp > 0:
-					e3.set_hp(ev.target_hp_after)
-				_pop(uid, "+%d" % ev.value, Color(0.4, 0.95, 0.5))
-				await _wait(0.1)
-			CombatEvent.Type.QI_COST:
-				var e4 = _entities.get(ev.actor_id)
-				if e4 != null:
-					e4.set_mp(ev.actor_mp_after)
-				await _wait(0.05)
-			CombatEvent.Type.QI_GAIN:
-				var uid5: String = ev.target_id if ev.target_id != "" else ev.actor_id
-				var e5 = _entities.get(uid5)
-				if e5 != null:
-					e5.set_mp(ev.target_mp_after)
-				await _wait(0.05)
-			CombatEvent.Type.STATUS_APPLIED:
-				_pop(ev.target_id, "状态", Color(0.6, 0.9, 0.6))
-				await _wait(0.05)
-			CombatEvent.Type.STATUS_TICK:
-				var e6 = _entities.get(ev.target_id)
-				if e6 != null and ev.target_max_hp > 0:
-					e6.set_hp(ev.target_hp_after)
-				_pop(ev.target_id, "%d" % ev.value, Color(0.95, 0.5, 0.2))
-				await _wait(0.08)
-			CombatEvent.Type.STATUS_EXPIRED:
-				_pop(ev.target_id, "解除", Color(0.7, 0.7, 0.7))
-				await _wait(0.05)
-			CombatEvent.Type.SHIELD_ABSORB:
-				_pop(ev.target_id, "盾%d" % ev.value, Color(0.4, 0.95, 0.95))
-				await _wait(0.08)
-			CombatEvent.Type.REFLECT:
-				var e7 = _entities.get(ev.target_id)
-				if e7 != null and ev.target_max_hp > 0:
-					e7.set_hp(ev.target_hp_after)
-				_pop(ev.target_id, "反弹%d" % ev.value, Color(0.85, 0.4, 0.95))
-				await _wait(0.08)
-			CombatEvent.Type.REVIVE:
-				var e8 = _entities.get(ev.target_id)
-				if e8 != null and ev.target_max_hp > 0:
-					e8.set_hp(ev.target_hp_after)
-				_pop(ev.target_id, "复活!", Color(1.0, 0.85, 0.2))
-				await _wait(0.1)
-			_:
-				pass
+		if _aborted:
+			return
+		if ev.type == CombatEvent.Type.GRID_MOVE:
+			# 移动是战术专有表现，仍由 BattleEntity 直接处理（含跳过瞬移）
+			var e = _entities.get(ev.actor_id)
+			if e != null:
+				e.move_to(ev.to_grid, _instant)
+			await _wait(0.28)
+			if _aborted:
+				return
+		else:
+			# P0-2：HUD 事件统一委托 CombatEventRenderer，与 BattleView 共用一套渲染逻辑
+			CombatEventRenderer.render(ev, _entity_lookup, _instant)
+			await _wait(CombatEventRenderer.duration(ev))
+			if _aborted:
+				return
 	_refresh_hud()
+	if _aborted:
+		return
 	await _wait(0.03)
 
-func _pop(uid: String, txt: String, color: Color) -> void:
-	var e = _entities.get(uid)
-	if e != null:
-		e.pop_text(txt, color)
+# P0-2：战术飘字现统一经 CombatEventRenderer（instant 时由渲染器跳过），本场景不再保留独立 _pop
 
 # ───────────────────────── 结束 ─────────────────────────
 
 func _finish() -> void:
+	if _aborted:
+		return
 	_phase = Phase.OVER
 	EventBus.grid_highlight_update.emit({})
 	GameManager.combat_service.finalize()
@@ -467,8 +478,9 @@ func _on_return_pressed() -> void:
 	_release_all()
 	GameManager.return_to_town()
 
-## 场景退出：释放对象池空闲实例（随场景销毁，无跨场景泄漏累积）
+## 场景退出：置 _aborted 打断在途协程，再释放对象池空闲实例（随场景销毁，无跨场景泄漏累积）
 func _exit_tree() -> void:
+	_aborted = true
 	if _entity_pool != null:
 		_entity_pool.clear()
 
@@ -513,10 +525,16 @@ func _unit_by_state(uid: String) -> CombatCharacter:
 			return e
 	return null
 
+## 节奏等待：加速时按 _speed_scale 缩短；跳过(_instant)或场景已退出(_aborted)时立即返回不挂起
 func _wait(dur: float) -> void:
+	if _aborted:
+		return
+	if _instant:
+		return
 	if dur <= 0.0:
 		return
-	await get_tree().create_timer(dur).timeout
+	var d := dur / max(_speed_scale, 0.0001)
+	await get_tree().create_timer(d).timeout
 
 # ───────────────────────── HUD 搭建 ─────────────────────────
 
@@ -537,7 +555,7 @@ func _build_hud() -> void:
 	title.offset_left = 12.0; title.offset_top = 12.0; title.offset_right = 240.0; title.offset_bottom = 48.0
 	hud.add_child(title)
 	var tl := Label.new()
-	tl.text = "竹林遭遇（战棋）"
+	tl.text = ConfigManager.get_battle(GameManager.pending_battle_id).get("name", "战棋战斗")
 	tl.position = Vector2(12, 8)
 	tl.add_theme_font_size_override("font_size", 16)
 	tl.add_theme_color_override("font_color", Color(0.95, 0.9, 0.7))
@@ -646,11 +664,24 @@ func _build_action_buttons(bar: HBoxContainer) -> void:
 	_auto_btn.pressed.connect(_on_auto_pressed)
 	bar.add_child(_auto_btn)
 
+	# P0-1 演出节奏：加速循环 ×1/×2/×4 + 跳过开关
+	_speed_btn = Button.new()
+	_speed_btn.text = "加速x1"
+	_speed_btn.custom_minimum_size = Vector2(72, 40)
+	_speed_btn.pressed.connect(_on_speed_pressed)
+	bar.add_child(_speed_btn)
+
+	_skip_btn = Button.new()
+	_skip_btn.text = "跳过: 关"
+	_skip_btn.custom_minimum_size = Vector2(72, 40)
+	_skip_btn.pressed.connect(_on_skip_pressed)
+	bar.add_child(_skip_btn)
+
 func _refresh_hud() -> void:
 	if _state == null:
 		return
 	if _hud_player_name != null:
-		_hud_player_name.text = "李十五"
+		_hud_player_name.text = GameManager.player_state.player_name
 	if _hud_player_hp != null:
 		_hud_player_hp.text = "气血 %d/%d" % [_state.player.hp, _state.player.max_hp]
 	if _hud_player_mp != null:

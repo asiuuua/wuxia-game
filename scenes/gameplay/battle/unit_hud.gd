@@ -17,6 +17,7 @@ var _mp_fill: ColorRect
 var _status: HBoxContainer
 var _portrait: TextureRect = null
 var _pop_layer: Node2D = null
+var _pop_pool: Array[Label] = []   # 飘字复用池（P2-7：避免高频 new/free）
 var _instant: bool = false
 var _max_hp: int = 100
 var _max_mp: int = 100
@@ -72,8 +73,10 @@ func reset() -> void:
 func _clear_pops() -> void:
 	if _pop_layer == null:
 		return
-	for c in _pop_layer.get_children():
-		c.free()
+	for l in _pop_pool:
+		if is_instance_valid(l):
+			l.free()
+	_pop_pool.clear()
 
 ## 头像：按图标 id 取图（缺图显占位图，不崩）；由 BattleScene 装配时调用
 ## 惰性自建 _portrait，即便 _ready 尚未执行也可挂图（健壮性更强）
@@ -143,18 +146,33 @@ func set_status(entries: Array) -> void:
 func set_instant(enabled: bool) -> void:
 	_instant = enabled
 
-## 飘字：在 HUD 本地坐标 (90,14) 上飘并淡出
+## 飘字：在 HUD 本地坐标 (90,14) 上飘并淡出；跳过模式 (_instant) 不飘字
 func pop_text(txt: String, color: Color) -> void:
 	_ensure_built()
-	var l := Label.new()
+	if _instant:
+		return
+	var l := _acquire_pop()
 	l.text = txt
 	l.modulate = color
+	l.visible = true
 	l.position = Vector2(90 + PORTRAIT_W, 14)
-	_pop_layer.add_child(l)
-	if _instant:
-		l.queue_free()
-		return
 	var t := create_tween()
 	t.tween_property(l, "position:y", -22.0, 0.5)
 	t.parallel().tween_property(l, "modulate:a", 0.0, 0.5)
-	t.tween_callback(l.queue_free)
+	t.tween_callback(func(): _release_pop(l))
+
+## 飘字复用：从池中取一个空闲 Label，无则新建并登记（P2-7 池化，避免高频 new/free）
+func _acquire_pop() -> Label:
+	for l in _pop_pool:
+		if is_instance_valid(l) and not l.visible:
+			return l
+	var l := Label.new()
+	_pop_layer.add_child(l)
+	_pop_pool.append(l)
+	return l
+
+## 飘字动画结束归还池（仅隐藏，等待下次复用）；节点已释放则忽略
+func _release_pop(l: Label) -> void:
+	if not is_instance_valid(l):
+		return
+	l.visible = false

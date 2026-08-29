@@ -29,6 +29,7 @@ var _mp_bg: ColorRect
 var _mp_fill: ColorRect
 var _sel_ring: ColorRect
 var _pop_layer: Node2D
+var _pop_pool: Array[Label] = []   # 飘字复用池（P2-7：避免高频 new/free）
 var _move_tween: Tween = null
 
 const SPRITE_W: float = 40.0
@@ -69,9 +70,11 @@ func _reset_visual(name_text: String) -> void:
 func _clear_pops() -> void:
 	if _pop_layer == null:
 		return
-	# 立即释放（实体处于脱离/未入树状态，安全），保证回收后无残留飘字
-	for c in _pop_layer.get_children():
-		c.free()
+	# 回收飘字池（reset/复用前清空，杜绝残留飘字与已释放引用）
+	for l in _pop_pool:
+		if is_instance_valid(l):
+			l.free()
+	_pop_pool.clear()
 
 func _build() -> void:
 	_built = true
@@ -117,13 +120,16 @@ func place_at(grid_pos: Vector2i) -> void:
 		var gn := _grid_node as BattleGridNode
 		position = gn.cell_center(grid_pos) + Vector2(0, -10.0)
 
-## 动画移动（GRID_MOVE 事件驱动）
-func move_to(grid_pos: Vector2i) -> void:
+## 动画移动（GRID_MOVE 事件驱动）；instant=true 时直接落位（跳过模式用）
+func move_to(grid_pos: Vector2i, instant: bool = false) -> void:
 	_grid_pos = grid_pos
 	if _grid_node == null:
 		return
 	var gn := _grid_node as BattleGridNode
 	var target := gn.cell_center(grid_pos) + Vector2(0, -10.0)
+	if instant:
+		position = target
+		return
 	if _move_tween != null and _move_tween.is_valid():
 		_move_tween.kill()
 	_move_tween = create_tween()
@@ -141,13 +147,29 @@ func set_selected(sel: bool) -> void:
 	_sel_ring.color = Color(1.0, 0.85, 0.2, 0.5 if sel else 0.0)
 
 func pop_text(txt: String, color: Color) -> void:
-	var l := Label.new()
+	var l := _acquire_pop()
 	l.text = txt
 	l.modulate = color
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.visible = true
 	l.position = Vector2(-14.0, -SPRITE_H - 32.0)
-	_pop_layer.add_child(l)
 	var t := create_tween()
 	t.tween_property(l, "position:y", -SPRITE_H - 64.0, 0.5)
 	t.parallel().tween_property(l, "modulate:a", 0.0, 0.5)
-	t.tween_callback(l.queue_free)
+	t.tween_callback(func(): _release_pop(l))
+
+## 飘字复用：从池中取一个空闲 Label，无则新建并登记（P2-7 池化，避免高频 new/free）
+func _acquire_pop() -> Label:
+	for l in _pop_pool:
+		if is_instance_valid(l) and not l.visible:
+			return l
+	var l := Label.new()
+	_pop_layer.add_child(l)
+	_pop_pool.append(l)
+	return l
+
+## 飘字动画结束归还池（仅隐藏，等待下次复用）；节点已释放则忽略
+func _release_pop(l: Label) -> void:
+	if not is_instance_valid(l):
+		return
+	l.visible = false

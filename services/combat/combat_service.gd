@@ -45,7 +45,7 @@ func start_combat(battle_id: String) -> void:
 	pc.crit_rate = ps.crit_rate
 	pc.crit_damage = ps.crit_damage
 	pc.dodge_rate = ps.dodge_rate
-	pc.speed = 10                     # 玩家集气速率基线（后续接 PlayerState.speed）
+	pc.speed = ps.agility             # 集气速率由敏捷派生（去魔法数；原硬编码 10，与敏捷基线一致）
 	pc.damage_taken_mult = edm
 	state.player = pc
 
@@ -57,7 +57,7 @@ func start_combat(battle_id: String) -> void:
 		ec.character_id = enemy_id
 		ec.name_key = enemy_id
 		ec.max_hp = int(edata.get("hp", 40) * ehp); ec.hp = ec.max_hp
-		ec.max_mp = 30; ec.mp = 30
+		ec.max_mp = int(edata.get("max_mp", 30)); ec.mp = ec.max_mp  # 敌真气上限取 enemies.json（缺省 30）
 		ec.attack = edata.get("attack", 10)
 		ec.defense = int(ec.attack * 0.5 * earm)
 		ec.damage_taken_mult = pdm
