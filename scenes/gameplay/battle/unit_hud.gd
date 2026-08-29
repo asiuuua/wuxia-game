@@ -1,7 +1,9 @@
 # scenes/gameplay/battle/unit_hud.gd
-# 单个战斗单位的 HUD（M2 演出层用）：名字 + 血条 + 真气条 + 状态行 + 飘字
+# 单个战斗单位的 HUD（M2 演出层用）：名字 + 血条 + 真气条 + 护盾条 + 状态行 + 飘字
 # 纯视图，不读战斗逻辑；max_hp/max_mp 由 BattleScene 装配时 setup 注入。
 # 属战斗窗口主权。
+# 工业化（P4·第5层）：视觉子节点惰性构建一次（_ensure_built），setup/reset 可重复调用，
+#              对象池复用前 reset() 清零状态行/护盾/飘字，杜绝回收复用残留。
 
 extends Control
 class_name UnitHud
@@ -14,16 +16,24 @@ var _mp_bg: ColorRect
 var _mp_fill: ColorRect
 var _status: HBoxContainer
 var _portrait: TextureRect = null
+var _pop_layer: Node2D = null
 var _instant: bool = false
 var _max_hp: int = 100
 var _max_mp: int = 100
+var _built: bool = false
 
 const BAR_W: float = 200.0
 const PORTRAIT_W: float = 56.0   # 头像宽；布局整体右移，原元素 x 偏移 PORTRAIT_W
 
 func _ready() -> void:
+	_ensure_built()
+
+## 惰性构建全部视觉子节点（首次 setup/set_portrait 前确保存在；对象池复用不再重建）
+func _ensure_built() -> void:
+	if _built:
+		return
+	_built = true
 	custom_minimum_size = Vector2(220 + PORTRAIT_W, 64)
-	_ensure_portrait()
 	_name = Label.new()
 	add_child(_name)
 	_name.position = Vector2(PORTRAIT_W, 0)
@@ -39,16 +49,36 @@ func _ready() -> void:
 	_mp_fill = ColorRect.new(); _mp_fill.color = Color(0.3, 0.5, 0.95)
 	_mp_fill.size = Vector2(BAR_W, 6); _mp_fill.position = Vector2(PORTRAIT_W, 34); add_child(_mp_fill)
 	_status = HBoxContainer.new(); _status.position = Vector2(PORTRAIT_W, 44); add_child(_status)
+	_pop_layer = Node2D.new(); add_child(_pop_layer)
+	_ensure_portrait()
 
-## 装配：名字 + 上下限（据此算血条比例）
+## 装配：名字 + 上下限（据此算血条比例）；可重复调用（对象池复用安全）
 func setup(name_text: String, max_hp: int, max_mp: int) -> void:
+	_ensure_built()
 	_name.text = name_text
 	_max_hp = max_hp; _max_mp = max_mp
 	set_hp(max_hp); set_mp(max_mp)
 
+## 回收复用前的重置：清零状态行 / 护盾 / 飘字（对象池 release→acquire 间调用）
+func reset() -> void:
+	if not _built:
+		return
+	_instant = false
+	for c in _status.get_children():
+		c.free()
+	set_shield(0)
+	_clear_pops()
+
+func _clear_pops() -> void:
+	if _pop_layer == null:
+		return
+	for c in _pop_layer.get_children():
+		c.free()
+
 ## 头像：按图标 id 取图（缺图显占位图，不崩）；由 BattleScene 装配时调用
 ## 惰性自建 _portrait，即便 _ready 尚未执行也可挂图（健壮性更强）
 func set_portrait(icon_id: String) -> void:
+	_ensure_built()
 	_ensure_portrait()
 	_portrait.texture = UIManager.get_icon(icon_id)
 
@@ -115,11 +145,12 @@ func set_instant(enabled: bool) -> void:
 
 ## 飘字：在 HUD 本地坐标 (90,14) 上飘并淡出
 func pop_text(txt: String, color: Color) -> void:
+	_ensure_built()
 	var l := Label.new()
 	l.text = txt
 	l.modulate = color
 	l.position = Vector2(90 + PORTRAIT_W, 14)
-	add_child(l)
+	_pop_layer.add_child(l)
 	if _instant:
 		l.queue_free()
 		return

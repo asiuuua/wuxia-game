@@ -5,6 +5,8 @@
 #   - set_hp / set_mp：据事件直设血条（加速/跳过不错位，与 M2 BattleView 约定一致）
 #   - pop_text：伤害/治疗/状态飘字
 # ⚠️ 不持有战斗逻辑；只做表现。网格坐标换算委托 BattleGridNode.cell_center。
+# 工业化（P4·第5层）：视觉子节点只在首次 _build 创建一次，setup 可重复调用（对象池复用）；
+#              reset() 清零血条/真气/选中/飘字，杜绝回收复用残留。
 
 extends Node2D
 class_name BattleEntity
@@ -18,6 +20,7 @@ var _mp: int = 50
 var _grid_pos: Vector2i = Vector2i.ZERO
 var _grid_node: Node = null
 
+var _built: bool = false
 var _body: ColorRect
 var _name_lbl: Label
 var _hp_bg: ColorRect
@@ -26,11 +29,13 @@ var _mp_bg: ColorRect
 var _mp_fill: ColorRect
 var _sel_ring: ColorRect
 var _pop_layer: Node2D
+var _move_tween: Tween = null
 
 const SPRITE_W: float = 40.0
 const SPRITE_H: float = 52.0
 const BAR_W: float = 44.0
 
+## 装配（可重复调用，对象池复用安全）：首次构建视觉子节点，之后仅重置清零。
 func setup(uid: String, player: bool, name_text: String, max_hp: int, max_mp: int, grid_node: Node) -> void:
 	unit_id = uid
 	is_player = player
@@ -39,9 +44,37 @@ func setup(uid: String, player: bool, name_text: String, max_hp: int, max_mp: in
 	_hp = max_hp
 	_mp = max_mp
 	_grid_node = grid_node
-	_build(name_text)
+	if not _built:
+		_build()
+	_reset_visual(name_text)
 
-func _build(name_text: String) -> void:
+## 回收复用前的重置：清零血条/真气/选中/飘字，重设名称与阵营配色（对象池 release→acquire 间调用）
+func reset(name_text: String = "") -> void:
+	if not _built:
+		return
+	if _move_tween != null and _move_tween.is_valid():
+		_move_tween.kill()
+		_move_tween = null
+	_reset_visual(name_text)
+
+func _reset_visual(name_text: String) -> void:
+	if name_text != "" and _name_lbl != null:
+		_name_lbl.text = name_text
+	if _body != null:
+		_body.color = Color(0.3, 0.5, 0.95) if is_player else Color(0.85, 0.35, 0.35)
+	set_selected(false)
+	_clear_pops()
+	_refresh_bars()
+
+func _clear_pops() -> void:
+	if _pop_layer == null:
+		return
+	# 立即释放（实体处于脱离/未入树状态，安全），保证回收后无残留飘字
+	for c in _pop_layer.get_children():
+		c.free()
+
+func _build() -> void:
+	_built = true
 	# 身体占位（玩家蓝、敌人红）
 	_body = ColorRect.new()
 	_body.size = Vector2(SPRITE_W, SPRITE_H)
@@ -56,7 +89,7 @@ func _build(name_text: String) -> void:
 	add_child(_sel_ring)
 	# 名字
 	_name_lbl = Label.new()
-	_name_lbl.text = name_text
+	_name_lbl.text = ""
 	_name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_name_lbl.position = Vector2(-30.0, -SPRITE_H - 22.0)
 	_name_lbl.add_theme_color_override("font_color", Color(0.95, 0.95, 0.95))
@@ -72,7 +105,6 @@ func _build(name_text: String) -> void:
 	_mp_fill = ColorRect.new(); _mp_fill.color = Color(0.35, 0.55, 0.95)
 	_mp_fill.size = Vector2(BAR_W, 4); _mp_fill.position = _mp_bg.position; add_child(_mp_fill)
 	_pop_layer = Node2D.new(); add_child(_pop_layer)
-	_refresh_bars()
 
 func _refresh_bars() -> void:
 	_hp_fill.size.x = BAR_W * clampf(float(_hp) / float(_max_hp), 0.0, 1.0)
@@ -92,8 +124,10 @@ func move_to(grid_pos: Vector2i) -> void:
 		return
 	var gn := _grid_node as BattleGridNode
 	var target := gn.cell_center(grid_pos) + Vector2(0, -10.0)
-	var t := create_tween()
-	t.tween_property(self, "position", target, 0.25)
+	if _move_tween != null and _move_tween.is_valid():
+		_move_tween.kill()
+	_move_tween = create_tween()
+	_move_tween.tween_property(self, "position", target, 0.25)
 
 func set_hp(hp: int) -> void:
 	_hp = hp

@@ -89,8 +89,7 @@ func _spawn_entities() -> void:
 			_spawn_one(e.character_id, false, nm, e)
 
 func _spawn_one(uid: String, player: bool, nm: String, ch: CombatCharacter) -> void:
-	var ent := BattleEntity.new()
-	ent.setup(uid, player, nm, ch.max_hp, ch.max_mp, _grid_node)
+	var ent := CombatEntityPool.acquire_entity(uid, player, nm, ch.max_hp, ch.max_mp, _grid_node)
 	ent.place_at(ch.grid_pos)
 	_entities_node.add_child(ent)
 	_entities[uid] = ent
@@ -453,7 +452,16 @@ func _show_result() -> void:
 		_result_label.text = "战斗结束：你倒下了……"
 		_return_btn.visible = false
 
+## 战斗结束回城前：把本场实体归还对象池（脱离父节点 + 清零），供下一场复用
+func _release_all() -> void:
+	for uid in _entities.keys():
+		var ent: BattleEntity = _entities[uid]
+		if ent != null:
+			CombatEntityPool.release_entity(ent)
+	_entities.clear()
+
 func _on_return_pressed() -> void:
+	_release_all()
 	GameManager.return_to_town()
 
 # ───────────────────────── 工具 ─────────────────────────

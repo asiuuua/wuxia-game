@@ -12,6 +12,7 @@ var _enemy_huds: Dictionary = {}      # character_id -> UnitHud
 var _enemy_buttons: Dictionary = {}   # character_id -> Button（选择）
 var _enemy_box: HBoxContainer = null
 var _player_hud: UnitHud = null
+var _root_vb: VBoxContainer = null   # 在 _build_ui 赋值，供 _build_units 经对象池取用玩家 HUD
 var _director: CombatDirector = null
 var _view: BattleView = null
 var _order_bar: HBoxContainer = null
@@ -53,9 +54,8 @@ func _build_ui() -> void:
 	_view = BattleView.new()
 	vb.add_child(_view)
 	_director.bind_view(_view)
-	# 玩家 HUD
-	_player_hud = UnitHud.new()
-	vb.add_child(_player_hud)
+	_root_vb = vb
+	# 玩家 HUD 在 _build_units 经对象池取用（避免每场 new/free）
 	# 敌人区（HUD + 选择按钮）
 	_enemy_box = HBoxContainer.new()
 	vb.add_child(_enemy_box)
@@ -101,14 +101,14 @@ func _build_ui() -> void:
 	_result_panel.add_child(_return_button)
 
 func _build_units() -> void:
-	_player_hud.setup("李十五", _state.player.max_hp, _state.player.max_mp)
+	_player_hud = CombatEntityPool.acquire_hud("李十五", _state.player.max_hp, _state.player.max_mp)
+	_root_vb.add_child(_player_hud)
 	_player_hud.set_portrait("npc/player")
 	_view.register_unit("player", _player_hud)
 	for e in _state.enemies:
-		var hud := UnitHud.new()
-		_enemy_box.add_child(hud)
 		var nm: String = ConfigManager.get_enemy(e.character_id).get("name", e.character_id)
-		hud.setup(nm, e.max_hp, e.max_mp)
+		var hud := CombatEntityPool.acquire_hud(nm, e.max_hp, e.max_mp)
+		_enemy_box.add_child(hud)
 		hud.set_portrait("enemies/" + e.character_id)
 		_enemy_huds[e.character_id] = hud
 		_view.register_unit(e.character_id, hud)
@@ -341,5 +341,22 @@ func _show_result() -> void:
 		_result_label.text = "战斗结束：你倒下了……"
 		_return_button.visible = false
 
+## 战斗结束回城前：把本场 HUD 归还对象池（脱离父节点 + 清零），供下一场复用
+func _release_all_huds() -> void:
+	if _player_hud != null:
+		CombatEntityPool.release_hud(_player_hud)
+		_player_hud = null
+	for k in _enemy_huds.keys():
+		var h: UnitHud = _enemy_huds[k]
+		if h != null:
+			CombatEntityPool.release_hud(h)
+	_enemy_huds.clear()
+	for k in _enemy_buttons.keys():
+		var b: Button = _enemy_buttons[k]
+		if b != null and b.get_parent() != null:
+			b.get_parent().remove_child(b)
+	_enemy_buttons.clear()
+
 func _on_return_pressed() -> void:
+	_release_all_huds()
 	GameManager.return_to_town()
