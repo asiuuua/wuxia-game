@@ -1,3 +1,4 @@
+@tool
 # scenes/ui/components/save_name_dialog/SaveNameDialog.gd
 # 存档命名弹窗（B 路线：静态结构全部进 SaveNameDialog.tscn，美术可在编辑器改布局/配色；脚本只管行为与信号）
 # 用法：instantiate() → add_child() → 连 confirmed / cancelled 信号 → setup() 可填默认名
