@@ -51,6 +51,16 @@ func _ready() -> void:
 	_content_root.mouse_filter = Control.MOUSE_FILTER_PASS
 	add_child(_content_root)
 	UIManager.apply_safe_area(_content_root)
+	# ⚠️ 关键修复（2026-08-31）：消除「全屏界面弹出后首下点击被吞、需点两下」的 Godot 已知行为。
+	# 直接 add_child 到 CanvasLayer 的 Control，进入场景树的当帧其 gui_input 尚未就绪，
+	# 该帧的鼠标点击会被 viewport 首次重排吞掉。表现为：主菜单点「读取旧梦」第一下无反应，第二下才进。
+	# 解法：把内容构建延迟到下一帧（call_deferred），让界面在第二帧才构建并接受输入，
+	# 首帧吞输入窗口已过去。缓存复用路径不跑 _ready，无副作用。
+	call_deferred("_build_deferred")
+
+func _build_deferred() -> void:
+	if _content_root == null or not is_instance_valid(_content_root):
+		return
 	_build_content()
 	_update_selection()
 

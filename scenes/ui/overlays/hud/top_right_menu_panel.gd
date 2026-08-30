@@ -7,7 +7,7 @@
 # B 路线（2026-08-30）：两个按钮与红点的静态结构/锚点/文案已迁入 TopRightMenuPanel.tscn，
 # 脚本只保留连线（pressed → open_screen）与交互反馈挂载，原 _build() 代码删净。
 
-extends Control
+extends HudDraggablePanel
 class_name TopRightMenuPanel
 
 const UIPalette = preload("res://core/constants/ui_theme.gd")
@@ -18,9 +18,10 @@ const UIFeedback = preload("res://scenes/ui/components/ui_feedback/UIFeedback.gd
 func _ready() -> void:
 	if Engine.is_editor_hint():
 		return
-	focus_mode = Control.FOCUS_NONE
-	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_hook_buttons()
+	# 拖拽初始化：默认右上角（屏幕宽-面板宽-边距，12）；可拖拽、落点持久化
+	var vp := _screen_size()
+	_init_drag("top_right_menu", Vector2(maxf(12.0, vp.x - 220.0), 12.0))
 	if is_instance_valid(EventBus):
 		EventBus.bond_relationship_changed.connect(_refresh_badge)
 	_refresh_badge()

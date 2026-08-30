@@ -1,6 +1,38 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scenes/ui/screens/save_load/SaveLoadScreen.gd" id="1_scr"]
+
+[sub_resource type="StyleBoxFlat" id="GlassPanel"]
+bg_color = Color(0.071, 0.078, 0.11, 0.62)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.2)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_left = 14
+corner_radius_bottom_right = 14
+content_margin_left = 20
+content_margin_right = 20
+content_margin_top = 16
+content_margin_bottom = 16
+
+[sub_resource type="StyleBoxFlat" id="GlassList"]
+bg_color = Color(0.071, 0.078, 0.11, 0.45)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.18)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_left = 10
+corner_radius_bottom_right = 10
+content_margin_left = 12
+content_margin_right = 12
+content_margin_top = 12
+content_margin_bottom = 12
 
 [node name="SaveLoadScreen" type="Control"]
 layout_mode = 1
@@ -9,27 +41,36 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 script = ExtResource("1_scr")
 
+[node name="Backdrop" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 1
+color = Color(0, 0, 0, 0.45)
+
 [node name="Header" type="HBoxContainer" parent="."]
 layout_mode = 1
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 1.0
-anchor_bottom = 0.0
-offset_left = 24.0
-offset_top = 16.0
-offset_right = -24.0
-offset_bottom = 72.0
+anchor_left = 0.5
+anchor_top = 0.06
+anchor_right = 0.5
+anchor_bottom = 0.06
+offset_left = -320.0
+offset_top = 0.0
+offset_right = 320.0
+offset_bottom = 52.0
 theme_override_constants/separation = 20
 
 [node name="Scroll" type="ScrollContainer" parent="."]
 layout_mode = 1
-anchor_left = 0.0
-anchor_top = 0.12
-anchor_right = 1.0
-anchor_bottom = 0.96
-offset_left = 60.0
-offset_right = -60.0
+anchor_left = 0.5
+anchor_top = 0.15
+anchor_right = 0.5
+anchor_bottom = 0.82
+offset_left = -320.0
+offset_right = 320.0
 horizontal_scroll_mode = 0
+theme_override_styles/panel = SubResource("GlassList")
 
 [node name="List" type="VBoxContainer" parent="Scroll"]
 layout_mode = 2

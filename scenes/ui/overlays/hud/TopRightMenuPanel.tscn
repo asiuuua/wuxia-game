@@ -4,25 +4,19 @@
 
 [node name="TopRightMenuPanel" type="Control"]
 layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
 focus_mode = 0
 script = ExtResource("1_scr")
 
-[node name="BondBtn" type="Button" parent="."]
+[node name="HBox" type="HBoxContainer" parent="."]
 layout_mode = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -178.0
-offset_top = 12.0
-offset_right = -96.0
-offset_bottom = 44.0
-grow_horizontal = 0
+mouse_filter = 2
+theme_override_constants/separation = 12
+
+[node name="BondBtn" type="Button" parent="HBox"]
+layout_mode = 2
 text = "姻缘"
 focus_mode = 0
+custom_minimum_size = Vector2(82, 32)
 
 [node name="RomanceBadge" type="Label" parent="BondBtn"]
 visible = false
@@ -39,14 +33,8 @@ horizontal_alignment = 2
 mouse_filter = 2
 theme_override_colors/font_color = Color(0.91, 0.2, 0.2, 1)
 
-[node name="MenuBtn" type="Button" parent="."]
-layout_mode = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -92.0
-offset_top = 12.0
-offset_right = -10.0
-offset_bottom = 44.0
-grow_horizontal = 0
+[node name="MenuBtn" type="Button" parent="HBox"]
+layout_mode = 2
 text = "菜单"
 focus_mode = 0
+custom_minimum_size = Vector2(82, 32)

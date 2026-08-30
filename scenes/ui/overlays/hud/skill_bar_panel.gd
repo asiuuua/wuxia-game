@@ -10,7 +10,7 @@
 # B 路线（2026-08-30）：面板锚点与 6 个技能槽实例已迁入 SkillBarPanel.tscn
 # （SkillSlot.tscn 静态 instance，美术可直接在编辑器增删槽位），脚本只收集引用 + 刷新。
 
-extends Control
+extends HudDraggablePanel
 class_name SkillBarPanel
 
 const UIPalette = preload("res://core/constants/ui_theme.gd")
@@ -24,8 +24,13 @@ var _slots: Array[SkillSlot] = []
 func _ready() -> void:
 	if Engine.is_editor_hint():
 		return
-	focus_mode = Control.FOCUS_NONE
 	_collect_slots()
+	# 拖拽初始化：默认底部居中（屏幕宽/2 - 面板宽/2，屏幕高 - 面板高 - 边距）；可拖拽、落点持久化
+	var vp := _screen_size()
+	var panel_w := get_combined_minimum_size().x
+	var panel_h := get_combined_minimum_size().y
+	var default_pos := Vector2(maxf(12.0, vp.x * 0.5 - panel_w * 0.5), maxf(12.0, vp.y - panel_h - 16.0))
+	_init_drag("skill_bar", default_pos)
 	if is_instance_valid(EventBus):
 		EventBus.combat_skill_equipped.connect(_on_skill_equipped)
 		EventBus.notify_skill_bar_changed.connect(_refresh_full)

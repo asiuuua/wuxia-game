@@ -56,24 +56,32 @@ func _ready() -> void:
 	_connect_signals()
 	_refresh_mode_visuals()
 
-# 悬停高亮态用代码生成的 StyleBox（金色描边 2px），静态底由 .tscn 提供
+# 悬停高亮态用代码生成的 StyleBox（毛玻璃底 + 选中金边），静态底由 .tscn 提供
 func _build_dynamic_styles() -> void:
 	_normal_sb = StyleBoxFlat.new()
-	_normal_sb.bg_color = UIPalette.PANEL_DARK
+	_normal_sb.bg_color = UIPalette.GLASS_BG
 	_normal_sb.border_width_left = 1
 	_normal_sb.border_width_top = 1
 	_normal_sb.border_width_right = 1
 	_normal_sb.border_width_bottom = 1
-	_normal_sb.border_color = UIPalette.TEXT_SECONDARY
+	_normal_sb.border_color = UIPalette.GLASS_BORDER
+	_normal_sb.corner_radius_top_left = 8
+	_normal_sb.corner_radius_top_right = 8
+	_normal_sb.corner_radius_bottom_left = 8
+	_normal_sb.corner_radius_bottom_right = 8
 	_normal_sb.set_content_margin_all(10)
 
 	_highlight_sb = StyleBoxFlat.new()
-	_highlight_sb.bg_color = UIPalette.PANEL_DARK
+	_highlight_sb.bg_color = UIPalette.GLASS_BG_HOVER
 	_highlight_sb.border_width_left = 2
 	_highlight_sb.border_width_top = 2
 	_highlight_sb.border_width_right = 2
 	_highlight_sb.border_width_bottom = 2
 	_highlight_sb.border_color = UIPalette.GOLD
+	_highlight_sb.corner_radius_top_left = 8
+	_highlight_sb.corner_radius_top_right = 8
+	_highlight_sb.corner_radius_bottom_left = 8
+	_highlight_sb.corner_radius_bottom_right = 8
 	_highlight_sb.set_content_margin_all(10)
 
 	_bg.add_theme_stylebox_override("panel", _normal_sb)

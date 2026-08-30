@@ -85,6 +85,8 @@ func _build_header() -> void:
 
 	var back_btn: Button = Button.new()
 	back_btn.text = "← " + (tr("esc_save_game") if _mode == "save" else tr("menu_load"))
+	back_btn.custom_minimum_size = Vector2(96, 34)
+	back_btn.add_theme_font_size_override("font_size", 15)
 	back_btn.pressed.connect(_go_back)
 	_apply_glass_to_button(back_btn, UIPalette.TEXT_SECONDARY)
 	_header.add_child(back_btn)

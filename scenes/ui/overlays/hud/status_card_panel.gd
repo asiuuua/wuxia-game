@@ -9,7 +9,7 @@
 # 本脚本只保留：① 引用场景节点 ② 给数值条填动态参数（标签/颜色/长度）③ EventBus 订阅与刷新。
 # 原 _build() / _build_avatar() 约 95 行代码搭 UI 全部删除。
 
-extends Control
+extends HudDraggablePanel
 class_name StatusCardPanel
 
 const UIPalette = preload("res://core/constants/ui_theme.gd")
@@ -39,8 +39,9 @@ var _attr_bars: Dictionary = {}
 func _ready() -> void:
 	if Engine.is_editor_hint():
 		return
-	focus_mode = Control.FOCUS_NONE
 	_setup_bars()
+	# 拖拽初始化（状态卡默认左上角 12,12；可拖拽、落点持久化）
+	_init_drag("status_card", Vector2(12.0, 12.0))
 	if is_instance_valid(EventBus):
 		EventBus.player_hp_changed.connect(_refresh)
 		EventBus.player_mp_changed.connect(_refresh)

@@ -25,10 +25,10 @@ const PANEL_W := 300.0
 const MAX_VISIBLE := 360.0            # 列表区最大可视高度，超出则滚动
 
 # --- 初始位置：状态卡下方「2 指头」距离（用户 2026-08-29 明确要求） ---
-# 状态卡：position(12,12)、设计尺寸 340×318、scale 0.667 → 渲染高 ≈ 212。
+# 状态卡：position(12,12)、设计尺寸 340×318（2026-08-31 起取消 scale 0.667，改用真实尺寸便于拖拽定位）。
 # 任务栏初始放在状态卡正下方，留 2 指头（FINGER×2）间隙，x 与状态卡左缘对齐。
 const STATUS_CARD_POS := Vector2(12.0, 12.0)
-const STATUS_CARD_SCALE := 0.667
+const STATUS_CARD_SCALE := 1.0
 const STATUS_CARD_W := 340.0
 const STATUS_CARD_H := 318.0
 const FINGER := 16.0

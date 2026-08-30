@@ -197,12 +197,14 @@ func _add_option(row: HBoxContainer, options: PackedStringArray, current: String
 func _add_toggle(row: HBoxContainer, value: bool, cb: Callable) -> void:
 	var btn: Button = Button.new()
 	btn.custom_minimum_size = Vector2(120, 0)
+	# 毛砂玻璃样式（去掉默认棕色填充，与分类/下拉按钮视觉一致）
+	_apply_glass_button_style(btn, UIPalette.SUCCESS if value else UIPalette.TEXT_SECONDARY)
 	btn.text = tr("toggle_on") if value else tr("toggle_off")
-	btn.add_theme_color_override("font_color", UIPalette.SUCCESS if value else UIPalette.DISABLED)
 	btn.pressed.connect(func():
 		var nv: bool = not (btn.text == tr("toggle_on"))
 		btn.text = tr("toggle_on") if nv else tr("toggle_off")
-		btn.add_theme_color_override("font_color", UIPalette.SUCCESS if nv else UIPalette.DISABLED)
+		# 开=绿、关=米灰，颜色随状态切换但底色始终毛玻璃
+		btn.add_theme_color_override("font_color", UIPalette.SUCCESS if nv else UIPalette.TEXT_SECONDARY)
 		cb.call(nv)
 	)
 	row.add_child(btn)
