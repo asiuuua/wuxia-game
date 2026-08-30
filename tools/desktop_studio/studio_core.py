@@ -938,6 +938,90 @@ def login_bg_layout_update(d):
     return True, "已保存登录背景布局（游戏内立即生效）"
 
 
+# ============================ 预加载(加载)界面布局（自由拖拽可视化编辑） ============================
+def _loading_layout_path():
+    return os.path.join(discover_project_root(), "data", "configs", "ui", "loading_layout.json")
+
+
+# 四个可拖拽元素（与游戏 LoadingScreen._apply_layout 的 keys 对应）
+LOADING_ELEMS = ["progress_bar", "progress_label", "tip_label", "version_label"]
+
+_LOADING_LAYOUT_DEFAULT = {
+    "elements": {
+        "progress_bar":  {"x": 0.5,  "y": 0.86, "w": 0.5,  "h": 0.02},
+        "progress_label":{"x": 0.5,  "y": 0.81, "align": "center"},
+        "tip_label":     {"x": 0.5,  "y": 0.66, "align": "center"},
+        "version_label": {"x": 0.97, "y": 0.97, "align": "right"},
+    }
+}
+
+
+def loading_layout_get():
+    """读取当前加载界面布局（与默认合并，缺字段补默认）。"""
+    p = _loading_layout_path()
+    data = {"elements": {k: dict(v) for k, v in _LOADING_LAYOUT_DEFAULT["elements"].items()}}
+    if os.path.exists(p):
+        try:
+            with open(p, "r", encoding="utf-8") as f:
+                parsed = json.load(f)
+            if isinstance(parsed, dict) and isinstance(parsed.get("elements"), dict):
+                for k in LOADING_ELEMS:
+                    if k in parsed["elements"]:
+                        data["elements"][k].update(parsed["elements"][k])
+        except Exception:
+            pass
+    return data
+
+
+def loading_layout_update(d):
+    """写入加载界面布局（自动备份旧文件）。d 形如 {"elements": {...}}。"""
+    p = _loading_layout_path()
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+    _backup(p)
+    data = {"elements": {}}
+    for k in LOADING_ELEMS:
+        spec = dict(_LOADING_LAYOUT_DEFAULT["elements"].get(k, {}))
+        incoming = (d.get("elements", {}) or {}).get(k, {})
+        if isinstance(incoming, dict):
+            spec.update(incoming)
+        # 归一化裁剪到 0~1
+        for ck in ("x", "y", "w", "h"):
+            if ck in spec:
+                spec[ck] = max(0.0, min(1.0, float(spec[ck])))
+        data["elements"][k] = spec
+    data["_doc"] = "加载界面元素布局（工作室「预加载界面」自由拖拽编辑写入）。坐标为视口归一化 0~1；progress_bar 用 w/h 控制条宽高。"
+    with open(p, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    log_event("loading_layout", p, "更新预加载界面布局")
+    return True, "已保存预加载界面布局（游戏内下次启动生效）"
+
+
+# === 各按钮背景图「存空/清除」（Task #42） ===
+def login_btn_bg_clear(btn_id):
+    """把某按钮背景图清空为 null：删映射表项 + 删图片文件，回退到游戏默认样式。"""
+    cfg = _login_btn_bg_cfg()
+    data = {}
+    if os.path.exists(cfg):
+        try:
+            data = json.load(open(cfg, "r", encoding="utf-8"))
+        except Exception:
+            data = {}
+    if "map" in data and btn_id in data["map"]:
+        del data["map"][btn_id]
+        with open(cfg, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    d = _login_btn_bg_dir()
+    fp = os.path.join(d, "%s.png" % btn_id)
+    if os.path.exists(fp):
+        _backup(fp)
+        try:
+            os.remove(fp)
+        except Exception:
+            pass
+    log_event("login_btn_bg_clear", btn_id, "清除按钮背景图（设为默认）")
+    return True, "已清除 %s 的按钮背景图（回退默认）" % btn_id
+
+
 # ============================ 自检（供无头测试） ============================
 def self_test(tmp_root):
     """在临时工程根目录上跑一遍增/删/改/回收站/恢复/日志，验证核心逻辑。"""

@@ -17,7 +17,7 @@ class_name UIBackground
 const UIPalette = preload("res://core/constants/ui_theme.gd")
 
 ## 背景图路径；留空或文件不存在则只显示渐变垫底（不报错、不崩）
-@export var bg_image_path: String = "res://assets/ui/main_menu_bg.jpg"
+@export var bg_image_path: String = "res://assets/ui/main_menu_bg.png"
 ## 压暗层不透明度（0=不压暗，1=全黑）
 @export var scrim_alpha: float = 0.55
 ## 是否启用落叶粒子

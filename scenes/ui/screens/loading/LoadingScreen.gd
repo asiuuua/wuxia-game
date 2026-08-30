@@ -13,9 +13,12 @@ const UIPalette = preload("res://core/constants/ui_theme.gd")
 
 const TIP_INTERVAL := 2.5
 const TIPS_FILE := "res://data/configs/ui/loading_tips.json"
+# 加载界面元素布局（工作室「预加载界面」标签页自由拖拽可视化编辑后写入；坐标为视口归一化 0~1）。
+# 缺省/字段缺失时回退到原预设位置，零破坏。
+const LAYOUT_FILE := "res://data/configs/ui/loading_layout.json"
 
 # 加载页背景图（与主菜单共用同款竹林图，风格统一；数据驱动，缺失则回退深墨色）
-const BG_IMAGE_PATH := "res://assets/ui/main_menu_bg.jpg"
+const BG_IMAGE_PATH := "res://assets/ui/main_menu_bg.png"
 # 背景图上的压暗层透明度（保证标题/进度文字可读：0=不压暗，1=全黑）
 const BG_IMAGE_SCRIM := 0.55
 
@@ -35,6 +38,7 @@ var _tip_timer := 0.0
 var _ready_to_enter := false
 var _auto_enter_timer := 0.0   # bootstrap_completed 后倒计时；归零自动进入主菜单
 var _progress_tween: Tween = null   # 进度条平滑缓动句柄（避免每步叠加 tween）
+var _applying_layout := false       # 工作室布局套用重入保护（resize 回调与初始化可能并发）
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -44,6 +48,10 @@ func _ready() -> void:
 	_connect_events()
 	if not _tips.is_empty():
 		_tip_label.text = _tips[0]
+	# 工作室拖拽布局：延后一帧套用（等 .tscn 尺寸与文案定稿，拿到的内容宽才准）
+	_apply_layout.call_deferred()
+	# 窗口尺寸变化（含不同比例屏幕）时按新视口重算归一化坐标
+	resized.connect(_on_resized)
 
 func _build_ui() -> void:
 	# B 路线（2026-08-29）：TipLabel / ProgressLabel / ProgressBar / VersionLabel 已迁入
@@ -69,6 +77,80 @@ func _build_ui() -> void:
 
 	# 版本号文本（原 _build_ui 里 new Label 设置的内容，现赋给 .tscn 节点）
 	_version_label.text = "v0.5.0 Build 20250827"
+
+# 工作室「预加载界面」自由拖拽布局：读取 loading_layout.json 的归一化(0~1)坐标套用到 4 个元素。
+# 任意字段缺失/文件不存在 → 保持 .tscn 原预设位置（零破坏）。坐标以视口当前尺寸换算为偏移量。
+func _apply_layout() -> void:
+	if _applying_layout:
+		return
+	_applying_layout = true
+	if not FileAccess.file_exists(LAYOUT_FILE):
+		_applying_layout = false
+		return
+	var f: FileAccess = FileAccess.open(LAYOUT_FILE, FileAccess.READ)
+	if f == null:
+		_applying_layout = false
+		return
+	var parsed: Variant = JSON.parse_string(f.get_as_text())
+	f.close()
+	if parsed == null or not parsed.has("elements"):
+		_applying_layout = false
+		return
+	var els: Dictionary = parsed["elements"]
+	var vw: float = get_viewport_rect().size.x
+	var vh: float = get_viewport_rect().size.y
+	_apply_one(_progress_bar, els.get("progress_bar", {}), vw, vh, true)
+	_apply_one(_progress_label, els.get("progress_label", {}), vw, vh, false)
+	_apply_one(_tip_label, els.get("tip_label", {}), vw, vh, false)
+	_apply_one(_version_label, els.get("version_label", {}), vw, vh, false)
+	_applying_layout = false
+
+func _on_resized() -> void:
+	# 窗口尺寸变化（含首次布局）时按新视口重算归一化坐标，避免错误位置
+	_apply_layout.call_deferred()
+
+# spec: {"x":0~1,"y":0~1,"w":0~1,"h":0~1(仅进度条用),"align":"left|center|right"}
+# 定位语义（与工作室预览严格一致）：y = 元素顶部；x = 锚点，按 align 左/居中/右回退自身宽度。
+func _apply_one(node: Control, spec: Dictionary, vw: float, vh: float, is_bar: bool) -> void:
+	if spec.is_empty() or not spec.has("x") or not spec.has("y"):
+		return
+	var px: float = float(spec["x"]) * vw
+	var py: float = float(spec["y"]) * vh
+	var w: float
+	var h: float
+	if is_bar:
+		w = float(spec.get("w", 0.5)) * vw
+		h = maxf(float(spec.get("h", 0.02)) * vh, 4.0)
+		node.custom_minimum_size = Vector2(w, h)
+	else:
+		# 文字类：宽度取内容宽与视口 60% 的较大值，保证文案变长时居中/右对齐依旧稳
+		var mins: Vector2 = node.get_combined_minimum_size()
+		w = maxf(mins.x, vw * 0.6)
+		h = maxf(mins.y, 1.0)
+	var align: String = String(spec.get("align", "center"))
+	if align == "right":
+		px -= w
+	elif align == "center":
+		px -= w * 0.5
+	# 锚点归零到左上角后，用四个 offset 显式写死矩形：不依赖 anchor 等值的零宽陷阱，行为完全可控
+	node.anchor_left = 0.0
+	node.anchor_top = 0.0
+	node.anchor_right = 0.0
+	node.anchor_bottom = 0.0
+	node.offset_left = px
+	node.offset_top = py
+	node.offset_right = px + w
+	node.offset_bottom = py + h
+	node.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	node.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	# horizontal_alignment 仅 Label 有；ProgressBar 无此属性，直接赋值会崩溃，故按类型分支
+	if node is Label:
+		if align == "right":
+			node.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		elif align == "left":
+			node.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		else:
+			node.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
 func _add_image_background(parent: Control, vw: float, vh: float) -> void:
 	var img_rect := TextureRect.new()

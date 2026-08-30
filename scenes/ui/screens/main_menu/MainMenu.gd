@@ -24,8 +24,8 @@ const MENU_ITEMS := [
 ]
 
 # 主菜单背景图（数据驱动：把图放到该路径即生效，缺失则回退到程序化水墨背景）
-# 换背景：把图命名为 main_menu_bg.jpg（或改下面的路径）放进 assets/ui/ 即可。
-const BG_IMAGE_PATH := "res://assets/ui/main_menu_bg.jpg"
+# 换背景：把图命名为 main_menu_bg.png（或改下面的路径）放进 assets/ui/ 即可。
+const BG_IMAGE_PATH := "res://assets/ui/main_menu_bg.png"
 # 各主菜单按钮背景图映射（工作室工具「登录界面」页写入：assets/ui/main_menu_btn/<menu_*>键.png）
 # 缺文件/缺键则对应按钮不显示背景（向后兼容）。
 const BTN_BG_MAP_PATH := "res://data/configs/ui/login_button_bg.json"

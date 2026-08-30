@@ -93,6 +93,8 @@ class Handler(BaseHTTPRequestHandler):
             return _send_json(self, core.login_btn_bg_list())
         if path == "/api/login/bg_layout":
             return _send_json(self, core.login_bg_layout())
+        if path == "/api/loading/layout":
+            return _send_json(self, core.loading_layout_get())
         if path == "/api/npc":
             return _send_json(self, core.npc_list())
         if path == "/api/dialog":
@@ -209,6 +211,12 @@ class Handler(BaseHTTPRequestHandler):
             return _send_json(self, {"ok": ok, "msg": m})
         if path == "/api/login/bg_layout":
             ok, m = core.login_bg_layout_update(body if isinstance(body, dict) else {})
+            return _send_json(self, {"ok": ok, "msg": m})
+        if path == "/api/loading/layout":
+            ok, m = core.loading_layout_update(body if isinstance(body, dict) else {})
+            return _send_json(self, {"ok": ok, "msg": m})
+        if path == "/api/login/btn_bg_clear":
+            ok, m = core.login_btn_bg_clear(body.get("btn_id", ""))
             return _send_json(self, {"ok": ok, "msg": m})
         _send_json(self, {"error": "not found"}, 404)
 

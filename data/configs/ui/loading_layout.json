@@ -1,0 +1,27 @@
+{
+  "elements": {
+    "progress_bar": {
+      "x": 0.5,
+      "y": 0.86,
+      "w": 0.5,
+      "h": 0.02,
+      "align": "center"
+    },
+    "progress_label": {
+      "x": 0.5,
+      "y": 0.81,
+      "align": "center"
+    },
+    "tip_label": {
+      "x": 0.5,
+      "y": 0.66,
+      "align": "center"
+    },
+    "version_label": {
+      "x": 0.97,
+      "y": 0.97,
+      "align": "right"
+    }
+  },
+  "_doc": "加载界面元素布局（工作室「预加载界面」自由拖拽编辑写入）。坐标为视口归一化 0~1；progress_bar 用 w/h 控制条宽高。"
+}

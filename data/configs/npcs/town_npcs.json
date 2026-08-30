@@ -4,15 +4,18 @@
   "npcs": [
     {
       "id": "npc_village_chief",
-      "name": "村长",
-      "pos_x": 240,
-      "pos_y": 150,
-      "sprite": "res://assets/characters/village_chief.png",
-      "portrait": "res://assets/characters/village_chief_face.png",
-      "dialog_id": "npc_village_chief",
-      "quest_id": "q_bandit_001",
-      "battle_id": "battle_bandit_001",
-      "half_body_portrait": "res://assets/characters/half_body/npc_village_chief.png"
+      "name": "",
+      "sprite": "",
+      "portrait": "",
+      "dialog_id": "",
+      "quest_id": "",
+      "battle_id": "",
+      "pos_x": 0,
+      "pos_y": 0,
+      "half_body_portrait": "res://assets/characters/half_body/npc_village_chief.png",
+      "portrait_type": "static",
+      "portrait_skeleton": "",
+      "portrait_frames": []
     },
     {
       "id": "demo_npc",

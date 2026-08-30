@@ -73,6 +73,7 @@
   <button data-tab="dialog">剧情对话</button>
   <button data-tab="cel">欢庆模块</button>
   <button data-tab="login">登录界面</button>
+  <button data-tab="loading">预加载界面</button>
   <button data-tab="trash">回收站</button>
   <button data-tab="settings">设置</button>
   <button data-tab="log">操作日志</button>
@@ -87,7 +88,13 @@
         不知道填多少？用下方<b>地图坐标预览</b>直接点一下即可定位，或点「参考坐标」抄老 NPC 的位置。立绘先填 <code>res://assets/characters/player.png</code> 占位。</div>
         <div class="refbox">
           <h4>参考：现有 NPC 坐标（点一下把坐标抄到表单）</h4>
+          <div class="row" style="align-items:center;gap:8px;margin-bottom:6px">
+            <button class="act sec" onclick="npcRefAll()">显示全部</button>
+            <button class="act sec" onclick="npcRefRandom()">🎲 随机抽 5 个</button>
+            <span class="hint" id="npcRefInfo" style="margin:0"></span>
+          </div>
           <div class="chips" id="npcRef"></div>
+          <div class="hint">格式：<code>唯一ID · 名称 · (x, y)</code>，未填名称显示 <code>null</code>。点左侧列表某一项 → 这里只显示该项；点「随机抽 5 个」随机抽 5 条当参考。</div>
         </div>
         <div class="row"><label>id（唯一·勿改）</label><input id="n_id" placeholder="例如 npc_xiao_er">
           <span id="n_lock" class="pill npc" onclick="npcUnlockId()" title="修改唯一ID需二次确认">🔒 已锁定（点此修改）</span>
@@ -244,6 +251,30 @@
     </div>
   </section>
 
+  <!-- LOADING -->
+  <section class="tab" id="tab-loading">
+    <div class="editor" style="max-width:920px">
+      <div class="hint">预加载（加载）界面可视化编辑：直接拖动下面画布里的 4 个元素到任意位置，点「保存布局」即写入游戏（下次启动生效）。坐标为窗口比例归一化，PC / 带鱼屏 / 手机都自动适配。</div>
+      <div id="loadingCanvasWrap" style="position:relative;border:1px solid #444;border-radius:8px;overflow:hidden;background:#0c0e16;width:100%;aspect-ratio:16/9">
+        <img id="loadingBg" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.5" src="">
+        <div class="load-el" data-el="progress_bar" style="position:absolute;min-width:40%;height:10px;background:#e6b35a;border-radius:4px;cursor:move"></div>
+        <div class="load-el" data-el="progress_label" style="position:absolute;color:#fff;font:14px sans-serif;cursor:move;white-space:nowrap">0%</div>
+        <div class="load-el" data-el="tip_label" style="position:absolute;color:#ccd2e6;font:15px sans-serif;cursor:move;white-space:nowrap">正在整理行囊…</div>
+        <div class="load-el" data-el="version_label" style="position:absolute;color:#888;font:12px sans-serif;cursor:move;white-space:nowrap">v0.5.0 Build 20250827</div>
+      </div>
+      <div class="hint">拖动说明：每个带色块/文字的元素都可拖动；进度条还能用右侧宽度滑块调长短。</div>
+      <div class="row" style="align-items:center;gap:10px;margin-top:6px">
+        <label style="white-space:nowrap">进度条宽度 <span id="loadBarWVal">50</span>%</label>
+        <input id="loadBarW" type="range" min="10" max="100" value="50" style="flex:1;max-width:360px">
+      </div>
+      <div class="btns" style="margin-top:10px">
+        <button class="act" onclick="loadingSave()">保存布局</button>
+        <button class="act sec" onclick="loadingReset()">恢复默认</button>
+        <span id="loadingStat" class="status"></span>
+      </div>
+    </div>
+  </section>
+
   <!-- TRASH -->
   <section class="tab" id="tab-trash">
     <div class="hint">保险模式：删除的东西先放到这里，到期（设置里的保留天数）才自动清空。可随时「恢复」或「彻底删除」。</div>
@@ -297,6 +328,7 @@ document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{
   if(b.dataset.tab==='settings')setLoad();
   if(b.dataset.tab==='log')logLoad();
   if(b.dataset.tab==='login')loginLoad();
+  if(b.dataset.tab==='loading')loadingLoad();
 });
 
 // ---------- NPC ----------
@@ -304,17 +336,48 @@ async function npcLoad(){
   const list=await A('GET','/api/npc');
   window._npcCache=list;
   const el=document.getElementById('npcList');el.innerHTML='';
-  const ref=document.getElementById('npcRef');ref.innerHTML='';
   list.forEach(n=>{
     const d=document.createElement('div');d.className='item';d.textContent=n.id;
     const s=document.createElement('small');s.textContent=n.name||'(无名)';d.appendChild(s);
     d.onclick=()=>npcSel(n);el.appendChild(d);
-    const c=document.createElement('span');c.className='chip';c.textContent=n.id+' ('+n.pos_x+','+n.pos_y+')';
-    c.title='点一下把坐标抄到表单';c.onclick=()=>{document.getElementById('n_px').value=n.pos_x;document.getElementById('n_py').value=n.pos_y;show('npcStat','已抄坐标 '+n.pos_x+','+n.pos_y,true);drawMap();};
-    ref.appendChild(c);
   });
   if(list.length===0)el.innerHTML='<div class="item">（暂无 NPC）</div>';
+  npcRefRender();
   drawMap();
+}
+
+// ---------- NPC 坐标参考栏（#44：唯一ID + 名称(空显 null) + 坐标；支持随机抽5 / 点列表显示该项） ----------
+window._npcRefMode='all'; window._npcRefIds=null; window._npcRefSel='';
+function npcRefList(){
+  let list=(window._npcCache||[]).slice();
+  if(window._npcRefMode==='pick'&&window._npcRefIds){const set=new Set(window._npcRefIds);list=list.filter(n=>set.has(n.id));}
+  if(window._npcRefMode==='one'&&window._npcRefSel){list=list.filter(n=>n.id===window._npcRefSel);}
+  return list;
+}
+function npcRefRender(){
+  const ref=document.getElementById('npcRef');if(!ref)return;
+  ref.innerHTML='';
+  const list=npcRefList();
+  if(list.length===0)ref.innerHTML='<span class="pill npc">（无匹配项）</span>';
+  list.forEach(n=>{
+    const nm=(n.name!==undefined&&n.name!==null&&String(n.name).trim()!=='')?String(n.name):'null';
+    const c=document.createElement('span');c.className='chip'+(n.id===window._npcRefSel?' sel':'');
+    c.innerHTML='<b>'+n.id+'</b> · '+nm+' · ('+(n.pos_x||0)+','+(n.pos_y||0)+')';
+    c.title='点一下把 '+n.id+' 的坐标抄到表单';
+    c.onclick=()=>{document.getElementById('n_px').value=n.pos_x||0;document.getElementById('n_py').value=n.pos_y||0;show('npcStat','已抄 '+n.id+' 的坐标 '+(n.pos_x||0)+','+(n.pos_y||0),true);drawMap();};
+    ref.appendChild(c);
+  });
+  const info=document.getElementById('npcRefInfo');
+  if(info)info.textContent='显示 '+list.length+' / 共 '+(window._npcCache||[]).length+' 项'
+    +(window._npcRefMode==='pick'?'（随机抽样）':(window._npcRefMode==='one'?'（跟随左侧选择）':'（全部）'));
+}
+function npcRefAll(){window._npcRefMode='all';window._npcRefIds=null;window._npcRefSel='';npcRefRender();}
+function npcRefRandom(){
+  const pool=(window._npcCache||[]).slice();
+  if(pool.length===0){show('npcStat','暂无 NPC 可抽',false);return;}
+  for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=pool[i];pool[i]=pool[j];pool[j]=t;}
+  window._npcRefMode='pick';window._npcRefIds=pool.slice(0,5).map(n=>n.id);window._npcRefSel='';
+  npcRefRender();show('npcStat','已随机抽取 '+window._npcRefIds.length+' 个参考坐标',true);
 }
 function lockId(on){const idEl=document.getElementById('n_id');idEl.disabled=!on;
   document.getElementById('n_lock').style.display=on?'':'none';
@@ -322,6 +385,8 @@ function lockId(on){const idEl=document.getElementById('n_id');idEl.disabled=!on
 function npcSel(n){
   window._loaded=JSON.parse(JSON.stringify(n));
   window._prevId=n.id; window._lastRename=null;
+  // 坐标参考栏跟随左侧选择：只显示当前这一项
+  window._npcRefMode='one'; window._npcRefSel=n.id; npcRefRender();
   document.getElementById('n_undorename').style.display='none';
   document.querySelectorAll('#npcList .item').forEach(x=>x.classList.remove('sel'));
   const idEl=document.getElementById('n_id');idEl.value=n.id; lockId(true);
@@ -612,8 +677,10 @@ async function loginLoad(){
   const list=await A('GET','/api/login/btn_bg');
   const bl=document.getElementById('loginBtnBgList');bl.innerHTML='';
   list.forEach(b=>{
-    const div=document.createElement('div');div.className='row';
-    div.innerHTML=`<label>${b.desc}</label><input type="file" data-btn="${b.key}" accept="image/*"><span id="btnbg_${b.key}" style="margin-left:8px"></span>`;
+    const div=document.createElement('div');div.className='row';div.style.alignItems='center';
+    const hasImg=b.path && b.path!=='';
+    const prev=hasImg?`<img src="/api/login/btn_bg/file?btn_id=${encodeURIComponent(b.key)}&t=${Date.now()}" style="height:42px;border:1px solid #444;border-radius:6px">`:`<span class="pill npc">默认（无图）</span>`;
+    div.innerHTML=`<label style="flex:1">${b.desc}</label>${prev}<input type="file" data-btn="${b.key}" accept="image/*"><span id="btnbg_${b.key}" style="margin-left:8px"></span><button class="act sec" data-clear="${b.key}">清除(null)</button>`;
     bl.appendChild(div);
   });
   bl.querySelectorAll('input[data-btn]').forEach(inp=>inp.onchange=async()=>{
@@ -621,6 +688,12 @@ async function loginLoad(){
     const d=await f.arrayBuffer();const b64=bufToB64(d);
     const r=await A('POST','/api/login/btn_bg',{btn_id:inp.dataset.btn,data:b64,name:f.name});
     document.getElementById('btnbg_'+inp.dataset.btn).textContent=r.ok?'已存':'失败';
+    if(r.ok)loginLoad();
+  });
+  bl.querySelectorAll('button[data-clear]').forEach(btn=>btn.onclick=async()=>{
+    if(!confirm('把【'+btn.dataset.clear+'】的按钮背景图清除为 null（回退默认）？'))return;
+    const r=await A('POST','/api/login/btn_bg_clear',{btn_id:btn.dataset.clear});
+    show('loginStat',r.msg,r.ok);if(r.ok)loginLoad();
   });
   await loginLayoutLoad();
 }
@@ -754,6 +827,96 @@ async function loginTextsSave(){
   const r=await A('POST','/api/login/texts',{rows});
   show('loginTextStat',r.msg||(r.ok?'已保存':'失败'),r.ok);
 }
+
+// ---------- 预加载界面（自由拖拽可视化编辑） ----------
+const LOAD_ELS=['progress_bar','progress_label','tip_label','version_label'];
+const LOAD_DEF={progress_bar:{x:0.5,y:0.86,w:0.5,h:0.02,align:'center'},
+                progress_label:{x:0.5,y:0.81,align:'center'},
+                tip_label:{x:0.5,y:0.66,align:'center'},
+                version_label:{x:0.97,y:0.97,align:'right'}};
+window._loadLayout=null;
+async function loadingLoad(){
+  try{
+    const d=await A('GET','/api/loading/layout');
+    const els=(d&&d.elements)||{};
+    const L={};LOAD_ELS.forEach(k=>{L[k]=Object.assign({},LOAD_DEF[k],els[k]||{});});
+    window._loadLayout=L;
+  }catch(e){window._loadLayout=JSON.parse(JSON.stringify(LOAD_DEF));}
+  const sl=document.getElementById('loadBarW');
+  sl.value=Math.round((window._loadLayout.progress_bar.w||0.5)*100);
+  document.getElementById('loadBarWVal').textContent=sl.value;
+  // 预加载页与主菜单共用同一张背景图，直接复用它的预览接口
+  document.getElementById('loadingBg').src='/api/login/bg/file?t='+Date.now();
+  loadingRender();
+}
+function loadingRender(){
+  const L=window._loadLayout;if(!L)return;
+  const wrap=document.getElementById('loadingCanvasWrap');
+  wrap.querySelectorAll('.load-el').forEach(el=>{
+    const k=el.dataset.el,s=L[k]||{},align=s.align||'center';
+    el.style.top=((s.y||0)*100)+'%';
+    el.style.left=((s.x||0)*100)+'%';
+    if(k==='progress_bar'){
+      el.style.width=((s.w||0.5)*100)+'%';
+      el.style.height=Math.max(6,(s.h||0.02)*(wrap.clientHeight||340))+'px';
+      el.style.minWidth='0';
+      el.style.transform='translateX(-50%)';
+    }else{
+      el.style.transform=align==='right'?'translateX(-100%)':(align==='center'?'translateX(-50%)':'none');
+      el.style.textAlign=align==='right'?'right':(align==='left'?'left':'center');
+    }
+  });
+}
+function loadingInitDrag(){
+  const wrap=document.getElementById('loadingCanvasWrap');
+  wrap.querySelectorAll('.load-el').forEach(el=>{
+    el.addEventListener('pointerdown',e=>{
+      e.preventDefault();
+      const k=el.dataset.el,r=wrap.getBoundingClientRect();
+      if(!r.width||!r.height)return;
+      const sx=e.clientX,sy=e.clientY,s0=Object.assign({},window._loadLayout[k]||{});
+      const clamp=v=>Math.max(0,Math.min(1,v));
+      const move=ev=>{
+        const s=window._loadLayout[k]=window._loadLayout[k]||{};
+        s.x=clamp((s0.x||0)+(ev.clientX-sx)/r.width);
+        s.y=clamp((s0.y||0)+(ev.clientY-sy)/r.height);
+        loadingRender();
+      };
+      const up=()=>{el.removeEventListener('pointermove',move);el.removeEventListener('pointerup',up);el.removeEventListener('pointercancel',up);
+        show('loadingStat','已拖动【'+k+'】，记得点「保存布局」',true);};
+      el.addEventListener('pointermove',move);el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up);
+      try{el.setPointerCapture(e.pointerId);}catch(_){}
+    });
+  });
+}
+document.getElementById('loadBarW').addEventListener('input',e=>{
+  const v=parseInt(e.target.value,10)||50;
+  document.getElementById('loadBarWVal').textContent=v;
+  const s=window._loadLayout.progress_bar=window._loadLayout.progress_bar||{};
+  s.w=v/100;loadingRender();
+});
+async function loadingSave(){
+  const L=window._loadLayout;if(!L){show('loadingStat','布局尚未加载',false);return;}
+  const elements={};
+  LOAD_ELS.forEach(k=>{
+    const s=L[k]||{},o={x:s.x!==undefined?s.x:LOAD_DEF[k].x,y:s.y!==undefined?s.y:LOAD_DEF[k].y};
+    if(k==='progress_bar'){o.w=s.w!==undefined?s.w:0.5;o.h=s.h!==undefined?s.h:0.02;o.align='center';}
+    else o.align=s.align||LOAD_DEF[k].align;
+    elements[k]=o;
+  });
+  const r=await A('POST','/api/loading/layout',{elements});
+  show('loadingStat',(r&&r.msg)?r.msg:(r&&r.ok?'已保存':'失败'),!!(r&&r.ok));
+}
+async function loadingReset(){
+  if(!confirm('把预加载界面的 4 个元素恢复成默认位置？'))return;
+  window._loadLayout=JSON.parse(JSON.stringify(LOAD_DEF));
+  const sl=document.getElementById('loadBarW');sl.value=50;
+  document.getElementById('loadBarWVal').textContent='50';
+  loadingRender();
+  const r=await A('POST','/api/loading/layout',{elements:JSON.parse(JSON.stringify(LOAD_DEF))});
+  show('loadingStat',(r&&r.msg)?r.msg:'已恢复默认',!!(r&&r.ok));
+}
+loadingInitDrag();
 
 // ---------- LOG ----------
 async function logLoad(){const l=await A('GET','/api/log');const box=document.getElementById('logBox');
