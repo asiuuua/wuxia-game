@@ -8,7 +8,7 @@ extends Node2D
 class_name TownScene
 
 const MOVE_SPEED := 200.0
-const PLAYER_SCENE_H := 350.0  # 玩家在场景里的目标高度（像素）— 白背景视频重抠版（matte_clean），清晰度达标，固化 350
+const PLAYER_SCENE_H := 175.0  # 玩家在场景里的目标高度（像素）— 白背景视频重抠版（matte_clean），用户要求缩一半看效果（350→175）
 const NPC_SCENE_H := 140.0     # NPC 同
 const SHADOW_BASE_W := 64      # 阴影纹理基准宽（运行时按角色实际宽度缩放）
 const SHADOW_BASE_H := 18      # 阴影纹理基准高
