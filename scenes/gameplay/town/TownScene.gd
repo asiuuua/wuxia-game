@@ -21,6 +21,8 @@ const SCENE_BG_PATH := "res://assets/scenes/town_main.png"
 const PLAYER_SPRITE_PATH := "res://assets/characters/player.png"
 # 玩家动态立绘帧序列（31 帧 matte idle 循环动画）；非空时主角世界体改用 AnimatedSprite2D 播放
 const PLAYER_FRAMES_PATH := "res://assets/characters/matte/matte_idle.tres"
+# 玩家动态立绘首帧 PNG（用于取真实尺寸做缩放；matte 序列固定 720×1280）
+const PLAYER_FRAME_TEX := "res://assets/characters/matte/matte_00001.png"
 
 const _MOVE_ACTIONS := {
 	"move_up": [KEY_W, KEY_UP],
@@ -111,16 +113,23 @@ func _make_actor(sprite_path: String, scene_h: float, frames_path: String = "") 
 		if frames != null and frames.has_animation("idle"):
 			anim.sprite_frames = frames
 			anim.play("idle")
-			var tex0: Texture2D = frames.get_frame_texture("idle", 0)
-			var fh: float = float(tex0.get_height())
-			var s: float = scene_h / fh
-			anim.scale = Vector2(s, s)
-			anim.offset = Vector2(0, -fh / 2.0)
-			var char_w := float(tex0.get_width()) * s
-			var ss: float = (char_w * SHADOW_WIDTH_RATIO) / float(SHADOW_BASE_W)
-			shadow.scale = Vector2(ss, ss)
-			actor.add_child(anim)
-			actor.set_meta("body", anim)
+			# 尺寸取首帧 PNG（直接 load，避免 headless 下 get_frame_texture 惰性返回 null）
+			var tex0: Texture2D = load(PLAYER_FRAME_TEX) as Texture2D
+			if tex0 == null:
+				tex0 = frames.get_frame_texture("idle", 0)
+			if tex0 != null:
+				var fh: float = float(tex0.get_height())
+				var s: float = scene_h / fh
+				anim.scale = Vector2(s, s)
+				anim.offset = Vector2(0, -fh / 2.0)
+				var char_w := float(tex0.get_width()) * s
+				var ss: float = (char_w * SHADOW_WIDTH_RATIO) / float(SHADOW_BASE_W)
+				shadow.scale = Vector2(ss, ss)
+				actor.add_child(anim)
+				actor.set_meta("body", anim)
+			else:
+				# 帧纹理不可用降级：退回静态 Sprite2D（用玩家单图）
+				anim.queue_free()
 	elif sprite_path != "" and ResourceLoader.exists(sprite_path):
 		var spr := Sprite2D.new()
 		var tex: Texture2D = load(sprite_path) as Texture2D

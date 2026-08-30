@@ -44,6 +44,8 @@ const MAX_QUEUE: int = 32
 const SPRITE_W: float = 40.0
 const SPRITE_H: float = 52.0
 const BAR_W: float = 44.0
+# 主角动态立绘首帧（用于在无 SpriteFrames 帧上下文时取尺寸做缩放；matte 序列固定 720×1280）
+const MATTE_FIRST_FRAME := "res://assets/characters/matte/matte_00001.png"
 
 ## 装配（可重复调用，对象池复用安全）：首次构建视觉子节点，之后仅重置清零。
 ## frames_path：主角动态立绘的 SpriteFrames 资源路径；为空则主角仍用色块占位（与敌人一致）。
@@ -95,17 +97,28 @@ func _build(frames_path: String = "") -> void:
 	if is_player and frames_path != "" and ResourceLoader.exists(frames_path):
 		var frames: SpriteFrames = load(frames_path) as SpriteFrames
 		if frames != null and frames.has_animation("idle"):
-			var anim := AnimatedSprite2D.new()
-			anim.sprite_frames = frames
-			anim.play("idle")
-			var tex0: Texture2D = frames.get_frame_texture("idle", 0)
-			var fh: float = float(tex0.get_height())
-			var s: float = SPRITE_H / fh
-			anim.scale = Vector2(s, s)
-			# 居中绘制；把脚底对齐到色块占位底部（-SPRITE_H），与 ColorRect 站位一致
-			anim.position = Vector2(0.0, -SPRITE_H - (fh * s) * 0.5)
-			anim.centered = true
-			add_child(anim)
+		var anim := AnimatedSprite2D.new()
+		anim.sprite_frames = frames
+		anim.play("idle")
+		# 尺寸取首帧 PNG（直接 load，避免 headless 下 get_frame_texture 惰性返回 null）
+		var tex0: Texture2D = load(MATTE_FIRST_FRAME) as Texture2D
+		if tex0 == null:
+			tex0 = frames.get_frame_texture("idle", 0)
+		if tex0 == null:
+			# 兜底：帧纹理不可用则降级回色块占位
+			_body = ColorRect.new()
+			_body.size = Vector2(SPRITE_W, SPRITE_H)
+			_body.position = Vector2(-SPRITE_W * 0.5, -SPRITE_H)
+			_body.color = Color(0.3, 0.5, 0.95)
+			add_child(_body)
+			return
+		var fh: float = float(tex0.get_height())
+		var s: float = SPRITE_H / fh
+		anim.scale = Vector2(s, s)
+		# 居中绘制；把脚底对齐到色块占位底部（-SPRITE_H），与 ColorRect 站位一致
+		anim.position = Vector2(0.0, -SPRITE_H - (fh * s) * 0.5)
+		anim.centered = true
+		add_child(anim)
 			_anim_body = anim
 			# 占位色块仍保留（作为选中环/朝向翻转的几何参照 + 敌人降级回退），但主角用贴图覆盖显示
 			_body = ColorRect.new()
