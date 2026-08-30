@@ -13,6 +13,16 @@ extends Control
 
 const SCREENS_FILE := "res://data/configs/ui/screens.json"
 
+# 组件清单：HUD 组件等未登记在 screens.json，单独登记以便预览器一键预览。
+# 下拉框中以 [组件] 前缀与界面区分（界面在前、组件在后，不影响默认展示 MainMenu）。
+const COMPONENT_PATHS := {
+	"StatusCardPanel": "res://scenes/ui/overlays/hud/StatusCardPanel.tscn",
+	"QuestTrackPanel": "res://scenes/ui/overlays/hud/QuestTrackPanel.tscn",
+	"TopRightMenuPanel": "res://scenes/ui/overlays/hud/TopRightMenuPanel.tscn",
+	"SkillBarPanel": "res://scenes/ui/overlays/hud/SkillBarPanel.tscn",
+	"SaveCard": "res://scenes/ui/components/save_card/SaveCard.tscn",
+}
+
 @onready var _picker: OptionButton = $TopBar/Picker
 @onready var _holder: Control = $PreviewRoot
 
@@ -57,6 +67,10 @@ func _load_registry() -> void:
 			path = "res://" + path
 		_screen_names.append(key)
 		_screen_paths.append(path)
+	# 组件清单：HUD 组件等不在 screens.json 中，单独登记，下拉框以 [组件] 前缀区分
+	for cname in COMPONENT_PATHS.keys():
+		_screen_names.append("[组件] " + cname)
+		_screen_paths.append(COMPONENT_PATHS[cname])
 
 func _build_picker() -> void:
 	_picker.clear()

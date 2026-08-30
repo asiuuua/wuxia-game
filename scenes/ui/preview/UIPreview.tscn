@@ -29,7 +29,7 @@ theme_override_constants/separation = 12
 
 [node name="Hint" type="Label" parent="TopBar"]
 layout_mode = 2
-text = "UI 预览（编辑器专用 · 不会进游戏）：选界面看完整带文字效果"
+text = "UI 预览（编辑器专用 · 不会进游戏）：选界面/组件看完整带文字效果"
 theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
 
 [node name="Picker" type="OptionButton" parent="TopBar"]
