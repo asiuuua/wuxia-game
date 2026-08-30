@@ -85,6 +85,30 @@ def _exe_dir():
     return os.path.dirname(os.path.abspath(sys.argv[0]))
 
 
+def tool_version():
+    """返回工具自身版本标识：exe 修改时间 + md5 前8位 + 当前生效工程根目录，用于首页状态栏显示。"""
+    exe_path = None
+    if getattr(sys, "frozen", False):
+        exe_path = sys.executable
+    else:
+        # 脚本模式：取本脚本自身
+        exe_path = os.path.abspath(__file__)
+    try:
+        st = os.stat(exe_path)
+        from datetime import datetime
+        mtime = datetime.fromtimestamp(st.st_mtime).strftime("%Y-%m-%d %H:%M")
+        import hashlib
+        h = hashlib.md5()
+        with open(exe_path, "rb") as f:
+            for b in iter(lambda: f.read(1 << 20), b""):
+                h.update(b)
+        md5 = h.hexdigest()[:8]
+        return {"build_time": mtime, "md5": md5, "path": exe_path,
+                "root": discover_project_root()}
+    except Exception as e:
+        return {"build_time": "unknown", "md5": "unknown", "path": str(exe_path), "root": discover_project_root(), "error": str(e)}
+
+
 def _has_project_marker(root):
     if not root or not os.path.isdir(root):
         return False
@@ -95,12 +119,28 @@ def _has_project_marker(root):
     return False
 
 
+def set_project_root(root):
+    """手动设置工程根目录（前端"选择工程"或 --root 参数调用），持久化到设置并即时生效。"""
+    root = (root or "").strip()
+    if not root:
+        return False, "路径为空"
+    if not _has_project_marker(root):
+        return False, "该目录不是有效的武侠游戏工程（缺少 project.godot 或 data/configs/npcs/town_npcs.json）"
+    s = load_settings()
+    s["project_root"] = root
+    save_settings(s)
+    return True, root
+
+
 def discover_project_root():
     """解析工程根目录：优先用设置里的值；否则从 exe 所在目录向上查找带工程标记( project.godot / town_npcs.json )的文件夹；
     找不到才回退默认路径。这样把 exe 连同 data 一起发给别人时，无需改设置即可定位。"""
     s = load_settings()
     stored = s.get("project_root", "")
-    if _has_project_marker(stored):
+    if stored and _has_project_marker(stored):
+        return stored
+    # 兜底：设置里的值存在但当前不可达（如工程被挪走），也允许返回它，让前端提示用户重新选择
+    if stored:
         return stored
     start = _exe_dir()
     for _ in range(5):
@@ -1179,9 +1219,34 @@ def loading_layout_update(d):
     return True, "已保存预加载界面布局（游戏内下次启动生效）"
 
 
+def _purge_import_cache_for(import_fp):
+    """读取 .import 的 dest_files，删除 .godot/imported/ 下对应的缓存纹理与 md5。"""
+    try:
+        import configparser
+        cp = configparser.ConfigParser()
+        cp.read(import_fp, encoding="utf-8")
+        deps = cp.get("remap", "dest_files", fallback="")
+        if not deps:
+            return
+        paths = json.loads(deps)
+        root = discover_project_root()
+        for p in paths:
+            if not isinstance(p, str) or not p.startswith("res://"):
+                continue
+            cache_fp = os.path.join(root, p.replace("res://", "").replace("/", os.sep))
+            for target in (cache_fp, cache_fp + ".md5"):
+                if os.path.exists(target):
+                    try:
+                        os.remove(target)
+                    except OSError:
+                        pass
+    except Exception:
+        pass
+
+
 # === 各按钮背景图「存空/清除」（Task #42） ===
 def login_btn_bg_clear(btn_id):
-    """把某按钮背景图清空为 null：删映射表项 + 删图片文件，回退到游戏默认样式。"""
+    """把某按钮背景图清空为 null：删映射表项 + 删图片文件 + 删 .import + 删 .godot/imported 缓存，彻底回退默认。"""
     cfg = _login_btn_bg_cfg()
     data = {}
     if os.path.exists(cfg):
@@ -1203,7 +1268,15 @@ def login_btn_bg_clear(btn_id):
                 os.remove(fp)
             except OSError:
                 pass
-    log_event("login_btn_bg_clear", btn_id, "清除按钮背景图（设为默认）")
+        # 同时删除 Godot 导入配置及已生成的导入缓存，否则编辑器/运行时仍可能使用旧纹理
+        import_fp = fp + ".import"
+        if os.path.exists(import_fp):
+            try:
+                _purge_import_cache_for(import_fp)
+                os.remove(import_fp)
+            except OSError:
+                pass
+    log_event("login_btn_bg_clear", btn_id, "清除按钮背景图（含 .import 与导入缓存）")
     return True, "已清除 %s 的按钮背景图（回退默认）" % btn_id
 
 
