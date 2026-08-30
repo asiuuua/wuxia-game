@@ -5,6 +5,8 @@
 extends TestBase
 
 const SAMPLE := "sword_qingsong_001"
+# B 路线（2026-08-30）：技能栏结构与槽位在 SkillBarPanel.tscn，测试必须实例化场景
+const SkillBarPanelScene = preload("res://scenes/ui/overlays/hud/SkillBarPanel.tscn")
 
 var _panel: SkillBarPanel
 
@@ -13,8 +15,8 @@ func _make_panel() -> SkillBarPanel:
 	asvc.learn(SAMPLE)
 	asvc.equip_combat_skill(0, SAMPLE)
 	asvc.cd_remaining.clear()
-	var p := SkillBarPanel.new()
-	p._ready()            # 触发 _build + 订阅 EventBus + _refresh_full
+	var p: SkillBarPanel = SkillBarPanelScene.instantiate()
+	p._ready()            # 触发 _collect_slots + 订阅 EventBus + _refresh_full
 	return p
 
 func _teardown() -> void:

@@ -5,48 +5,37 @@
 #      + notify_skill_cd_update（冷却读秒展示，武学窗实现冷却后生效）。
 # 注意：冷却倒计时逻辑归属武学窗主权，本面板只展示 remain_time 文本，不驱动计时。
 # 配色走 UIPalette。
+#
+# B 路线（2026-08-30）：面板锚点与 6 个技能槽实例已迁入 SkillBarPanel.tscn
+# （SkillSlot.tscn 静态 instance，美术可直接在编辑器增删槽位），脚本只收集引用 + 刷新。
 
 extends Control
 class_name SkillBarPanel
 
 const UIPalette = preload("res://core/constants/ui_theme.gd")
-# B 路线：单个技能槽抽为独立复合控件 SkillSlot（结构 SkillSlot.tscn + 逻辑 SkillSlot.gd）。
-# 双 const 引用模式：SkillSlot 仅做类型标注，SkillSlotScene 用于 instantiate()。
+# SkillSlot 仅做类型标注；槽位实例已静态声明在 SkillBarPanel.tscn 的 HBox 下
 const SkillSlot = preload("res://scenes/ui/components/skill_slot/SkillSlot.gd")
-const SkillSlotScene = preload("res://scenes/ui/components/skill_slot/SkillSlot.tscn")
 
-# 单个技能槽已抽为独立复合控件 SkillSlot（见 scenes/ui/components/skill_slot/SkillSlot.gd）。
+@onready var _hbox: HBoxContainer = $HBox
 
 var _slots: Array[SkillSlot] = []
 
 func _ready() -> void:
 	focus_mode = Control.FOCUS_NONE
-	_build()
+	_collect_slots()
 	if is_instance_valid(EventBus):
 		EventBus.combat_skill_equipped.connect(_on_skill_equipped)
 		EventBus.notify_skill_bar_changed.connect(_refresh_full)
 		EventBus.notify_skill_cd_update.connect(_on_cd_update)
 	_refresh_full()
 
-func _build() -> void:
-	# 底部居中
-	anchor_left = 0.5
-	anchor_right = 0.5
-	anchor_top = 1.0
-	anchor_bottom = 1.0
-	offset_left = -210.0
-	offset_right = 210.0
-	offset_top = -96.0
-	offset_bottom = -12.0
-	var h := HBoxContainer.new()
-	h.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	h.add_theme_constant_override("separation", 4)
-	h.alignment = BoxContainer.ALIGNMENT_CENTER
-	add_child(h)
-	for i in range(6):
-		var s: SkillSlot = SkillSlotScene.instantiate()
-		_slots.append(s)
-		h.add_child(s)
+# 收集 .tscn 里静态声明的槽位（顺序即 HBox 子节点顺序）
+func _collect_slots() -> void:
+	_slots.clear()
+	for c in _hbox.get_children():
+		var s: SkillSlot = c as SkillSlot
+		if s != null:
+			_slots.append(s)
 
 func _exit_tree() -> void:
 	if not is_instance_valid(EventBus):

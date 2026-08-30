@@ -10,6 +10,8 @@ const StatusCardPanel = preload("res://scenes/ui/overlays/hud/status_card_panel.
 # 用脚本 new() 出来的实例没有子节点（缩放/数值条全在场景里），故测试一律改为实例化场景。
 const StatusCardPanelScene = preload("res://scenes/ui/overlays/hud/StatusCardPanel.tscn")
 const QuestTrackPanelScene = preload("res://scenes/ui/overlays/hud/QuestTrackPanel.tscn")
+const TopRightMenuPanelScene = preload("res://scenes/ui/overlays/hud/TopRightMenuPanel.tscn")
+const SkillBarPanelScene = preload("res://scenes/ui/overlays/hud/SkillBarPanel.tscn")
 const TopRightMenuPanel = preload("res://scenes/ui/overlays/hud/top_right_menu_panel.gd")
 const QuestTrackPanel = preload("res://scenes/ui/overlays/hud/quest_track_panel.gd")
 const SkillBarPanel = preload("res://scenes/ui/overlays/hud/skill_bar_panel.gd")
@@ -30,13 +32,13 @@ func test_hud_mounts_four_panels() -> void:
 func test_panels_build_without_crash() -> void:
 	# 各面板独立实例化 + _ready，验证订阅/构建不崩（服务可能为 null，应有 null 守卫）
 	var p1 := StatusCardPanelScene.instantiate(); p1._ready(); p1.free()
-	var p2 := TopRightMenuPanel.new(); p2._ready(); p2.free()
+	var p2 := TopRightMenuPanelScene.instantiate(); p2._ready(); p2.free()
 	var p3 := QuestTrackPanelScene.instantiate(); p3._ready(); p3.free()
-	var p4 := SkillBarPanel.new(); p4._ready(); p4.free()
+	var p4 := SkillBarPanelScene.instantiate(); p4._ready(); p4.free()
 	expect(true, "四面板独立 _ready 未崩溃")
 
 func test_skill_bar_has_six_slots() -> void:
-	var p := SkillBarPanel.new()
+	var p := SkillBarPanelScene.instantiate()
 	p._ready()
 	p._refresh_full()
 	expect(p.get_child_count() > 0, "技能栏应至少含一个布局容器")
