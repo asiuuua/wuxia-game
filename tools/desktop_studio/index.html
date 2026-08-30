@@ -44,6 +44,10 @@
   button.act.bad{background:var(--bad);color:#fff}
   button.act:hover{filter:brightness(1.08)}
   .hint{color:var(--muted);font-size:12px;margin:6px 0 12px;line-height:1.6}
+  .banner{margin:12px 20px 0;padding:9px 14px;border-radius:8px;background:#3a2f1a;
+          border:1px solid #6b5326;color:#f0c987;font-size:12.5px;line-height:1.7}
+  .banner b{color:#ffd9a0}
+  .banner .x{color:var(--muted)}
   .status{margin-top:12px;padding:8px 12px;border-radius:6px;background:var(--panel2);
           font-size:13px;min-height:18px}
   .status.ok{color:var(--ok)} .status.bad{color:var(--bad)}
@@ -78,6 +82,11 @@
   <button data-tab="settings">设置</button>
   <button data-tab="log">操作日志</button>
 </nav>
+<div class="banner">
+  ⚠️ <b>改动生效说明：</b>本工具编辑的是项目的<b>源码数据目录</b>（如 <code>data/configs/ui/</code>）。
+  在编辑器里运行项目时可立即看到效果；但若要反映在<b>已打包发行的游戏</b>里，必须<b>重新打包游戏</b>（或用 Godot 编辑器直接打开项目运行）。
+  <span class="x">直接启动发行版 exe 不会自动同步这些改动。</span>
+</div>
 <main>
   <!-- NPC -->
   <section class="tab active" id="tab-npc">
