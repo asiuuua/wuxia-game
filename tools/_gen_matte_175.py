@@ -22,17 +22,19 @@ def main():
         im = Image.open(os.path.join(SRC, "matte_%05d.png" % i)).convert("RGBA")
         # 1) 高质量降采样（LANCZOS 保细节）
         rgb = im.resize((out_w, out_h), Image.LANCZOS)
-        # 2) alpha 通道单独轻高斯，消除硬边发丝缩小后的碎噪
+        # 2) alpha 通道单独轻高斯，消除硬边发丝缩小后的碎噪（半径调小=更锐）
         a = im.split()[3]
         a_small = a.resize((out_w, out_h), Image.LANCZOS)
-        a_blur = a_small.filter(ImageFilter.GaussianBlur(radius=0.6))
+        a_blur = a_small.filter(ImageFilter.GaussianBlur(radius=0.35))
         arr = np.asarray(a_blur, dtype=np.float32)
         # 3) 反阈值化：>128 视为不透明，但保留轻过渡羽化（发丝轮廓平滑）
-        #    用 smoothstep 在 [100,180] 做柔边，避免纯硬边锯齿又不过度发虚
-        lo, hi = 100.0, 180.0
+        #    用 smoothstep 在 [120,160] 做更窄柔边 → 边缘更锐（用户要求再锐化）
+        lo, hi = 120.0, 160.0
         out_a = np.clip((arr - lo) / (hi - lo), 0.0, 1.0) * 255.0
         out_a = out_a.astype(np.uint8)
         rgb.putalpha(Image.fromarray(out_a, "L"))
+        # 4) 轻度锐化增强发丝细节（factor 1.3，避免 halo 噪点）
+        rgb = rgb.filter(ImageFilter.UnsharpMask(radius=1.0, percent=130, threshold=2))
         rgb.save(os.path.join(DST, "matte_%05d.png" % i), "PNG")
     print(f"已生成 {N} 帧到 {DST}")
 
