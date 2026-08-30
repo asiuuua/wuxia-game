@@ -20,6 +20,7 @@
 - **`mini/maxi` 仅 2 参** → 多参嵌套；写三参 Parse Error 级联拖垮存档套件。
 - 删函数须全工程 grep 残留；`Invalid call Nonexistent function 'new'` 真因是某脚本 Parse Error。
 - Control `scale` 以 pivot_offset 为基准（默认左上角）→ 悬停放大先设 pivot 中心并监听 resized。
+- **Control 绝对定位坑（2026-08-30 实测）**：anchor 四个值全归零且 `offset_left == offset_right` 时控件**宽度恒为 0**，`custom_minimum_size` 不会自动撑开。要绝对定位就把四个 offset 全写死：`offset_left=px, offset_top=py, offset_right=px+w, offset_bottom=py+h`。另：`horizontal_alignment` 只有 Label 有，ProgressBar 赋值直接崩 → 按 `node is Label` 分支；按视口比例定位时记得连 `resized` 信号重算（用布尔量防重入）。
 - **GDScript 4.x 闭包按值捕获值类型**：`func(): made += 1` 把整型 `made` 按值捕获进闭包，闭包内自增**不回写**外层，断言读到恒为 0（2026-08-30 实测坑，曾让 object_pool 单测全挂）。**测试里计数/统计用引用类型**（Array/RefCounted/Dictionary，原地 `append`/改属性），别用 int/float 局部变量当闭包计数器。
 
 ## Godot 本机验证铁律（必记）
