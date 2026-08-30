@@ -37,13 +37,16 @@ const BG_IMAGE_SCRIM := 0.55
 const LOGIN_BGM := "res://resources/audio/bgm/login_bgm.mp3"
 
 # B 路线（2026-08-29）：静态容器已迁入 MainMenu.tscn（美术可在编辑器改锚点/间距/位置），脚本只引用 + 填动态内容
+# B 路线（2026-08-30）：底部栏三个按钮（设置/音量/语言）布局与轻样式一并迁入 .tscn，脚本只连线与设文案
 @onready var _menu_container: VBoxContainer = $MenuContainer
 @onready var _bottom_left: Label = $BottomLeft
 @onready var _bottom_right: HBoxContainer = $BottomRight
+@onready var _settings_btn: Button = $BottomRight/SettingsBtn
+@onready var _vol_btn: Button = $BottomRight/VolBtn
+@onready var _lang_btn: Button = $BottomRight/LangBtn
 
 var _menu_items: Array = []   # MenuItem 实例（untyped，避免 --script 下 class_name 未注册的类型推断问题）
 var _has_save: bool = false
-var _vol_btn: Button = null        # 底部栏静音/恢复切换按钮
 var _last_music_vol: float = 0.6   # 静音前记录的 music 音量，恢复时使用
 
 func _init() -> void:
@@ -198,62 +201,25 @@ func _load_btn_bg_map() -> Dictionary:
 		return {}
 	return parsed.get("map", {})
 
-# === 底部栏（左：版本/制作组；右：设置/音量/语言 占位按钮） ===
-# 设计原则：
-#   1) 按钮无棕色背景、无金边焦点框 — 走"图标式轻按钮"风格，与顶部 LOGO + 6 项主菜单留白呼吸感一致；
-#   2) 距离底部 1 指（MARGIN_TIP=32），距离右侧 2 指（2*MARIGN_WIDE=80），不上不下、不左不右；
-#   3) 不抢主菜单焦点（focus_mode=NONE），避免上下方向键在底部三键与主菜单六项之间"打架"。
+# === 底部栏（左：版本/制作组；右：设置/音量/语言 按钮） ===
+# B 路线（2026-08-30）：按钮布局/轻样式/最小尺寸已在 MainMenu.tscn，这里只连线 + 设动态文案。
 func _build_bottom_bar() -> void:
-	# B 路线：底部栏 BottomLeft / BottomRight 已迁入 MainMenu.tscn，此处仅引用并填动态文本/按钮
 	var bl: Label = _bottom_left
 	bl.text = "%s  |  %s" % [VERSION_TEXT, tr("studio_name")]
 	bl.add_theme_font_size_override("font_size", UIPalette.FS_SMALL)
 	bl.add_theme_color_override("font_color", UIPalette.TEXT_SECONDARY)
 	add_content(bl)
 
-	var br: HBoxContainer = _bottom_right
-	add_content(br)
+	add_content(_bottom_right)
 
-	# 透明背景占位样式（不画底色、不画描边，仅留内边距避免文字贴紧）
-	var transparent_sb := StyleBoxFlat.new()
-	transparent_sb.bg_color = Color(0, 0, 0, 0)
-	transparent_sb.set_border_width_all(0)  # StyleBoxFlat 没有 border_width_all 属性，必须用 set_border_width_all 方法
-	transparent_sb.content_margin_left = 4
-	transparent_sb.content_margin_right = 4
-	transparent_sb.content_margin_top = 4
-	transparent_sb.content_margin_bottom = 4
-	# 焦点样式：完全不画（取代全局主题的金色描边，避免深棕色按钮外一圈黄边的丑感）
-	var focus_sb := StyleBoxEmpty.new()
+	_settings_btn.text = tr("btn_settings")
+	_settings_btn.pressed.connect(_on_open_settings)
 
-	var settings_btn: Button = Button.new()
-	settings_btn.text = tr("btn_settings")
-	settings_btn.pressed.connect(_on_open_settings)
-	_style_bottom_btn(settings_btn, transparent_sb, focus_sb)
-	br.add_child(settings_btn)
+	_vol_btn.text = _music_vol_label()
+	_vol_btn.pressed.connect(_toggle_mute)
 
-	var vol_btn: Button = Button.new()
-	vol_btn.text = _music_vol_label()
-	vol_btn.pressed.connect(_toggle_mute)
-	_style_bottom_btn(vol_btn, transparent_sb, focus_sb)
-	br.add_child(vol_btn)
-	_vol_btn = vol_btn  # 成员化以便 _toggle_mute 改文字
-
-	var lang_btn: Button = Button.new()
-	lang_btn.text = tr("btn_language")
-	lang_btn.pressed.connect(_on_language_placeholder)
-	_style_bottom_btn(lang_btn, transparent_sb, focus_sb)
-	br.add_child(lang_btn)
-
-# 底部按钮统一样式：去棕色底 + 去金边焦点 + 小字号 + 不参与焦点导航
-func _style_bottom_btn(btn: Button, transparent_sb: StyleBoxFlat, focus_sb: StyleBoxEmpty) -> void:
-	btn.add_theme_stylebox_override("normal", transparent_sb)
-	btn.add_theme_stylebox_override("hover", transparent_sb)
-	btn.add_theme_stylebox_override("pressed", transparent_sb)
-	btn.add_theme_stylebox_override("disabled", transparent_sb)
-	btn.add_theme_stylebox_override("focus", focus_sb)
-	btn.focus_mode = Control.FOCUS_NONE  # 底部按钮不抢主菜单上下方向键焦点
-	btn.add_theme_font_size_override("font_size", UIPalette.FS_SUB)
-	btn.custom_minimum_size = Vector2(72, 30)
+	_lang_btn.text = tr("btn_language")
+	_lang_btn.pressed.connect(_on_language_placeholder)
 
 # === 存档可用性（决定「继续游戏」是否可点） ===
 func _check_saves() -> void:
