@@ -53,7 +53,9 @@ func _configure_nodes() -> void:
 	# 可选图标：menu/<key>，由消费方 set_icon() 传入。
 	# 仅当后台真实存在该图标文件时才显示；否则连"缺图标占位紫块"都不画，界面保持干净。
 	# 美术按 id 丢 resources/icons/menu/<key>.png 即生效（见 IconRegistry）。
-	if _icon_id != "" and UIManager.has_icon(_icon_id):
+	# 工具模式下 UIManager 是占位实例，调用 autoload 方法会报 "placeholder instance" 错误；
+	# 图标只在运行时加载，编辑器预览无需显示。
+	if _icon_id != "" and not Engine.is_editor_hint() and UIManager.has_icon(_icon_id):
 		_icon.texture = UIManager.get_icon(_icon_id)
 		_icon.custom_minimum_size = Vector2(24, 24)
 		_icon.size = Vector2(24, 24)
