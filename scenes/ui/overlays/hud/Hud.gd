@@ -6,7 +6,8 @@
 extends Control
 class_name Hud
 
-const StatusCardPanel = preload("res://scenes/ui/overlays/hud/status_card_panel.gd")
+# B 路线（2026-08-30）：已迁 .tscn 的面板走场景实例化；未迁的仍走脚本 new()，逐屏过渡。
+const StatusCardPanelScene = preload("res://scenes/ui/overlays/hud/StatusCardPanel.tscn")
 const TopRightMenuPanel = preload("res://scenes/ui/overlays/hud/top_right_menu_panel.gd")
 const QuestTrackPanel = preload("res://scenes/ui/overlays/hud/quest_track_panel.gd")
 const SkillBarPanel = preload("res://scenes/ui/overlays/hud/skill_bar_panel.gd")
@@ -14,7 +15,7 @@ const SkillBarPanel = preload("res://scenes/ui/overlays/hud/skill_bar_panel.gd")
 func _ready() -> void:
 	focus_mode = Control.FOCUS_NONE
 	# 四面板：状态卡 / 右上菜单 / 任务追踪 / 快捷技能栏
-	add_child(StatusCardPanel.new())
+	add_child(StatusCardPanelScene.instantiate())
 	add_child(TopRightMenuPanel.new())
 	add_child(QuestTrackPanel.new())
 	add_child(SkillBarPanel.new())

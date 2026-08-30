@@ -1,0 +1,163 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scenes/ui/overlays/hud/status_card_panel.gd" id="1_scr"]
+[ext_resource type="PackedScene" path="res://scenes/ui/components/status_bar/StatusBar.tscn" id="2_sb"]
+
+[sub_resource type="StyleBoxFlat" id="1_glass"]
+bg_color = Color(0.071, 0.078, 0.11, 0.62)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.2)
+
+[sub_resource type="StyleBoxFlat" id="2_avatar"]
+bg_color = Color(0.788, 0.663, 0.38, 1)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_left = 14
+corner_radius_bottom_right = 14
+
+[node name="StatusCardPanel" type="Control"]
+offset_left = 12.0
+offset_top = 12.0
+offset_right = 352.0
+offset_bottom = 330.0
+scale = Vector2(0.667, 0.667)
+pivot_offset = Vector2(0, 0)
+custom_minimum_size = Vector2(340, 318)
+focus_mode = 0
+script = ExtResource("1_scr")
+
+[node name="Panel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("1_glass")
+
+[node name="Margin" type="MarginContainer" parent="Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="V" type="VBoxContainer" parent="Panel/Margin"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="Top" type="HBoxContainer" parent="Panel/Margin/V"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 10
+
+[node name="Avatar" type="Panel" parent="Panel/Margin/V/Top"]
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+size = Vector2(60, 60)
+mouse_filter = 2
+theme_override_styles/panel = SubResource("2_avatar")
+
+[node name="AvatarChar" type="Label" parent="Panel/Margin/V/Top/Avatar"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "侠"
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_colors/font_color = Color(0.941, 0.902, 0.82, 1)
+theme_override_font_sizes/font_size = 30
+
+[node name="AvatarTex" type="TextureRect" parent="Panel/Margin/V/Top/Avatar"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture_filter = 1
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Info" type="VBoxContainer" parent="Panel/Margin/V/Top"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="NameLabel" type="Label" parent="Panel/Margin/V/Top/Info"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.941, 0.902, 0.82, 1)
+theme_override_font_sizes/font_size = 20
+
+[node name="LvLabel" type="Label" parent="Panel/Margin/V/Top/Info"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.831, 0.686, 0.216, 1)
+theme_override_font_sizes/font_size = 14
+
+[node name="MoneyLabel" type="Label" parent="Panel/Margin/V/Top/Info"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.659, 0.608, 0.549, 1)
+theme_override_font_sizes/font_size = 12
+
+[node name="HPBar" parent="Panel/Margin/V" instance=ExtResource("2_sb")]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="MPBar" parent="Panel/Margin/V" instance=ExtResource("2_sb")]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="AttrTitle" type="Label" parent="Panel/Margin/V"]
+layout_mode = 2
+text = "六 维 属 性"
+theme_override_colors/font_color = Color(0.659, 0.608, 0.549, 1)
+theme_override_font_sizes/font_size = 12
+
+[node name="AttrGrid" type="GridContainer" parent="Panel/Margin/V"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+columns = 2
+theme_override_constants/h_separation = 12
+theme_override_constants/v_separation = 4
+
+[node name="BarStrength" parent="Panel/Margin/V/AttrGrid" instance=ExtResource("2_sb")]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="BarConstitution" parent="Panel/Margin/V/AttrGrid" instance=ExtResource("2_sb")]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="BarAgility" parent="Panel/Margin/V/AttrGrid" instance=ExtResource("2_sb")]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="BarWisdom" parent="Panel/Margin/V/AttrGrid" instance=ExtResource("2_sb")]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="BarLuck" parent="Panel/Margin/V/AttrGrid" instance=ExtResource("2_sb")]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="BarFocus" parent="Panel/Margin/V/AttrGrid" instance=ExtResource("2_sb")]
+layout_mode = 2
+mouse_filter = 2

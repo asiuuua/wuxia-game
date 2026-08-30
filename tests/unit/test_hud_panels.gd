@@ -6,6 +6,9 @@ extends TestBase
 
 const Hud = preload("res://scenes/ui/overlays/hud/Hud.gd")
 const StatusCardPanel = preload("res://scenes/ui/overlays/hud/status_card_panel.gd")
+# B 路线（2026-08-30）：状态卡静态结构已迁入 StatusCardPanel.tscn，
+# 用脚本 new() 出来的实例没有子节点（缩放/数值条全在场景里），故测试一律改为实例化场景。
+const StatusCardPanelScene = preload("res://scenes/ui/overlays/hud/StatusCardPanel.tscn")
 const TopRightMenuPanel = preload("res://scenes/ui/overlays/hud/top_right_menu_panel.gd")
 const QuestTrackPanel = preload("res://scenes/ui/overlays/hud/quest_track_panel.gd")
 const SkillBarPanel = preload("res://scenes/ui/overlays/hud/skill_bar_panel.gd")
@@ -25,7 +28,7 @@ func test_hud_mounts_four_panels() -> void:
 
 func test_panels_build_without_crash() -> void:
 	# 各面板独立实例化 + _ready，验证订阅/构建不崩（服务可能为 null，应有 null 守卫）
-	var p1 := StatusCardPanel.new(); p1._ready(); p1.free()
+	var p1 := StatusCardPanelScene.instantiate(); p1._ready(); p1.free()
 	var p2 := TopRightMenuPanel.new(); p2._ready(); p2.free()
 	var p3 := QuestTrackPanel.new(); p3._ready(); p3.free()
 	var p4 := SkillBarPanel.new(); p4._ready(); p4.free()
@@ -42,7 +45,7 @@ func test_skill_bar_has_six_slots() -> void:
 func test_status_card_is_visual_scaled_to_two_thirds() -> void:
 	# 用户截图三轮反馈：状态卡「缩小三分之一」→ 保留 2/3（≈0.667），实际渲染 227×212，
 	# 远低于屏幕左上 1/4（960×540）。修改此值需同步改 docs/HUD常驻系统落地方案v2_2026-08-29.md 的尺寸表。
-	var p := StatusCardPanel.new()
+	var p := StatusCardPanelScene.instantiate()
 	p._ready()
 	expect(is_equal_approx(p.scale.x, 0.667), "状态卡 scale.x 应为 0.667（缩小 1/3），实际 %f" % p.scale.x)
 	expect(is_equal_approx(p.scale.y, 0.667), "状态卡 scale.y 应为 0.667（缩小 1/3），实际 %f" % p.scale.y)
