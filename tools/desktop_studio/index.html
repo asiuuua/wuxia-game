@@ -262,7 +262,7 @@
         <div class="load-el" data-el="tip_label" style="position:absolute;color:#ccd2e6;font:15px sans-serif;cursor:move;white-space:nowrap">正在整理行囊…</div>
         <div class="load-el" data-el="version_label" style="position:absolute;color:#888;font:12px sans-serif;cursor:move;white-space:nowrap">v0.5.0 Build 20250827</div>
       </div>
-      <div class="hint">拖动说明：每个带色块/文字的元素都可拖动；进度条还能用右侧宽度滑块调长短。</div>
+      <div class="hint">拖动说明：每个带色块/文字的元素都可拖动；进度条还能用下方宽度滑块调长短。</div>
       <div class="row" style="align-items:center;gap:10px;margin-top:6px">
         <label style="white-space:nowrap">进度条宽度 <span id="loadBarWVal">50</span>%</label>
         <input id="loadBarW" type="range" min="10" max="100" value="50" style="flex:1;max-width:360px">
@@ -922,7 +922,7 @@ loadingInitDrag();
 async function logLoad(){const l=await A('GET','/api/log');const box=document.getElementById('logBox');
   box.innerHTML=l.slice().reverse().map(x=>`<div class="logline"><b>${x.ts.replace('T',' ')}</b> ［${x.action}］ ${x.target} ${x.detail||''}</div>`).join('');}
 
-stat();npcLoad();
+stat();npcLoad();loadingLoad();
 </script>
 </body>
 </html>
