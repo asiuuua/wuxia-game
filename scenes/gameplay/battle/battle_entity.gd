@@ -94,46 +94,54 @@ func _clear_pops() -> void:
 func _build(frames_path: String = "") -> void:
 	_built = true
 	# 主角动态立绘：用 SpriteFrames 帧序列做 AnimatedSprite2D（脚下锚定，与色块占位同尺寸盒）
+	# 注意：无论走动画还是色块，_sel_ring/_name_lbl/血条都必须在末尾统一构建（不可提前 return）。
 	if is_player and frames_path != "" and ResourceLoader.exists(frames_path):
 		var frames: SpriteFrames = load(frames_path) as SpriteFrames
 		if frames != null and frames.has_animation("idle"):
-		var anim := AnimatedSprite2D.new()
-		anim.sprite_frames = frames
-		anim.play("idle")
-		# 尺寸取首帧 PNG（直接 load，避免 headless 下 get_frame_texture 惰性返回 null）
-		var tex0: Texture2D = load(MATTE_FIRST_FRAME) as Texture2D
-		if tex0 == null:
-			tex0 = frames.get_frame_texture("idle", 0)
-		if tex0 == null:
-			# 兜底：帧纹理不可用则降级回色块占位
+			var anim := AnimatedSprite2D.new()
+			anim.sprite_frames = frames
+			anim.play("idle")
+			# 尺寸取首帧 PNG（直接 load，避免 headless 下 get_frame_texture 惰性返回 null）
+			var tex0: Texture2D = load(MATTE_FIRST_FRAME) as Texture2D
+			if tex0 == null:
+				tex0 = frames.get_frame_texture("idle", 0)
+			if tex0 != null:
+				var fh: float = float(tex0.get_height())
+				var s: float = SPRITE_H / fh
+				anim.scale = Vector2(s, s)
+				# 居中绘制；把脚底对齐到色块占位底部（-SPRITE_H），与 ColorRect 站位一致
+				anim.position = Vector2(0.0, -SPRITE_H - (fh * s) * 0.5)
+				anim.centered = true
+				add_child(anim)
+				_anim_body = anim
+				# 占位色块保留作几何参照，主角用贴图覆盖故隐藏
+				_body = ColorRect.new()
+				_body.size = Vector2(SPRITE_W, SPRITE_H)
+				_body.position = Vector2(-SPRITE_W * 0.5, -SPRITE_H)
+				_body.color = Color(0.3, 0.5, 0.95)
+				_body.visible = false
+				add_child(_body)
+			else:
+				# 帧纹理不可用降级：可见色块占位
+				_body = ColorRect.new()
+				_body.size = Vector2(SPRITE_W, SPRITE_H)
+				_body.position = Vector2(-SPRITE_W * 0.5, -SPRITE_H)
+				_body.color = Color(0.3, 0.5, 0.95)
+				add_child(_body)
+		else:
+			# frames 无效降级：可见色块占位
 			_body = ColorRect.new()
 			_body.size = Vector2(SPRITE_W, SPRITE_H)
 			_body.position = Vector2(-SPRITE_W * 0.5, -SPRITE_H)
 			_body.color = Color(0.3, 0.5, 0.95)
 			add_child(_body)
-			return
-		var fh: float = float(tex0.get_height())
-		var s: float = SPRITE_H / fh
-		anim.scale = Vector2(s, s)
-		# 居中绘制；把脚底对齐到色块占位底部（-SPRITE_H），与 ColorRect 站位一致
-		anim.position = Vector2(0.0, -SPRITE_H - (fh * s) * 0.5)
-		anim.centered = true
-		add_child(anim)
-			_anim_body = anim
-			# 占位色块仍保留（作为选中环/朝向翻转的几何参照 + 敌人降级回退），但主角用贴图覆盖显示
-			_body = ColorRect.new()
-			_body.size = Vector2(SPRITE_W, SPRITE_H)
-			_body.position = Vector2(-SPRITE_W * 0.5, -SPRITE_H)
-			_body.color = Color(0.3, 0.5, 0.95)
-			_body.visible = false
-			add_child(_body)
-			return
-	# 身体占位（玩家蓝、敌人红）
-	_body = ColorRect.new()
-	_body.size = Vector2(SPRITE_W, SPRITE_H)
-	_body.position = Vector2(-SPRITE_W * 0.5, -SPRITE_H)
-	_body.color = Color(0.3, 0.5, 0.95) if is_player else Color(0.85, 0.35, 0.35)
-	add_child(_body)
+	else:
+		# 敌人 / 无帧序列：色块占位（玩家蓝、敌人红）
+		_body = ColorRect.new()
+		_body.size = Vector2(SPRITE_W, SPRITE_H)
+		_body.position = Vector2(-SPRITE_W * 0.5, -SPRITE_H)
+		_body.color = Color(0.3, 0.5, 0.95) if is_player else Color(0.85, 0.35, 0.35)
+		add_child(_body)
 	# 选中高亮环（默认透明）
 	_sel_ring = ColorRect.new()
 	_sel_ring.size = Vector2(SPRITE_W + 10, SPRITE_H + 10)
