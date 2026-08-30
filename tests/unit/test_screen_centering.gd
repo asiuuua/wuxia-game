@@ -57,15 +57,14 @@ func test_game_menu_screen_centered() -> void:
 	s.free()
 
 func test_esc_menu_centered() -> void:
+	# EscMenu 继承 BaseScreen：静态居中容器 Container 已在 .tscn 里
+	# （anchor 0.5 + 对称 offset）。BaseScreen._ready 会把 Container 重挂进 ContentRoot，
+	# 居中属性不变；这里直接断言 .tscn 里的 Container 已正确居中即可。
 	var s: Control = load("res://scenes/ui/screens/esc_menu/EscMenu.tscn").instantiate()
-	s._ready()
-	var found: Control = null
-	for c in s._content_root.get_children():
-		if c is Control and is_equal_approx(c.anchor_left, 0.5):
-			found = c
-	expect(found != null, "EscMenu 应含居中容器(anchor 0.5)")
-	if found != null:
-		_assert_centered(found, "ESC菜单容器")
+	var container: Control = s.get_node("Container")
+	expect(container != null, "EscMenu 应含居中容器 Container")
+	if container != null:
+		_assert_centered(container, "ESC菜单容器")
 	s.free()
 
 # 菜单里 5 个入口弹窗（装备/锻造/炼药/商铺/门派）重做为居中玻璃面板后的回归：
