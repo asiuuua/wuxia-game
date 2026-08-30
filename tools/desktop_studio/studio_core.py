@@ -1415,7 +1415,7 @@ def battle_layout_delete(layout_id):
 
 def battle_layout_preset(size):
     """生成 N×N 空预设布局（size 取 6/8/10/12）。返回 (ok, msg, data)。"""
-    s = max(2, min(32, int(size)))
+    s = max(2, min(40, int(size)))
     lid = "preset_%dx%d" % (s, s)
     data = {
         "name": "预设 %dx%d" % (s, s),

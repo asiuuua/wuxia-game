@@ -345,9 +345,18 @@
               <option value="iso">45° 等距（菱形）</option>
               <option value="ortho">正交轴测（方块）</option>
             </select>
-            <label>宽 W</label><input id="blW" type="number" min="2" max="32" value="10" style="width:64px">
-            <label>高 H</label><input id="blH" type="number" min="2" max="32" value="8" style="width:64px">
+            <label>长(宽) W</label><input id="blW" type="number" min="2" max="40" value="10" style="width:64px" onchange="blResize()">
+            <label>宽(高) H</label><input id="blH" type="number" min="2" max="40" value="8" style="width:64px" onchange="blResize()">
             <button class="act sec" onclick="blResize()">重设尺寸</button>
+            <span class="hint" style="margin:0" id="blGridCount"></span>
+          </div>
+          <div class="row" style="align-items:center;gap:10px;margin-top:6px;flex-wrap:wrap">
+            <span>场景适配（一键套用长宽）：</span>
+            <button class="act sec" onclick="blApplyScene(12,12)">开阔战场 12×12</button>
+            <button class="act sec" onclick="blApplyScene(6,16)">狭路走廊 6×16</button>
+            <button class="act sec" onclick="blApplyScene(10,10)">据点防守 10×10</button>
+            <button class="act sec" onclick="blApplyScene(8,14)">纵深突围 8×14</button>
+            <button class="act sec" onclick="blApplyScene(16,9)">横列阵线 16×9</button>
           </div>
           <div class="row" style="align-items:center;gap:10px;margin-top:6px">
             <span>点击格子切换：</span>
@@ -1292,6 +1301,8 @@ async function blLoadOne(id){
   if(window._bl.zoom===undefined)window._bl.zoom=1.0;
   document.getElementById('blZoomVal').textContent=Math.round((window._bl.zoom||1)*100);
   blRender();
+  const cnt=document.getElementById('blGridCount');
+  if(cnt)cnt.textContent='当前 '+window._bl.width+'×'+window._bl.height+' = '+(window._bl.width*window._bl.height)+' 格';
   blLoadBg();
 }
 function blLoadBg(){
@@ -1321,10 +1332,25 @@ function blViewChanged(){
 }
 function blResize(){
   if(!window._bl){show('blStat','先选或新建一个布局',false);return;}
-  window._bl.width=parseInt(document.getElementById('blW').value,10)||window._bl.width;
-  window._bl.height=parseInt(document.getElementById('blH').value,10)||window._bl.height;
+  window._bl.width=Math.max(2,Math.min(40,parseInt(document.getElementById('blW').value,10)||window._bl.width));
+  window._bl.height=Math.max(2,Math.min(40,parseInt(document.getElementById('blH').value,10)||window._bl.height));
+  document.getElementById('blW').value=window._bl.width;
+  document.getElementById('blH').value=window._bl.height;
   blClipTerrain();
   blRender();
+  const cnt=document.getElementById('blGridCount');
+  if(cnt)cnt.textContent='当前 '+window._bl.width+'×'+window._bl.height+' = '+(window._bl.width*window._bl.height)+' 格';
+}
+// 场景适配：一键套用某战术长宽比（开阔战场/狭路/据点/突围/横列），立即重算并裁剪越界地形
+function blApplyScene(w,h){
+  if(!window._bl){show('blStat','先选或新建一个布局',false);return;}
+  document.getElementById('blW').value=w;
+  document.getElementById('blH').value=h;
+  window._bl.width=w;window._bl.height=h;
+  blClipTerrain();
+  blRender();
+  const cnt=document.getElementById('blGridCount');
+  if(cnt)cnt.textContent='当前 '+w+'×'+h+' = '+(w*h)+' 格（场景预设）';
 }
 function blClipTerrain(){
   const W=window._bl.width,H=window._bl.height;
