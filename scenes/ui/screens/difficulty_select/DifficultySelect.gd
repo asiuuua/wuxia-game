@@ -46,6 +46,9 @@ func _build_list() -> void:
 		if id == "HELL":
 			btn.add_theme_color_override("font_color", UIPalette.DANGER)
 		btn.pressed.connect(_on_confirm_selection.bind(i))
+		_apply_glass_to_button(btn, UIPalette.TEXT_MAIN)
+		if id == "HELL":
+			btn.add_theme_color_override("font_color", UIPalette.DANGER)
 		_list.add_child(btn)
 		# 填进 _nav_items 后，键盘上下导航由基类统一处理
 		_nav_items.append(btn)
@@ -115,3 +118,27 @@ func _proceed(diff_id: String) -> void:
 
 func _on_back() -> void:
 	UIManager.close_screen(self)
+
+## 给按钮套磨砂玻璃样式（对齐 SettingsScreen / SaveLoadScreen 玻璃按钮规范）
+func _apply_glass_to_button(btn: Button, font_color: Color) -> void:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = UIPalette.GLASS_BG
+	sb.border_width_left = 1
+	sb.border_width_top = 1
+	sb.border_width_right = 1
+	sb.border_width_bottom = 1
+	sb.border_color = UIPalette.GLASS_BORDER
+	sb.corner_radius_top_left = 8
+	sb.corner_radius_top_right = 8
+	sb.corner_radius_bottom_left = 8
+	sb.corner_radius_bottom_right = 8
+	sb.content_margin_left = 18
+	sb.content_margin_right = 18
+	sb.content_margin_top = 8
+	sb.content_margin_bottom = 8
+	btn.add_theme_stylebox_override("normal", sb)
+	btn.add_theme_stylebox_override("hover", sb)
+	btn.add_theme_stylebox_override("pressed", sb)
+	btn.add_theme_stylebox_override("focus", sb)
+	btn.add_theme_color_override("font_color", font_color)
+	btn.add_theme_font_size_override("font_size", UIPalette.FS_SUB)

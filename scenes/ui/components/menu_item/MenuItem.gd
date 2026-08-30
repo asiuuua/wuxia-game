@@ -49,8 +49,10 @@ func _configure_nodes() -> void:
 	# 有图标时箭头右移到图标右侧，避免与图标重叠
 	_arrow.position = Vector2(2 if _icon_id == "" else 34, 10)
 	_arrow.visible = false
-	# 可选图标：menu/<key>，由消费方 set_icon() 传入；缺图则不显示（不占位、不崩）
-	if _icon_id != "":
+	# 可选图标：menu/<key>，由消费方 set_icon() 传入。
+	# 仅当后台真实存在该图标文件时才显示；否则连"缺图标占位紫块"都不画，界面保持干净。
+	# 美术按 id 丢 resources/icons/menu/<key>.png 即生效（见 IconRegistry）。
+	if _icon_id != "" and UIManager.has_icon(_icon_id):
 		_icon.texture = UIManager.get_icon(_icon_id)
 		_icon.custom_minimum_size = Vector2(24, 24)
 		_icon.size = Vector2(24, 24)
@@ -59,6 +61,7 @@ func _configure_nodes() -> void:
 		_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		_icon.visible = true
 	else:
+		_icon.texture = null
 		_icon.visible = false
 	# 默认留空：任何漏 set_text 的 MenuItem 会显示空白，比"菜单项"占位符更易暴露 bug
 	_label.text = ""

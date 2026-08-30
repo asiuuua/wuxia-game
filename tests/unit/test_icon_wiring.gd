@@ -34,12 +34,15 @@ func test_bond_screen_builds() -> void:
 	expect(scr.get_child_count() > 0, "BondRomanceScreen._build 应成功（含 NPC 头像接线）")
 
 func test_menu_item_icon_wired() -> void:
+	# 新行为（2026-08-30）：仅当后台真实存在图标文件时才显示图标；
+	# 缺图时连"缺图标占位紫块"都不画（见 MenuItem._configure_nodes 的 UIManager.has_icon 门控）。
 	var item = load("res://scenes/ui/components/menu_item/MenuItem.tscn").instantiate()
-	item.set_icon("menu/save_game")
+	item.set_icon("menu/__no_such_icon_xyz__")
 	item.set_text("保存")
 	item._ready()   # @onready + _configure_nodes 在 _ready 内跑（TestBase 为 RefCounted，无 add_child）
-	var ok: bool = item._icon != null and item._icon is TextureRect and item._icon.visible and item._icon.texture != null
-	expect(ok, "MenuItem 设 set_icon 后 _icon 应被设置纹理并可见（UIManager.get_icon 占位图兜底）")
+	expect(item._icon != null and item._icon is TextureRect, "MenuItem 应含 _icon 节点（TextureRect）")
+	expect(item._icon.visible == false, "缺图标文件时 _icon 应隐藏，不显示占位紫块")
+	expect(item._icon.texture == null, "缺图标文件时 _icon.texture 应为 null（不渲染占位图）")
 	# 不设图标时 _icon 节点存在但不应显示（向后兼容旧菜单项）
 	var plain = load("res://scenes/ui/components/menu_item/MenuItem.tscn").instantiate()
 	plain.set_text("纯文字")

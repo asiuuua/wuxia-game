@@ -199,6 +199,7 @@ func _add_option(row: HBoxContainer, options: PackedStringArray, current: String
 		if opt == current:
 			idx = ob.get_item_count() - 1
 	ob.select(idx)
+	_apply_glass_button_style(ob, UIPalette.TEXT_MAIN)
 	ob.item_selected.connect(func(i: int):
 		cb.call(options[i])
 	)

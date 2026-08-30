@@ -15,7 +15,7 @@ const TITLE := "save_title"
 const TITLE_SAVE := "save_title_save"
 
 # 主菜单背景图（数据驱动：有图用图叠压暗层+落叶，无图回退深墨）
-const BG_IMAGE_PATH := "res://assets/ui/main_menu_bg.jpg"
+const BG_IMAGE_PATH := "res://assets/ui/main_menu_bg.png"
 const BG_IMAGE_SCRIM := 0.55
 
 var _cards: Array = []           # SaveCard 实例（手动+自动，键盘可导航）
@@ -80,6 +80,7 @@ func _build_header() -> void:
 	var back_btn: Button = Button.new()
 	back_btn.text = "← " + (tr("esc_save_game") if _mode == "save" else tr("menu_load"))
 	back_btn.pressed.connect(_go_back)
+	_apply_glass_to_button(back_btn, UIPalette.TEXT_SECONDARY)
 	_header.add_child(back_btn)
 
 	var title: Label = Label.new()
