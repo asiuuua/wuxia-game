@@ -326,8 +326,11 @@ func _continue_game() -> void:
 		return
 	var target_slot: int = slot
 	AudioManager.stop_bgm()
-	# 委托 UIManager 统一淡出转场，淡出完成后再读档进入
-	UIManager.close_screen(self, func(): GameManager.load_game(target_slot))
+	# 一次性关掉所有 UI 屏幕（含 MainMenu）：对齐 _proceed（新游戏）的稳妥清理，
+	# 避免 autoload CanvasLayer 残留旧界面遮挡 TownScene，导致玩家误以为"卡死/没进游戏"。
+	# 与 DifficultySelect._proceed 行为一致（UI 入口自行清理 UI，符合主权边界）。
+	UIManager.close_all_screens()
+	GameManager.load_game(target_slot)
 
 func _open_load() -> void:
 	UIManager.open_screen("SaveLoadScreen", UIManager.Layer.FULLSCREEN)

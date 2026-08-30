@@ -18,7 +18,7 @@ text = "姻缘"
 focus_mode = 0
 custom_minimum_size = Vector2(82, 32)
 
-[node name="RomanceBadge" type="Label" parent="BondBtn"]
+[node name="RomanceBadge" type="Label" parent="HBox/BondBtn"]
 visible = false
 layout_mode = 1
 anchor_left = 1.0

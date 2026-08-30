@@ -13,7 +13,7 @@ class_name TopRightMenuPanel
 const UIPalette = preload("res://core/constants/ui_theme.gd")
 const UIFeedback = preload("res://scenes/ui/components/ui_feedback/UIFeedback.gd")
 
-@onready var _bond_badge: Label = $BondBtn/RomanceBadge
+@onready var _bond_badge: Label = $HBox/BondBtn/RomanceBadge
 
 func _ready() -> void:
 	if Engine.is_editor_hint():
@@ -28,10 +28,10 @@ func _ready() -> void:
 
 # 连线 + 交互反馈（按钮本体在 .tscn，行为仍由脚本挂载）
 func _hook_buttons() -> void:
-	var bond_btn: Button = $BondBtn
+	var bond_btn: Button = $HBox/BondBtn
 	bond_btn.pressed.connect(UIManager.open_screen.bind("BondRomance"))
 	UIFeedback.attach(bond_btn)
-	var menu_btn: Button = $MenuBtn
+	var menu_btn: Button = $HBox/MenuBtn
 	menu_btn.pressed.connect(UIManager.open_screen.bind("GameMenu"))
 	UIFeedback.attach(menu_btn)
 

@@ -9,7 +9,6 @@
 
 extends BaseScreen
 
-@onready var _title: Label = $Title
 @onready var _list: VBoxContainer = $List
 @onready var _back: Button = $Back
 
@@ -26,15 +25,10 @@ func _ready() -> void:
 	super._ready()   # 基类：铺满 + 安全区 + _build_content() + _update_selection()
 
 func _build_content() -> void:
-	# 静态壳在 .tscn；此处把节点挂进安全区 ContentRoot 并填动态内容
-	add_content(_title)
+	# 静态壳在 .tscn（Title 已删除，仅 List + Back）；此处把节点挂进安全区 ContentRoot 并填动态内容
 	add_content(_list)
 	add_content(_back)
-	_title.text = tr("diff_select_title")
-	_title.add_theme_font_size_override("font_size", UIPalette.FS_TITLE)
-	_title.add_theme_color_override("font_color", UIPalette.GOLD)
-	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_back.text = tr("diff_select_back")
+	_back.text = "ESC返回"
 	_back.pressed.connect(_on_back)
 	_build_list()
 
@@ -43,7 +37,7 @@ func _build_list() -> void:
 		var id: String = _diff_ids[i]
 		var btn: Button = Button.new()
 		btn.name = "Diff_%d" % i
-		btn.custom_minimum_size = Vector2(0, 120)
+		btn.custom_minimum_size = Vector2(0, 72)   # 菜单整体缩到 60%（原 120）
 		btn.alignment = HORIZONTAL_ALIGNMENT_CENTER
 		btn.text = _entry_text(id)
 		if id == "HELL":
@@ -150,22 +144,17 @@ func _apply_glass_to_button(btn: Button, font_color: Color) -> void:
 func _editor_preview() -> void:
 	if not Engine.is_editor_hint():
 		return
-	_title = $Title
 	_list = $List
 	_back = $Back
-	if _title == null or _list == null:
+	if _list == null:
 		return
 	_diff_ids = CombatEnums.Difficulty.keys()
-	_title.text = tr("diff_select_title")
-	_title.add_theme_font_size_override("font_size", UIPalette.FS_TITLE)
-	_title.add_theme_color_override("font_color", UIPalette.GOLD)
-	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_back.text = tr("diff_select_back")
+	_back.text = "ESC返回"
 	for i in _diff_ids.size():
 		var id: String = _diff_ids[i]
 		var btn: Button = Button.new()
 		btn.name = "Diff_%d" % i
-		btn.custom_minimum_size = Vector2(0, 120)
+		btn.custom_minimum_size = Vector2(0, 72)   # 菜单整体缩到 60%（原 120）
 		btn.alignment = HORIZONTAL_ALIGNMENT_CENTER
 		btn.text = _entry_text(id)
 		if id == "HELL":
