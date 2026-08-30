@@ -19,10 +19,15 @@ const BG_IMAGE_PATH := "res://assets/ui/main_menu_bg.jpg"
 const BG_IMAGE_SCRIM := 0.55
 
 var _cards: Array = []           # SaveCard 实例（手动+自动，键盘可导航）
-var _list_container: VBoxContainer = null  # _build_list 创建，_rebuild_list 填充
 var _mode: String = "load"       # "load" 读取模式（主菜单/ESC 读取）/ "save" 保存模式（ESC 保存游戏）
 var _name_dialog: Control = null # 命名弹窗（保存模式选槽位后弹出）
 var _name_dialog_open: bool = false
+
+# B 路线（2026-08-29）：静态壳（顶部栏 Header + 滚动区 Scroll 及其内 List 容器）已迁入
+# SaveLoadScreen.tscn，美术可在编辑器改布局/边距；脚本只留业务与动态内容（存档卡片/命名弹窗）。
+@onready var _header: HBoxContainer = $Header
+@onready var _scroll: ScrollContainer = $Scroll
+@onready var _list_container: VBoxContainer = $Scroll/List
 
 ## 接收打开参数（来自 EscMenu）；data = {"mode": "save" | "load"}
 func _on_open(data: Variant) -> void:
@@ -69,45 +74,23 @@ func _add_image_background(parent: Control, _vw: float, _vh: float) -> void:
 
 # === 顶部栏：返回 + 标题（内容放 add_content，已套安全区，避开刘海） ===
 func _build_header() -> void:
-	var header: HBoxContainer = HBoxContainer.new()
-	header.anchor_left = 0.0
-	header.anchor_top = 0.0
-	header.anchor_right = 1.0
-	header.anchor_bottom = 0.0
-	header.offset_left = UIPalette.MARGIN
-	header.offset_top = UIPalette.HEADER_TOP
-	header.offset_right = -UIPalette.MARGIN
-	header.offset_bottom = UIPalette.HEADER_H
-	header.add_theme_constant_override("separation", 20)
-	add_content(header)
+	add_content(_header)
 
 	var back_btn: Button = Button.new()
 	back_btn.text = "← " + (tr("esc_save_game") if _mode == "save" else tr("menu_load"))
 	back_btn.pressed.connect(_go_back)
-	header.add_child(back_btn)
+	_header.add_child(back_btn)
 
 	var title: Label = Label.new()
 	title.text = tr(TITLE_SAVE if _mode == "save" else TITLE)
 	title.add_theme_font_size_override("font_size", UIPalette.FS_HEADER)
 	title.add_theme_color_override("font_color", UIPalette.GOLD)
-	header.add_child(title)
+	_header.add_child(title)
 
 # === 列表区（滚动容器，含手动存档 + 自动存档段） ===
 func _build_list() -> void:
-	var scroll: ScrollContainer = ScrollContainer.new()
-	scroll.anchor_left = 0.0
-	scroll.anchor_top = UIPalette.CONTENT_TOP
-	scroll.anchor_right = 1.0
-	scroll.anchor_bottom = UIPalette.CONTENT_BOTTOM
-	scroll.offset_left = UIPalette.MARGIN_LIST
-	scroll.offset_right = -UIPalette.MARGIN_LIST
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	add_content(scroll)
-
-	_list_container = VBoxContainer.new()
-	_list_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_list_container.add_theme_constant_override("separation", 12)
-	scroll.add_child(_list_container)
+	add_content(_scroll)
+	# _list_container 已在 SaveLoadScreen.tscn 静态声明，直接复用（滚动区内 VBox）
 
 # === 读取存档列表 + 自动存档段 ===
 func _rebuild_list() -> void:

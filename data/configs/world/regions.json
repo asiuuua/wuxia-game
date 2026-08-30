@@ -1,0 +1,57 @@
+{
+	"_doc": "世界区域注册表（填表模式 / 零代码新增区域）。\n 用法：想加一个新区域，只需两步，绝不碰代码——\n   1) 在 resources/ 下做好该区域的场景文件（如 res://scenes/gameplay/world/MyPlace.tscn）；\n   2) 在本表加一行：{\"name\":\"我的地点\",\"scene_path\":\"res://scenes/gameplay/world/MyPlace.tscn\",\"type\":\"world\",\"connections\":[\"region_start_town\"]}。\n  然后按 M 打开世界地图，点该区域即可传送过去。\n  connections 是「从本区域能去哪些区域」的 id 列表（无向感，建议双向都写）。\n  scene_path 留空字符串表示「尚未实装场景」，点击会提示而非崩溃。\n  type 取值：hub(枢纽城镇) / world(大世界) / dungeon(副本) / battle(战斗场) / special(特殊)。\n  name 直接显示，无需改 strings.csv；若要本地化可改用 tr_key。",
+	"region_start_town": {
+		"name": "起始城镇",
+		"scene_path": "res://scenes/gameplay/town/TownScene.tscn",
+		"type": "hub",
+		"connections": ["region_sect_gate", "region_market", "region_frontier"]
+	},
+	"region_sect_gate": {
+		"name": "宗门山门",
+		"scene_path": "",
+		"type": "world",
+		"connections": ["region_start_town", "region_secret"]
+	},
+	"region_market": {
+		"name": "市集",
+		"scene_path": "",
+		"type": "world",
+		"connections": ["region_start_town"]
+	},
+	"region_frontier": {
+		"name": "边荒",
+		"scene_path": "",
+		"type": "world",
+		"connections": ["region_start_town", "region_isle", "region_desert"]
+	},
+	"region_isle": {
+		"name": "海岛",
+		"scene_path": "",
+		"type": "world",
+		"connections": ["region_frontier", "region_underworld"]
+	},
+	"region_secret": {
+		"name": "秘境",
+		"scene_path": "",
+		"type": "dungeon",
+		"connections": ["region_sect_gate", "region_snow"]
+	},
+	"region_underworld": {
+		"name": "幽冥",
+		"scene_path": "",
+		"type": "dungeon",
+		"connections": ["region_isle"]
+	},
+	"region_desert": {
+		"name": "大漠",
+		"scene_path": "",
+		"type": "world",
+		"connections": ["region_frontier", "region_snow"]
+	},
+	"region_snow": {
+		"name": "雪原",
+		"scene_path": "",
+		"type": "world",
+		"connections": ["region_secret", "region_desert"]
+	}
+}

@@ -35,6 +35,9 @@ const _TOGGLE_ACTIONS := {
 }
 const _DEBUG_ACTIONS := {
 	"debug_tactical_battle": [KEY_F9],
+	"debug_party_tactical": [KEY_F8],
+	"debug_riverside_test": [KEY_F11],
+	"debug_swarm_test": [KEY_F12],
 	"debug_celebration": [KEY_F10],
 }
 # 一次“休息/睡觉”推进的游戏天数：怀胎期 gestation_days=300，按月跳进（30天/次）
@@ -45,6 +48,11 @@ const REST_DAYS := 30
 # 城镇内按 F9 直接开战术战棋 demo，跳过“走过去→对话→战斗”链路，方便反复试战斗表现。
 const DEBUG_QUICK_BATTLE := true
 const DEBUG_TACTICAL_BATTLE_ID := "tactical_demo_001"
+const DEBUG_PARTY_BATTLE_ID := "tactical_demo_party"
+# 城镇内按 F11 一键进「竹林水畔」战棋测试场景（装饰层 demo：竹子/房屋遮挡 + 水面波纹 + 雾气）
+const DEBUG_QUICK_RIVERSIDE := true
+# 城镇内按 F12 一键进「群怪压力测试」战棋场景（20 小怪 + 友方，验证多 NPC 同场 + 飘字队列不丢字）
+const DEBUG_QUICK_SWARM := true
 # 城镇内按 F10 一键造配偶 + 触发欢庆：跳过求婚/结婚/好感流程，反复试受孕与 CG 表现。
 const DEBUG_QUICK_CELEBRATION := true
 const DEBUG_CELEBRATION_SPOUSE_ID := "npc_su_waner"
@@ -231,6 +239,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		_open_dialog(_nearby_npc)
 	elif event.is_action_pressed("debug_tactical_battle") and DEBUG_QUICK_BATTLE:
 		_launch_debug_tactical()
+	elif event.is_action_pressed("debug_party_tactical") and DEBUG_QUICK_BATTLE:
+		_launch_debug_party_tactical()
+	elif event.is_action_pressed("debug_riverside_test") and DEBUG_QUICK_RIVERSIDE:
+		_launch_debug_riverside_test()
+	elif event.is_action_pressed("debug_swarm_test") and DEBUG_QUICK_SWARM:
+		_launch_debug_swarm_test()
 	elif event.is_action_pressed("debug_celebration") and DEBUG_QUICK_CELEBRATION:
 		_launch_debug_celebration()
 
@@ -269,6 +283,26 @@ func _launch_debug_tactical() -> void:
 	if UIManager.is_any_screen_open():
 		return
 	GameManager.start_battle(DEBUG_TACTICAL_BATTLE_ID)
+
+# 调试：一键开「主角 + 随行剑客 vs 山贼」组队战，验证多 NPC 同场 + 飘字可见。由 F8 触发，受 DEBUG_QUICK_BATTLE 门控。
+func _launch_debug_party_tactical() -> void:
+	if UIManager.is_any_screen_open():
+		return
+	GameManager.start_battle(DEBUG_PARTY_BATTLE_ID)
+
+# 调试：一键进「竹林水畔」战棋测试场景（竹子/房屋遮挡 + 水面波纹 + 雾气装饰层 demo）。
+# 由 F11 触发，受 DEBUG_QUICK_RIVERSIDE 门控。复用真实战术战斗逻辑，仅外层多套一层装饰。
+func _launch_debug_riverside_test() -> void:
+	if UIManager.is_any_screen_open():
+		return
+	GameManager.start_test_riverside()
+
+# 调试：一键进「群怪压力测试」战棋场景（20 小怪 + 友方），验证多 NPC 同场 + 飘字队列不丢字。
+# 由 F12 触发，受 DEBUG_QUICK_SWARM 门控。复用 riverside 装饰壳，仅加载 tactical_test_swarm 战斗配置。
+func _launch_debug_swarm_test() -> void:
+	if UIManager.is_any_screen_open():
+		return
+	GameManager.start_test_swarm()
 
 # 调试：一键造已婚配偶 + 触发欢庆，反复试受孕与 CG 表现。由 F10 触发，受 DEBUG_QUICK_CELEBRATION 门控。
 # 复用与面板 _on_celebration 完全一致的开界面流程（成功开 CG / 超配额开 over_limit 对话框 / 受孕弹喜讯）。

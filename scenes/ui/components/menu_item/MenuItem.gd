@@ -1,8 +1,3 @@
-# scenes/ui/components/menu_item/MenuItem.gd
-# 主菜单选项组件（代码构建 Control，无 .tscn；对齐 LoadingScreen 惯例）
-# 交互：鼠标悬停 → 选中（金色箭头 + 文字右移 2px + 变金）；点击/确认 → confirmed；禁用态灰显无交互
-# 颜色集中引用 UIPalette，不硬编码（消费方已 preload UIPalette，详见 ui_theme.gd 头部说明）
-
 @warning_ignore("shadowed_global_identifier")
 
 extends Control
@@ -18,17 +13,21 @@ signal confirmed
 const ARROW := "▶"
 const FONT_SIZE := 23
 
-var _label: Label = null
-var _arrow: Label = null
-var _icon: TextureRect = null    # 可选图标（menu/<key>），缺图不显示
+# B 路线：节点结构（_arrow/_icon/_label）已迁入 MenuItem.tscn，
+# 美术可在编辑器直接编辑布局与外观；本脚本只负责状态、交互与数据填充。
+@onready var _label: Label = $_label
+@onready var _arrow: Label = $_arrow
+@onready var _icon: TextureRect = $_icon
+
 var _icon_id: String = ""        # 由消费方 set_icon() 传入；空=无图标（向后兼容）
 var _is_selected: bool = false
 var _is_enabled: bool = true
-var _pending_text: String = ""   # _build 创建 _label 之前调用 set_text 时暂存，建好后再应用
+var _pending_text: String = ""   # _ready 创建 _label 之前调用 set_text 时暂存，建好后再应用
 var _feedback: UIFeedback = null # 交互反馈（缩放动画 + 音效），配置表驱动
 
 func _ready() -> void:
-	_build()
+	custom_minimum_size = Vector2(280, 44)
+	_configure_nodes()
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	# 关键：子项不抢焦点。菜单键盘导航由父容器（EscMenu/MainMenu）经 _unhandled_input 统一处理；
 	# 若此处默认 FOCUS_ALL，鼠标点选会 grab 焦点，而父菜单关闭（queue_free）后焦点会悬挂在
@@ -41,38 +40,31 @@ func _ready() -> void:
 	# 统一收敛到 set_selected() -> notify_selection_changed() 这一个入口。
 	_feedback = UIFeedback.attach(self, "focus", false)
 
-func _build() -> void:
-	custom_minimum_size = Vector2(280, 44)
-
-	_arrow = Label.new()
+func _configure_nodes() -> void:
 	_arrow.text = ARROW
 	_arrow.add_theme_font_size_override("font_size", FONT_SIZE)
 	_arrow.add_theme_color_override("font_color", UIPalette.GOLD)
 	# 有图标时箭头右移到图标右侧，避免与图标重叠
 	_arrow.position = Vector2(2 if _icon_id == "" else 34, 10)
 	_arrow.visible = false
-	add_child(_arrow)
-
 	# 可选图标：menu/<key>，由消费方 set_icon() 传入；缺图则不显示（不占位、不崩）
 	if _icon_id != "":
-		_icon = TextureRect.new()
 		_icon.texture = UIManager.get_icon(_icon_id)
 		_icon.custom_minimum_size = Vector2(24, 24)
 		_icon.size = Vector2(24, 24)
 		_icon.position = Vector2(6, 10)
 		_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		add_child(_icon)
-
-	_label = Label.new()
+		_icon.visible = true
+	else:
+		_icon.visible = false
 	# 默认留空：任何漏 set_text 的 MenuItem 会显示空白，比"菜单项"占位符更易暴露 bug
 	_label.text = ""
 	_label.add_theme_font_size_override("font_size", FONT_SIZE)
 	_label.add_theme_color_override("font_color", UIPalette.TEXT_MAIN)
 	# 有图标时右移给图标留位（图标区约 6..30，label 从 56 起）
 	_label.position = Vector2(56 if _icon_id != "" else 28, 10)
-	add_child(_label)
-	# _label 已就绪：若 set_text 在 _build 之前（节点未进树时）被调用过，此刻补应用
+	# _label 已就绪：若 set_text 在 _ready 之前（节点未进树时）被调用过，此刻补应用
 	if _pending_text != "":
 		_label.text = _pending_text
 
@@ -80,10 +72,10 @@ func set_text(text: String) -> void:
 	if _label != null:
 		_label.text = text
 	else:
-		# 尚未进树、_label 未创建：暂存，待 _build 末尾应用
+		# 尚未进树、_label 未创建：暂存，待 _configure_nodes 末尾应用
 		_pending_text = text
 
-## 设置图标 id（如 "menu/save_game"）。应在 add_child 之前调用，_build 时据此创建图标。
+## 设置图标 id（如 "menu/save_game"）。应在 add_child 之前调用，_configure_nodes 时据此创建图标。
 ## 留空则不显示图标（向后兼容旧菜单项）。美术按 id 丢 resources/icons/menu/<key>.png 即生效。
 func set_icon(icon_id: String) -> void:
 	_icon_id = icon_id

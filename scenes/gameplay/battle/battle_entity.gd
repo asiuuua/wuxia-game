@@ -29,8 +29,16 @@ var _mp_bg: ColorRect
 var _mp_fill: ColorRect
 var _sel_ring: ColorRect
 var _pop_layer: Node2D
-var _pop_pool: Array[Label] = []   # 飘字复用池（P2-7：避免高频 new/free）
+var _pop_pool: Array[Label] = []    # 飘字复用池（P2-7：避免高频 new/free）
+var _pop_active: Array[Label] = []  # 当前播放中的飘字顺序（7.3.5 特效预算：用于回收最旧）
+var _pop_pending: Array[Dictionary] = []  # 7.3.5 优化：超限时不丢弃，排队稍后播放（梦幻式）
 var _move_tween: Tween = null
+
+# 7.3.5 特效预算：单实体飘字并发上限与排队兜底。
+# 上限是「每个单位」独立计算：20 个敌人 = 20 个独立池，不会互相抢上限。
+# 超过上限时先入队，等正在播放的飘字结束再出队，避免直接截断/丢弃数字。
+const MAX_POPS: int = 48
+const MAX_QUEUE: int = 32
 
 const SPRITE_W: float = 40.0
 const SPRITE_H: float = 52.0
@@ -73,8 +81,11 @@ func _clear_pops() -> void:
 	# 回收飘字池（reset/复用前清空，杜绝残留飘字与已释放引用）
 	for l in _pop_pool:
 		if is_instance_valid(l):
+			_finish_pop(l)
 			l.free()
 	_pop_pool.clear()
+	_pop_active.clear()
+	_pop_pending.clear()
 
 func _build() -> void:
 	_built = true
@@ -118,15 +129,26 @@ func place_at(grid_pos: Vector2i) -> void:
 	_grid_pos = grid_pos
 	if _grid_node != null:
 		var gn := _grid_node as BattleGridNode
-		position = gn.cell_center(grid_pos) + Vector2(0, -10.0)
+		position = gn.cell_center(grid_pos)
+	set_facing(CombatCharacter.FACING.DOWN)   # 出生默认面朝下（占位；接入贴图后按枚举切帧）
+
+## 面朝：纯逻辑枚举驱动视图表现；斜45°映射只在视图层做（P1）
+## 当前为占位矩形，左向做水平翻转示意；后续接入精灵帧时改按 facing 切贴图即可
+func set_facing(f: int) -> void:
+	if _body == null:
+		return
+	_body.scale.x = -1.0 if f == CombatCharacter.FACING.LEFT else 1.0
 
 ## 动画移动（GRID_MOVE 事件驱动）；instant=true 时直接落位（跳过模式用）
 func move_to(grid_pos: Vector2i, instant: bool = false) -> void:
+	var old: Vector2i = _grid_pos
 	_grid_pos = grid_pos
+	if old != grid_pos:
+		set_facing(CombatCharacter.calc_facing(old, grid_pos))   # 仅真实移动时按逻辑坐标差值更朝向
 	if _grid_node == null:
 		return
 	var gn := _grid_node as BattleGridNode
-	var target := gn.cell_center(grid_pos) + Vector2(0, -10.0)
+	var target := gn.cell_center(grid_pos)
 	if instant:
 		position = target
 		return
@@ -147,9 +169,35 @@ func set_selected(sel: bool) -> void:
 	_sel_ring.color = Color(1.0, 0.85, 0.2, 0.5 if sel else 0.0)
 
 func pop_text(txt: String, color: Color) -> void:
+	# 7.3.5 优化：优先立即播放；当前实体所有 Label 都在忙且池满时，入队稍后播放（不丢弃）
+	if _can_spawn_pop():
+		_spawn_pop(txt, color)
+	elif _pop_pending.size() < MAX_QUEUE:
+		_pop_pending.append({"txt": txt, "color": color})
+	else:
+		# 队列也满：兜底丢弃最旧的一条（极端罕见，正常战斗不会触发）
+		_pop_pending.pop_front()
+		_pop_pending.append({"txt": txt, "color": color})
+
+## 是否能立即播放：有空闲 Label，或池未达单实体上限
+func _can_spawn_pop() -> bool:
+	for l in _pop_pool:
+		if is_instance_valid(l) and not l.visible:
+			return true
+	return _pop_pool.size() < MAX_POPS
+
+## 实际生成一条飘字
+func _spawn_pop(txt: String, color: Color) -> void:
 	var l := _acquire_pop()
+	# 若该标签还在播上一段动画（回收复用情形），先停掉，避免两段 tween 叠放错乱
+	var old_tw = null
+	if l.has_meta("pop_tween"):
+		old_tw = l.get_meta("pop_tween")
+	if old_tw != null and is_instance_valid(old_tw):
+		old_tw.kill()
 	l.text = txt
 	l.modulate = color
+	l.modulate.a = 1.0
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.visible = true
 	l.position = Vector2(-14.0, -SPRITE_H - 32.0)
@@ -157,19 +205,51 @@ func pop_text(txt: String, color: Color) -> void:
 	t.tween_property(l, "position:y", -SPRITE_H - 64.0, 0.5)
 	t.parallel().tween_property(l, "modulate:a", 0.0, 0.5)
 	t.tween_callback(func(): _release_pop(l))
+	l.set_meta("pop_tween", t)
+	if not (l in _pop_active):
+		_pop_active.append(l)
 
-## 飘字复用：从池中取一个空闲 Label，无则新建并登记（P2-7 池化，避免高频 new/free）
+## 飘字复用（7.3.5 限额）：优先复用空闲标签；池未满则新建；达上限时交给 _pop_pending 排队
 func _acquire_pop() -> Label:
 	for l in _pop_pool:
 		if is_instance_valid(l) and not l.visible:
 			return l
-	var l := Label.new()
-	_pop_layer.add_child(l)
-	_pop_pool.append(l)
-	return l
+	if _pop_pool.size() < MAX_POPS:
+		var l := Label.new()
+		_pop_layer.add_child(l)
+		_pop_pool.append(l)
+		return l
+	# 理论上不会走到这里（pop_text 会先入队）；兜底返回池首，避免 null
+	return _pop_pool[0]
 
-## 飘字动画结束归还池（仅隐藏，等待下次复用）；节点已释放则忽略
+## 立即结束某飘字动画并隐藏（清理路径用，不触发队列）
+func _finish_pop(l: Label) -> void:
+	if not is_instance_valid(l):
+		return
+	var tw = null
+	if l.has_meta("pop_tween"):
+		tw = l.get_meta("pop_tween")
+	if tw != null and is_instance_valid(tw):
+		tw.kill()
+	l.visible = false
+	l.modulate.a = 1.0
+	var idx := _pop_active.find(l)
+	if idx >= 0:
+		_pop_active.remove_at(idx)
+
+## 飘字动画结束归还池（仅隐藏，等待下次复用），然后触发队列中下一条
 func _release_pop(l: Label) -> void:
 	if not is_instance_valid(l):
 		return
 	l.visible = false
+	var idx := _pop_active.find(l)
+	if idx >= 0:
+		_pop_active.remove_at(idx)
+	_dequeue_next_pop()
+
+## 队列下一条出队播放；每条等上一条播完再出，避免一帧爆开
+func _dequeue_next_pop() -> void:
+	if _pop_pending.is_empty():
+		return
+	var p: Dictionary = _pop_pending.pop_front()
+	_spawn_pop(p.get("txt", ""), p.get("color", Color.WHITE))

@@ -1,24 +1,32 @@
 # scenes/ui/overlays/attributes/AttributesScreen.gd
 # 人物属性面板（Tab 键开关）：基础信息 + 经验/气血/内力进度条 + 属性总览
 # 铁律：UI 只展示与输入，数据来自 GameManager.player_state
+# B 路线：静态壳（压暗底 + 居中玻璃面板 + 标题/信息/三进度条/属性网格/关闭）在 AttributesScreen.tscn，
+# 美术可直接编辑布局与外观；本脚本只填动态文本与进度条值（按 player_state 刷新）。
 
 @warning_ignore("shadowed_global_identifier")
+
 extends PopupBase
 
 class_name AttributesScreen
 
 const UIPalette = preload("res://core/constants/ui_theme.gd")
+const UIFeedback = preload("res://scenes/ui/components/ui_feedback/UIFeedback.gd")
 
-var _info_label: Label
-var _exp_bar: ProgressBar
-var _hp_bar: ProgressBar
-var _mp_bar: ProgressBar
-var _attr_grid: GridContainer
+@onready var _title: Label = $Panel/Margin/VLayout/Title
+@onready var _info_label: Label = $Panel/Margin/VLayout/InfoLabel
+@onready var _exp_bar: ProgressBar = $Panel/Margin/VLayout/ExpBar
+@onready var _hp_bar: ProgressBar = $Panel/Margin/VLayout/HpBar
+@onready var _mp_bar: ProgressBar = $Panel/Margin/VLayout/MpBar
+@onready var _attr_title: Label = $Panel/Margin/VLayout/AttrTitle
+@onready var _attr_grid: GridContainer = $Panel/Margin/VLayout/AttrGrid
+@onready var _close: Button = $Panel/Margin/VLayout/Close
 
 func _ready() -> void:
 	focus_mode = Control.FOCUS_NONE
+	UIManager.apply_safe_area(self)
 	popup_id = "Attributes"
-	_build()
+	_build_ui()
 	_refresh()
 	EventBus.player_stats_changed.connect(_on_changed)
 	EventBus.player_hp_changed.connect(_on_changed)
@@ -26,54 +34,13 @@ func _ready() -> void:
 	EventBus.player_level_up.connect(_on_changed)
 	EventBus.player_money_changed.connect(_on_changed)
 
-func _build() -> void:
-	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var dim := ColorRect.new()
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	dim.color = UIPalette.DIM
-	dim.mouse_filter = Control.MOUSE_FILTER_STOP
-	add_child(dim)
-	var panel := make_glass_panel(Vector2(520, 560))
-	add_child(panel)
-	var margin := MarginContainer.new()
-	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 16)
-	margin.add_theme_constant_override("margin_right", 16)
-	margin.add_theme_constant_override("margin_top", 14)
-	margin.add_theme_constant_override("margin_bottom", 14)
-	panel.add_child(margin)
-	var v := VBoxContainer.new()
-	margin.add_child(v)
-	var title := Label.new()
-	title.text = tr("ui_attr_title")
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	v.add_child(title)
-	_info_label = Label.new()
-	v.add_child(_info_label)
-	_exp_bar = ProgressBar.new()
-	_exp_bar.max_value = 1.0
-	_exp_bar.show_percentage = false
-	v.add_child(_exp_bar)
-	_hp_bar = ProgressBar.new()
-	_hp_bar.max_value = 1.0
-	_hp_bar.show_percentage = false
-	v.add_child(_hp_bar)
-	_mp_bar = ProgressBar.new()
-	_mp_bar.max_value = 1.0
-	_mp_bar.show_percentage = false
-	v.add_child(_mp_bar)
-	var attr_title := Label.new()
-	attr_title.text = tr("ui_attr_overview")
-	v.add_child(attr_title)
-	_attr_grid = GridContainer.new()
-	_attr_grid.columns = 2
-	_attr_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	v.add_child(_attr_grid)
-	var close := Button.new()
-	close.text = tr("ui_attr_close")
-	close.focus_mode = Control.FOCUS_NONE
-	close.pressed.connect(request_close)
-	v.add_child(close)
+func _build_ui() -> void:
+	_title.text = tr("ui_attr_title")
+	_attr_title.text = tr("ui_attr_overview")
+	_close.text = tr("ui_attr_close")
+	_close.focus_mode = Control.FOCUS_NONE
+	_close.pressed.connect(request_close)
+	UIFeedback.attach(_close)
 
 func _refresh() -> void:
 	if _info_label == null:

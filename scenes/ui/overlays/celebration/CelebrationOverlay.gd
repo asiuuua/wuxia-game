@@ -10,7 +10,6 @@ extends Control
 class_name CelebrationOverlay
 
 const ResourceManager = preload("res://core/resource_manager.gd")
-const UIPalette = preload("res://core/constants/ui_theme.gd")
 
 const TABLE_PATH := "res://data/configs/bond/celebrations.json"
 const MAX_CG_SECONDS := 10.0
@@ -19,12 +18,17 @@ const END_HOLD_SECONDS := 3.0
 var _mode: String = "cg"
 var _npc_id: String = ""
 var _cg_id: String = "default"
-var _media_box: Control = null
-var _lines_label: Label = null
-var _btn_row: HBoxContainer = null
+# B 路线（2026-08-29）：静态外壳（Dim/Panel/Margin/VBox/TitleLabel/MediaBox/LinesLabel/BtnRow）
+# 已迁入 CelebrationOverlay.tscn，美术可在编辑器改外观；脚本只保留动态逻辑（异步媒体/台词/计时）。
+@onready var _title_label: Label = $Panel/Margin/VBox/TitleLabel
+@onready var _media_box: Control = $Panel/Margin/VBox/MediaBox
+@onready var _lines_label: Label = $Panel/Margin/VBox/LinesLabel
+@onready var _btn_row: HBoxContainer = $Panel/Margin/VBox/BtnRow
 var _bgm_player: AudioStreamPlayer = null
 var _timer: Timer = null
-var _built := false
+# _on_open 先于 _ready 执行（UIManager 在 add_child 前注入 init_data）：用 _ready_done + _pending_open 延迟到 _ready 后构建内容
+var _ready_done := false
+var _pending_open: Variant = null
 # 已进入关闭流程（跳过/超时/主动关闭/_exit_tree）。置位后所有在途异步回调直接丢弃，
 # 防止 CG 媒体/音乐在节点已 queue_free 后才加载完成、把节点挂到已释放容器上导致崩溃/泄漏。
 var _is_closing: bool = false
@@ -34,8 +38,11 @@ var _bgm_path: String = ""
 
 func _ready() -> void:
 	focus_mode = Control.FOCUS_NONE
-	if not _built:
-		_build()
+	_ready_done = true
+	if _pending_open != null:
+		var d: Variant = _pending_open
+		_pending_open = null
+		_open(d)
 
 ## UIManager.open_screen 注入初始化数据：{"mode": "cg"|"over_limit", "npc_id":, "cg_id":}
 func _on_open(data: Variant) -> void:
@@ -43,61 +50,20 @@ func _on_open(data: Variant) -> void:
 		_mode = String(data.get("mode", "cg"))
 		_npc_id = String(data.get("npc_id", ""))
 		_cg_id = String(data.get("cg_id", "default"))
-	# UIManager 在 add_child 前先调 _on_open，_ready 尚未执行；此处兜底先构建。
-	if not _built:
-		_build()
+	# UIManager 在 add_child 前先调 _on_open，_ready 尚未执行、@onready 节点未就绪；
+	# 延迟到 _ready 后再构建内容（与 DialogOverlay 同款处理）。
+	if _ready_done:
+		_open(data)
+	else:
+		_pending_open = data
+
+## 构建内容（在 _ready 之后调用，确保 @onready 节点已就绪）
+func _open(_data: Variant) -> void:
+	_title_label.text = "欢庆" if _mode != "over_limit" else "欢庆 · 今日已尽"
 	_build_content()
 
-func _build() -> void:
-	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var dim := ColorRect.new()
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	dim.color = UIPalette.CG_DIM
-	dim.mouse_filter = Control.MOUSE_FILTER_STOP
-	add_child(dim)
-	var panel := Panel.new()
-	var _psz := Vector2(760, 520)
-	panel.custom_minimum_size = _psz
-	panel.size = _psz
-	panel.anchor_left = 0.5; panel.anchor_top = 0.5; panel.anchor_right = 0.5; panel.anchor_bottom = 0.5
-	panel.offset_left = -_psz.x * 0.5; panel.offset_top = -_psz.y * 0.5
-	panel.offset_right = _psz.x * 0.5; panel.offset_bottom = _psz.y * 0.5
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = UIPalette.CG_PANEL_BG
-	sb.border_color = UIPalette.CG_BORDER
-	sb.border_width_left = 1; sb.border_width_top = 1; sb.border_width_right = 1; sb.border_width_bottom = 1
-	panel.add_theme_stylebox_override("panel", sb)
-	add_child(panel)
-	var margin := MarginContainer.new()
-	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 24)
-	margin.add_theme_constant_override("margin_right", 24)
-	margin.add_theme_constant_override("margin_top", 20)
-	margin.add_theme_constant_override("margin_bottom", 20)
-	panel.add_child(margin)
-	var v := VBoxContainer.new()
-	margin.add_child(v)
-	var title := Label.new()
-	title.text = "欢庆" if _mode != "over_limit" else "欢庆 · 今日已尽"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 22)
-	title.add_theme_color_override("font_color", UIPalette.CG_TITLE)
-	v.add_child(title)
-	_media_box = Control.new()
-	_media_box.custom_minimum_size = Vector2(700, 280)
-	_media_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	v.add_child(_media_box)
-	_lines_label = Label.new()
-	_lines_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_lines_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_lines_label.add_theme_font_size_override("font_size", 18)
-	_lines_label.add_theme_color_override("font_color", UIPalette.CG_TEXT)
-	v.add_child(_lines_label)
-	_btn_row = HBoxContainer.new()
-	_btn_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	_btn_row.add_theme_constant_override("separation", 12)
-	v.add_child(_btn_row)
-	_built = true
+# B 路线：静态外壳（Dim/Panel/Margin/VBox/标题/媒体框/台词/按钮行）已迁入 CelebrationOverlay.tscn，
+# 美术可在编辑器改外观；脚本不再 new 这些节点。
 
 func _build_content() -> void:
 	var table: Dictionary = _load_table()

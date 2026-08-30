@@ -1,8 +1,9 @@
 # autoload/ui_manager.gd
 # UI 管理器（autoload，不写 class_name —— 避免与单例名冲突解析失败，今日 08-27 刚踩此坑）
 # 职责：维护 6 个 CanvasLayer 层级，提供全屏界面栈的打开/关闭。
-# 界面以「脚本路径」登记在 data/configs/ui/screens.json，open_screen 用 script.new() 实例化
-# （对齐本项目「代码构建 Control 覆盖层」的惯例，不依赖 .tscn）。
+# 界面登记在 data/configs/ui/screens.json：值统一为「场景路径(.tscn)」（B 路线复合控件）。
+# open_screen 仅支持 .tscn：load().instantiate() 后挂到对应层级；非法扩展名（非 .tscn）直接报错返回 null。
+# 2026-08-30 收尾：全量界面已迁 .tscn，旧的 .gd / script.new() 分支已删除，不再兼容脚本路径。
 #
 # 2026-08-29 P2 弹窗生命周期：screens.json 支持 {path, cache} 写法；cache=true 的界面关闭时
 # 仅隐藏、保留在层上（_screen_cache），重开复用，不销毁——高频弹窗（设置/存档）省重建开销；
@@ -181,11 +182,17 @@ func open_screen(screen_name: String, layer: int = Layer.FULLSCREEN, init_data: 
 		elif screen.has_method("_on_reopen"):
 			screen._on_reopen()
 	else:
-		var script: Script = load(String(entry.get("path", ""))) as Script
-		if script == null:
-			GameLogger.error("UIManager", "界面脚本加载失败: %s" % screen_name)
+		var path: String = String(entry.get("path", ""))
+		# B 路线（2026-08-29 收尾）：全量界面已迁 .tscn，不再支持 .gd 脚本路径。
+		# 若登记的不是 .tscn 复合控件场景，直接报错返回，避免静默走旧 new() 分支。
+		if not path.ends_with(".tscn"):
+			GameLogger.error("UIManager", "界面必须为 .tscn 复合控件场景: %s (%s)" % [screen_name, path])
 			return null
-		screen = script.new() as Control
+		var packed: PackedScene = load(path) as PackedScene
+		if packed == null:
+			GameLogger.error("UIManager", "界面场景加载失败: %s" % screen_name)
+			return null
+		screen = packed.instantiate() as Control
 		screen.name = screen_name
 		# 初始化数据（如界面模式 save/load）：若有 _on_open 方法则注入，避免界面硬编码打开上下文
 		if init_data != null and screen.has_method("_on_open"):

@@ -6,7 +6,7 @@
 
 extends TestBase
 
-const SettingsScreen = preload("res://scenes/ui/screens/settings/SettingsScreen.gd")
+const SettingsScreen = preload("res://scenes/ui/screens/settings/SettingsScreen.tscn")
 const EquipmentScreen = preload("res://scenes/ui/screens/equipment/EquipmentScreen.gd")
 const PopupBase = preload("res://scenes/ui/screens/popup_base.gd")
 

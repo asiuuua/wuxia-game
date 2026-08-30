@@ -7,6 +7,10 @@ extends Control
 class_name StatusCardPanel
 
 const UIPalette = preload("res://core/constants/ui_theme.gd")
+# B 路线：单条数值条抽为独立复合控件 StatusBar（结构 StatusBar.tscn + 逻辑 StatusBar.gd）。
+# 双 const 引用模式：StatusBar 仅做类型标注，StatusBarScene 用于 instantiate()。
+const StatusBar = preload("res://scenes/ui/components/status_bar/StatusBar.gd")
+const StatusBarScene = preload("res://scenes/ui/components/status_bar/StatusBar.tscn")
 
 # 六维属性（key 对应 PlayerState 成员名，name 为面板显示用单字）
 const _ATTRS := [
@@ -18,69 +22,15 @@ const _ATTRS := [
 	{"key": "focus", "name": "定"},
 ]
 
-# === 单条数值条（标签 + 轨道 + 填充 + 可选数值文本） ===
-class _Bar extends Control:
-	var _fill: ColorRect
-	var _val_label: Label
-	func _init(p_label: String, p_color: Color, p_width: float, p_height := 16.0, show_val := true) -> void:
-		var label_w := 42.0
-		var val_w := 58.0 if show_val else 0.0
-		var track_w := p_width - label_w - val_w
-		custom_minimum_size = Vector2(p_width, p_height + 16.0)
-		var h := HBoxContainer.new()
-		h.size_flags_horizontal = SIZE_EXPAND_FILL
-		var lab := Label.new()
-		lab.text = p_label
-		lab.custom_minimum_size = Vector2(label_w, p_height)
-		lab.add_theme_color_override("font_color", UIPalette.TEXT_MAIN)
-		lab.add_theme_font_size_override("font_size", UIPalette.FS_SMALL)
-		h.add_child(lab)
-		var track := Panel.new()
-		track.custom_minimum_size = Vector2(track_w, p_height)
-		var sb := StyleBoxFlat.new()
-		sb.bg_color = UIPalette.PANEL_DARK
-		for r in ["top_left", "top_right", "bottom_left", "bottom_right"]:
-			sb.set("corner_radius_" + r, 4)
-		track.add_theme_stylebox_override("panel", sb)
-		_fill = ColorRect.new()
-		_fill.color = p_color
-		_fill.anchor_left = 0.0
-		_fill.anchor_top = 0.0
-		_fill.anchor_right = 0.0
-		_fill.anchor_bottom = 1.0
-		_fill.offset_left = 0.0
-		_fill.offset_top = 0.0
-		_fill.offset_right = 0.0
-		_fill.offset_bottom = 0.0
-		track.add_child(_fill)
-		h.add_child(track)
-		if show_val:
-			_val_label = Label.new()
-			_val_label.custom_minimum_size = Vector2(val_w, p_height)
-			_val_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-			_val_label.add_theme_color_override("font_color", UIPalette.TEXT_SECONDARY)
-			_val_label.add_theme_font_size_override("font_size", UIPalette.FS_TINY)
-			h.add_child(_val_label)
-		add_child(h)
-	func set_value(cur: int, maxv: int) -> void:
-		var r := 0.0
-		if maxv > 0:
-			r = float(cur) / float(maxv)
-		_fill.anchor_right = clampf(r, 0.0, 1.0)
-		if _val_label != null:
-			_val_label.text = "%d/%d" % [cur, maxv]
-	func set_level(cur: int, cap := 100) -> void:
-		_fill.anchor_right = clampf(float(cur) / float(cap), 0.0, 1.0)
-		if _val_label != null:
-			_val_label.text = str(cur)
+# 单条数值条已抽为独立复合控件 StatusBar（见 scenes/ui/components/status_bar/StatusBar.gd）。
 
 var _name_label: Label
 var _lv_label: Label
 var _money_label: Label
 var _avatar_char: Label
 var _avatar_tex: TextureRect
-var _hp_bar: _Bar
-var _mp_bar: _Bar
+var _hp_bar: StatusBar
+var _mp_bar: StatusBar
 var _attr_bars: Dictionary = {}
 
 func _ready() -> void:
@@ -98,7 +48,7 @@ func _ready() -> void:
 # === 构建状态卡 ===
 # 视觉尺寸说明：用户要求「缩小三分之一」→ 保留 2/3（约 0.667），实际渲染 227×212，
 # 远低于屏幕左上 1/4（960×540），满足「不超左上四分之一」约束。
-# 后续若需再调整体改 _VISUAL_SCALE 即可，不动内部 _Bar/字号字面。
+# 后续若需再调整体改 _VISUAL_SCALE 即可，不动字号字面。
 # 用 Control.scale 做整体变换，pivot 显式锚左上，position/size 不变。
 const _VISUAL_SCALE := 0.667
 
@@ -151,10 +101,14 @@ func _build() -> void:
 	top.add_child(info)
 	v.add_child(top)
 	# 气血 / 内力
-	_hp_bar = _Bar.new("气血", UIPalette.HP_FILL, 300.0)
-	v.add_child(_hp_bar)
-	_mp_bar = _Bar.new("内力", UIPalette.MP_FILL, 300.0)
-	v.add_child(_mp_bar)
+	var hp: StatusBar = StatusBarScene.instantiate()
+	v.add_child(hp)
+	hp.setup("气血", UIPalette.HP_FILL, 300.0)
+	_hp_bar = hp
+	var mp: StatusBar = StatusBarScene.instantiate()
+	v.add_child(mp)
+	mp.setup("内力", UIPalette.MP_FILL, 300.0)
+	_mp_bar = mp
 	# 六维属性条
 	var attr_title := Label.new()
 	attr_title.text = "六 维 属 性"
@@ -167,7 +121,8 @@ func _build() -> void:
 	grid.add_theme_constant_override("h_separation", 12)
 	grid.add_theme_constant_override("v_separation", 4)
 	for a in _ATTRS:
-		var b := _Bar.new(a["name"], UIPalette.ATTR_FILL, 150.0, 14.0, false)
+		var b: StatusBar = StatusBarScene.instantiate()
+		b.setup(a["name"], UIPalette.ATTR_FILL, 150.0, 14.0, false)
 		_attr_bars[a["key"]] = b
 		grid.add_child(b)
 	v.add_child(grid)
@@ -241,7 +196,7 @@ func _refresh(_a: Variant = null, _b: Variant = null, _c: Variant = null) -> voi
 	_hp_bar.set_value(ps.hp, ps.max_hp)
 	_mp_bar.set_value(ps.mp, ps.max_mp)
 	for a in _ATTRS:
-		var b: _Bar = _attr_bars.get(a["key"], null)
+		var b: StatusBar = _attr_bars.get(a["key"], null)
 		if b != null:
 			# PlayerState 是 Object，Object.get 仅 1 参（无默认值）；
 			# 用 `or 0` 兜底缺省属性，避免解析期 “Too many arguments for get()”。

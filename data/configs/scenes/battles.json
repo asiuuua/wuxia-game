@@ -12,6 +12,26 @@
       "reward_exp": 30
     },
     {
+      "id": "tactical_ally_inject",
+      "name": "友方NPC注入测试（战棋）",
+      "enemy_ids": [
+        "bandit_001"
+      ],
+      "turn_mode": "sequential",
+      "tactical": true,
+      "reward_exp": 10,
+      "allies": ["test_ally_npc"],
+      "grid": {
+        "width": 10,
+        "height": 8,
+        "obstacles": ["4,3", "5,3", "4,4", "5,4"],
+        "deployment": {
+          "player": [1, 4],
+          "bandit_001": [8, 4]
+        }
+      }
+    },
+    {
       "id": "demo_battle",
       "name": "乞丐的试炼",
       "enemy_ids": [
@@ -59,6 +79,85 @@
         "deployment": {
           "player": [1, 4],
           "bandit_001": [8, 4]
+        }
+      }
+    },
+    {
+      "id": "tactical_mapbound_001",
+      "name": "竹林遭遇·布局复用（战棋）",
+      "enemy_ids": ["bandit_001"],
+      "turn_mode": "sequential",
+      "tactical": true,
+      "reward_exp": 20,
+      "layout": "courtyard_12x10",
+      "deployment": {
+        "player": [1, 5],
+        "bandit_001": [10, 5]
+      }
+    },
+    {
+      "id": "tactical_mapbound_002",
+      "name": "竹林遭遇·纯底图绑定（战棋）",
+      "enemy_ids": ["bandit_001"],
+      "turn_mode": "sequential",
+      "tactical": true,
+      "reward_exp": 20,
+      "deployment": {
+        "player": [1, 5],
+        "bandit_001": [10, 5]
+      }
+    },
+    {
+      "id": "tactical_demo_party",
+      "name": "竹林遭遇·组队验证（战棋）",
+      "enemy_ids": ["bandit_001"],
+      "turn_mode": "sequential",
+      "tactical": true,
+      "reward_exp": 20,
+      "allies": ["ally_sworder_001"],
+      "grid": {
+        "width": 10,
+        "height": 8,
+        "obstacles": ["4,3", "5,3", "4,4", "5,4", "8,6", "9,6", "8,7", "9,7"],
+        "deployment": {
+          "player": [1, 4],
+          "bandit_001": [8, 4],
+          "ally_sworder_001": [2, 4]
+        }
+      }
+    },
+    {
+      "id": "tactical_test_riverside",
+      "name": "竹林水畔·测试场景（战棋）",
+      "enemy_ids": ["bandit_001"],
+      "turn_mode": "sequential",
+      "tactical": true,
+      "reward_exp": 10,
+      "grid": {
+        "width": 10,
+        "height": 8,
+        "obstacles": ["4,3", "5,3", "4,4", "5,4", "8,6", "9,6", "8,7", "9,7"],
+        "deployment": {
+          "player": [1, 4],
+          "bandit_001": [8, 4]
+        }
+      }
+    },
+    {
+      "id": "tactical_test_swarm",
+      "name": "群怪压力测试（战棋·20小怪+1友方）",
+      "enemy_ids": ["bandit_001","bandit_001","bandit_001","bandit_001","bandit_001","bandit_001","bandit_001","bandit_001","bandit_001","bandit_001","bandit_001","bandit_001","bandit_001","bandit_001","bandit_001","bandit_001","bandit_001","bandit_001","bandit_001","bandit_001"],
+      "turn_mode": "sequential",
+      "tactical": true,
+      "reward_exp": 10,
+      "allies": ["ally_sworder_001"],
+      "grid": {
+        "width": 12,
+        "height": 10,
+        "obstacles": ["5,4", "6,4", "5,5", "6,5"],
+        "deployment": {
+          "player": [1, 5],
+          "ally_sworder_001": [2, 5]
         }
       }
     }

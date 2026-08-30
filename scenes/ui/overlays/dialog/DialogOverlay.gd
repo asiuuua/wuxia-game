@@ -6,7 +6,13 @@
 # 双立绘规则（数据驱动，UI 零逻辑）：
 #   - 左侧：永久固定主角半身立绘（开局加载一次）。
 #   - 右侧：动态跟随说话人；NPC 说话显示其立绘、主角变暗；主角说话隐藏右侧。
-# 解耦目标：NPC / 台词 / 对话框三者独立；改台词只动 dialogs.json，改外观只动本脚本。
+# 解耦目标：NPC / 台词 / 对话框三者独立；改台词只动 dialogs.json，改外观只动本脚本/本场景。
+#
+# B 路线（2026-08-29）：静态结构（遮罩/玻璃面板/双立绘/标签/按钮/容器）下沉到
+# DialogOverlay.tscn，美术可在编辑器改外观；脚本只保留动态逻辑与 @onready 引用。
+# 生命周期：UIManager.open_screen 在 add_child 之前调用 _on_open（即 _ready 之前），
+# 故用 _ready_done + _pending_open 把"打开"推迟到 _ready（@onready 节点就位）后执行，
+# 与 CelebrationOverlay 同款处理。
 
 @warning_ignore("shadowed_global_identifier")
 extends Control
@@ -20,191 +26,64 @@ var _npc_id: String = ""
 var _dialog_id: String = ""
 var _npc_data: Dictionary = {}
 
-var _speaker_label: Label
-var _dialog_label: Label
-var _next_button: Button
-var _action_container: VBoxContainer
-var _option_container: VBoxContainer
-var _left_bust: TextureRect
-var _right_bust: TextureRect
-var _left_dim: ColorRect
-var _right_dim: ColorRect
-var _built := false
+@onready var _speaker_label: Label = $Panel/SpeakerLabel
+@onready var _dialog_label: Label = $Panel/DialogLabel
+@onready var _next_button: Button = $Panel/NextButton
+@onready var _action_container: VBoxContainer = $Panel/ActionContainer
+@onready var _option_container: VBoxContainer = $Panel/OptionContainer
+@onready var _left_bust: TextureRect = $LeftBust
+@onready var _right_bust: TextureRect = $RightBust
+@onready var _left_dim: ColorRect = $LeftDim
+@onready var _right_dim: ColorRect = $RightDim
+
+var _ready_done := false
+var _pending_open: Variant = null
 
 
 func _ready() -> void:
 	focus_mode = Control.FOCUS_NONE
-	_ensure_built()
+	_init_static()
+	_ready_done = true
+	if _pending_open != null:
+		var data: Variant = _pending_open
+		_pending_open = null
+		_open(data)
+
+
+## 静态外观初始化（原 _build 中固定不变的部分）。其余动态内容由 _render / _update_portraits 驱动。
+func _init_static() -> void:
+	_next_button.text = tr("ui_dialog_next")
+	_next_button.pressed.connect(_on_next_pressed)
+	var pbust: Texture2D = _load_tex(ConfigManager.get_player().get("bust", ""))
+	if pbust != null:
+		_left_bust.texture = pbust
+	_left_bust.visible = (pbust != null)
 
 
 ## UIManager.open_screen 标准入口：data = {"npc_id": String, "dialog_id": String}
 func _on_open(data: Variant) -> void:
+	if _ready_done:
+		_open(data)
+	else:
+		_pending_open = data
+
+
+## 兼容入口：直接传入 NPC 配置字典（含 id、可选 dialog_id）
+func show_for_npc(npc_data: Dictionary) -> void:
+	if _ready_done:
+		_open(npc_data)
+	else:
+		_pending_open = npc_data
+
+
+func _open(data: Variant) -> void:
 	var d: Dictionary = data if data is Dictionary else {}
-	_npc_id = d.get("npc_id", "")
-	_ensure_built()
+	_npc_id = d.get("npc_id", d.get("id", ""))
 	visible = true
 	var render: Dictionary = GameManager.dialogue_service.start(_npc_id, d.get("dialog_id", ""))
 	_dialog_id = GameManager.dialogue_service.get_dialog_id()
 	PortraitCache.preload_portrait(ConfigManager.get_npc(_npc_id).get("bust", ""))  # 预热 NPC 立绘，避免首帧卡顿
 	_render(render)
-
-
-## 兼容入口：直接传入 NPC 配置字典（含 id、可选 dialog_id）
-func show_for_npc(npc_data: Dictionary) -> void:
-	_npc_id = npc_data.get("id", "")
-	_ensure_built()
-	visible = true
-	var render: Dictionary = GameManager.dialogue_service.start(_npc_id, npc_data.get("dialog_id", ""))
-	_dialog_id = GameManager.dialogue_service.get_dialog_id()
-	PortraitCache.preload_portrait(ConfigManager.get_npc(_npc_id).get("bust", ""))  # 预热 NPC 立绘，避免首帧卡顿
-	_render(render)
-
-
-func _ensure_built() -> void:
-	if _built:
-		return
-	_build()
-
-
-func _build() -> void:
-	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var backdrop := ColorRect.new()
-	backdrop.color = UIPalette.DIM
-	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
-	add_child(backdrop)
-
-	var panel := Panel.new()
-	panel.anchor_left = 0.1
-	panel.anchor_right = 0.9
-	panel.anchor_top = 1.0
-	panel.anchor_bottom = 1.0
-	panel.offset_top = -220.0
-	panel.offset_bottom = -20.0
-	UICenterUtils.apply_glass_style(panel)
-	add_child(panel)
-
-	# 左侧固定主角半身立绘
-	_left_bust = TextureRect.new()
-	_left_bust.anchor_left = 0.0
-	_left_bust.anchor_right = 0.0
-	_left_bust.anchor_top = 1.0
-	_left_bust.anchor_bottom = 1.0
-	_left_bust.offset_left = 24.0
-	_left_bust.offset_right = 174.0
-	_left_bust.offset_top = -460.0
-	_left_bust.offset_bottom = -240.0
-	_left_bust.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
-	_left_bust.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	var pbust: Texture2D = _load_tex(ConfigManager.get_player().get("bust", ""))
-	if pbust != null:
-		_left_bust.texture = pbust
-	_left_bust.visible = (pbust != null)
-	add_child(_left_bust)
-	_left_dim = ColorRect.new()
-	_left_dim.color = UIPalette.DIM_STRONG
-	_left_dim.anchor_left = 0.0
-	_left_dim.anchor_right = 0.0
-	_left_dim.anchor_top = 1.0
-	_left_dim.anchor_bottom = 1.0
-	_left_dim.offset_left = 24.0
-	_left_dim.offset_right = 174.0
-	_left_dim.offset_top = -460.0
-	_left_dim.offset_bottom = -240.0
-	_left_dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_left_dim.visible = false
-	add_child(_left_dim)
-
-	# 右侧动态说话人半身立绘
-	_right_bust = TextureRect.new()
-	_right_bust.anchor_left = 1.0
-	_right_bust.anchor_right = 1.0
-	_right_bust.anchor_top = 1.0
-	_right_bust.anchor_bottom = 1.0
-	_right_bust.offset_left = -174.0
-	_right_bust.offset_right = -24.0
-	_right_bust.offset_top = -460.0
-	_right_bust.offset_bottom = -240.0
-	_right_bust.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
-	_right_bust.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	_right_bust.visible = false
-	add_child(_right_bust)
-	_right_dim = ColorRect.new()
-	_right_dim.color = UIPalette.DIM_STRONG
-	_right_dim.anchor_left = 1.0
-	_right_dim.anchor_right = 1.0
-	_right_dim.anchor_top = 1.0
-	_right_dim.anchor_bottom = 1.0
-	_right_dim.offset_left = -174.0
-	_right_dim.offset_right = -24.0
-	_right_dim.offset_top = -460.0
-	_right_dim.offset_bottom = -240.0
-	_right_dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_right_dim.visible = false
-	add_child(_right_dim)
-
-	_speaker_label = Label.new()
-	_speaker_label.add_theme_font_size_override("font_size", 18)
-	_speaker_label.add_theme_color_override("font_color", UIPalette.GOLD)
-	_speaker_label.anchor_left = 0.0
-	_speaker_label.anchor_right = 1.0
-	_speaker_label.anchor_top = 0.0
-	_speaker_label.anchor_bottom = 0.0
-	_speaker_label.offset_left = 20.0
-	_speaker_label.offset_right = -20.0
-	_speaker_label.offset_top = 10.0
-	panel.add_child(_speaker_label)
-
-	_dialog_label = Label.new()
-	_dialog_label.add_theme_font_size_override("font_size", 16)
-	_dialog_label.add_theme_color_override("font_color", UIPalette.TEXT_MAIN)
-	_dialog_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_dialog_label.anchor_left = 0.0
-	_dialog_label.anchor_right = 1.0
-	_dialog_label.anchor_top = 0.0
-	_dialog_label.anchor_bottom = 0.0
-	_dialog_label.offset_left = 20.0
-	_dialog_label.offset_right = -20.0
-	_dialog_label.offset_top = 44.0
-	panel.add_child(_dialog_label)
-
-	_next_button = Button.new()
-	_next_button.text = tr("ui_dialog_next")
-	_next_button.anchor_left = 1.0
-	_next_button.anchor_right = 1.0
-	_next_button.anchor_top = 1.0
-	_next_button.anchor_bottom = 1.0
-	_next_button.offset_left = -120.0
-	_next_button.offset_right = -20.0
-	_next_button.offset_top = -44.0
-	_next_button.offset_bottom = -12.0
-	_next_button.pressed.connect(_on_next_pressed)
-	panel.add_child(_next_button)
-
-	_option_container = VBoxContainer.new()
-	_option_container.anchor_left = 0.0
-	_option_container.anchor_right = 1.0
-	_option_container.anchor_top = 1.0
-	_option_container.anchor_bottom = 1.0
-	_option_container.offset_left = 20.0
-	_option_container.offset_right = -20.0
-	_option_container.offset_top = -64.0
-	_option_container.offset_bottom = -8.0
-	panel.add_child(_option_container)
-
-	_action_container = VBoxContainer.new()
-	_action_container.anchor_left = 0.0
-	_action_container.anchor_right = 1.0
-	_action_container.anchor_top = 1.0
-	_action_container.anchor_bottom = 1.0
-	_action_container.offset_left = 20.0
-	_action_container.offset_right = -20.0
-	_action_container.offset_top = -64.0
-	_action_container.offset_bottom = -8.0
-	_action_container.visible = false
-	panel.add_child(_action_container)
-
-	_built = true
 
 
 func _load_tex(path: String) -> Texture2D:

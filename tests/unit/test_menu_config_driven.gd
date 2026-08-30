@@ -6,7 +6,7 @@
 
 extends TestBase
 
-const GameMenuScreen = preload("res://scenes/ui/screens/game_menu/GameMenuScreen.gd")
+const GameMenuScreen = preload("res://scenes/ui/screens/game_menu/GameMenuScreen.tscn")
 
 # 递归收集菜单里所有 Button（排除"返回"关闭按钮，避免触发 close_screen）
 func _collect_menu_buttons(node: Node) -> Array:
@@ -39,7 +39,7 @@ func test_game_menu_emits_action_ids() -> void:
 	var cb := func(id: String): captured.append(id)
 	EventBus.ui_action_requested.connect(cb)
 
-	var s := GameMenuScreen.new()
+	var s: Control = GameMenuScreen.instantiate()
 	s._ready()
 	var btns: Array = _collect_menu_buttons(s)
 	expect(btns.size() == 12, "应生成 12 个菜单按钮，实际 %d" % btns.size())

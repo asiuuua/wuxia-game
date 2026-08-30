@@ -553,6 +553,54 @@ func get_battle(id: String) -> Dictionary:
 func has_battle(id: String) -> bool:
 	return _battles.has(id)
 
+# === 战棋布局资源（资源驱动：底图/战斗共享同一份网格几何）===
+## 底图配置：返回 { "tactical_layout": "<layout_id>" }；底图不存在返回空字典
+func get_map_layout(map_id: String) -> Dictionary:
+	if map_id == "":
+		return {}
+	return _load_json("res://data/configs/maps/%s.json" % map_id)
+
+## 战棋布局资源：返回 { "width", "height", "obstacles", "deployment"? }；不存在返回空字典
+func get_battle_layout(layout_id: String) -> Dictionary:
+	if layout_id == "":
+		return {}
+	return _load_json("res://data/configs/battles/grids/%s.json" % layout_id)
+
+# === 世界区域（填表模式：data/configs/world/regions.json）===
+# 共享地基增量（只增不改）：新增 get_region / get_all_region_ids / get_region_connections。
+var _regions: Dictionary = {}
+var _regions_loaded: bool = false
+
+func _ensure_regions() -> void:
+	if _regions_loaded:
+		return
+	_regions = _load_json("res://data/configs/world/regions.json")
+	# 剔除 _ 开头的元数据键（如 _doc），仅保留真实区域
+	for k in _regions.keys():
+		if k.begins_with("_"):
+			_regions.erase(k)
+	_regions_loaded = true
+
+## 取单个区域配置：{"name","scene_path","type","connections"}；不存在返回空字典
+func get_region(id: String) -> Dictionary:
+	_ensure_regions()
+	return _regions.get(id, {})
+
+## 全部区域 id 列表
+func get_all_region_ids() -> Array[String]:
+	_ensure_regions()
+	var out: Array[String] = []
+	out.assign(_regions.keys())
+	return out
+
+## 某区域可直达的区域 id 列表；无配置返回空数组
+func get_region_connections(id: String) -> Array[String]:
+	var r: Dictionary = get_region(id)
+	var c: Array = r.get("connections", [])
+	var out: Array[String] = []
+	out.assign(c)
+	return out
+
 # === 任务 ===
 func get_quest(id: String) -> Dictionary:
 	if not _quests.has(id):

@@ -10,63 +10,50 @@ signal slot_drop(iid: String, data: Dictionary)
 
 const SIZE := 64
 
+# B 路线：节点结构（_bg/_icon/_label/_badge/_lock_icon）已迁入 ItemSlot.tscn，
+# 美术可在编辑器直接编辑布局与外观；本脚本只负责状态、交互与数据填充。
+@onready var _bg: Panel = $_bg
+@onready var _icon: TextureRect = $_icon
+@onready var _label: Label = $_label
+@onready var _badge: Label = $_badge
+@onready var _lock_icon: Label = $_lock_icon
+
 var _iid: String = ""
-var _bg: Panel
-var _icon: TextureRect
-var _label: Label
-var _badge: Label
-var _lock_icon: Label
 
 func _ready() -> void:
 	custom_minimum_size = Vector2(SIZE, SIZE)
 	size = Vector2(SIZE, SIZE)
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	_build()
-
-func _build() -> void:
-	if _label != null:
-		return  # 已构建，避免重复添加子节点
-	_bg = Panel.new()
-	_bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_configure_static()
 	_apply_bg(false)
-	add_child(_bg)
-	# 图标：占满槽位核心区；缺图时 UIManager.get_icon 返回占位图，
-	# 美术后续按 item_id 丢 resources/icons/items/<item_id>.png 即可替换，无需改代码。
-	_icon = TextureRect.new()
-	_icon.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_icon.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_icon.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	mouse_entered.connect(func(): slot_hover.emit(_iid))
+	mouse_exited.connect(func(): slot_hover.emit(""))
+
+# 结构来自 .tscn，这里只补静态外观（对齐/字号/描边/角标位置），状态色在 setup() 内按数据刷新
+func _configure_static() -> void:
 	_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_icon.custom_minimum_size = Vector2(SIZE - 14, SIZE - 14)
-	add_child(_icon)
-	_label = Label.new()
-	_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_icon.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_icon.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_label.add_theme_font_size_override("font_size", 11)
 	_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 1))
 	_label.add_theme_constant_override("outline_size", 2)
-	add_child(_label)
-	_badge = Label.new()
 	_badge.position = Vector2(SIZE - 32, 2)
 	_badge.add_theme_font_size_override("font_size", 13)
 	_badge.add_theme_color_override("font_color", UIPalette.TEXT_MAIN)
-	add_child(_badge)
-	_lock_icon = Label.new()
 	_lock_icon.text = "锁"
 	_lock_icon.position = Vector2(2, 2)
 	_lock_icon.add_theme_font_size_override("font_size", 12)
 	_lock_icon.add_theme_color_override("font_color", UIPalette.GOLD)
 	_lock_icon.visible = false
-	add_child(_lock_icon)
-	mouse_entered.connect(func(): slot_hover.emit(_iid))
-	mouse_exited.connect(func(): slot_hover.emit(""))
 
 ## 填充一个物品实例（inst 为 ItemInstance；传 null 表示空槽）
 func setup(inst) -> void:
 	if _label == null:
-		_build()  # 允许在 add_child 之前调用 setup（按需构建）
+		return  # 安全网：实例化后未进树时跳过
 	if inst == null:
 		_iid = ""
 		_label.text = ""

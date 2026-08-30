@@ -1,11 +1,16 @@
 # scenes/ui/screens/difficulty_select/DifficultySelect.gd
 # 开局难度选择界面（阶段2 消费端入口）：读难度配置表渲染 5 档，选定后写入难度并开新游戏。
 # HELL 强制二次确认警告；其余直接确认。文案经 tr() 本地化。
+# B 路线：静态壳（Backdrop/Title/List/Back）在 DifficultySelect.tscn，代码只填动态内容。
 # 2026-08-29 迁移到 BaseScreen：铺满/安全区/键盘导航/返回 由基类统一处理，本文件只留业务
 
 @warning_ignore("shadowed_global_identifier")
 
 extends BaseScreen
+
+@onready var _title: Label = $Title
+@onready var _list: VBoxContainer = $List
+@onready var _back: Button = $Back
 
 var _diff_ids: Array = []   # 难度枚举顺序：EASY..HELL
 
@@ -18,24 +23,19 @@ func _ready() -> void:
 	super._ready()   # 基类：铺满 + 安全区 + _build_content() + _update_selection()
 
 func _build_content() -> void:
-	# 压暗底铺满整屏（含刘海区），内容放 add_content() 的容器里（自动避开刘海）
-	_add_backdrop(0.7)
+	# 静态壳在 .tscn；此处把节点挂进安全区 ContentRoot 并填动态内容
+	add_content(_title)
+	add_content(_list)
+	add_content(_back)
+	_title.text = tr("diff_select_title")
+	_title.add_theme_font_size_override("font_size", UIPalette.FS_TITLE)
+	_title.add_theme_color_override("font_color", UIPalette.GOLD)
+	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_back.text = tr("diff_select_back")
+	_back.pressed.connect(_on_back)
+	_build_list()
 
-	var title: Label = Label.new()
-	title.text = tr("diff_select_title")
-	title.add_theme_font_size_override("font_size", UIPalette.FS_TITLE)
-	title.add_theme_color_override("font_color", UIPalette.GOLD)
-	title.anchor_left = 0.5; title.anchor_top = 0.06; title.anchor_right = 0.5; title.anchor_bottom = 0.06
-	title.offset_left = -200.0; title.offset_top = 0.0; title.offset_right = 200.0; title.offset_bottom = 60.0
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	add_content(title)
-
-	var list: VBoxContainer = VBoxContainer.new()
-	list.anchor_left = 0.5; list.anchor_top = 0.22; list.anchor_right = 0.5; list.anchor_bottom = 0.82
-	list.offset_left = -360.0; list.offset_top = 0.0; list.offset_right = 360.0; list.offset_bottom = 0.0
-	list.add_theme_constant_override("separation", 12)
-	add_content(list)
-
+func _build_list() -> void:
 	for i in _diff_ids.size():
 		var id: String = _diff_ids[i]
 		var btn: Button = Button.new()
@@ -46,16 +46,9 @@ func _build_content() -> void:
 		if id == "HELL":
 			btn.add_theme_color_override("font_color", UIPalette.DANGER)
 		btn.pressed.connect(_on_confirm_selection.bind(i))
-		list.add_child(btn)
+		_list.add_child(btn)
 		# 填进 _nav_items 后，键盘上下导航由基类统一处理
 		_nav_items.append(btn)
-
-	var back: Button = Button.new()
-	back.text = tr("diff_select_back")
-	back.anchor_left = 0.5; back.anchor_top = 0.88; back.anchor_right = 0.5; back.anchor_bottom = 0.88
-	back.offset_left = -100.0; back.offset_top = 0.0; back.offset_right = 100.0; back.offset_bottom = 44.0
-	back.pressed.connect(_on_back)
-	add_content(back)
 
 func _entry_text(diff_id: String) -> String:
 	var d: Dictionary = ConfigManager.get_difficulty(diff_id)

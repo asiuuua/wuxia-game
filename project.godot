@@ -38,6 +38,7 @@ ErrorHandler="*res://autoload/error_handler.gd"
 PerformanceMonitor="*res://tools/performance_monitor.gd"
 PatchManager="*res://core/patch_manager.gd"
 TransitionManager="*res://autoload/transition_manager.gd"
+ObjectPool="*res://services/object_pool.gd"
 
 [display]
 

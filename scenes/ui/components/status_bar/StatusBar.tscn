@@ -1,0 +1,20 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/ui/components/status_bar/StatusBar.gd" id="1_sb"]
+
+[node name="StatusBar" type="Control"]
+script = ExtResource("1_sb")
+
+[node name="HBox" type="HBoxContainer" parent="."]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="HBox"]
+layout_mode = 2
+
+[node name="Track" type="Panel" parent="HBox"]
+layout_mode = 2
+
+[node name="Fill" type="ColorRect" parent="HBox/Track"]
+
+[node name="Val" type="Label" parent="HBox"]
+layout_mode = 2

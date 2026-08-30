@@ -15,10 +15,13 @@ signal confirmed()
 @warning_ignore("unused_signal")
 signal cancelled()
 
-var _title_label: Label = null
-var _content_label: Label = null
-var _confirm_btn: Button = null
-var _cancel_btn: Button = null
+# B 路线（2026-08-29）：静态壳（压暗底 Dim + 磨砂玻璃 Panel + VBox + 标题/内容/按钮行）已迁入
+# ConfirmDialog.tscn，美术可在编辑器改外观；脚本只保留动态填充（setup）与交互逻辑。
+# 按钮的磨砂玻璃皮肤仍走 _apply_glass_button_style（与设置/存档一致的复用 helper）。
+@onready var _title_label: Label = $Panel/VBox/TitleLabel
+@onready var _content_label: Label = $Panel/VBox/ContentLabel
+@onready var _confirm_btn: Button = $Panel/VBox/BtnRow/ConfirmBtn
+@onready var _cancel_btn: Button = $Panel/VBox/BtnRow/CancelBtn
 
 var _confirm_callback: Callable = Callable()
 var _cancel_callback: Callable = Callable()
@@ -30,80 +33,12 @@ func _ready() -> void:
 	_build_ui()
 
 func _build_ui() -> void:
-	var dim: ColorRect = ColorRect.new()
-	dim.color = UIPalette.DIM
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	dim.mouse_filter = Control.MOUSE_FILTER_STOP
-	add_child(dim)
-
-	var panel: Panel = Panel.new()
-	panel.size = Vector2(440, 220)
-	panel.custom_minimum_size = Vector2(440, 220)
-	UICenterUtils.center_panel(panel)   # 修复 Godot4.7.2 PRESET_CENTER 不居中
-	# === 磨砂玻璃面板（替代原棕底 + 金边）===
-	# 背景半透冷调深蓝黑 + 细白边 + 柔和阴影，营造"漂浮在背景之上"的玻璃质感
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = UIPalette.GLASS_BG
-	sb.border_width_left = 1
-	sb.border_width_top = 1
-	sb.border_width_right = 1
-	sb.border_width_bottom = 1
-	sb.border_color = UIPalette.GLASS_BORDER
-	sb.corner_radius_top_left = 14
-	sb.corner_radius_top_right = 14
-	sb.corner_radius_bottom_left = 14
-	sb.corner_radius_bottom_right = 14
-	sb.shadow_size = 16
-	sb.shadow_offset = Vector2(0, 6)
-	sb.shadow_color = UIPalette.GLASS_SHADOW
-	# 内边距由内层 VBox 控制，这里留 1px 让边框不被内容压没
-	sb.content_margin_left = 1
-	sb.content_margin_right = 1
-	sb.content_margin_top = 1
-	sb.content_margin_bottom = 1
-	panel.add_theme_stylebox_override("panel", sb)
-	add_child(panel)
-
-	var vbox: VBoxContainer = VBoxContainer.new()
-	vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	vbox.add_theme_constant_override("separation", 16)
-	vbox.add_theme_constant_override("margin_left", 28)
-	vbox.add_theme_constant_override("margin_top", 24)
-	vbox.add_theme_constant_override("margin_right", 28)
-	vbox.add_theme_constant_override("margin_bottom", 24)
-	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	panel.add_child(vbox)
-
-	_title_label = Label.new()
-	_title_label.add_theme_font_size_override("font_size", 22)
-	_title_label.add_theme_color_override("font_color", UIPalette.GOLD)
-	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(_title_label)
-
-	_content_label = Label.new()
-	_content_label.add_theme_font_size_override("font_size", 15)
-	_content_label.add_theme_color_override("font_color", UIPalette.TEXT_MAIN)
-	_content_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_content_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	vbox.add_child(_content_label)
-
-	var btn_row: HBoxContainer = HBoxContainer.new()
-	btn_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	btn_row.add_theme_constant_override("separation", 20)
-	vbox.add_child(btn_row)
-
-	_confirm_btn = Button.new()
-	# 文字由 setup(...) 运行时填充；这里只创建空按钮避免 Parse Error
-	_confirm_btn.text = ""
+	# 静态结构（Dim / Panel / VBox / 标题 / 内容 / 按钮行）已迁入 ConfirmDialog.tscn；
+	# 此处仅接线按钮信号并套用磨砂玻璃皮肤（与设置/存档弹窗一致）。
 	_apply_glass_button_style(_confirm_btn, UIPalette.SUCCESS)
-	_confirm_btn.pressed.connect(_on_confirm)
-	btn_row.add_child(_confirm_btn)
-
-	_cancel_btn = Button.new()
-	_cancel_btn.text = ""
 	_apply_glass_button_style(_cancel_btn, UIPalette.TEXT_SECONDARY)
+	_confirm_btn.pressed.connect(_on_confirm)
 	_cancel_btn.pressed.connect(_on_cancel)
-	btn_row.add_child(_cancel_btn)
 
 ## 应用"磨砂玻璃"按钮样式：透明半透冷调底 + 极细白边，无填充焦点描边，仅文字变色标识选中
 ## font_color: SUCCESS=确认(墨绿)/TEXT_SECONDARY=取消(次级灰白)

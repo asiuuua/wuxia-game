@@ -18,7 +18,7 @@ func _run() -> void:
 	inv.add_item("weapon_sword_iron_001", 1, "test")
 	_assert(int(inv.get_item_count("pill_heal_xiaohuan_001")) == 5, "pill 添加 5 个")
 	# 构建界面（P2-1：实例网格 + 组件）
-	var screen = preload("res://scenes/ui/overlays/inventory/InventoryScreen.gd").new()
+	var screen = preload("res://scenes/ui/overlays/inventory/InventoryScreen.tscn").instantiate()
 	add_child(screen)
 	await get_tree().process_frame
 	_assert(screen != null, "InventoryScreen 实例化")

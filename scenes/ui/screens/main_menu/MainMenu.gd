@@ -1,5 +1,5 @@
 # scenes/ui/screens/main_menu/MainMenu.gd
-# 主菜单界面（代码构建 Control，挂在 UIManager.FULLSCREEN 层级；对齐 LoadingScreen 惯例，不依赖 .tscn）
+# 主菜单界面（B 路线：静态容器 MenuContainer / BottomLeft / BottomRight 已迁入 MainMenu.tscn，美术可在编辑器改布局；动态内容 MenuItem / 底部按钮仍由代码构建）
 # M2 范围：6 选项 + 键盘/鼠标导航 + 快捷键 + 动态背景占位 + 主题常量
 # UI 只做展示与输入，业务逻辑调用 GameManager / SaveManager
 # 文案经 tr() 本地化（M6）：键在 data/configs/localization/strings.csv
@@ -10,6 +10,7 @@
 extends BaseScreen
 
 const MenuItem = preload("res://scenes/ui/components/menu_item/MenuItem.gd")
+const MenuItemScene = preload("res://scenes/ui/components/menu_item/MenuItem.tscn")
 const UIBackground = preload("res://scenes/ui/components/ui_background/UIBackground.gd")
 
 const VERSION_TEXT := "v0.5.0 Build 20250827"
@@ -31,6 +32,11 @@ const BG_IMAGE_SCRIM := 0.55
 
 # 登录界面背景音乐（数据驱动：把 MP3 放到该路径即生效，缺失则静默不播）
 const LOGIN_BGM := "res://resources/audio/bgm/login_bgm.mp3"
+
+# B 路线（2026-08-29）：静态容器已迁入 MainMenu.tscn（美术可在编辑器改锚点/间距/位置），脚本只引用 + 填动态内容
+@onready var _menu_container: VBoxContainer = $MenuContainer
+@onready var _bottom_left: Label = $BottomLeft
+@onready var _bottom_right: HBoxContainer = $BottomRight
 
 var _menu_items: Array = []   # MenuItem 实例（untyped，避免 --script 下 class_name 未注册的类型推断问题）
 var _has_save: bool = false
@@ -155,15 +161,11 @@ func _make_leaf_texture() -> Texture2D:
 # === 菜单（无顶部标题，菜单纵向居中） ===
 # 内容放 add_content()（ContentRoot，已套安全区），自动避开刘海/挖孔
 func _build_menu() -> void:
-	var container: VBoxContainer = VBoxContainer.new()
-	container.anchor_left = 0.12
-	container.anchor_top = 0.30
-	container.anchor_right = 0.46
-	container.anchor_bottom = 0.86
-	container.add_theme_constant_override("separation", 14)
+	# B 路线：菜单容器 MenuContainer 已迁入 MainMenu.tscn（美术可在编辑器调锚点/间距），此处仅引用并填动态 MenuItem
+	var container: VBoxContainer = _menu_container
 	add_content(container)
 	for i in MENU_ITEMS.size():
-		var item: MenuItem = MenuItem.new()
+		var item: MenuItem = MenuItemScene.instantiate()
 		item.name = "MenuItem_%d" % i
 		item.set_text(tr(MENU_ITEMS[i]["text"]))
 		item.set_icon("menu/" + MENU_ITEMS[i]["key"])
@@ -178,31 +180,14 @@ func _build_menu() -> void:
 #   2) 距离底部 1 指（MARGIN_TIP=32），距离右侧 2 指（2*MARIGN_WIDE=80），不上不下、不左不右；
 #   3) 不抢主菜单焦点（focus_mode=NONE），避免上下方向键在底部三键与主菜单六项之间"打架"。
 func _build_bottom_bar() -> void:
-	var bl: Label = Label.new()
+	# B 路线：底部栏 BottomLeft / BottomRight 已迁入 MainMenu.tscn，此处仅引用并填动态文本/按钮
+	var bl: Label = _bottom_left
 	bl.text = "%s  |  %s" % [VERSION_TEXT, tr("studio_name")]
 	bl.add_theme_font_size_override("font_size", UIPalette.FS_SMALL)
 	bl.add_theme_color_override("font_color", UIPalette.TEXT_SECONDARY)
-	bl.anchor_left = 0.0
-	bl.anchor_top = 1.0
-	bl.anchor_right = 0.0
-	bl.anchor_bottom = 1.0
-	bl.offset_left = UIPalette.MARGIN
-	bl.offset_top = -(UIPalette.MARGIN_TIP + 24)
-	bl.offset_right = 360.0
-	bl.offset_bottom = -UIPalette.MARGIN_TIP
 	add_content(bl)
 
-	var br: HBoxContainer = HBoxContainer.new()
-	br.anchor_left = 1.0
-	br.anchor_top = 1.0
-	br.anchor_right = 1.0
-	br.anchor_bottom = 1.0
-	br.offset_left = -360.0
-	br.offset_top = -(UIPalette.MARGIN_TIP + 36)
-	br.offset_right = -2 * UIPalette.MARGIN_WIDE
-	br.offset_bottom = -UIPalette.MARGIN_TIP
-	br.add_theme_constant_override("separation", 16)
-	br.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var br: HBoxContainer = _bottom_right
 	add_content(br)
 
 	# 透明背景占位样式（不画底色、不画描边，仅留内边距避免文字贴紧）

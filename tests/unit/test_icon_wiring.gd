@@ -5,7 +5,8 @@
 extends TestBase
 
 func test_item_slot_icon_wired() -> void:
-	var slot = load("res://scenes/ui/components/item_slot/ItemSlot.gd").new()
+	var slot = load("res://scenes/ui/components/item_slot/ItemSlot.tscn").instantiate()
+	slot._ready()   # @onready 在 _ready 内赋值（TestBase 为 RefCounted，无 add_child）
 	var inst = ItemInstance.new()
 	inst.item_id = "iron_sword"
 	slot.setup(inst)
@@ -23,30 +24,31 @@ func test_item_slot_icon_wired() -> void:
 	expect(empty_ok, "空槽时图标纹理应为 null")
 
 func test_abilities_screen_builds() -> void:
-	var scr = load("res://scenes/ui/screens/abilities/AbilitiesScreen.gd").new()
+	var scr: Control = load("res://scenes/ui/screens/abilities/AbilitiesScreen.tscn").instantiate()
 	scr._ready()
 	expect(scr.get_child_count() > 0, "AbilitiesScreen._build 应成功（含技能图标接线）")
 
 func test_bond_screen_builds() -> void:
-	var scr = load("res://scenes/ui/screens/bond_romance/BondRomanceScreen.gd").new()
+	var scr: Control = load("res://scenes/ui/screens/bond_romance/BondRomanceScreen.tscn").instantiate()
 	scr._ready()
 	expect(scr.get_child_count() > 0, "BondRomanceScreen._build 应成功（含 NPC 头像接线）")
 
 func test_menu_item_icon_wired() -> void:
-	var item = load("res://scenes/ui/components/menu_item/MenuItem.gd").new()
+	var item = load("res://scenes/ui/components/menu_item/MenuItem.tscn").instantiate()
 	item.set_icon("menu/save_game")
 	item.set_text("保存")
-	item._ready()   # _build 在 _ready 内跑
-	var ok := item._icon != null and item._icon is TextureRect and item._icon.texture != null
-	expect(ok, "MenuItem 设 set_icon 后 _build 应创建图标 TextureRect（UIManager.get_icon 占位图兜底）")
-	# 不设图标时不应创建图标（向后兼容旧菜单项）
-	var plain = load("res://scenes/ui/components/menu_item/MenuItem.gd").new()
+	item._ready()   # @onready + _configure_nodes 在 _ready 内跑（TestBase 为 RefCounted，无 add_child）
+	var ok: bool = item._icon != null and item._icon is TextureRect and item._icon.visible and item._icon.texture != null
+	expect(ok, "MenuItem 设 set_icon 后 _icon 应被设置纹理并可见（UIManager.get_icon 占位图兜底）")
+	# 不设图标时 _icon 节点存在但不应显示（向后兼容旧菜单项）
+	var plain = load("res://scenes/ui/components/menu_item/MenuItem.tscn").instantiate()
 	plain.set_text("纯文字")
 	plain._ready()
-	expect(plain._icon == null, "未设 set_icon 的 MenuItem 不应创建图标（向后兼容旧菜单项）")
+	expect(plain._icon != null and plain._icon.visible == false, "未设 set_icon 的 MenuItem _icon 应存在但不显示（向后兼容旧菜单项）")
 
 func test_dialog_overlay_portrait_no_crash() -> void:
-	var dlg = load("res://scenes/ui/overlays/dialog/DialogOverlay.gd").new()
+	var dlg: Control = load("res://scenes/ui/overlays/dialog/DialogOverlay.tscn").instantiate()
+	dlg._ready()
 	# 解耦后通过 dialog_id 绑定台词；npc_merchant 在 town_npcs.json 与 dialogs.json 均存在
 	dlg.show_for_npc({"id": "npc_merchant", "dialog_id": "npc_merchant"})
 	expect(dlg.get_child_count() > 0, "DialogOverlay.show_for_npc 应成功构建（立绘双通道不崩）")

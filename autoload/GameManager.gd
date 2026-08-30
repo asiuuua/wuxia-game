@@ -27,6 +27,9 @@ var master_service: MasterService = null        # 师徒服务（M4：师徒分�
 var relationship_service: RelationshipService = null   # 关系网数据中枢（M3：聚合门面，无状态不存档）
 
 var pending_battle_id: String = ""     # 由 NPC/剧情设置，战斗场景读取
+var debug_override_battle_id: String = ""  # 测试用：让战术测试场景壳(riverside)复用并加载指定战斗配置；空=用默认
+var current_map_id: String = "town"     # 当前底图标识（世界区域）；战棋布局映射壳据此继承底图共享网格几何
+var current_region_id: String = "region_start_town"  # 当前所在世界区域（填表模式，对应 regions.json 的 id）
 var current_slot: int = -1             # 当前游戏所在存档槽位（-1 表示尚未存档）；HELL 删档时定点删除
 var _last_known_day: int = 1             # 姻缘子嗣推进用的天数基线（M3）             # 当前游戏所在存档槽位（-1 表示尚未存档）；HELL 删档时定点删除
 
@@ -109,12 +112,14 @@ func start_new_game() -> void:
 	WeatherTimeService.reset()
 	_sync_day_baseline()
 	_equip_starting_abilities()
+	current_region_id = "region_start_town"
 	get_tree().change_scene_to_file(PathConstants.SCENE_TOWN)
 
 ## 读取存档并进入游戏（主菜单"继续江湖路"调用，M2 新增）
 func load_game(slot: int) -> void:
 	ResourceManager.reclaim_all()
 	if SaveManager.load_from_slot(slot):
+		current_region_id = "region_start_town"
 		get_tree().change_scene_to_file(PathConstants.SCENE_TOWN)
 	else:
 		GameLogger.warn("GameManager", "读取存档失败: slot=%d" % slot)
@@ -129,6 +134,25 @@ func start_battle(battle_id: String) -> void:
 		get_tree().change_scene_to_file(PathConstants.SCENE_TACTICAL_BATTLE)
 	else:
 		get_tree().change_scene_to_file(PathConstants.SCENE_BATTLE)
+
+## 调试/测试：进入「竹林水畔」战棋测试场景（包裹装饰层 demo），供 F11 一键验证遮挡/水面/雾气。
+## 内部 TacticalBattleScene 子节点读 pending_battle_id 开局（与正式战斗逻辑完全一致），结束自动 return_to_town。
+func start_test_riverside() -> void:
+	ResourceManager.reclaim_all()
+	debug_override_battle_id = ""
+	pending_battle_id = "tactical_test_riverside"
+	get_tree().change_scene_to_file("res://scenes/gameplay/battle/tactical_test_riverside.tscn")
+
+## 调试/测试：进入「群怪压力测试」战棋场景（复用 riverside 装饰壳），供 F12 一键验证 20 小怪同场 + 飘字队列不丢字。
+## 复用战术测试场景壳，仅覆盖 battle 配置为 tactical_test_swarm（20 敌 + 友方），装饰层照常生效。
+func start_test_swarm() -> void:
+	ResourceManager.reclaim_all()
+	debug_override_battle_id = "tactical_test_swarm"
+	get_tree().change_scene_to_file("res://scenes/gameplay/battle/tactical_test_riverside.tscn")
+
+## 设置当前底图标识（世界区域切入时调用）。战棋布局映射壳据此让该底图所有小怪复用同一份共享网格几何。
+func set_current_map(map_id: String) -> void:
+	current_map_id = map_id
 
 ## 指令接线：任务/对话发出 cmd_start_combat(attacker_list, defender_list) 后自动开战。
 ## defender_list 元素为 NPC id（或 enemy id），优先按 NPC 的 battle_id 解析战斗配置。
@@ -187,7 +211,26 @@ func return_to_safe_point() -> void:
 	# 当前所有安全点都映射到城镇场景；marker 预留给后续扩展（客栈/营地等不同场景）
 	GameLogger.info("GameManager", "回安全点: %s" % sp.get("marker", "town"))
 	ResourceManager.reclaim_all()
+	current_region_id = "region_start_town"
 	get_tree().change_scene_to_file(PathConstants.SCENE_TOWN)
+
+## 区域传送（填表模式）：查 regions.json 取 scene_path 切场景；scene_path 为空=尚未实装，飘字提示不卡死
+func goto_region(id: String) -> void:
+	var region: Dictionary = ConfigManager.get_region(id)
+	if region.is_empty():
+		GameLogger.warn("GameManager", "goto_region：区域不存在: %s" % id)
+		EventBus.notification_show.emit("未知区域：%s" % id)
+		return
+	var scene_path: String = String(region.get("scene_path", ""))
+	if scene_path.is_empty():
+		GameLogger.warn("GameManager", "goto_region：区域尚未实装场景: %s" % id)
+		EventBus.notification_show.emit("区域尚未实装：%s" % region.get("name", id))
+		return
+	GameLogger.info("GameManager", "传送至区域: %s (%s)" % [id, scene_path])
+	ResourceManager.reclaim_all()
+	current_region_id = id
+	current_map_id = id
+	get_tree().change_scene_to_file(scene_path)
 
 func _equip_starting_abilities() -> void:
 	var slot := 0

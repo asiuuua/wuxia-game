@@ -1,5 +1,5 @@
 # scenes/ui/screens/equipment/EquipmentScreen.gd
-# 装备界面（Phase 2，纯代码构建）：展示三槽位与背包可装备物品，支持装卸
+# 装备界面（B 路线：静态壳在 EquipmentScreen.tscn，脚本只填动态内容）
 # 铁律：UI 只做展示与输入，业务逻辑调用 GameManager / EquipmentService
 
 extends PopupBase
@@ -7,9 +7,13 @@ class_name EquipmentScreen
 
 const UIPalette = preload("res://core/constants/ui_theme.gd")
 
+@onready var _title: Label = $Panel/Margin/VLayout/Title
+@onready var _stat_label: Label = $Panel/Margin/VLayout/StatLabel
+@onready var _slots: VBoxContainer = $Panel/Margin/VLayout/Slots
+@onready var _inv_list: VBoxContainer = $Panel/Margin/VLayout/BodyAnchor/List
+@onready var _close: Button = $Panel/Margin/VLayout/Close
+
 var _slot_labels: Dictionary = {}
-var _inv_list: VBoxContainer
-var _stat_label: Label
 
 func _ready() -> void:
 	popup_id = "EquipmentScreen"
@@ -18,31 +22,15 @@ func _ready() -> void:
 	EventBus.equipment_changed.connect(_on_equipment_changed)
 
 func _build_ui() -> void:
-	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var dim := ColorRect.new()
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	dim.color = UIPalette.DIM
-	dim.mouse_filter = Control.MOUSE_FILTER_STOP
-	add_child(dim)
-	var panel := make_glass_panel(Vector2(560, 560))
-	add_child(panel)
-	var margin := MarginContainer.new()
-	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 18)
-	margin.add_theme_constant_override("margin_right", 18)
-	margin.add_theme_constant_override("margin_top", 16)
-	margin.add_theme_constant_override("margin_bottom", 16)
-	panel.add_child(margin)
-	var v := VBoxContainer.new()
-	v.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	v.add_theme_constant_override("separation", 10)
-	margin.add_child(v)
-	var title := Label.new()
-	title.text = tr("ui_equip_title")
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	v.add_child(title)
-	_stat_label = Label.new()
-	v.add_child(_stat_label)
+	_title.text = tr("ui_equip_title")
+	_close.text = tr("ui_equip_close")
+	_close.pressed.connect(request_close)
+	_build_slots()
+
+func _build_slots() -> void:
+	for child in _slots.get_children():
+		child.queue_free()
+	_slot_labels.clear()
 	for slot in EquipmentService.ALL_SLOTS:
 		var h := HBoxContainer.new()
 		var name_l := Label.new()
@@ -52,22 +40,8 @@ func _build_ui() -> void:
 		item_l.name = "ItemLabel"
 		h.add_child(name_l)
 		h.add_child(item_l)
+		_slots.add_child(h)
 		_slot_labels[slot] = item_l
-		v.add_child(h)
-	var inv_title := Label.new()
-	inv_title.text = tr("ui_equip_bag")
-	v.add_child(inv_title)
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	v.add_child(scroll)
-	_inv_list = VBoxContainer.new()
-	_inv_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.add_child(_inv_list)
-	var close := Button.new()
-	close.text = tr("ui_equip_close")
-	close.pressed.connect(request_close)
-	v.add_child(close)
 
 func _slot_name(slot: String) -> String:
 	match slot:

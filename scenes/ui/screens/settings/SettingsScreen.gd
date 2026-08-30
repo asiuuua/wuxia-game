@@ -33,14 +33,21 @@ const ACTION_LABELS := {
 	"toggle_attributes": "ctrl_attributes",
 }
 
+# B 路线（2026-08-29）：静态壳（压暗底 Backdrop + 磨砂玻璃 Panel + Header + Body 内
+# CategoryList / PanelContainer / PanelVBox）已迁入 SettingsScreen.tscn，美术可在编辑器改框架
+# 外观/边距；脚本只保留动态内容（分类按钮 + 各分类面板滑块/下拉/开关/键位重绑）与交互逻辑。
+# B 路线：Header / Body 已迁入 Panel 内部（受磨砂玻璃面板框住），故路径需带 $Panel 前缀
+@onready var _backdrop: ColorRect = $Backdrop
+@onready var _panel: Panel = $Panel
+@onready var _header: HBoxContainer = $Panel/Header
+@onready var _category_list: VBoxContainer = $Panel/Body/CategoryList
+@onready var _panel_container: ScrollContainer = $Panel/Body/PanelContainer
+@onready var _panel_vbox: VBoxContainer = $Panel/Body/PanelContainer/PanelVBox
+
 var _current_category: String = "audio"
 var _category_buttons: Array = []      # 左侧分类按钮（Control）
-var _panel_container: ScrollContainer = null
-var _panel_vbox: VBoxContainer = null
-var _category_list: VBoxContainer = null
 var _title_label: Label = null
 var _hint_label: Label = null
-var _panel: Panel = null
 
 # 键位重绑定临时态
 var _rebinding_action: String = ""
@@ -65,13 +72,7 @@ func _ready() -> void:
 
 # === 压暗遮罩：点击外部关闭弹窗 ===
 func _build_backdrop() -> void:
-	var dim: ColorRect = ColorRect.new()
-	dim.name = "Backdrop"
-	dim.color = UIPalette.DIM
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	dim.mouse_filter = Control.MOUSE_FILTER_STOP
-	dim.gui_input.connect(_on_backdrop_input)
-	add_child(dim)
+	_backdrop.gui_input.connect(_on_backdrop_input)
 
 func _on_backdrop_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
@@ -79,30 +80,8 @@ func _on_backdrop_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 # === 磨砂玻璃面板框架（圆角/细白边/阴影），自适应居中 ===
+# 面板与磨砂玻璃样式已迁移到 SettingsScreen.tscn（美术可改）；本函数只负责运行时按视口居中。
 func _build_panel_frame() -> void:
-	_panel = Panel.new()
-	_panel.name = "Panel"
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = UIPalette.GLASS_BG
-	sb.border_width_left = 1
-	sb.border_width_top = 1
-	sb.border_width_right = 1
-	sb.border_width_bottom = 1
-	sb.border_color = UIPalette.GLASS_BORDER
-	sb.corner_radius_top_left = 14
-	sb.corner_radius_top_right = 14
-	sb.corner_radius_bottom_left = 14
-	sb.corner_radius_bottom_right = 14
-	sb.shadow_size = 18
-	sb.shadow_offset = Vector2(0, 8)
-	sb.shadow_color = UIPalette.GLASS_SHADOW
-	# 内容内边距：让 header/body 与面板边缘留出呼吸
-	sb.content_margin_left = 28
-	sb.content_margin_top = 24
-	sb.content_margin_right = 28
-	sb.content_margin_bottom = 24
-	_panel.add_theme_stylebox_override("panel", sb)
-	add_child(_panel)
 	_fit_panel()
 
 func _fit_panel() -> void:
@@ -118,24 +97,11 @@ func _fit_panel() -> void:
 
 # === 顶部栏（返回 + 标题 + 重绑提示），位于面板内部 ===
 func _build_header() -> void:
-	var header: HBoxContainer = HBoxContainer.new()
-	header.name = "Header"
-	header.anchor_left = 0.0
-	header.anchor_top = 0.0
-	header.anchor_right = 1.0
-	header.anchor_bottom = 0.0
-	header.offset_left = 0.0
-	header.offset_top = 0.0
-	header.offset_right = 0.0
-	header.offset_bottom = 52.0
-	header.add_theme_constant_override("separation", 16)
-	_panel.add_child(header)
-
 	var back_btn: Button = Button.new()
 	back_btn.text = tr("back_btn")
 	_apply_glass_button_style(back_btn, UIPalette.TEXT_SECONDARY)
 	back_btn.pressed.connect(_go_back)
-	header.add_child(back_btn)
+	_header.add_child(back_btn)
 
 	var title: Label = Label.new()
 	title.text = tr("settings_title")
@@ -143,46 +109,20 @@ func _build_header() -> void:
 	title.add_theme_color_override("font_color", UIPalette.GOLD)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	header.add_child(title)
+	_header.add_child(title)
 	_title_label = title
 
 	_hint_label = Label.new()
 	_hint_label.text = ""
 	_hint_label.add_theme_color_override("font_color", UIPalette.GOLD)
 	_hint_label.add_theme_font_size_override("font_size", UIPalette.FS_SMALL)
-	header.add_child(_hint_label)
+	_header.add_child(_hint_label)
 
 # === 主体布局：左分类 + 右面板（位于面板内部，header 之下撑满） ===
+# 静态结构（Body + CategoryList + PanelContainer + PanelVBox）已迁入 SettingsScreen.tscn，
+# 美术可改布局/边距；本函数保留为扩展钩子。
 func _build_body() -> void:
-	var content: HBoxContainer = HBoxContainer.new()
-	content.name = "Body"
-	content.anchor_left = 0.0
-	content.anchor_top = 0.0
-	content.anchor_right = 1.0
-	content.anchor_bottom = 1.0
-	content.offset_left = 0.0
-	content.offset_top = 64.0   # 让出 header 高度
-	content.offset_right = 0.0
-	content.offset_bottom = 0.0
-	content.add_theme_constant_override("separation", 24)
-	_panel.add_child(content)
-
-	var cat_list: VBoxContainer = VBoxContainer.new()
-	cat_list.custom_minimum_size = Vector2(180, 0)
-	cat_list.add_theme_constant_override("separation", 8)
-	cat_list.name = "CategoryList"
-	content.add_child(cat_list)
-	_category_list = cat_list
-
-	_panel_container = ScrollContainer.new()
-	_panel_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_panel_container.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	content.add_child(_panel_container)
-
-	_panel_vbox = VBoxContainer.new()
-	_panel_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_panel_vbox.add_theme_constant_override("separation", 18)
-	_panel_container.add_child(_panel_vbox)
+	pass
 
 # === 左侧分类按钮 ===
 func _build_categories() -> void:

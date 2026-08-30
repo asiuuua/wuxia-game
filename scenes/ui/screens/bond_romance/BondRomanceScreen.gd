@@ -4,6 +4,7 @@
 #       数据源与关系中枢 relationship_service 对齐——结义走 sworn_service、师徒走 master_service，
 #       好感走 bond_service、姻缘走 romance_service，避免与关系图对不上。
 #       刷新监听 EventBus.bond_relationship_changed（0 参，必须 0 参处理器避免运行期崩溃）。
+# B 路线：静态壳在 BondRomanceScreen.tscn，脚本只填动态内容。
 
 extends PopupBase
 class_name BondRomanceScreen
@@ -11,54 +12,26 @@ class_name BondRomanceScreen
 const UIPalette = preload("res://core/constants/ui_theme.gd")
 const UIFeedback = preload("res://scenes/ui/components/ui_feedback/UIFeedback.gd")
 
-var _content: VBoxContainer = null
-var _scroll: ScrollContainer = null
+@onready var _title: Label = $Panel/Margin/VLayout/Title
+@onready var _content: VBoxContainer = $Panel/Margin/VLayout/BodyAnchor/Content
+@onready var _close: Button = $Panel/Margin/VLayout/Close
 
 func _ready() -> void:
 	focus_mode = Control.FOCUS_NONE
 	UIManager.apply_safe_area(self)
 	popup_id = "BondRomance"
-	_build()
+	_build_ui()
 	_refresh()
 	if not EventBus.bond_relationship_changed.is_connected(_on_relationship_changed):
 		EventBus.bond_relationship_changed.connect(_on_relationship_changed)
 
-func _build() -> void:
-	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var dim := ColorRect.new()
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	dim.color = UIPalette.DIM
-	dim.mouse_filter = Control.MOUSE_FILTER_STOP
-	add_child(dim)
-	var panel := make_glass_panel(Vector2(760, 620))
-	add_child(panel)
-	var margin := MarginContainer.new()
-	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 18)
-	margin.add_theme_constant_override("margin_right", 18)
-	margin.add_theme_constant_override("margin_top", 16)
-	margin.add_theme_constant_override("margin_bottom", 16)
-	panel.add_child(margin)
-	var v := VBoxContainer.new()
-	margin.add_child(v)
-	var title := Label.new()
-	title.text = "姻缘 · 情缘录"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 24)
-	v.add_child(title)
-	_scroll = ScrollContainer.new()
-	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	v.add_child(_scroll)
-	_content = VBoxContainer.new()
-	_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_scroll.add_child(_content)
-	var close := Button.new()
-	close.text = "关闭"
-	close.focus_mode = Control.FOCUS_NONE
-	close.pressed.connect(request_close)
-	UIFeedback.attach(close)
-	v.add_child(close)
+func _build_ui() -> void:
+	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_title.add_theme_font_size_override("font_size", 24)
+	_close.text = "关闭"
+	_close.focus_mode = Control.FOCUS_NONE
+	_close.pressed.connect(request_close)
+	UIFeedback.attach(_close)
 
 func _refresh() -> void:
 	if _content == null:

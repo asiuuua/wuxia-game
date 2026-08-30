@@ -49,12 +49,19 @@ func start_combat(battle_id: String) -> void:
 	pc.damage_taken_mult = edm
 	state.player = pc
 
+	var _seen: Dictionary = {}
 	for enemy_id in battle.get("enemy_ids", []):
 		var edata: Dictionary = ConfigManager.get_enemy(enemy_id)
 		if edata.is_empty():
 			continue
+		var uid: String = enemy_id
+		if _seen.has(enemy_id):
+			_seen[enemy_id] += 1
+			uid = "%s#%d" % [enemy_id, _seen[enemy_id]]
+		else:
+			_seen[enemy_id] = 0
 		var ec := CombatCharacter.new()
-		ec.character_id = enemy_id
+		ec.character_id = uid
 		ec.name_key = enemy_id
 		ec.max_hp = int(edata.get("hp", 40) * ehp); ec.hp = ec.max_hp
 		ec.max_mp = int(edata.get("max_mp", 30)); ec.mp = ec.max_mp  # 敌真气上限取 enemies.json（缺省 30）
@@ -65,16 +72,54 @@ func start_combat(battle_id: String) -> void:
 		ec.speed = int(edata.get("speed", 8))   # 消费 enemies.json.speed（此前全工程无人读取）
 		ec.ai_kit = _normalize_abilities(edata.get("abilities", []))   # M3：AI 技能包归一化（字符串→{id,weight,condition}）
 		state.enemies.append(ec)
+	# 组队 / 友方 NPC（胜负修正 + 7.3.1）：把战斗配置 allies 与玩家 companion_ids 纳入玩家方
+	# —— 这些单位与主角同属"玩家方"，单独阵亡不再判负；主角与它们全部阵亡才判负
+	_build_player_side(battle, ps, edm, state)
 	_state = state
 	# 内核接管后续流程编排与结算；seed=0 由内核按时间派生（测试可改 get_core().rng.configure）
 	_core = CombatCore.new()
 	_core.configure(state)
-	# 战术战棋：构建网格并部署单位（纯增量，非战棋战斗无 tactical/grid 配置则跳过）
+	# 战术战棋：构建网格并部署单位（纯增量，非战棋战斗无 tactical 标志则跳过）
 	var grid_cfg: Dictionary = battle.get("grid", {})
-	if bool(battle.get("tactical", false)) and not grid_cfg.is_empty():
-		_build_grid(grid_cfg)
+	if bool(battle.get("tactical", false)):
+		_build_grid(grid_cfg, battle)
 	EventBus.combat_started.emit(battle_id)
 	print("[Combat] 战斗开始: %s，敌人 %d，模式 %s" % [battle_id, state.enemies.size(), "ATB" if state.turn_mode == CombatEnums.TurnMode.ATB else "顺序"])
+
+## 构建玩家方友军：战斗配置 allies（数据模板复用 enemies.json，可带战斗属性）与玩家 companion_ids（存档同伴）
+## 全部以 is_player=true 加入 player_party，与主角同属"玩家方"——胜负判定、敌人 AI 集火、回合序列都含它们。
+## 单玩家战斗（无 allies 且无 companion）则 player_party 为空，行为完全不变（向后兼容）。
+func _build_player_side(battle: Dictionary, ps: PlayerState, edm: float, st: CombatState) -> void:
+	var ids: Array = []
+	for aid in battle.get("allies", []):
+		if String(aid) != "" and not (String(aid) in ids):
+			ids.append(String(aid))
+	for cid in ps.companion_ids:
+		if String(cid) != "" and not (String(cid) in ids):
+			ids.append(String(cid))
+	for uid in ids:
+		var ch := CombatCharacter.new()
+		ch.character_id = uid
+		ch.is_player = true
+		var edata: Dictionary = ConfigManager.get_enemy(uid)
+		if not edata.is_empty():
+			ch.name_key = uid
+			ch.max_hp = int(edata.get("hp", 60)); ch.hp = ch.max_hp
+			ch.max_mp = int(edata.get("max_mp", 30)); ch.mp = ch.max_mp
+			ch.attack = int(edata.get("attack", 10))
+			ch.defense = int(ch.attack * 0.5)
+			ch.crit_rate = float(edata.get("crit_rate", 0.05))
+			ch.speed = int(edata.get("speed", 8))
+		else:
+			# 无敌人模板：用主角属性的弱化版兜底，保证可参战（存档 companion 未配战斗数据时）
+			ch.name_key = uid
+			ch.max_hp = int(ps.max_hp * 0.7); ch.hp = ch.max_hp
+			ch.max_mp = int(ps.max_mp * 0.7); ch.mp = ch.max_mp
+			ch.attack = int(ps.attack * 0.8)
+			ch.defense = int(ps.defense * 0.8)
+			ch.speed = ps.agility
+		ch.damage_taken_mult = edm   # 与主角一致：承受敌人伤害按敌伤倍率缩放
+		st.player_party.append(ch)
 
 ## 玩家普通攻击（门面：委托内核，返回首个伤害事件摘要供旧调用方兼容）
 func player_attack(target_id: String = "") -> Dictionary:
@@ -140,16 +185,17 @@ func run_enemy_turns() -> void:
 
 # ───────────────────────── M2 事件流接口（只增不改，旧兼容方法保留） ─────────────────────────
 ## 玩家普攻：返回完整事件流，M2 演出层 play_events 消费（替代 player_attack 的兼容摘要）
-func player_attack_events(target_id: String = "") -> Array[CombatEvent]:
+## actor_id 默认主角；组队模式下可指定任意同伴单位（P2 多玩家单位）
+func player_attack_events(target_id: String = "", actor_id: String = "player") -> Array[CombatEvent]:
 	if _state == null or not _state.is_active:
 		return []
-	return _core.player_basic(target_id)
+	return _core.player_basic(target_id, actor_id)
 
 ## 玩家施展快捷栏武学：返回事件流
-func player_cast_events(slot: int, target_id: String = "") -> Array[CombatEvent]:
+func player_cast_events(slot: int, target_id: String = "", actor_id: String = "player") -> Array[CombatEvent]:
 	if _state == null or not _state.is_active:
 		return []
-	return _core.player_skill(slot, target_id)
+	return _core.player_skill(slot, target_id, actor_id)
 
 ## 玩家调息：返回事件流
 func player_rest_events() -> Array[CombatEvent]:
@@ -219,7 +265,11 @@ func get_result() -> int:
 		return CombatEnums.CombatResult.NONE
 	if _escaped:
 		return CombatEnums.CombatResult.FLEE
-	if _state.player.is_dead:
+	# 敌方全灭 = 胜利（优先级最高）
+	if _state.get_alive_enemies().is_empty():
+		return CombatEnums.CombatResult.VICTORY
+	# 失败必须"主角 + 全部友方 NPC 同时阵亡"才算（友方 NPC 单独阵亡≠失败；主角阵亡但 NPC 存活≠失败）
+	if _state.is_player_side_wiped():
 		return CombatEnums.CombatResult.DEFEAT
 	return CombatEnums.CombatResult.VICTORY
 
@@ -262,24 +312,89 @@ func is_target_in_range(caster_id: String, target_id: String, ability_id: String
 		return false
 	return _core.is_target_in_range(caster_id, target_id, ability_id)
 
-## 从战斗配置构建战术网格：尺寸 + 障碍 + 按 deployment 部署玩家/敌人
-func _build_grid(grid_cfg: Dictionary) -> void:
+## 从战斗配置构建战术网格（资源驱动·三级几何解析，纯增量，逻辑层零 Node 引用）
+## 几何解析优先级：battle.grid(显式内嵌) > battle.layout(引用共享布局) > 当前底图 tactical_layout(底图绑定)
+##   —— 满足「任意底图遇到小怪只加载该地图战棋布局、所有底图复用同一套战斗逻辑」
+## 部署优先级：battle.grid.deployment > battle.deployment > layout.deployment（单位落点随战斗走）
+func _build_grid(grid_cfg: Dictionary, battle: Dictionary) -> void:
+	var geom: Dictionary = {}
+	if not grid_cfg.is_empty():
+		geom = grid_cfg
+	else:
+		# 退而求其次：战斗内 layout 引用 → 当前底图 tactical_layout
+		var layout_id: String = String(battle.get("layout", ""))
+		if layout_id == "" and GameManager.current_map_id != "":
+			var m: Dictionary = ConfigManager.get_map_layout(GameManager.current_map_id)
+			if not m.is_empty() and m.has("tactical_layout"):
+				layout_id = String(m["tactical_layout"])
+		if layout_id != "":
+			geom = ConfigManager.get_battle_layout(layout_id)
+	if geom.is_empty():
+		push_error("[Combat] 战术战斗缺少网格几何配置: %s（请检查 battle.grid / battle.layout / 底图 tactical_layout）" % _state.combat_id)
+		return
 	var g := BattleGrid.new()
-	g.width = int(grid_cfg.get("width", 10))
-	g.height = int(grid_cfg.get("height", 8))
-	for ob in grid_cfg.get("obstacles", []):
+	g.width = int(geom.get("width", 10))
+	g.height = int(geom.get("height", 8))
+	for ob in geom.get("obstacles", []):
 		var parts: PackedStringArray = String(ob).split(",")
 		if parts.size() >= 2:
 			g.set_obstacle(Vector2i(int(parts[0]), int(parts[1])), true)
+	# P3：地形高度层（可选，缺省全 0 平面）
+	if geom.has("heights"):
+		for h in geom["heights"]:
+			var hp: PackedStringArray = String(h).split(",")
+			if hp.size() >= 3:
+				g.set_height(Vector2i(int(hp[0]), int(hp[1])), int(hp[2]))
 	_core.set_grid(g)
+	# 部署优先级：battle.grid.deployment > battle.deployment > layout.deployment
 	var dep: Dictionary = grid_cfg.get("deployment", {})
+	if dep.is_empty():
+		dep = battle.get("deployment", {})
+	if dep.is_empty():
+		dep = geom.get("deployment", {})
 	if dep.has("player"):
 		var pp: Array = dep["player"]
 		_core.deploy_unit("player", Vector2i(int(pp[0]), int(pp[1])))
+	var player_pos: Vector2i = _core._unit_by_id("player").grid_pos if _core._unit_by_id("player") != null else Vector2i(int(g.width * 0.3), int(g.height * 0.5))
 	for e in _state.enemies:
 		if dep.has(e.character_id):
 			var ep: Array = dep[e.character_id]
 			_core.deploy_unit(e.character_id, Vector2i(int(ep[0]), int(ep[1])))
+	# 敌人自动补齐：enemy_ids 中未在 deployment 显式落点的，按扫描顺序分配到首个空闲格。
+	# 向后兼容：已显式部署的照旧；仅补"没写格子"的敌人（多 NPC 同场 / 快速铺怪用）。
+	for e in _state.enemies:
+		if _core._unit_by_id(e.character_id) != null:
+			continue
+		var placed := false
+		for yy in range(g.height):
+			for xx in range(g.width):
+				var c := Vector2i(xx, yy)
+				if not g.in_bounds(c) or g.is_obstacle_cell(c):
+					continue
+				if g.occupant_at(c) != "":
+					continue
+				_core.deploy_unit(e.character_id, c)
+				placed = true
+				break
+			if placed:
+				break
+	# 组队同伴部署（7.3.1）：优先用 deployment 显式位置；否则排在主角周围首个可走空闲格。
+	# 单玩家模式（player_party 为空）不部署任何同伴，行为完全不变。
+	var ally_offsets := [Vector2i(1,0), Vector2i(0,1), Vector2i(-1,0), Vector2i(0,-1), Vector2i(1,1), Vector2i(-1,-1), Vector2i(1,-1), Vector2i(-1,1)]
+	for p in _state.player_party:
+		var ppos: Vector2i = Vector2i.ZERO
+		if dep.has(p.character_id):
+			var pa: Array = dep[p.character_id]
+			ppos = Vector2i(int(pa[0]), int(pa[1]))
+		else:
+			for off in ally_offsets:
+				var c: Vector2i = player_pos + off
+				if g.in_bounds(c) and not g.is_obstacle_cell(c) and g.occupant_at(c) == "":
+					ppos = c
+					break
+			if ppos == Vector2i.ZERO:
+				ppos = player_pos
+		_core.deploy_unit(p.character_id, ppos)
 
 ## 构造单个战斗事件（M2 事件流接口内部使用）
 func _mk_ev(type_: int, actor: String = "", target: String = "", val: int = 0) -> CombatEvent:
@@ -357,6 +472,11 @@ func _grant_rewards() -> void:
 func _build_snapshots() -> Array:
 	var snaps: Array = []
 	snaps.append({"unit_id": "player", "is_player": true, "status": GameState.UnitStatus.ALIVE if _state.player.is_alive() else GameState.UnitStatus.DEAD})
+	# 玩家方友军（组队同伴 / 友方 NPC）一并纳入快照，供任务判定（它们与主角同属玩家方）
+	for p in _state.player_party:
+		snaps.append({"unit_id": p.character_id, "is_player": true, "status": GameState.UnitStatus.ALIVE if p.is_alive() else GameState.UnitStatus.DEAD})
+	for a in _state.allies:
+		snaps.append({"unit_id": a.character_id, "is_player": true, "status": GameState.UnitStatus.ALIVE if a.is_alive() else GameState.UnitStatus.DEAD})
 	for enemy in _state.enemies:
 		var status: int = GameState.UnitStatus.ALIVE if enemy.is_alive() else GameState.UnitStatus.DEAD
 		snaps.append({"unit_id": enemy.character_id, "is_player": false, "status": status})

@@ -22,6 +22,7 @@ enum Mode { MOVE, AWAIT_TARGET }
 var _state: CombatState = null
 var _grid: BattleGrid = null
 var _grid_node: BattleGridNode = null
+var _cam: Camera2D = null
 var _entities_node: Node2D = null
 var _entities: Dictionary = {}      # character_id -> BattleEntity
 # P0-2：统一渲染查找闭包（character_id -> BattleEntity），供 CombatEventRenderer 委托
@@ -44,6 +45,11 @@ var _auto: bool = false
 var _busy: bool = false
 var _pending: Dictionary = {}       # {kind:"basic"|"cast", ability_id, slot}
 var _target_id: String = ""
+
+# 7.3.1 组队选择：玩家方单位（"player" + 存活同伴）列表、当前可操控单位、本回合已行动标记
+var _roster: Array[String] = []
+var _active_actor: String = "player"
+var _actors_acted: Dictionary = {}
 
 # HUD 引用
 var _hud_player_name: Label
@@ -91,13 +97,42 @@ func _build_world() -> void:
 	bf.add_child(_grid_node)
 	_entities_node = Node2D.new()
 	_entities_node.name = "Entities"
+	_entities_node.y_sort_enabled = true
 	bf.add_child(_entities_node)
-	# 居中：把战场像素中心对齐屏幕中心（根 Node2D 在屏幕左上角，所以直接 offset）
-	var vc := get_viewport_rect().size * 0.5
-	bf.position = vc - _grid_node.pixel_center()
+	# 镜头自动适配（P0）：算出整张等轴测地图像素包围盒，自动缩放+居中
+	# —— 小地图放大、大地图缩小，不写死镜头参数；bf 保持原点，居中完全交给 Camera2D
+	_cam = Camera2D.new()
+	add_child(_cam)
+	var bbox := _grid_pixel_rect()
+	var view := get_viewport_rect().size
+	var zoom: float = min(view.x / max(bbox.size.x, 1.0), view.y / max(bbox.size.y, 1.0)) * 0.92
+	zoom = clampf(zoom, 0.25, 1.5)
+	_cam.zoom = Vector2(zoom, zoom)
+	_cam.position = bbox.get_center()   # bf 在原点，grid_node 局部坐标即世界坐标
+
+## 整张等轴测地图的像素包围盒（grid_node 局部坐标）：用于镜头自动缩放/居中
+func _grid_pixel_rect() -> Rect2:
+	var min_x: float = 1e9
+	var max_x: float = -1e9
+	var min_y: float = 1e9
+	var max_y: float = -1e9
+	for x in range(_grid.width):
+		for y in range(_grid.height):
+			var c := _grid_node.cell_center(Vector2i(x, y))
+			min_x = min(min_x, c.x); max_x = max(max_x, c.x)
+			min_y = min(min_y, c.y); max_y = max(max_y, c.y)
+	var hw: float = _grid_node.tile_width * 0.5
+	var hh: float = _grid_node.tile_height * 0.5
+	return Rect2(min_x - hw, min_y - hh, (max_x - min_x) + hw * 2.0, (max_y - min_y) + hh * 2.0)
 
 func _spawn_entities() -> void:
-	_spawn_one("player", true, "李十五", _state.player)
+	var pname: String = "李十五"
+	if GameManager.player_state != null and GameManager.player_state.player_name != "":
+		pname = GameManager.player_state.player_name
+	_spawn_one("player", true, pname, _state.player)
+	for p in _state.player_party:
+		if p.is_alive():
+			_spawn_one(p.character_id, true, p.name_key, p)
 	for e in _state.enemies:
 		if e.is_alive():
 			var nm: String = ConfigManager.get_enemy(e.character_id).get("name", e.character_id)
@@ -289,11 +324,53 @@ func _start_player_turn() -> void:
 	_turn += 1
 	_phase = Phase.PLAYER
 	_mode = Mode.MOVE
+	_actors_acted = {}
+	_refresh_roster()
+	_active_actor = _first_unacted()
+	_enter_actor_turn()
+
+## 重建玩家方单位列表（仅存活者），供选择条与回合遍历
+func _refresh_roster() -> void:
+	_roster = ["player"]
+	for p in _state.player_party:
+		if p.is_alive():
+			_roster.append(p.character_id)
+
+## 下一个本回合尚未行动的单位；都为空返回 ""
+func _first_unacted() -> String:
+	for id in _roster:
+		if not _actors_acted.get(id, false) and _alive_side(id):
+			return id
+	return ""
+
+## 进入某玩家方单位的行动子回合：重置模式、选最近敌人、高亮其可达格
+func _enter_actor_turn() -> void:
+	if _aborted:
+		return
+	if _active_actor == "":
+		_start_enemy_phase()
+		return
+	_mode = Mode.MOVE
 	_target_id = _nearest_alive_enemy_id()
 	_show_reachable()
 	_refresh_hud()
 	if _auto:
 		_auto_player_turn()
+
+func _is_player_side(uid: String) -> bool:
+	if uid == "player":
+		return true
+	for p in _state.player_party:
+		if p.character_id == uid:
+			return true
+	return false
+
+func _alive_side(uid: String) -> bool:
+	var c: CombatCharacter = _unit_by_state(uid)
+	return c != null and c.is_alive()
+
+func _active_char() -> CombatCharacter:
+	return _unit_by_state(_active_actor)
 
 func _start_enemy_phase() -> void:
 	if GameManager.combat_service.is_over():
@@ -356,8 +433,8 @@ func _auto_player_turn() -> void:
 			if _aborted:
 				return
 		if not GameManager.combat_service.is_over():
-		var evs2: Array[CombatEvent] = GameManager.combat_service.player_attack_events("")
-		await _play_events(evs2)
+			var evs2: Array[CombatEvent] = GameManager.combat_service.player_attack_events("")
+			await _play_events(evs2)
 		if _aborted:
 			return
 	_busy = false
@@ -476,6 +553,12 @@ func _release_all() -> void:
 
 func _on_return_pressed() -> void:
 	_release_all()
+	# 分帧释放（P2）：把重场景切换推迟一帧，先让结算面板/末帧渲染完，避免卸载瞬间掉帧
+	call_deferred("_deferred_return")
+
+func _deferred_return() -> void:
+	if _aborted:
+		return
 	GameManager.return_to_town()
 
 ## 场景退出：置 _aborted 打断在途协程，再释放对象池空闲实例（随场景销毁，无跨场景泄漏累积）
@@ -533,7 +616,7 @@ func _wait(dur: float) -> void:
 		return
 	if dur <= 0.0:
 		return
-	var d := dur / max(_speed_scale, 0.0001)
+	var d: float = dur / max(_speed_scale, 0.0001)
 	await get_tree().create_timer(d).timeout
 
 # ───────────────────────── HUD 搭建 ─────────────────────────

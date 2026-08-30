@@ -57,10 +57,17 @@ func _build_content() -> void:
 	push_warning("BaseScreen 子类必须重写 _build_content()")
 
 ## 把节点加进内容容器（自动避开刘海）。子类应优先用这个而不是 add_child()
+## ⚠️ B 路线兼容：节点可能已在 .tscn 里作为 root 子节点存在（如 EscMenu 的 Container、
+## DifficultySelect 的 Title/List/Back），此时需要先脱离旧父节点再挂进 ContentRoot。
+## Godot 4 的 add_child 对已带父节点的节点会直接报错（不会自动重挂），故此处显式重挂。
 func add_content(node: Node) -> void:
 	if _content_root != null:
+		if node.get_parent() != null and node.get_parent() != _content_root:
+			node.get_parent().remove_child(node)
 		_content_root.add_child(node)
 	else:
+		if node.get_parent() != null and node.get_parent() != self:
+			node.get_parent().remove_child(node)
 		add_child(node)
 
 ## 加一层全屏压暗底（透出下层画面，表明处于弹窗/暂停态）。

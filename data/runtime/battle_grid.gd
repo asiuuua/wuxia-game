@@ -19,6 +19,14 @@ var height: int = 8
 var _obstacles: Dictionary = {}
 # 占用：key="x,y" -> unit_id（某单位当前站在这格）
 var _occupants: Dictionary = {}
+# 地形高度：key="x,y" -> int（P3 立体感；0=平地，>0 抬高。仅供视图层做 y 偏移，不影响逻辑寻路/坐标）
+var _heights: Dictionary = {}
+
+func set_height(p: Vector2i, h: int) -> void:
+	_heights[_key(p)] = h
+
+func get_height(p: Vector2i) -> int:
+	return int(_heights.get(_key(p), 0))
 
 func _key(p: Vector2i) -> String:
 	return "%d,%d" % [p.x, p.y]

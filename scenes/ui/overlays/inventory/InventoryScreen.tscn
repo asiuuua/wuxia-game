@@ -1,0 +1,84 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/ui/overlays/inventory/InventoryScreen.gd" id="1_inv"]
+
+[node name="InventoryScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+script = ExtResource("1_inv")
+
+[node name="Dim" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+color = Color(0, 0, 0, 0.55)
+mouse_filter = 1
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+
+[node name="Panel" type="Panel" parent="Center"]
+layout_mode = 2
+custom_minimum_size = Vector2(720, 560)
+
+[node name="Margin" type="MarginContainer" parent="Center/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="VBox" type="VBoxContainer" parent="Center/Panel/Margin"]
+layout_mode = 2
+
+[node name="Header" type="HBoxContainer" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="Center/Panel/Margin/VBox/Header"]
+layout_mode = 2
+
+[node name="Weight" type="Label" parent="Center/Panel/Margin/VBox/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="SortBtn" type="Button" parent="Center/Panel/Margin/VBox/Header"]
+layout_mode = 2
+
+[node name="CloseBtn" type="Button" parent="Center/Panel/Margin/VBox/Header"]
+layout_mode = 2
+
+[node name="MainLabel" type="Label" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+
+[node name="MainScroll" type="ScrollContainer" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="MainGrid" type="GridContainer" parent="Center/Panel/Margin/VBox/MainScroll"]
+layout_mode = 2
+columns = 8
+size_flags_horizontal = 3
+
+[node name="MaterialLabel" type="Label" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+
+[node name="MaterialScroll" type="ScrollContainer" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="MaterialGrid" type="GridContainer" parent="Center/Panel/Margin/VBox/MaterialScroll"]
+layout_mode = 2
+columns = 8
+size_flags_horizontal = 3
+
+[node name="QuestLabel" type="Label" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+
+[node name="QuestScroll" type="ScrollContainer" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="QuestGrid" type="GridContainer" parent="Center/Panel/Margin/VBox/QuestScroll"]
+layout_mode = 2
+columns = 8
+size_flags_horizontal = 3

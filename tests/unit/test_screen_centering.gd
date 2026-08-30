@@ -6,14 +6,14 @@
 
 extends TestBase
 
-const BondRomanceScreen = preload("res://scenes/ui/screens/bond_romance/BondRomanceScreen.gd")
-const GameMenuScreen = preload("res://scenes/ui/screens/game_menu/GameMenuScreen.gd")
+const BondRomanceScreen = preload("res://scenes/ui/screens/bond_romance/BondRomanceScreen.tscn")
+const GameMenuScreen = preload("res://scenes/ui/screens/game_menu/GameMenuScreen.tscn")
 const EscMenu = preload("res://scenes/ui/screens/esc_menu/EscMenu.gd")
-const EquipmentScreen = preload("res://scenes/ui/screens/equipment/EquipmentScreen.gd")
-const ForgeScreen = preload("res://scenes/ui/screens/forge/ForgeScreen.gd")
-const AlchemyScreen = preload("res://scenes/ui/screens/alchemy/AlchemyScreen.gd")
-const ShopScreen = preload("res://scenes/ui/screens/shop/ShopScreen.gd")
-const SectScreen = preload("res://scenes/ui/screens/sect/SectScreen.gd")
+const EquipmentScreen = preload("res://scenes/ui/screens/equipment/EquipmentScreen.tscn")
+const ForgeScreen = preload("res://scenes/ui/screens/forge/ForgeScreen.tscn")
+const AlchemyScreen = preload("res://scenes/ui/screens/alchemy/AlchemyScreen.tscn")
+const ShopScreen = preload("res://scenes/ui/screens/shop/ShopScreen.tscn")
+const SectScreen = preload("res://scenes/ui/screens/sect/SectScreen.tscn")
 
 # 从屏幕节点里找出主玻璃面板（第一个 Panel 子节点）
 func _find_panel(screen: Control) -> Panel:
@@ -39,7 +39,7 @@ func _assert_centered(panel: Control, ctx: String) -> void:
 		"%s panel offset_bottom 应 =size.y/2（对称居中），实际 %f" % [ctx, panel.offset_bottom])
 
 func test_bond_romance_screen_centered() -> void:
-	var s := BondRomanceScreen.new()
+	var s: Control = BondRomanceScreen.instantiate()
 	s._ready()
 	var p := _find_panel(s)
 	expect(p != null, "BondRomanceScreen 应含主玻璃面板 Panel")
@@ -48,7 +48,7 @@ func test_bond_romance_screen_centered() -> void:
 	s.free()
 
 func test_game_menu_screen_centered() -> void:
-	var s := GameMenuScreen.new()
+	var s: Control = GameMenuScreen.instantiate()
 	s._ready()
 	var p := _find_panel(s)
 	expect(p != null, "GameMenuScreen 应含主玻璃面板 Panel")
@@ -57,7 +57,7 @@ func test_game_menu_screen_centered() -> void:
 	s.free()
 
 func test_esc_menu_centered() -> void:
-	var s := EscMenu.new()
+	var s: Control = load("res://scenes/ui/screens/esc_menu/EscMenu.tscn").instantiate()
 	s._ready()
 	var found: Control = null
 	for c in s._content_root.get_children():
@@ -81,7 +81,7 @@ func test_menu_sub_screens_centered() -> void:
 	for d in defs:
 		var nm: String = String(d[0])
 		var cls = d[1]
-		var s = cls.new()
+		var s: Control = cls.instantiate()
 		s._ready()
 		var panel: Panel = null
 		for c in s.get_children():

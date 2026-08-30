@@ -10,7 +10,14 @@
 extends BaseScreen
 
 const MenuItem = preload("res://scenes/ui/components/menu_item/MenuItem.gd")
-const UICenterUtils = preload("res://scenes/ui/ui_center_utils.gd")
+const MenuItemScene = preload("res://scenes/ui/components/menu_item/MenuItem.tscn")
+
+# B 路线：静态壳（压暗底 Backdrop + 居中容器 Container）已迁入 EscMenu.tscn，
+# 美术可在编辑器直接编辑布局与外观；本脚本只负责动态菜单项与交互。
+# 注：UIPalette 已由基类 BaseScreen 声明（共享地基），本类继承即可，勿重复声明（会触发
+# "The member 'UIPalette' already exists in parent class BaseScreen" 编译错误）。
+@onready var _backdrop: ColorRect = $Backdrop
+@onready var _container: VBoxContainer = $Container
 
 const MENU_ITEMS := [
 	{"key": "return_game", "text": "esc_return_game"},
@@ -31,22 +38,17 @@ func _init() -> void:
 	close_on_cancel = false
 
 func _build_content() -> void:
-	_add_backdrop(0.55)   # 压暗底铺满整屏（含刘海），透出底层游戏画面
-
-	var container: VBoxContainer = VBoxContainer.new()
-	container.size = Vector2(400, 460)
-	UICenterUtils.center_panel(container)   # 修复 Godot4.7.2 PRESET_CENTER 不居中
-	container.add_theme_constant_override("separation", 8)
-	add_content(container)
+	_backdrop.color = UIPalette.DIM_STRONG   # 压暗底铺满整屏（含刘海），透出底层游戏画面
+	add_content(_container)   # 居中容器（结构在 .tscn）移入内容层，自动避开刘海
 
 	for i in MENU_ITEMS.size():
-		var item: MenuItem = MenuItem.new()
+		var item: MenuItem = MenuItemScene.instantiate()
 		item.name = "EscItem_%d" % i
 		item.set_text(tr(MENU_ITEMS[i]["text"]))
 		item.set_icon("menu/" + MENU_ITEMS[i]["key"])
 		item.selected.connect(_on_item_selected.bind(i))
 		item.confirmed.connect(_on_item_confirmed.bind(i))
-		container.add_child(item)
+		_container.add_child(item)
 		# 填进 _nav_items 后，键盘上下导航由基类统一处理；
 		# MenuItem 的选中动画与音效由 UIFeedback 在 set_selected 内触发
 		_nav_items.append(item)

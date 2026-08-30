@@ -1,0 +1,13 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scenes/gameplay/battle/tactical_test_riverside.gd" id="1_root"]
+[ext_resource type="PackedScene" path="res://scenes/gameplay/battle/TacticalBattleScene.tscn" id="2_tbs"]
+[ext_resource type="Script" path="res://scenes/gameplay/battle/tactical_test_decorator.gd" id="3_deco"]
+
+[node name="TacticalTestRiverside" type="Node2D"]
+script = ExtResource("1_root")
+
+[node name="TacticalBattleScene" parent="." instance=ExtResource("2_tbs")]
+
+[node name="TacticalTestDecorator" type="Node2D" parent="."]
+script = ExtResource("3_deco")

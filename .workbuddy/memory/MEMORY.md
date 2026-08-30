@@ -20,6 +20,7 @@
 - **`mini/maxi` 仅 2 参** → 多参嵌套；写三参 Parse Error 级联拖垮存档套件。
 - 删函数须全工程 grep 残留；`Invalid call Nonexistent function 'new'` 真因是某脚本 Parse Error。
 - Control `scale` 以 pivot_offset 为基准（默认左上角）→ 悬停放大先设 pivot 中心并监听 resized。
+- **GDScript 4.x 闭包按值捕获值类型**：`func(): made += 1` 把整型 `made` 按值捕获进闭包，闭包内自增**不回写**外层，断言读到恒为 0（2026-08-30 实测坑，曾让 object_pool 单测全挂）。**测试里计数/统计用引用类型**（Array/RefCounted/Dictionary，原地 `append`/改属性），别用 int/float 局部变量当闭包计数器。
 
 ## Godot 本机验证铁律（必记）
 - console：`C:\Users\Administrator\.workbuddy\binaries\godot\Godot_v4.7.2-stable_win64_console.exe`
@@ -27,6 +28,8 @@
 - 单脚本 `--check-only --script res://<path>.gd` **不加载 autoload**，引用单例报假阳性。
 - 单元：`Godot_v4.7.2_console --headless --path "D:/武侠游戏" res://tests/unit/run_all.tscn`。
 - ⚠️ 两条 Windows 致命铁律：① POSIX 路径 `/d/xxx` 让 Godot 静默不跑（门禁误报绿）→ ROOT 必须 Windows 风格 `D:/武侠游戏`；② `get_tree().quit(code)` 退出码不传播 → 以 run_all 的 `✗` 标记判成败，不靠进程码。
+- **⚠️ GATE2 判据盲点（2026-08-30 实测）**：套件自身 **Parse Error** 时脚本没执行到断言，**一个 `✗` 都不打印** → `grep -c "✗"` 返回 0 看着全绿，实际 `套件：通过 42 · 失败 1`。**判绿必须两条同时满足**：`grep -c "✗"`==0 **且** `套件：通过 N · 失败 M` 的 M==0。只看 `✗` 会漏掉整类"脚本加载失败"。
+- **⚠️ GATE1 `--quit` 不覆盖非主启动链场景脚本**：独立测试 .tscn 引用的脚本不在解析链上 → 需「直接 headless 加载该 .tscn」冒烟才覆盖。但 Godot 4 该模式下主循环不推进时间，`create_timer`/`Timer.timeout` 永不触发（无法自退，须手工 kill 进程）。
 - 多 Godot 进程抢 `.godot` 类缓存 → 验证必须串行。
 - **⚠️ 沙箱 git 写不落盘**：本机 Bash 工具在沙箱内运行，`git checkout/rm/stash` 等写操作**不落真实磁盘**；唯 shell `>` 重定向与 Write/Edit 工具落盘。恢复跟踪文件用 `git show HEAD:<path> > <path>`（重定向落盘），别用 `git checkout HEAD -- <path>`（沙箱内空操作）。
 - **⚠️ .godot 缺失=双闸门全崩**：global_script_class_cache.cfg 缺失→所有 class_name 报 "not declared"，与代码无关。误删后 unsandboxed 跑 `godot --headless --editor --quit` 重建（数秒）。删 .godot 前先确认能从真实磁盘重建。
@@ -49,6 +52,8 @@
 - 3 HUD 常驻信号（UI 主权·共享地基纯追加）：`notify_quest_track_changed`（任务窗 quest_service.accept/turn_in/reset emit）、`notify_skill_bar_changed` + `notify_skill_cd_update(skill_id,remain_time)`（武学窗 ability_service equip/unequip/set_cooldown/tick emit，GameManager._process 驱动 tick_cooldowns）。已派单 `660252401c6e`(武学) / `08ec940f5674`(任务) 确认 emit 点。
 - **待决策（用户未确认）**：是否让 HUD 在战斗中常驻（BattleScene 也 mount_hud，需处理与 BattleScene 自身 UI 布局重叠）。
 - 图标接口 `UIManager.get_icon/has_icon`（id 派生实体 id）；8 处已接线。
+- **UI 外观整改方向(2026-08-30 拍板, 经两轮反转)**：**完全迁移 B 路线**（全量 `.tscn` 复合控件 + Theme，推翻先前 A/C 混合决策）。上层编排架构(UIManager六层+界面栈+窗口缓存+Toast池+EventBus+双闸门+UIPalette/令牌)保留不变；**仅叶子构造方式**从 `script.new()`+`_build()` 改为 `.tscn` 实例化。共享地基影响：screens.json 值语义由脚本路径改场景路径、UIManager 实例化行改 `load().instantiate()`（属共享地基增量，须写《变更通告》）。动态列表(背包/技能栏)仍靠代码 instantiate 模板 `.tscn`，B 路线下亦无法全消。执行：分屏逐转、每屏保双闸门绿、精确提交。详见 `docs/UI架构整改方案_美术驱动自定义外观.md` + `docs/变更通告_2026-08-30_B路线基础设施.md`。
+  - **试点已落地(2026-08-30)**：UIManager 按扩展名分流 .tscn/.gd（并存过渡）；`InventoryScreen` 已转 `.tscn` 为全项目样板（静态结构进场景、动态逻辑留脚本），双闸门绿(43套件0✗)。其余 20 屏 + ItemSlot/MenuItem/_Bar/_Slot 复合控件照此模式逐迁。
 
 ## 当前 open 派单（节选）
 - `fed3f00da584` 战斗→gameplay/town：TownScene:52 掉血崩（参数不匹配）。

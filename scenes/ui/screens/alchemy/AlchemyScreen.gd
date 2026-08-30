@@ -1,5 +1,5 @@
 # scenes/ui/screens/alchemy/AlchemyScreen.gd
-# 炼药界面（Phase 2，纯代码构建）：列出配方、显示材料满足度、点击炼制
+# 炼药界面（B 路线：静态壳在 AlchemyScreen.tscn，脚本只填动态内容）
 # 铁律：UI 只做展示与输入，业务逻辑调用 GameManager / AlchemyService
 
 extends PopupBase
@@ -7,7 +7,9 @@ class_name AlchemyScreen
 
 const UIPalette = preload("res://core/constants/ui_theme.gd")
 
-var _list: VBoxContainer
+@onready var _title: Label = $Panel/Margin/VLayout/Title
+@onready var _list: VBoxContainer = $Panel/Margin/VLayout/BodyAnchor/List
+@onready var _close: Button = $Panel/Margin/VLayout/Close
 
 func _ready() -> void:
 	popup_id = "AlchemyScreen"
@@ -17,40 +19,9 @@ func _ready() -> void:
 	EventBus.alchemy_failed.connect(_on_alchemy_failed)
 
 func _build_ui() -> void:
-	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var dim := ColorRect.new()
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	dim.color = UIPalette.DIM
-	dim.mouse_filter = Control.MOUSE_FILTER_STOP
-	add_child(dim)
-	var panel := make_glass_panel(Vector2(640, 560))
-	add_child(panel)
-	var margin := MarginContainer.new()
-	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 18)
-	margin.add_theme_constant_override("margin_right", 18)
-	margin.add_theme_constant_override("margin_top", 16)
-	margin.add_theme_constant_override("margin_bottom", 16)
-	panel.add_child(margin)
-	var v := VBoxContainer.new()
-	v.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	v.add_theme_constant_override("separation", 10)
-	margin.add_child(v)
-	var title := Label.new()
-	title.text = tr("ui_alchemy_title")
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	v.add_child(title)
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	v.add_child(scroll)
-	_list = VBoxContainer.new()
-	_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.add_child(_list)
-	var close := Button.new()
-	close.text = tr("ui_alchemy_close")
-	close.pressed.connect(request_close)
-	v.add_child(close)
+	_title.text = tr("ui_alchemy_title")
+	_close.text = tr("ui_alchemy_close")
+	_close.pressed.connect(request_close)
 
 func refresh() -> void:
 	for child in _list.get_children():

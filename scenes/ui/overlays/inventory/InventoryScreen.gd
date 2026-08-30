@@ -3,6 +3,7 @@ extends PopupBase
 
 const UIPalette = preload("res://core/constants/ui_theme.gd")
 const ItemSlot = preload("res://scenes/ui/components/item_slot/ItemSlot.gd")
+const ItemSlotScene = preload("res://scenes/ui/components/item_slot/ItemSlot.tscn")
 const Tooltip = preload("res://scenes/ui/components/tooltip/Tooltip.gd")
 
 var _weight_label: Label
@@ -12,73 +13,49 @@ var _tooltip: Tooltip
 var _context_menu: PopupMenu = null
 var _current_iid: String = ""
 
+# B 路线：静态结构（dim/面板/标题/三栏滚动网格）已迁入 InventoryScreen.tscn，
+# 美术可在编辑器直接编辑布局与外观；本脚本只负责数据填充、状态与交互。
+# 节点引用经 $ 路径取自 .tscn（结构契约），避免硬编码 new() 重建布局。
 func _ready() -> void:
 	focus_mode = Control.FOCUS_NONE
 	popup_id = "Inventory"
-	_build()
-	_refresh()
-	EventBus.inventory_item_added.connect(_on_inv_changed)
-	EventBus.inventory_item_removed.connect(_on_inv_changed)
-
-func _build() -> void:
-	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var dim := ColorRect.new()
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	dim.color = UIPalette.DIM
-	dim.mouse_filter = Control.MOUSE_FILTER_STOP
-	add_child(dim)
-	var panel := make_glass_panel(Vector2(720, 560))
-	add_child(panel)
-	var margin := MarginContainer.new()
-	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 18)
-	margin.add_theme_constant_override("margin_right", 18)
-	margin.add_theme_constant_override("margin_top", 16)
-	margin.add_theme_constant_override("margin_bottom", 16)
-	panel.add_child(margin)
-	var v := VBoxContainer.new()
-	margin.add_child(v)
-	var header := HBoxContainer.new()
-	v.add_child(header)
-	var title := Label.new()
+	# 压暗底（颜色取自 UIPalette，避免 .tscn 里写死）
+	$Dim.color = UIPalette.DIM
+	$Dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	# 玻璃面板皮肤（结构在 .tscn，皮肤暂沿用统一玻璃样式；后续迁 UISkin 纹理/九宫格层）
+	UICenterUtils.apply_glass_style($Center/Panel)
+	# 标题/重量/按钮文本与配色（文本需 tr()，留代码；结构在 .tscn 由美术编辑）
+	var title: Label = $Center/Panel/Margin/VBox/Header/Title
 	title.text = tr("ui_inventory_title")
 	title.add_theme_font_size_override("font_size", 22)
 	title.add_theme_color_override("font_color", UIPalette.GOLD)
-	header.add_child(title)
-	_weight_label = Label.new()
+	_weight_label = $Center/Panel/Margin/VBox/Header/Weight
 	_weight_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_weight_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_weight_label.add_theme_color_override("font_color", UIPalette.TEXT_SECONDARY)
-	header.add_child(_weight_label)
-	var sort_btn := Button.new()
+	var sort_btn: Button = $Center/Panel/Margin/VBox/Header/SortBtn
 	sort_btn.text = tr("ui_inventory_tidy")
 	sort_btn.focus_mode = Control.FOCUS_NONE
 	sort_btn.pressed.connect(_on_sort)
-	header.add_child(sort_btn)
-	var close := Button.new()
+	var close: Button = $Center/Panel/Margin/VBox/Header/CloseBtn
 	close.text = tr("ui_inventory_close")
 	close.focus_mode = Control.FOCUS_NONE
 	close.pressed.connect(request_close)
-	header.add_child(close)
-	for bag_name in ["main", "material", "quest"]:
-		var head := Label.new()
-		head.text = _bag_title(bag_name)
-		head.add_theme_color_override("font_color", UIPalette.TEXT_SECONDARY)
-		v.add_child(head)
-		var scroll := ScrollContainer.new()
-		scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		v.add_child(scroll)
-		var grid := GridContainer.new()
-		grid.columns = 8
-		grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		scroll.add_child(grid)
-		_grids[bag_name] = grid
+	_grids["main"] = $Center/Panel/Margin/VBox/MainScroll/MainGrid
+	_grids["material"] = $Center/Panel/Margin/VBox/MaterialScroll/MaterialGrid
+	_grids["quest"] = $Center/Panel/Margin/VBox/QuestScroll/QuestGrid
+	($Center/Panel/Margin/VBox/MainLabel).text = _bag_title("main")
+	($Center/Panel/Margin/VBox/MaterialLabel).text = _bag_title("material")
+	($Center/Panel/Margin/VBox/QuestLabel).text = _bag_title("quest")
 	_tooltip = Tooltip.new()
 	_tooltip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	# 抬升层级并置顶，避免贴边物品浮窗被面板/裁剪容器遮挡或裁切
 	_tooltip.z_index = 100
 	add_child(_tooltip)
 	_tooltip.move_to_front()
+	_refresh()
+	EventBus.inventory_item_added.connect(_on_inv_changed)
+	EventBus.inventory_item_removed.connect(_on_inv_changed)
 
 func _refresh() -> void:
 	if _weight_label == null:
@@ -107,7 +84,7 @@ func _fill_grid(bag_name: String, inv: InventoryService) -> void:
 		if i < grid.get_child_count():
 			slot = grid.get_child(i) as ItemSlot
 		else:
-			slot = ItemSlot.new()
+			slot = ItemSlotScene.instantiate()
 			_connect_slot(slot)
 			grid.add_child(slot)
 		if slot.get_meta("sig", "") != sig:
@@ -286,11 +263,6 @@ func _index_in_bag(bag_name: String, iid: String) -> int:
 
 func _on_inv_changed(_a: Variant = null, _b: Variant = null) -> void:
 	_refresh()
-
-func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("ui_cancel"):
-		request_close()
-		get_viewport().set_input_as_handled()
 
 func _exit_tree() -> void:
 	if EventBus.inventory_item_added.is_connected(_on_inv_changed):

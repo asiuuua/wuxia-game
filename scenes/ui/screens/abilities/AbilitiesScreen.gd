@@ -1,6 +1,8 @@
 # scenes/ui/screens/abilities/AbilitiesScreen.gd
 # 江湖技艺（已学武学）面板：列出玩家习得的武学，展示名称/描述/内力消耗/修炼等级。
 # 数据来自 GameManager.ability_service.learned + ConfigManager.get_ability；纯展示，不修改业务。
+# B 路线：静态壳（压暗底 + 居中玻璃面板 + 标题/滚动列表/关闭）在 AbilitiesScreen.tscn，
+# 美术可在编辑器直接编辑布局与外观；本脚本只负责动态行填充与交互。
 
 extends PopupBase
 class_name AbilitiesScreen
@@ -8,53 +10,24 @@ class_name AbilitiesScreen
 const UIPalette = preload("res://core/constants/ui_theme.gd")
 const UIFeedback = preload("res://scenes/ui/components/ui_feedback/UIFeedback.gd")
 
-var _content: VBoxContainer
+@onready var _title: Label = $Panel/Margin/VLayout/Title
+@onready var _content: VBoxContainer = $Panel/Margin/VLayout/BodyAnchor/List
+@onready var _close: Button = $Panel/Margin/VLayout/Close
 
 func _ready() -> void:
 	focus_mode = Control.FOCUS_NONE
 	UIManager.apply_safe_area(self)
 	popup_id = "Abilities"
-	_build()
+	_build_ui()
 	_refresh()
 
-func _build() -> void:
-	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var dim := ColorRect.new()
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	dim.color = UIPalette.DIM
-	dim.mouse_filter = Control.MOUSE_FILTER_STOP
-	add_child(dim)
-	var panel := make_glass_panel(Vector2(720, 540))
-	add_child(panel)
-	var margin := MarginContainer.new()
-	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 22)
-	margin.add_theme_constant_override("margin_right", 22)
-	margin.add_theme_constant_override("margin_top", 18)
-	margin.add_theme_constant_override("margin_bottom", 18)
-	panel.add_child(margin)
-	var v := VBoxContainer.new()
-	margin.add_child(v)
-	var title := Label.new()
-	title.text = "江 湖 技 艺"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_color_override("font_color", UIPalette.GOLD)
-	title.add_theme_font_size_override("font_size", UIPalette.FS_HEADER)
-	v.add_child(title)
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	v.add_child(scroll)
-	_content = VBoxContainer.new()
-	_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_content.add_theme_constant_override("separation", 10)
-	scroll.add_child(_content)
-	var close := Button.new()
-	close.text = "关闭"
-	close.focus_mode = Control.FOCUS_NONE
-	close.pressed.connect(request_close)
-	UIFeedback.attach(close)
-	v.add_child(close)
+func _build_ui() -> void:
+	_title.add_theme_color_override("font_color", UIPalette.GOLD)
+	_title.add_theme_font_size_override("font_size", UIPalette.FS_HEADER)
+	_close.text = "关闭"
+	_close.focus_mode = Control.FOCUS_NONE
+	_close.pressed.connect(request_close)
+	UIFeedback.attach(_close)
 
 func _refresh() -> void:
 	if _content == null:

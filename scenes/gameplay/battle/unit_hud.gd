@@ -18,6 +18,10 @@ var _status: HBoxContainer
 var _portrait: TextureRect = null
 var _pop_layer: Node2D = null
 var _pop_pool: Array[Label] = []   # 飘字复用池（P2-7：避免高频 new/free）
+var _pop_active: Array[Label] = []  # 当前播放中的飘字
+var _pop_pending: Array[Dictionary] = []  # 超限排队（梦幻式，绝不丢弃跳字）
+const MAX_POPS: int = 48            # 7.3.5 特效预算：飘字并发硬上限（与 BattleEntity 对齐）
+const MAX_QUEUE: int = 32           # 队列上限：溢出时丢弃最旧排队项，保留最新
 var _instant: bool = false
 var _max_hp: int = 100
 var _max_mp: int = 100
@@ -73,6 +77,8 @@ func reset() -> void:
 func _clear_pops() -> void:
 	if _pop_layer == null:
 		return
+	_pop_pending.clear()
+	_pop_active.clear()
 	for l in _pop_pool:
 		if is_instance_valid(l):
 			l.free()
@@ -146,33 +152,70 @@ func set_status(entries: Array) -> void:
 func set_instant(enabled: bool) -> void:
 	_instant = enabled
 
-## 飘字：在 HUD 本地坐标 (90,14) 上飘并淡出；跳过模式 (_instant) 不飘字
+## 飘字：HUD 本地坐标 (90,14) 上飘并淡出；跳过模式 (_instant) 不飘字
+## 溢出不丢弃（梦幻式排队）：满则进 _pop_pending，待槽位释放再播，杜绝「伤害打出看不到数字」
 func pop_text(txt: String, color: Color) -> void:
 	_ensure_built()
 	if _instant:
 		return
+	if _can_spawn_pop():
+		_spawn_pop(txt, color)
+	elif _pop_pending.size() < MAX_QUEUE:
+		_pop_pending.append({"txt": txt, "color": color})
+	else:
+		_pop_pending.pop_front()
+		_pop_pending.append({"txt": txt, "color": color})
+
+func _can_spawn_pop() -> bool:
+	for l in _pop_pool:
+		if is_instance_valid(l) and not l.visible:
+			return true
+	return _pop_pool.size() < MAX_POPS
+
+## 取出/新建一个空闲 Label 并播动画（复用前杀掉旧 tween，避免叠加）
+func _spawn_pop(txt: String, color: Color) -> void:
 	var l := _acquire_pop()
 	l.text = txt
 	l.modulate = color
 	l.visible = true
 	l.position = Vector2(90 + PORTRAIT_W, 14)
+	if l.has_meta("pop_tween"):
+		var ot = l.get_meta("pop_tween")
+		if ot != null and is_instance_valid(ot):
+			ot.kill()
 	var t := create_tween()
+	l.set_meta("pop_tween", t)
 	t.tween_property(l, "position:y", -22.0, 0.5)
 	t.parallel().tween_property(l, "modulate:a", 0.0, 0.5)
 	t.tween_callback(func(): _release_pop(l))
+	_pop_active.append(l)
 
 ## 飘字复用：从池中取一个空闲 Label，无则新建并登记（P2-7 池化，避免高频 new/free）
+## 池达 MAX_POPS 上限时复用最旧的一个（_can_spawn_pop 已保证有空闲，此处仅保险）
 func _acquire_pop() -> Label:
 	for l in _pop_pool:
 		if is_instance_valid(l) and not l.visible:
 			return l
-	var l := Label.new()
-	_pop_layer.add_child(l)
-	_pop_pool.append(l)
-	return l
+	if _pop_pool.size() < MAX_POPS:
+		var l := Label.new()
+		_pop_layer.add_child(l)
+		_pop_pool.append(l)
+		return l
+	return _pop_pool[0]
 
-## 飘字动画结束归还池（仅隐藏，等待下次复用）；节点已释放则忽略
+## 飘字动画结束归还池，并触发排队项出队（仅隐藏，等待下次复用）
 func _release_pop(l: Label) -> void:
 	if not is_instance_valid(l):
 		return
 	l.visible = false
+	var idx: int = _pop_active.find(l)
+	if idx >= 0:
+		_pop_active.remove_at(idx)
+	_dequeue_next_pop()
+
+## 排队项出队播放（溢出跳字不丢）
+func _dequeue_next_pop() -> void:
+	if _pop_pending.is_empty():
+		return
+	var p: Dictionary = _pop_pending.pop_front()
+	_spawn_pop(p["txt"], p["color"])

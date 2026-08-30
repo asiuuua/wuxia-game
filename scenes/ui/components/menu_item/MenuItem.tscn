@@ -1,0 +1,22 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/ui/components/menu_item/MenuItem.gd" id="1"]
+
+[node name="MenuItem" type="Control"]
+layout_mode = 3
+mouse_filter = 2
+custom_minimum_size = Vector2(280, 44)
+script = ExtResource("1")
+
+[node name="_arrow" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 0
+
+[node name="_icon" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 0
+visible = false
+
+[node name="_label" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 0

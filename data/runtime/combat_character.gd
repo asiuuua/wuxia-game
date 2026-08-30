@@ -36,6 +36,21 @@ var ai_kit: Array = []            # 敌人 AI 技能包（M3）：[{id, weight, 
 # ── 战术网格（战棋模式，M4 增量）──
 var grid_pos: Vector2i = Vector2i.ZERO   # 战场网格坐标（非战棋模式恒为 0,0）
 var move_range: int = 3                   # 每回合可移动格数（BFS 步数上限）
+# 面朝方向：纯逻辑枚举，只由「逻辑坐标差值」计算，与屏幕/斜45°无关（P1·对标方案提醒）
+enum FACING { UP, DOWN, LEFT, RIGHT }
+var facing: int = FACING.DOWN
+
+## 由「从→到」逻辑坐标差值推导面朝（绝不读屏幕尺寸）；逻辑层只用此枚举，贴图切换交给视图层
+static func calc_facing(from: Vector2i, to: Vector2i) -> int:
+	var d: Vector2i = to - from
+	if d.y < 0:
+		return FACING.UP
+	elif d.y > 0:
+		return FACING.DOWN
+	elif d.x < 0:
+		return FACING.LEFT
+	else:
+		return FACING.RIGHT
 
 # ⚠️ 非战斗遗留路径（供 AbilityService 等战斗外伤害结算）：不走护盾 / 反弹 / 复活，
 # 且 rng 为 null 时回退全局 randf()（不可复现）。【战斗内伤害必须走 CombatCore._resolve_hit】，

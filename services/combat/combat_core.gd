@@ -25,34 +25,41 @@ func configure(p_state: CombatState, seed_val: int = 0) -> void:
 
 # ───────────────────────── 玩家行动 ─────────────────────────
 
-## 玩家普攻 → 返回本次行动的事件流
-func player_basic(target_id: String = "") -> Array[CombatEvent]:
+## 玩家普攻 → 返回本次行动的事件流（actor_id 默认主角；组队模式下可为任意同伴单位）
+func player_basic(target_id: String = "", actor_id: String = "player") -> Array[CombatEvent]:
 	var events: Array[CombatEvent] = []
 	if state == null or not state.is_active:
+		return events
+	var actor: CombatCharacter = _unit_by_id(actor_id)
+	if actor == null or not actor.is_alive():
 		return events
 	var target: CombatCharacter = _resolve(target_id)
 	if target == null:
 		return events
-	events.append_array(tick_unit(state.player))            # 自己回合开始先 tick 自身状态
-	events.append(_ev(CombatEvent.Type.ACTION_BASIC, state.player.character_id, target.character_id))
-	var res: Dictionary = _resolve_hit(state.player, target, state.player.effective_attack())
+	events.append_array(tick_unit(actor))            # 自己回合开始先 tick 自身状态
+	events.append(_ev(CombatEvent.Type.ACTION_BASIC, actor.character_id, target.character_id))
+	var res: Dictionary = _resolve_hit(actor, target, actor.effective_attack())
 	events.append_array(res.events)
 	_try_down(target, events)
 	return events
 
 ## 玩家招式（slot=快捷栏位）→ 返回事件流（含真气消耗 / 冷却 / 状态施加）
 ## 复用 _cast_skill 与敌人共用同一套施法结算，行为零变化（双闸门保护）
-func player_skill(slot: int, target_id: String = "") -> Array[CombatEvent]:
+## actor_id 默认主角；组队模式下可为任意同伴单位（其招式取自共享快捷栏，组队独立配装为后续增量）
+func player_skill(slot: int, target_id: String = "", actor_id: String = "player") -> Array[CombatEvent]:
 	var events: Array[CombatEvent] = []
 	if state == null or not state.is_active:
+		return events
+	var actor: CombatCharacter = _unit_by_id(actor_id)
+	if actor == null or not actor.is_alive():
 		return events
 	if slot < 0 or slot >= GameManager.ability_service.equipped_combat.size():
 		return events
 	var ability_id: String = GameManager.ability_service.equipped_combat[slot]
 	if ability_id == "":
 		return events
-	events.append_array(tick_unit(state.player))          # 自己回合开始先 tick（含冷却递减）
-	events.append_array(_cast_skill(state.player, ability_id, target_id, slot))
+	events.append_array(tick_unit(actor))          # 自己回合开始先 tick（含冷却递减）
+	events.append_array(_cast_skill(actor, ability_id, target_id, slot))
 	return events
 
 ## 通用施法结算（玩家 / 敌人共用）：真气消耗 + 冷却 + 目标解析 + 伤害 + 状态施加
@@ -87,11 +94,12 @@ func _cast_skill(caster: CombatCharacter, ability_id: String, primary_target_id:
 	var is_self: bool = (cfg_target == "self" or cfg_target == "all_allies")
 	var targets: Array[CombatCharacter] = []
 	if cfg_target == "all_enemies":
-		targets = state.get_alive_enemies() if caster.is_player else [state.player]   # 敌人群攻只打单人玩家
+		# 玩家方招式打全体敌人；敌人招式打全体玩家方（组队模式下含同伴）—— 不再写死单人主角
+		targets = state.get_alive_enemies() if caster.is_player else _alive_player_side()
 	elif is_self:
 		targets = [caster]
 	else:
-		var t: CombatCharacter = state.player if not caster.is_player else _resolve(primary_target_id)
+		var t: CombatCharacter = _resolve(primary_target_id) if caster.is_player else _pick_player_target(caster)
 		if t != null and t.is_alive():
 			targets.append(t)
 	var power: int = int(cfg.get("power", 0)) + int(caster.effective_attack() * 0.3)
@@ -144,11 +152,12 @@ func enemy_phase() -> Array[CombatEvent]:
 		if enemy == null or not enemy.is_alive():
 			continue
 		events.append_array(enemy_act(eid))
-		if state.player.is_dead:
+		if state.is_over():
 			break
 	return events
 
 ## 单个敌人行动（供回合顺序驱动）：tick → 选招 / 普攻兜底 → 结算玩家受伤
+## 组队模式：目标在玩家方（主角 + 存活同伴）中按"最低气血"选取，不再写死 state.player
 func enemy_act(enemy_id: String) -> Array[CombatEvent]:
 	var events: Array[CombatEvent] = []
 	if state == null:
@@ -160,15 +169,18 @@ func enemy_act(enemy_id: String) -> Array[CombatEvent]:
 	events.append_array(tick_unit(enemy))            # 含冷却递减
 	if not enemy.is_alive():
 		return events
-	var ab: Dictionary = _pick_enemy_ability(enemy, grid != null)
+	var target: CombatCharacter = _pick_player_target(enemy)
+	if target == null:
+		return events
+	var ab: Dictionary = _pick_enemy_ability(enemy, grid != null, target.character_id)
 	if ab.is_empty():
 		# 普攻兜底（ACTION_BASIC + DAMAGE）
-		events.append(_ev(CombatEvent.Type.ACTION_BASIC, enemy.character_id, state.player.character_id))
-		var res: Dictionary = _resolve_hit(enemy, state.player, enemy.effective_attack())
+		events.append(_ev(CombatEvent.Type.ACTION_BASIC, enemy.character_id, target.character_id))
+		var res: Dictionary = _resolve_hit(enemy, target, enemy.effective_attack())
 		events.append_array(res.events)
 	else:
-		events.append_array(_cast_skill(enemy, ab.get("id", ""), "player"))
-	_try_down(state.player, events)
+		events.append_array(_cast_skill(enemy, ab.get("id", ""), target.character_id))
+	_try_down(target, events)
 	return events
 
 func _enemy_by_id(enemy_id: String) -> CombatCharacter:
@@ -177,13 +189,35 @@ func _enemy_by_id(enemy_id: String) -> CombatCharacter:
 			return e
 	return null
 
+## 敌人选目标：玩家方（主角 + 存活同伴）中优先打"最低气血"（集火弱者）；无存活玩家方单位返回 null
+func _pick_player_target(_enemy: CombatCharacter) -> CombatCharacter:
+	var best: CombatCharacter = null
+	if state.player != null and state.player.is_alive():
+		best = state.player
+	for p in state.player_party:
+		if p.is_alive() and (best == null or p.hp < best.hp):
+			best = p
+	return best
+
+## 玩家方（主角 + 存活同伴）全体：供敌人"全体玩家方"类招式锁定（敌人眼里玩家方=敌方阵营）
+func _alive_player_side() -> Array[CombatCharacter]:
+	var list: Array[CombatCharacter] = []
+	if state.player != null and state.player.is_alive():
+		list.append(state.player)
+	for p in state.player_party:
+		if p.is_alive():
+			list.append(p)
+	return list
+
 ## 按权重从敌人 AI 技能包里选一个可用招式（确定性：rng.randf() 由内核 seed 驱动）
 ## 返回 {id, weight, condition} 或空字典（无可用的 → 调用方普攻兜底）
-## respect_range=true（网格战术模式）：额外要求"技能射程内能命中玩家"，杜绝够不到仍出手的越界施法（P2-8）
+## respect_range=true（网格战术模式）：额外要求"技能射程内能命中玩家方目标"，杜绝够不到仍出手的越界施法（P2-8）
 ## respect_range=false（经典模式 / grid==null）：与原逻辑完全一致
-func _pick_enemy_ability(enemy: CombatCharacter, respect_range: bool = false) -> Dictionary:
+## target_id：本回合敌人锁定的玩家方目标（组队模式下可为任意同伴）；为空时退回主角
+func _pick_enemy_ability(enemy: CombatCharacter, respect_range: bool = false, target_id: String = "") -> Dictionary:
 	if enemy.ai_kit == null or enemy.ai_kit.is_empty():
 		return {}
+	var tgt_id: String = target_id if target_id != "" else state.player.character_id
 	var candidates: Array = []
 	var total: float = 0.0
 	for entry in enemy.ai_kit:
@@ -194,7 +228,7 @@ func _pick_enemy_ability(enemy: CombatCharacter, respect_range: bool = false) ->
 			continue
 		if not _condition_met(enemy, entry.get("condition", "always")):
 			continue
-		if respect_range and grid != null and not is_target_in_range(enemy.character_id, state.player.character_id, id):
+		if respect_range and grid != null and not is_target_in_range(enemy.character_id, tgt_id, id):
 			continue
 		var w: float = float(entry.get("weight", 1))
 		if w <= 0:
@@ -301,9 +335,12 @@ func _apply_status(unit: CombatCharacter, status_id: String, stacks: int) -> Com
 
 # ───────────────────────── ATB ─────────────────────────
 
-## ATB 行动顺序（供 M2 顺序条）：按集气速率(effective_charge_rate)降序（仅存活单位）
+## ATB 行动顺序（供 M2 顺序条）：按集气速率(effective_charge_rate)降序（仅存活单位，含组队同伴）
 func action_order() -> Array[String]:
 	var list: Array[CombatCharacter] = [state.player]
+	for p in state.player_party:
+		if p.is_alive():
+			list.append(p)
 	for e in state.enemies:
 		if e.is_alive():
 			list.append(e)
@@ -318,6 +355,9 @@ func action_order() -> Array[String]:
 ## SEQUENTIAL → 玩家先、再按编成顺序的存活敌人；ATB → 按 effective_charge_rate 降序（速度插队）
 func get_round_sequence() -> Array[String]:
 	var actors: Array[CombatCharacter] = [state.player]
+	for p in state.player_party:
+		if p.is_alive():
+			actors.append(p)
 	for e in state.enemies:
 		if e.is_alive():
 			actors.append(e)
@@ -343,6 +383,9 @@ func _unit_by_id(uid: String) -> CombatCharacter:
 		return null
 	if state.player != null and state.player.character_id == uid:
 		return state.player
+	for p in state.player_party:
+		if p.character_id == uid:
+			return p
 	for e in state.enemies:
 		if e.character_id == uid:
 			return e
@@ -402,6 +445,7 @@ func move_unit(unit_id: String, to_pos: Vector2i) -> Array[CombatEvent]:
 	grid.set_occupant(to_pos, unit_id)
 	var from: Vector2i = u.grid_pos
 	u.grid_pos = to_pos
+	u.facing = CombatCharacter.calc_facing(from, to_pos)   # P1：朝向只由逻辑坐标差值决定，与地图尺寸无关
 	events.append(_ev_move(unit_id, from, to_pos))
 	return events
 
@@ -412,7 +456,7 @@ func enemy_tactical_plan(enemy_id: String) -> Dictionary:
 	var e := _enemy_by_id(enemy_id)
 	if e == null or not e.is_alive() or grid == null:
 		return plan
-	var target: CombatCharacter = state.player
+	var target: CombatCharacter = _pick_player_target(e)
 	if target == null or not target.is_alive():
 		return plan
 	var reach: Array[Vector2i] = grid.bfs_reachable(e.grid_pos, e.move_range)

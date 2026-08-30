@@ -102,6 +102,15 @@
       "loot": [
         { "item_id": "material_ore_001", "count": 2 }
       ]
+    },
+    {
+      "id": "ally_sworder_001",
+      "name": "随行剑客",
+      "hp": 60,
+      "attack": 14,
+      "speed": 9,
+      "abilities": [ { "id": "sword_qingsong_001", "weight": 3, "condition": "always" } ],
+      "loot": []
     }
   ]
 }

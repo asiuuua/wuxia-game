@@ -1,0 +1,13 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/ui/components/skill_slot/SkillSlot.gd" id="1_ss"]
+
+[node name="SkillSlot" type="Control"]
+custom_minimum_size = Vector2(60, 60)
+script = ExtResource("1_ss")
+
+[node name="_icon" type="TextureRect" parent="."]
+
+[node name="_name" type="Label" parent="."]
+
+[node name="_cd" type="Label" parent="."]
