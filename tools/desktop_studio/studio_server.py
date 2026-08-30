@@ -145,6 +145,30 @@ class Handler(BaseHTTPRequestHandler):
             return _send_json(self, core.loading_layout_get())
         if path == "/api/main_menu/layout":
             return _send_json(self, core.main_menu_layout_get())
+        if path == "/api/battle_layout/list":
+            return _send_json(self, core.battle_layout_list())
+        if path == "/api/battle_layout":
+            # GET ?id=xxx → 单条；无 id → 列表
+            qs = urllib.parse.parse_qs(self.path.split("?", 1)[1] if "?" in self.path else {})
+            lid = (qs.get("id") or [""])[0]
+            if lid:
+                return _send_json(self, core.battle_layout_get(lid))
+            return _send_json(self, core.battle_layout_list())
+        if path == "/api/battle_bg/file":
+            qs = urllib.parse.parse_qs(self.path.split("?", 1)[1] if "?" in self.path else {})
+            lid = (qs.get("id") or [""])[0]
+            fp = core._battle_bg_path_for(lid) if lid else ""
+            if fp and os.path.exists(fp):
+                with open(fp, "rb") as f:
+                    data = f.read()
+                self.send_response(200)
+                self.send_header("Content-Type", _mime_of(fp))
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+                return
+            _send_json(self, {"error": "no bg"}, 404)
+            return
         if path == "/api/npc":
             return _send_json(self, core.npc_list())
         if path == "/api/dialog":
@@ -279,6 +303,22 @@ class Handler(BaseHTTPRequestHandler):
             return _send_json(self, {"ok": ok, "msg": m})
         if path == "/api/main_menu/layout":
             ok, m = core.main_menu_layout_update(body if isinstance(body, dict) else {})
+            return _send_json(self, {"ok": ok, "msg": m})
+        if path == "/api/battle_layout/save":
+            lid = str(body.get("id", ""))
+            ok, m = core.battle_layout_save(lid, body.get("data", {}) if isinstance(body.get("data"), dict) else body)
+            return _send_json(self, {"ok": ok, "msg": m})
+        if path == "/api/battle_layout/preset":
+            ok, m = core.battle_layout_preset(int(body.get("size", 10)))
+            return _send_json(self, {"ok": ok, "msg": m})
+        if path == "/api/battle_layout/delete":
+            ok, m = core.battle_layout_delete(str(body.get("id", "")))
+            return _send_json(self, {"ok": ok, "msg": m})
+        if path == "/api/battle_bg/upload":
+            ok, m = core.battle_bg_upload(str(body.get("id", "")), body if isinstance(body, dict) else {})
+            return _send_json(self, {"ok": ok, "msg": m})
+        if path == "/api/battle_bg/clear":
+            ok, m = core.battle_bg_clear(str(body.get("id", "")))
             return _send_json(self, {"ok": ok, "msg": m})
         if path == "/api/login/btn_bg_clear":
             ok, m = core.login_btn_bg_clear(body.get("btn_id", ""))

@@ -1294,6 +1294,238 @@ def main_menu_layout_update(d):
     return True, "已保存主菜单布局（游戏内下次启动生效）"
 
 
+# ============================ 战棋布局（工作室可视化编辑器） ============================
+# 布局文件存于 data/configs/battles/grids/<id>.json，Schema 与 combat_service._build_grid 完全兼容：
+#   width/height(int) · obstacles(['x,y']) · heights(['x,y,h']) · deployment({unit:[x,y]})
+# 扩展字段：view_mode('iso'|'ortho') · background('res://...'|'') · name(显示名)
+# 地形三态映射：可走=不在 obstacles/heights；障碍=在 obstacles；高地=在 heights(h>0)
+def _battle_layout_dir():
+    return os.path.join(discover_project_root(), "data", "configs", "battles", "grids")
+
+
+def battle_layout_list():
+    """列出所有战棋布局（id / 尺寸 / 视图模式）。"""
+    d = _battle_layout_dir()
+    out = []
+    if not os.path.isdir(d):
+        return out
+    for fn in sorted(os.listdir(d)):
+        if not fn.endswith(".json"):
+            continue
+        if fn.startswith("_"):
+            continue
+        lid = fn[:-5]
+        data = load_json(os.path.join(d, fn), {})
+        out.append({
+            "id": lid,
+            "name": data.get("name", lid),
+            "width": int(data.get("width", 0)),
+            "height": int(data.get("height", 0)),
+            "view_mode": data.get("view_mode", "iso"),
+            "has_bg": bool(data.get("background", "")),
+        })
+    return out
+
+
+def battle_layout_get(layout_id):
+    """读取单个布局全量（含地形/部署）。不存在返回空 dict。"""
+    lid = _safe_id(layout_id)
+    if not lid:
+        return {}
+    p = os.path.join(_battle_layout_dir(), lid + ".json")
+    if not os.path.exists(p):
+        return {}
+    return load_json(p, {})
+
+
+def battle_layout_save(layout_id, data):
+    """写入布局（自动备份旧文件 + 字段归一化）。data 形如完整布局 dict。"""
+    lid = _safe_id(layout_id)
+    if not lid:
+        return False, "布局 id 非法"
+    p = os.path.join(_battle_layout_dir(), lid + ".json")
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+    _backup(p)
+    # 归一化
+    norm = {}
+    norm["name"] = str(data.get("name", lid))
+    norm["view_mode"] = "ortho" if str(data.get("view_mode", "iso")) == "ortho" else "iso"
+    norm["width"] = max(2, int(data.get("width", 10)))
+    norm["height"] = max(2, int(data.get("height", 8)))
+    norm["background"] = str(data.get("background", ""))
+    # obstacles: 'x,y' 字符串数组；裁剪到界内
+    obs = []
+    for o in (data.get("obstacles", []) or []):
+        parts = str(o).split(",")
+        if len(parts) >= 2:
+            x, y = int(parts[0]), int(parts[1])
+            if 0 <= x < norm["width"] and 0 <= y < norm["height"]:
+                obs.append("%d,%d" % (x, y))
+    norm["obstacles"] = obs
+    # heights: 'x,y,h' 字符串数组；h>0
+    hs = []
+    for h in (data.get("heights", []) or []):
+        parts = str(h).split(",")
+        if len(parts) >= 3:
+            x, y, hh = int(parts[0]), int(parts[1]), int(parts[2])
+            if 0 <= x < norm["width"] and 0 <= y < norm["height"] and hh > 0:
+                hs.append("%d,%d,%d" % (x, y, hh))
+    norm["heights"] = hs
+    # deployment: unit_id -> [x,y]
+    dep = {}
+    for uid, pos in (data.get("deployment", {}) or {}).items():
+        if isinstance(pos, (list, tuple)) and len(pos) >= 2:
+            x, y = int(pos[0]), int(pos[1])
+            if 0 <= x < norm["width"] and 0 <= y < norm["height"]:
+                dep[str(uid)] = [x, y]
+    norm["deployment"] = dep
+    with open(p, "w", encoding="utf-8") as f:
+        json.dump(norm, f, ensure_ascii=False, indent=2)
+    log_event("battle_layout", lid, "保存战棋布局 %dx%d (%s)" % (norm["width"], norm["height"], norm["view_mode"]))
+    return True, "已保存战棋布局「%s」" % norm["name"]
+
+
+def battle_layout_delete(layout_id):
+    """删除布局文件（进回收站保险，不直接销毁）。"""
+    lid = _safe_id(layout_id)
+    if not lid:
+        return False, "布局 id 非法"
+    p = os.path.join(_battle_layout_dir(), lid + ".json")
+    if not os.path.exists(p):
+        return False, "布局不存在"
+    _backup(p)
+    # 同时清关联底图
+    bg_dir = _battle_bg_dir()
+    for ext in (".png", ".jpg", ".webp"):
+        bp = os.path.join(bg_dir, lid + ext)
+        if os.path.exists(bp):
+            try:
+                os.remove(bp)
+            except Exception:
+                pass
+    os.remove(p)
+    log_event("battle_layout", lid, "删除战棋布局（已备份）")
+    return True, "已删除战棋布局「%s」（备份在回收站）" % lid
+
+
+def battle_layout_preset(size):
+    """生成 N×N 空预设布局（size 取 6/8/10/12）。返回 (ok, msg, data)。"""
+    s = max(2, min(32, int(size)))
+    lid = "preset_%dx%d" % (s, s)
+    data = {
+        "name": "预设 %dx%d" % (s, s),
+        "view_mode": "iso",
+        "background": "",
+        "width": s,
+        "height": s,
+        "obstacles": [],
+        "heights": [],
+        "deployment": {},
+    }
+    return battle_layout_save(lid, data)
+
+
+# ---- 战棋底图 ----
+def _battle_bg_dir():
+    return os.path.join(discover_project_root(), "assets", "battle_bg")
+
+
+def _battle_bg_path_for(layout_id):
+    """返回该布局当前底图绝对路径（按扩展名探测）。无图返回 ''。"""
+    lid = _safe_id(layout_id)
+    if not lid:
+        return ""
+    d = _battle_bg_dir()
+    for ext in (".png", ".jpg", ".webp"):
+        fp = os.path.join(d, lid + ext)
+        if os.path.exists(fp):
+            return fp
+    return ""
+
+
+def battle_bg_upload(layout_id, payload):
+    """上传战棋底图：按文件头判真实格式存对扩展名；更新布局 background 字段；清旧 import 缓存。"""
+    lid = _safe_id(layout_id)
+    if not lid:
+        return False, "布局 id 非法"
+    import base64
+    raw = base64.b64decode(payload.get("data", b"") or b"")
+    if not raw:
+        return False, "空图片数据"
+    # 先落临时文件判真实格式
+    d = _battle_bg_dir()
+    os.makedirs(d, exist_ok=True)
+    tmp = os.path.join(d, "_tmp_bg_%s.bin" % lid)
+    with open(tmp, "wb") as f:
+        f.write(raw)
+    ext = _detect_image_ext(tmp)
+    if ext is None:
+        try:
+            os.remove(tmp)
+        except Exception:
+            pass
+        return False, "无法识别的图片格式（仅支持 png/jpg/webp）"
+    # 清旧图（含旧扩展名 + 旧 .import 缓存，避免 Godot 仍用旧图）
+    for old_ext in (".png", ".jpg", ".webp"):
+        old_fp = os.path.join(d, lid + old_ext)
+        if os.path.exists(old_fp):
+            old_import = old_fp + ".import"
+            if os.path.exists(old_import):
+                _purge_import_cache_for(old_import)
+                try:
+                    os.remove(old_import)
+                except Exception:
+                    pass
+            try:
+                os.remove(old_fp)
+            except Exception:
+                pass
+    dst = os.path.join(d, lid + "." + ext)
+    shutil.move(tmp, dst)
+    # 更新布局 background 字段
+    p = os.path.join(_battle_layout_dir(), lid + ".json")
+    data = load_json(p, {}) if os.path.exists(p) else {"name": lid, "width": 10, "height": 8,
+                                                        "obstacles": [], "heights": [], "deployment": {}}
+    data["background"] = "res://assets/battle_bg/%s.%s" % (lid, ext)
+    if "view_mode" not in data:
+        data["view_mode"] = "iso"
+    if "width" not in data:
+        data["width"] = 10
+    if "height" not in data:
+        data["height"] = 8
+    battle_layout_save(lid, data)
+    log_event("battle_bg", lid, "上传战棋底图 %s" % dst)
+    return True, "已上传战棋底图（%s）" % ext
+
+
+def battle_bg_clear(layout_id):
+    """清除战棋底图：删文件 + .import + 缓存，并把布局 background 字段置空。"""
+    lid = _safe_id(layout_id)
+    if not lid:
+        return False, "布局 id 非法"
+    d = _battle_bg_dir()
+    for ext in (".png", ".jpg", ".webp"):
+        fp = os.path.join(d, lid + ext)
+        if os.path.exists(fp):
+            import_fp = fp + ".import"
+            if os.path.exists(import_fp):
+                _purge_import_cache_for(import_fp)
+                try:
+                    os.remove(import_fp)
+                except Exception:
+                    pass
+            try:
+                os.remove(fp)
+            except Exception:
+                pass
+    p = os.path.join(_battle_layout_dir(), lid + ".json")
+    if os.path.exists(p):
+        data = load_json(p, {})
+        data["background"] = ""
+        battle_layout_save(lid, data)
+    return True, "已清除战棋底图"
+
+
 def _purge_import_cache_for(import_fp):
     """读取 .import 的 dest_files，删除 .godot/imported/ 下对应的缓存纹理与 md5。"""
     try:

@@ -77,6 +77,7 @@
   <button data-tab="dialog">剧情对话</button>
   <button data-tab="cel">欢庆模块</button>
   <button data-tab="login">登录界面</button>
+  <button data-tab="battle">战棋布局</button>
   <button data-tab="loading">预加载界面</button>
   <button data-tab="trash">回收站</button>
   <button data-tab="settings">设置</button>
@@ -315,6 +316,68 @@
     </div>
   </section>
 
+  <!-- BATTLE LAYOUT -->
+  <section class="tab" id="tab-battle">
+    <div class="editor" style="max-width:1100px">
+      <div class="hint">战棋布局可视化编辑器：左侧选/新建布局，中间 1280×720 模拟视口里直接点格子切换地形（蓝=可走 / 红=障碍 / 金=高地），拖右下角单位落点；可一键套用 6/8/10/12 预设、上传底图实时预览。保存后游戏侧对应战斗挂载该布局即生效。</div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap">
+        <!-- 左：布局列表 -->
+        <div style="flex:1;min-width:240px">
+          <h4>布局列表</h4>
+          <div class="btns">
+            <button class="act sec" onclick="blLoadList()">刷新</button>
+            <button class="act" onclick="blNewPrompt()">＋ 新建</button>
+          </div>
+          <div id="blList" style="margin-top:8px;display:flex;flex-direction:column;gap:6px"></div>
+          <h4 style="margin-top:14px">一键预设</h4>
+          <div class="btns">
+            <button class="act sec" onclick="blPreset(6)">6×6</button>
+            <button class="act sec" onclick="blPreset(8)">8×8</button>
+            <button class="act sec" onclick="blPreset(10)">10×10</button>
+            <button class="act sec" onclick="blPreset(12)">12×12</button>
+          </div>
+        </div>
+        <!-- 右：画布 + 控制 -->
+        <div style="flex:3;min-width:420px">
+          <div class="row" style="align-items:center;gap:10px;flex-wrap:wrap">
+            <label>视图</label>
+            <select id="blView" onchange="blViewChanged()">
+              <option value="iso">45° 等距（菱形）</option>
+              <option value="ortho">正交轴测（方块）</option>
+            </select>
+            <label>宽 W</label><input id="blW" type="number" min="2" max="32" value="10" style="width:64px">
+            <label>高 H</label><input id="blH" type="number" min="2" max="32" value="8" style="width:64px">
+            <button class="act sec" onclick="blResize()">重设尺寸</button>
+          </div>
+          <div class="row" style="align-items:center;gap:10px;margin-top:6px">
+            <span>点击格子切换：</span>
+            <label><input type="radio" name="blPaint" value="walk" checked> 可走(蓝)</label>
+            <label><input type="radio" name="blPaint" value="obstacle"> 障碍(红)</label>
+            <label><input type="radio" name="blPaint" value="high"> 高地(金)</label>
+            <button class="act sec" onclick="blClearTerrain()">清空地形</button>
+          </div>
+          <div id="blCanvasWrap" style="position:relative;border:1px solid #444;border-radius:8px;overflow:hidden;background:#0c0e16;width:100%;max-width:720px;aspect-ratio:16/9;margin-top:8px">
+            <img id="blBg" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.85" src="" onerror="this.style.display='none'">
+            <canvas id="blCanvas" style="position:absolute;inset:0;width:100%;height:100%;cursor:crosshair"></canvas>
+            <div id="blUnit" data-uid="player" style="position:absolute;width:18px;height:18px;border-radius:50%;background:#e6b35a;border:2px solid #fff;cursor:grab;display:none"></div>
+          </div>
+          <div class="hint">画布里：左键点格子刷地形；右下角金点是「玩家」落点，可拖动（落点只在游戏内生效，编辑器里用于预览站位）。</div>
+          <div class="row" style="align-items:center;gap:10px;margin-top:8px">
+            <label>底图</label>
+            <input type="file" id="blBgFile" accept="image/*">
+            <button class="act" onclick="blBgUpload()">上传底图</button>
+            <button class="act sec" onclick="blBgClear()">清除底图</button>
+          </div>
+          <div class="btns" style="margin-top:10px">
+            <button class="act" onclick="blSave()">保存布局</button>
+            <button class="act sec" onclick="blDelete()">删除布局</button>
+            <span id="blStat" class="status"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- LOADING -->
   <section class="tab" id="tab-loading">
     <div class="editor" style="max-width:920px">
@@ -406,6 +469,7 @@ document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{
   if(b.dataset.tab==='log')logLoad();
   if(b.dataset.tab==='login')loginLoad();
   if(b.dataset.tab==='login')mmLoad();
+  if(b.dataset.tab==='battle')blLoadList();
   if(b.dataset.tab==='loading')loadingLoad();
 });
 
@@ -1189,6 +1253,216 @@ async function mmReset(){
   mmRender();
   const r=await A('POST','/api/main_menu/layout',{elements:JSON.parse(JSON.stringify(MM_DEF))});
   show('mmStat',(r&&r.msg)?r.msg:'已恢复默认',!!(r&&r.ok));
+}
+
+// ---------- 战棋布局编辑器 ----------
+window._bl=null;        // 当前布局 {id,name,view_mode,width,height,obstacles[],heights[],deployment{}}
+window._blSel=null;     // 当前选中布局 id
+function blLoadList(){
+  A('GET','/api/battle_layout/list').then(list=>{
+    const box=document.getElementById('blList');box.innerHTML='';
+    (list||[]).forEach(it=>{
+      const d=document.createElement('div');d.className='item';d.textContent=it.name+' ('+it.width+'×'+it.height+', '+(it.view_mode==='ortho'?'方块':'菱形')+(it.has_bg?', 有底图':'')+')';
+      d.onclick=()=>blLoadOne(it.id);
+      box.appendChild(d);
+    });
+    if(!list||!list.length){box.innerHTML='<div class="hint">暂无布局，点「＋ 新建」或右侧预设。</div>';}
+  }).catch(()=>{});
+}
+async function blLoadOne(id){
+  window._blSel=id;
+  const d=await A('GET','/api/battle_layout?id='+encodeURIComponent(id));
+  window._bl=d;
+  document.getElementById('blView').value=d.view_mode||'iso';
+  document.getElementById('blW').value=d.width||10;
+  document.getElementById('blH').value=d.height||8;
+  blRender();
+  blLoadBg();
+}
+function blLoadBg(){
+  const img=document.getElementById('blBg');
+  if(window._bl && window._bl.background){
+    img.src='/api/battle_bg/file?id='+encodeURIComponent(window._blSel)+'&t='+Date.now();
+    img.style.display='';
+  }else{img.style.display='none';img.src='';}
+}
+function blNewPrompt(){
+  const id=prompt('新布局 id（英文/数字，如 forest_ambush）：','new_layout');
+  if(!id)return;
+  const w=parseInt(document.getElementById('blW').value,10)||10;
+  const h=parseInt(document.getElementById('blH').value,10)||8;
+  A('POST','/api/battle_layout/save',{id,data:{name:id,view_mode:document.getElementById('blView').value,width:w,height:h,obstacles:[],heights:[],deployment:{}}}).then(r=>{
+    if(r&&r.ok){blLoadList();blLoadOne(id);}else show('blStat',(r&&r.msg)||'失败',false);
+  });
+}
+async function blPreset(n){
+  const r=await A('POST','/api/battle_layout/preset',{size:n});
+  show('blStat',(r&&r.msg)?r.msg:'已生成预设',!!(r&&r.ok));
+  if(r&&r.ok){blLoadList();blLoadOne('preset_'+n+'x'+n);}
+}
+function blViewChanged(){
+  if(window._bl)window._bl.view_mode=document.getElementById('blView').value;
+  blRender();
+}
+function blResize(){
+  if(!window._bl){show('blStat','先选或新建一个布局',false);return;}
+  window._bl.width=parseInt(document.getElementById('blW').value,10)||window._bl.width;
+  window._bl.height=parseInt(document.getElementById('blH').value,10)||window._bl.height;
+  blClipTerrain();
+  blRender();
+}
+function blClipTerrain(){
+  const W=window._bl.width,H=window._bl.height;
+  window._bl.obstacles=(window._bl.obstacles||[]).filter(s=>{const p=s.split(',');return +p[0]<W&&+p[1]<H;});
+  window._bl.heights=(window._bl.heights||[]).filter(s=>{const p=s.split(',');return +p[0]<W&&+p[1]<H;});
+}
+function blClearTerrain(){
+  if(!window._bl)return;
+  window._bl.obstacles=[];window._bl.heights=[];blRender();
+}
+// 网格几何：把 cell(i,j) 投到 720p 画布坐标（与游戏侧 BattleGrid 同公式）
+function blCellToXY(i,j){
+  const wrap=document.getElementById('blCanvasWrap');
+  const Wc=wrap.clientWidth||720, Hc=wrap.clientHeight||405;
+  const W=window._bl.width, H=window._bl.height;
+  const isIso=window._bl.view_mode!=='ortho';
+  // 单元像素尺寸：让整张网格铺满画布 92%
+  let s;
+  if(isIso){ s=Math.min(Wc*0.92/(W+H), Hc*0.92/((W+H)*0.5)); }
+  else { s=Math.min(Wc*0.92/W, Hc*0.92/H); }
+  const tw=s, th=isIso?s*0.5:s;
+  let x,y;
+  if(isIso){ x=(i-j)*tw*0.5; y=(i+j)*th*0.5; }
+  else { x=i*tw; y=j*th; }
+  // 居中
+  const ox=Wc*0.5 - ((isIso?((W-1)-(0))*tw*0.5: (W-1)*tw*0.5))*0.5;
+  const oy=Hc*0.5 - ((isIso?((W-1)+(H-1))*th*0.5: (H-1)*th*0.5))*0.5;
+  return {x:x+ox, y:y+oy, tw, th, isIso};
+}
+function blXYToCell(px,py){
+  const wrap=document.getElementById('blCanvasWrap');
+  const Wc=wrap.clientWidth||720, Hc=wrap.clientHeight||405;
+  const W=window._bl.width, H=window._bl.height;
+  const isIso=window._bl.view_mode!=='ortho';
+  let s;
+  if(isIso){ s=Math.min(Wc*0.92/(W+H), Hc*0.92/((W+H)*0.5)); }
+  else { s=Math.min(Wc*0.92/W, Hc*0.92/H); }
+  const tw=s, th=isIso?s*0.5:s;
+  const ox=Wc*0.5 - ((isIso?((W-1)-(0))*tw*0.5: (W-1)*tw*0.5))*0.5;
+  const oy=Hc*0.5 - ((isIso?((W-1)+(H-1))*th*0.5: (H-1)*th*0.5))*0.5;
+  const lx=px-ox, ly=py-oy;
+  let gx,gy;
+  if(isIso){
+    gx=Math.round((lx/tw + ly/th)*0.5);
+    gy=Math.round((ly/th - lx/tw)*0.5);
+  }else{
+    gx=Math.floor(lx/tw); gy=Math.floor(ly/th);
+  }
+  if(gx<0||gy<0||gx>=W||gy>=H)return null;
+  return {x:gx,y:gy};
+}
+function blHas(arr,key){return (arr||[]).indexOf(key)>=0;}
+function blRender(){
+  const c=document.getElementById('blCanvas');if(!c||!window._bl)return;
+  const wrap=document.getElementById('blCanvasWrap');
+  c.width=wrap.clientWidth||720; c.height=wrap.clientHeight||405;
+  const ctx=c.getContext('2d');
+  ctx.clearRect(0,0,c.width,c.height);
+  const W=window._bl.width,H=window._bl.height;
+  const obs=window._bl.obstacles||[], hs=window._bl.heights||[];
+  for(let j=0;j<H;j++)for(let i=0;i<W;i++){
+    const g=blCellToXY(i,j);
+    const hw=g.tw*0.5, hh=g.th*0.5;
+    ctx.beginPath();
+    if(g.isIso){ctx.moveTo(g.x,g.y-hh);ctx.lineTo(g.x+hw,g.y);ctx.lineTo(g.x,g.y+hh);ctx.lineTo(g.x-hw,g.y);}
+    else{ctx.rect(g.x-hw,g.y-hh,g.tw,g.th);}
+    ctx.closePath();
+    const key=i+','+j;
+    if(blHas(obs,key)){ctx.fillStyle='rgba(200,60,50,0.55)';}
+    else if(blHas(hs,key)){ctx.fillStyle='rgba(230,179,90,0.55)';}
+    else{ctx.fillStyle='rgba(70,110,180,0.35)';}
+    ctx.fill();
+    ctx.strokeStyle='rgba(180,200,230,0.5)';ctx.lineWidth=1;ctx.stroke();
+  }
+  // 单位落点预览
+  const u=document.getElementById('blUnit');
+  if(window._bl.deployment && window._bl.deployment.player){
+    const p=window._bl.deployment.player;const g=blCellToXY(p[0],p[1]);
+    u.style.display='';u.style.left=(g.x-9)+'px';u.style.top=(g.y-9)+'px';
+  }else{u.style.display='none';}
+}
+function blPaintAt(px,py){
+  if(!window._bl)return;
+  const cell=blXYToCell(px,py);if(!cell)return;
+  const key=cell.x+','+cell.y;
+  const mode=(document.querySelector('input[name=blPaint]:checked')||{}).value||'walk';
+  let obs=window._bl.obstacles||[], hs=window._bl.heights||[];
+  obs=obs.filter(s=>s!==key); hs=hs.filter(s=>s.split(',')[0]+','+s.split(',')[1]!==key);
+  if(mode==='obstacle')obs.push(key);
+  else if(mode==='high')hs.push(key+',1');
+  window._bl.obstacles=obs;window._bl.heights=hs;
+  blRender();
+}
+function blInitCanvas(){
+  const wrap=document.getElementById('blCanvasWrap');
+  const c=document.getElementById('blCanvas');
+  let painting=false;
+  c.addEventListener('pointerdown',e=>{painting=true;const r=c.getBoundingClientRect();blPaintAt(e.clientX-r.left,e.clientY-r.top);});
+  c.addEventListener('pointermove',e=>{if(painting){const r=c.getBoundingClientRect();blPaintAt(e.clientX-r.left,e.clientY-r.top);}});
+  c.addEventListener('pointerup',()=>painting=false);
+  c.addEventListener('pointerleave',()=>painting=false);
+  // 单位拖动
+  const u=document.getElementById('blUnit');
+  u.addEventListener('pointerdown',e=>{
+    e.preventDefault();e.stopPropagation();
+    const sx=e.clientX,sy=e.clientY;
+    const sp={x:parseFloat(u.style.left)||0,y:parseFloat(u.style.top)||0};
+    const mv=ev=>{u.style.left=(sp.x+ev.clientX-sx)+'px';u.style.top=(sp.y+ev.clientY-sy)+'px';};
+    const up=ev=>{
+      document.removeEventListener('pointermove',mv);document.removeEventListener('pointerup',up);
+      if(!window._bl)return;
+      const r=wrap.getBoundingClientRect();
+      const cell=blXYToCell(ev.clientX-r.left,ev.clientY-r.top);
+      if(cell){window._bl.deployment=window._bl.deployment||{};window._bl.deployment.player=[cell.x,cell.y];blRender();}
+    };
+    document.addEventListener('pointermove',mv);document.addEventListener('pointerup',up);
+    try{u.setPointerCapture(e.pointerId);}catch(_){}
+  });
+}
+blInitCanvas();
+async function blSave(){
+  if(!window._bl||!window._blSel){show('blStat','先选或新建布局',false);return;}
+  const d=window._bl;
+  const payload={id:window._blSel,data:{name:d.name||window._blSel,view_mode:d.view_mode,width:d.width,height:d.height,obstacles:d.obstacles||[],heights:d.heights||[],deployment:d.deployment||{}}};
+  const r=await A('POST','/api/battle_layout/save',payload);
+  show('blStat',(r&&r.msg)?r.msg:(r&&r.ok?'已保存':'失败'),!!(r&&r.ok));
+  if(r&&r.ok)blLoadList();
+}
+async function blDelete(){
+  if(!window._blSel)return;
+  if(!confirm('删除布局「'+window._blSel+'」？（已备份到回收站）'))return;
+  const r=await A('POST','/api/battle_layout/delete',{id:window._blSel});
+  show('blStat',(r&&r.msg)?r.msg:'已删除',!!(r&&r.ok));
+  if(r&&r.ok){window._bl=null;blRender();blLoadList();}
+}
+async function blBgUpload(){
+  if(!window._blSel){show('blStat','先选或新建布局',false);return;}
+  const inp=document.getElementById('blBgFile');
+  if(!inp.files||!inp.files[0]){show('blStat','请先选一张图片',false);return;}
+  const fr=new FileReader();
+  fr.onload=async()=>{
+    const b64=fr.result.split(',')[1];
+    const r=await A('POST','/api/battle_bg/upload',{id:window._blSel,data:b64,filename:inp.files[0].name});
+    show('blStat',(r&&r.msg)?r.msg:(r&&r.ok?'已上传':'失败'),!!(r&&r.ok));
+    if(r&&r.ok){const d=await A('GET','/api/battle_layout?id='+encodeURIComponent(window._blSel));window._bl=d;blLoadBg();}
+  };
+  fr.readAsDataURL(inp.files[0]);
+}
+async function blBgClear(){
+  if(!window._blSel)return;
+  const r=await A('POST','/api/battle_bg/clear',{id:window._blSel});
+  show('blStat',(r&&r.msg)?r.msg:'已清除',!!(r&&r.ok));
+  if(r&&r.ok){window._bl.background='';blLoadBg();}
 }
 
 // ---------- LOG ----------
