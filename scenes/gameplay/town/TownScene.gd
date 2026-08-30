@@ -20,10 +20,10 @@ const SCENE_BG_PATH := "res://assets/scenes/town_main.png"
 # 玩家立绘（demo 硬编码；后续从 PlayerState/存档读）
 const PLAYER_SPRITE_PATH := "res://assets/characters/player.png"
 # 玩家动态立绘帧序列（31 帧 matte idle 循环动画）；非空时主角世界体改用 AnimatedSprite2D 播放
-# 白背景视频重抠版（闭运算填细孔，半透明=0）：matte_clean/matte_clean_idle.tres
-const PLAYER_FRAMES_PATH := "res://assets/characters/matte_clean/matte_clean_idle.tres"
-# 玩家动态立绘首帧 PNG（用于取真实尺寸做缩放；matte 序列固定 720×1280）
-const PLAYER_FRAME_TEX := "res://assets/characters/matte_clean/matte_00001.png"
+# 白背景视频重抠 + 高质量缩到 175 高（发丝抗锯齿专用版）：matte_175/matte_175_idle.tres
+const PLAYER_FRAMES_PATH := "res://assets/characters/matte_175/matte_175_idle.tres"
+# 玩家动态立绘首帧 PNG（用于取真实尺寸做缩放；matte_175 序列固定 98×175）
+const PLAYER_FRAME_TEX := "res://assets/characters/matte_175/matte_00001.png"
 
 const _MOVE_ACTIONS := {
 	"move_up": [KEY_W, KEY_UP],

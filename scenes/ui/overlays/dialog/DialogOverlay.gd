@@ -76,7 +76,7 @@ func _init_static() -> void:
 			# 按 LeftBust 显示区高度缩放铺满（脚底对齐底部）
 			var tex0: Texture2D = frames.get_frame_texture("idle", 0)
 			if tex0 == null:
-				tex0 = load("res://assets/characters/matte_clean/matte_00001.png") as Texture2D
+				tex0 = load("res://assets/characters/matte_175/matte_00001.png") as Texture2D
 			if tex0 == null:
 				anim.queue_free()
 			else:
