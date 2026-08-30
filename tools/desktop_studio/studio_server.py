@@ -11,6 +11,7 @@
 """
 
 import os
+import sys
 import json
 import webbrowser
 import datetime
@@ -95,6 +96,9 @@ class Handler(BaseHTTPRequestHandler):
             return _send_json(self, core.load_settings())
         if path == "/api/project_root":
             return _send_json(self, {"root": core.discover_project_root()})
+        if path == "/api/tool_version":
+            # 用 exe 文件修改时间 + md5 前8位作为"构建版本"，帮助用户分辨是否最新版
+            return _send_json(self, core.tool_version())
         # ---- 登录界面修改插件 ----
         if path == "/api/login/bg":
             return _send_json(self, core.login_bg_info())
@@ -139,6 +143,8 @@ class Handler(BaseHTTPRequestHandler):
             return _send_json(self, core.login_bg_layout())
         if path == "/api/loading/layout":
             return _send_json(self, core.loading_layout_get())
+        if path == "/api/main_menu/layout":
+            return _send_json(self, core.main_menu_layout_get())
         if path == "/api/npc":
             return _send_json(self, core.npc_list())
         if path == "/api/dialog":
@@ -171,6 +177,16 @@ class Handler(BaseHTTPRequestHandler):
                     s[k] = body[k]
             core.save_settings(s)
             return _send_json(self, {"ok": True, "settings": s})
+        if path == "/api/project_root/set":
+            ok, m = core.set_project_root(body.get("root", ""))
+            return _send_json(self, {"ok": ok, "msg": m,
+                                     "root": core.discover_project_root()})
+        if path == "/api/project_root/check":
+            # 仅校验某路径是否为有效工程，不持久化
+            root = (body.get("root", "") or "").strip()
+            ok = bool(root) and core._has_project_marker(root)
+            return _send_json(self, {"ok": ok,
+                                     "msg": "有效工程" if ok else "该目录不是有效的武侠游戏工程"})
         if path == "/api/npc/rename":
             ok, m = core.npc_rename(body.get("old_id", ""), body.get("id", ""), body)
             return _send_json(self, {"ok": ok, "msg": m})
@@ -261,6 +277,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/loading/layout":
             ok, m = core.loading_layout_update(body if isinstance(body, dict) else {})
             return _send_json(self, {"ok": ok, "msg": m})
+        if path == "/api/main_menu/layout":
+            ok, m = core.main_menu_layout_update(body if isinstance(body, dict) else {})
+            return _send_json(self, {"ok": ok, "msg": m})
         if path == "/api/login/btn_bg_clear":
             ok, m = core.login_btn_bg_clear(body.get("btn_id", ""))
             return _send_json(self, {"ok": ok, "msg": m})
@@ -301,6 +320,16 @@ class Handler(BaseHTTPRequestHandler):
 
 def main():
     core.auto_cleanup()
+    s = core.load_settings()
+    # 支持 --root=路径 / --root 路径：启动即指定工程根目录并持久化，便于跨电脑/换盘使用
+    for i, a in enumerate(sys.argv[1:]):
+        if a.startswith("--root"):
+            val = a.split("=", 1)[1] if "=" in a else (sys.argv[i + 2] if i + 2 < len(sys.argv) else "")
+            if val:
+                ok, m = core.set_project_root(val)
+                if not ok:
+                    print("[警告] --root 指定目录无效：%s" % m)
+            break
     s = core.load_settings()
     port = int(s.get("port", 8765))
     server = ThreadingHTTPServer(("127.0.0.1", port), Handler)

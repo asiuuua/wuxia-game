@@ -1219,6 +1219,81 @@ def loading_layout_update(d):
     return True, "已保存预加载界面布局（游戏内下次启动生效）"
 
 
+# ============================ 主菜单(登录)界面布局（自由拖拽可视化编辑） ============================
+def _main_menu_layout_path():
+    return os.path.join(discover_project_root(), "data", "configs", "ui", "main_menu_layout.json")
+
+
+# 三个可拖拽块（与游戏 MainMenu._apply_layout 的 keys 对应）。
+# 坐标统一用「视口归一化 0~1」：x/y 为块左上角位置；w/h 为占视口比例（仅用于预览框尺寸，
+# 游戏侧 MenuContainer 用 anchor 四值定位，BottomLeft/BottomRight 用 anchor+offset）。
+# separation 仅 MenuContainer 用（按钮间距，像素）。
+MAIN_MENU_ELEMS = ["menu_container", "bottom_left", "bottom_right"]
+
+_MAIN_MENU_LAYOUT_DEFAULT = {
+    "elements": {
+        # MenuContainer：6 个主菜单按钮的纵向容器。anchor 四值定位（与 .tscn 默认一致）
+        "menu_container": {"anchor_left": 0.12, "anchor_top": 0.30, "anchor_right": 0.46,
+                           "anchor_bottom": 0.86, "offset_left": 0.0, "offset_top": 0.0,
+                           "offset_right": 0.0, "offset_bottom": 0.0, "separation": 14},
+        # 左下角：版本号 / 制作组文字
+        "bottom_left": {"anchor_left": 0.0, "anchor_top": 1.0, "anchor_right": 0.0,
+                        "anchor_bottom": 1.0, "offset_left": 24.0, "offset_top": -56.0,
+                        "offset_right": 360.0, "offset_bottom": -32.0},
+        # 右下角：设置 / 音量 / 语言 三个按钮
+        "bottom_right": {"anchor_left": 1.0, "anchor_top": 1.0, "anchor_right": 1.0,
+                         "anchor_bottom": 1.0, "offset_left": -360.0, "offset_top": -68.0,
+                         "offset_right": -80.0, "offset_bottom": -32.0},
+    }
+}
+
+
+def main_menu_layout_get():
+    """读取当前主菜单布局（与默认合并，缺字段补默认）。"""
+    p = _main_menu_layout_path()
+    data = {"elements": {k: dict(v) for k, v in _MAIN_MENU_LAYOUT_DEFAULT["elements"].items()}}
+    if os.path.exists(p):
+        try:
+            with open(p, "r", encoding="utf-8") as f:
+                parsed = json.load(f)
+            if isinstance(parsed, dict) and isinstance(parsed.get("elements"), dict):
+                for k in MAIN_MENU_ELEMS:
+                    if k in parsed["elements"]:
+                        data["elements"][k].update(parsed["elements"][k])
+        except Exception:
+            pass
+    return data
+
+
+def main_menu_layout_update(d):
+    """写入主菜单布局（自动备份旧文件）。d 形如 {"elements": {...}}。"""
+    p = _main_menu_layout_path()
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+    _backup(p)
+    data = {"elements": {}}
+    for k in MAIN_MENU_ELEMS:
+        spec = dict(_MAIN_MENU_LAYOUT_DEFAULT["elements"].get(k, {}))
+        incoming = (d.get("elements", {}) or {}).get(k, {})
+        if isinstance(incoming, dict):
+            spec.update(incoming)
+        # anchor 裁剪到 0~1；offset 不限（像素，可负）；separation 非负
+        for ck in ("anchor_left", "anchor_top", "anchor_right", "anchor_bottom"):
+            if ck in spec:
+                spec[ck] = max(0.0, min(1.0, float(spec[ck])))
+        for ck in ("offset_left", "offset_top", "offset_right", "offset_bottom"):
+            if ck in spec:
+                spec[ck] = float(spec[ck])
+        if "separation" in spec:
+            spec["separation"] = max(0, int(spec["separation"]))
+        data["elements"][k] = spec
+    data["_doc"] = "主菜单(登录)界面元素布局（工作室「登录界面 → 主菜单布局」自由拖拽编辑写入）。" \
+                   "menu_container 用 anchor 四值 + offset 定位，separation 为按钮间距(像素)；“bottom_*” 用 anchor + offset 定位。坐标为视口归一化 0~1。"
+    with open(p, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    log_event("main_menu_layout", p, "更新主菜单布局")
+    return True, "已保存主菜单布局（游戏内下次启动生效）"
+
+
 def _purge_import_cache_for(import_fp):
     """读取 .import 的 dest_files，删除 .godot/imported/ 下对应的缓存纹理与 md5。"""
     try:

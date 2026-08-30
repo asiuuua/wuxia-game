@@ -290,6 +290,28 @@
         <span class="hint" style="margin:0">图片内容与扩展名不符时（如 JPEG 存成 .png），Godot 会导入失败、按钮背景静默消失。点此自动按真实格式改名并更新映射，不丢图。</span></div>
       <div id="loginBtnBgList"></div>
       <div id="btnBgFixStat" class="status"></div>
+
+      <h3>🧭 主菜单布局（自由拖拽）</h3>
+      <div class="hint">零代码摆放主菜单三大块：菜单按钮区（6 项）、左下角版本文字、右下角按钮栏。在下面 1280×720 模拟视口里直接拖动每块到想要的位置/大小，点「保存布局」即写入游戏（下次进主菜单生效）。坐标为窗口比例归一化，任意屏幕自动适配。</div>
+      <div id="mmCanvasWrap" style="position:relative;border:1px solid #444;border-radius:8px;overflow:hidden;background:#0c0e16;width:100%;max-width:720px;aspect-ratio:16/9">
+        <img id="mmBg" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.5" src="">
+        <div class="mm-el" data-el="menu_container" style="position:absolute;cursor:move;background:rgba(230,179,90,0.18);border:1px solid #e6b35a;border-radius:6px;display:flex;flex-direction:column;justify-content:center;gap:3px;padding:6px 8px;box-sizing:border-box">
+          <span style="color:#e6b35a;font:12px sans-serif;text-align:center">菜单区</span>
+          <span style="color:#ccc;font:10px sans-serif;text-align:center">6 个按钮</span>
+        </div>
+        <div class="mm-el" data-el="bottom_left" style="position:absolute;cursor:move;background:rgba(120,160,220,0.18);border:1px solid #78a0dc;border-radius:6px;padding:6px 8px;box-sizing:border-box;color:#cdd6ee;font:11px sans-serif;white-space:nowrap">v0.5.0 · 制作组</div>
+        <div class="mm-el" data-el="bottom_right" style="position:absolute;cursor:move;background:rgba(120,220,160,0.18);border:1px solid #78dca0;border-radius:6px;padding:6px 8px;box-sizing:border-box;color:#cdeede;font:11px sans-serif;white-space:nowrap">设置 · 音量 · 语言</div>
+      </div>
+      <div class="hint">拖动说明：每块都可拖动改变位置；选中「菜单区」后还可用下方滑块调按钮间距。调好位置后记得点「保存布局」。</div>
+      <div class="row" style="align-items:center;gap:10px;margin-top:6px;display:none" id="mmSepRow">
+        <label style="white-space:nowrap">菜单按钮间距 <span id="mmSepVal">14</span>px</label>
+        <input id="mmSep" type="range" min="4" max="40" value="14" style="flex:1;max-width:320px">
+      </div>
+      <div class="btns" style="margin-top:10px">
+        <button class="act" onclick="mmSave()">保存布局</button>
+        <button class="act sec" onclick="mmReset()">恢复默认</button>
+        <span id="mmStat" class="status"></span>
+      </div>
     </div>
   </section>
 
@@ -330,10 +352,19 @@
   <!-- SETTINGS -->
   <section class="tab" id="tab-settings">
     <div class="editor" style="max-width:560px">
-      <div class="hint">工程路径指向你的武侠游戏根目录；端口是本地工具用的（一般不用改）；保留天数=回收站项目存活天数。</div>
-      <div class="row"><label>当前识别到的工程</label><input id="s_detected" readonly value="识别中…" style="color:#888"></div>
-      <div class="row"><label>工程根目录</label><input id="s_root" value="D:/武侠游戏" placeholder="例如 D:/武侠游戏"></div>
-      <div class="row"><label>端口</label><input id="s_port" type="number" value="8765"></div>
+      <div class="hint">工程路径指向你的武侠游戏根目录（含 project.godot 的文件夹）。换电脑或挪盘后，点「浏览选择」或手动填入，再「应用并立即生效」即可，<b>无需重新打包</b>。</div>
+      <div class="row"><label>当前生效的工程</label><input id="s_detected" readonly value="识别中…" style="color:#888"></div>
+      <div class="row">
+        <label>工程根目录</label>
+        <input id="s_root" value="D:/武侠游戏" placeholder="例如 D:/武侠游戏 或 E:/我的游戏">
+      </div>
+      <div class="btns">
+        <button class="act sec" onclick="pickRoot()">浏览选择…</button>
+        <button class="act sec" onclick="checkRoot()">校验路径</button>
+        <button class="act" onclick="applyRoot()">应用并立即生效</button>
+      </div>
+      <div class="status" id="rootStat"></div>
+      <div class="row" style="margin-top:14px"><label>端口</label><input id="s_port" type="number" value="8765"></div>
       <div class="row"><label>保留天数</label><input id="s_days" type="number" value="30"></div>
       <div class="row"><label>保险模式</label>
         <select id="s_safe"><option value="true">开（删除进回收站）</option><option value="false">关（直接删除）</option></select>
@@ -353,7 +384,11 @@
 <script>
 const A = (m,p,b)=>fetch(p,{method:m,headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined}).then(r=>r.json());
 function show(id,msg,ok){const e=document.getElementById(id);e.textContent=msg;e.className='status '+(ok?'ok':'bad');}
-async function stat(){const s=await A('GET','/api/settings');document.getElementById('hstat').textContent='工程：'+s.project_root+' ｜ 保险模式：'+(s.safe_mode?'开':'关')+' ｜ 回收站保留 '+s.retention_days+' 天';}
+async function stat(){
+  const [s,v]=await Promise.all([A('GET','/api/settings'), A('GET','/api/tool_version')]);
+  const ver='工具版本：'+(v.build_time||'?')+' · '+v.md5;
+  document.getElementById('hstat').textContent='工程：'+s.project_root+' ｜ 保险模式：'+(s.safe_mode?'开':'关')+' ｜ 回收站保留 '+s.retention_days+' 天 ｜ '+ver;
+}
 
 window._npcCache=[]; window._prevId=''; window._loaded=null; window._lastRename=null;
 
@@ -370,6 +405,7 @@ document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{
   if(b.dataset.tab==='settings')setLoad();
   if(b.dataset.tab==='log')logLoad();
   if(b.dataset.tab==='login')loginLoad();
+  if(b.dataset.tab==='login')mmLoad();
   if(b.dataset.tab==='loading')loadingLoad();
 });
 
@@ -691,6 +727,35 @@ async function saveSettings(){
   const s={project_root:document.getElementById('s_root').value.trim(),port:parseInt(document.getElementById('s_port').value)||8765,
     retention_days:parseInt(document.getElementById('s_days').value)||30,safe_mode:document.getElementById('s_safe').value==='true'};
   const r=await A('POST','/api/settings',s);show('setStat',r.ok?'已保存（路径等下次启动生效）':'保存失败',r.ok);if(r.ok)stat();
+}
+// 浏览器文件夹选择（Chromium/Edge 支持 showDirectoryPicker）
+async function pickRoot(){
+  try{
+    const h=window.showDirectoryPicker?await window.showDirectoryPicker():null;
+    if(h){const p=h.name?(''+h.name):''; /* 仅得目录名，需拼接_handle，改用手动路径更可靠 */}
+  }catch(e){ /* 用户取消或无权限，忽略 */ }
+  const v=prompt('请输入工程根目录路径（含 project.godot 的文件夹）：\n例如 D:/武侠游戏 或 E:/我的游戏','');
+  if(v){document.getElementById('s_root').value=v.trim();checkRoot();}
+}
+async function checkRoot(){
+  const v=document.getElementById('s_root').value.trim();
+  const r=await A('POST','/api/project_root/check',{root:v});
+  show('rootStat',r.ok?('✓ '+v+' 是有效工程'):('✗ '+r.msg),r.ok);
+  return r.ok;
+}
+async function applyRoot(){
+  const v=document.getElementById('s_root').value.trim();
+  const chk=await checkRoot();
+  if(!chk)return;
+  const r=await A('POST','/api/project_root/set',{root:v});
+  if(r.ok){
+    show('rootStat','✓ 已切换工程到 '+r.root+'，立即生效（无需重启）',true);
+    document.getElementById('s_detected').value=r.root;
+    stat();
+    show('setStat','工程目录已变更并立即生效',true);
+  }else{
+    show('rootStat','✗ 切换失败：'+(r.msg||'未知错误'),false);
+  }
 }
 
 // ---------- LOGIN UI ----------
@@ -1018,6 +1083,113 @@ async function loadingReset(){
   show('loadingStat',(r&&r.msg)?r.msg:'已恢复默认',!!(r&&r.ok));
 }
 loadingInitDrag();
+
+// ---------- 主菜单(登录)界面布局（自由拖拽可视化编辑） ----------
+const MM_ELS=['menu_container','bottom_left','bottom_right'];
+const MM_DEF={menu_container:{anchor_left:0.12,anchor_top:0.30,anchor_right:0.46,anchor_bottom:0.86,offset_left:0,offset_top:0,offset_right:0,offset_bottom:0,separation:14},
+              bottom_left:{anchor_left:0,anchor_top:1,anchor_right:0,anchor_bottom:1,offset_left:24,offset_top:-56,offset_right:360,offset_bottom:-32},
+              bottom_right:{anchor_left:1,anchor_top:1,anchor_right:1,anchor_bottom:1,offset_left:-360,offset_top:-68,offset_right:-80,offset_bottom:-32}};
+window._mmLayout=null;
+async function mmLoad(){
+  try{
+    const d=await A('GET','/api/main_menu/layout');
+    const els=(d&&d.elements)||{};
+    const L={};MM_ELS.forEach(k=>{L[k]=Object.assign({},MM_DEF[k],els[k]||{});});
+    window._mmLayout=L;
+  }catch(e){window._mmLayout=JSON.parse(JSON.stringify(MM_DEF));}
+  document.getElementById('mmBg').src='/api/login/bg/file?t='+Date.now();
+  mmRender();
+  mmInitDrag();
+}
+// 把归一化 anchor+offset 转成画布上的百分比矩形。
+// 画布宽 Wc、高 Hc；某块左上角 px = anchor_left*Wc + offset_left；宽 = (anchor_right-anchor_left)*Wc + (offset_right-offset_left)
+function mmRectCss(L,k,Wc,Hc){
+  const s=L[k]||{};
+  const left=s.anchor_left*Wc+s.offset_left;
+  const top=s.anchor_top*Hc+s.offset_top;
+  const width=(s.anchor_right-s.anchor_left)*Wc+(s.offset_right-s.offset_left);
+  const height=(s.anchor_bottom-s.anchor_top)*Hc+(s.offset_bottom-s.offset_top);
+  return {left,top,width,height};
+}
+function mmRender(){
+  const L=window._mmLayout;if(!L)return;
+  const wrap=document.getElementById('mmCanvasWrap');
+  const Wc=wrap.clientWidth||720, Hc=wrap.clientHeight||405;
+  wrap.querySelectorAll('.mm-el').forEach(el=>{
+    const k=el.dataset.el;
+    const r=mmRectCss(L,k,Wc,Hc);
+    el.style.left=Math.max(0,r.left)+'px';
+    el.style.top=Math.max(0,r.top)+'px';
+    el.style.width=Math.max(20,r.width)+'px';
+    el.style.height=Math.max(16,r.height)+'px';
+    if(k==='menu_container'){
+      document.getElementById('mmSepRow').style.display='';
+      const sl=document.getElementById('mmSep');sl.value=L[k].separation||14;
+      document.getElementById('mmSepVal').textContent=L[k].separation||14;
+    }
+  });
+}
+function mmInitDrag(){
+  const wrap=document.getElementById('mmCanvasWrap');
+  wrap.querySelectorAll('.mm-el').forEach(el=>{
+    el.addEventListener('pointerdown',e=>{
+      e.preventDefault();
+      const k=el.dataset.el,r=wrap.getBoundingClientRect();
+      if(!r.width||!r.height)return;
+      const Wc=r.width,Hc=r.height;
+      const s=window._mmLayout[k]=window._mmLayout[k]||{};
+      const startLeft=parseFloat(el.style.left)||0,startTop=parseFloat(el.style.top)||0;
+      const sx=e.clientX,sy=e.clientY;
+      const move=ev=>{
+        const dx=ev.clientX-sx, dy=ev.clientY-sy;
+        // 反向解算：新左上 px → anchor/offset
+        const newLeft=startLeft+dx, newTop=startTop+dy;
+        const width=parseFloat(el.style.width)||80, height=parseFloat(el.style.height)||30;
+        s.anchor_left=Math.max(0,Math.min(1,newLeft/Wc));
+        s.anchor_top=Math.max(0,Math.min(1,newTop/Hc));
+        s.offset_left=Math.max(-Wc,newLeft)-s.anchor_left*Wc;
+        s.offset_top=Math.max(-Hc,newTop)-s.anchor_top*Hc;
+        s.anchor_right=Math.max(s.anchor_left,Math.min(1,(newLeft+width)/Wc));
+        s.anchor_bottom=Math.max(s.anchor_top,Math.min(1,(newTop+height)/Hc));
+        s.offset_right=(newLeft+width)-s.anchor_right*Wc;
+        s.offset_bottom=(newTop+height)-s.anchor_bottom*Hc;
+        el.style.left=newLeft+'px';el.style.top=newTop+'px';
+        show('mmStat','已拖动【'+k+'】，记得点「保存布局」',true);
+      };
+      const up=()=>{el.removeEventListener('pointermove',move);el.removeEventListener('pointerup',up);el.removeEventListener('pointercancel',up);};
+      el.addEventListener('pointermove',move);el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up);
+      try{el.setPointerCapture(e.pointerId);}catch(_){}
+    });
+  });
+}
+document.getElementById('mmSep').addEventListener('input',e=>{
+  const v=parseInt(e.target.value,10)||14;
+  document.getElementById('mmSepVal').textContent=v;
+  const s=window._mmLayout.menu_container=window._mmLayout.menu_container||{};
+  s.separation=v;
+});
+async function mmSave(){
+  const L=window._mmLayout;if(!L){show('mmStat','布局尚未加载',false);return;}
+  const elements={};
+  MM_ELS.forEach(k=>{
+    const s=L[k]||{},d=MM_DEF[k];
+    const o={};
+    ['anchor_left','anchor_top','anchor_right','anchor_bottom','offset_left','offset_top','offset_right','offset_bottom'].forEach(c=>{
+      o[c]=s[c]!==undefined?s[c]:d[c];
+    });
+    if(k==='menu_container')o.separation=s.separation!==undefined?s.separation:d.separation;
+    elements[k]=o;
+  });
+  const r=await A('POST','/api/main_menu/layout',{elements});
+  show('mmStat',(r&&r.msg)?r.msg:(r&&r.ok?'已保存':'失败'),!!(r&&r.ok));
+}
+async function mmReset(){
+  if(!confirm('把主菜单三大块恢复成默认位置？'))return;
+  window._mmLayout=JSON.parse(JSON.stringify(MM_DEF));
+  mmRender();
+  const r=await A('POST','/api/main_menu/layout',{elements:JSON.parse(JSON.stringify(MM_DEF))});
+  show('mmStat',(r&&r.msg)?r.msg:'已恢复默认',!!(r&&r.ok));
+}
 
 // ---------- LOG ----------
 async function logLoad(){const l=await A('GET','/api/log');const box=document.getElementById('logBox');

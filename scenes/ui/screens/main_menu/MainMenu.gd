@@ -37,6 +37,10 @@ const BG_IMAGE_SCRIM := 0.55
 # 登录界面背景音乐（数据驱动：把 MP3 放到该路径即生效，缺失则静默不播）
 const LOGIN_BGM := "res://resources/audio/bgm/login_bgm.mp3"
 
+# 主菜单布局（工作室工具「登录界面 → 主菜单布局」自由拖拽写入：data/configs/ui/main_menu_layout.json）
+# 缺文件/缺字段则沿用 .tscn 默认锚点（向后兼容）。
+const MAIN_MENU_LAYOUT_PATH := "res://data/configs/ui/main_menu_layout.json"
+
 # B 路线（2026-08-29）：静态容器已迁入 MainMenu.tscn（美术可在编辑器改锚点/间距/位置），脚本只引用 + 填动态内容
 # B 路线（2026-08-30）：底部栏三个按钮（设置/音量/语言）布局与轻样式一并迁入 .tscn，脚本只连线与设文案
 @onready var _menu_container: VBoxContainer = $MenuContainer
@@ -55,6 +59,7 @@ func _init() -> void:
 
 # === 构建内容（基类 _ready 调用：铺满 + 安全区已就绪，本函数只堆内容） ===
 func _build_content() -> void:
+	_apply_layout()   # 应用工作室工具写入的主菜单布局（拖拽块位置/间距），缺则沿用 .tscn 默认
 	_build_background()
 	_build_menu()
 	_build_bottom_bar()
@@ -65,6 +70,54 @@ func _build_content() -> void:
 		AudioManager.play_bgm(LOGIN_BGM)
 	else:
 		GameLogger.warn("MainMenu", "登录 BGM 缺失: %s" % LOGIN_BGM)
+
+# === 主菜单布局（数据驱动：工作室工具自由拖拽写入） ===
+# 读取 data/configs/ui/main_menu_layout.json，把 menu_container / bottom_left / bottom_right 的
+# anchor 四值 + offset 套到对应节点；menu_container 还套 separation（按钮间距）。
+# 文件/字段缺失则该块沿用 .tscn 默认（向后兼容）。坐标为视口归一化 0~1。
+func _apply_layout() -> void:
+	if not FileAccess.file_exists(MAIN_MENU_LAYOUT_PATH):
+		return
+	var f := FileAccess.open(MAIN_MENU_LAYOUT_PATH, FileAccess.READ)
+	if f == null:
+		return
+	var txt := f.get_as_text()
+	f.close()
+	var parsed: Variant = JSON.parse_string(txt)
+	if typeof(parsed) != TYPE_DICTIONARY or not parsed.has("elements"):
+		return
+	var elements: Dictionary = parsed["elements"]
+
+	_apply_block(_menu_container, elements.get("menu_container", {}))
+	_apply_block(_bottom_left, elements.get("bottom_left", {}))
+	_apply_block(_bottom_right, elements.get("bottom_right", {}))
+
+	if elements.has("menu_container") and typeof(elements["menu_container"]) == TYPE_DICTIONARY:
+		var mc: Dictionary = elements["menu_container"]
+		if mc.has("separation"):
+			_menu_container.add_theme_constant_override("separation", int(mc["separation"]))
+
+# 把单个块的 anchor 四值 + offset 套到节点（缺字段不覆盖 .tscn 默认）
+func _apply_block(node: Control, spec: Dictionary) -> void:
+	if node == null or typeof(spec) != TYPE_DICTIONARY:
+		return
+	if spec.has("anchor_left"):
+		node.anchor_left = float(spec["anchor_left"])
+	if spec.has("anchor_top"):
+		node.anchor_top = float(spec["anchor_top"])
+	if spec.has("anchor_right"):
+		node.anchor_right = float(spec["anchor_right"])
+	if spec.has("anchor_bottom"):
+		node.anchor_bottom = float(spec["anchor_bottom"])
+	if spec.has("offset_left"):
+		node.offset_left = float(spec["offset_left"])
+	if spec.has("offset_top"):
+		node.offset_top = float(spec["offset_top"])
+	if spec.has("offset_right"):
+		node.offset_right = float(spec["offset_right"])
+	if spec.has("offset_bottom"):
+		node.offset_bottom = float(spec["offset_bottom"])
+
 
 # === 背景（数据驱动：有图片用图片，无图片回退到程序化水墨占位） ===
 # 背景是「全屏铺底」，必须加在 self 上并压到最底层（ContentRoot 之下），
