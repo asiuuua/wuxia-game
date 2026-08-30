@@ -29,7 +29,7 @@ png = os.path.join(T, "x.png")
 with open(png, "wb") as f:
     f.write(b"\x89PNG\r\n\x1a\n")  # fake but valid-enough bytes for copy
 ok, m = core.login_bg_replace(png)
-assert ok and os.path.exists(os.path.join(T, "assets/ui/main_menu_bg.jpg")), m
+assert ok and os.path.exists(os.path.join(T, "assets/ui/main_menu_bg.png")), m
 print("[2] bg_replace OK ->", m)
 
 # 3) texts read

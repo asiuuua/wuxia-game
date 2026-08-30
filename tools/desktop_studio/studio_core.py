@@ -553,8 +553,58 @@ def cel_delete(npc_id):
 import re
 
 
+def _login_bg_base():
+    return os.path.join(discover_project_root(), "assets", "ui", "main_menu_bg")
+
+
+def _detect_image_ext(src_path):
+    # 读文件头判定真实图片格式（Godot 按扩展名选解码器，扩展名错配会导入出坏图）
+    try:
+        with open(src_path, "rb") as f:
+            head = f.read(8)
+    except Exception:
+        return "jpg"
+    if head[:8] == b"\x89PNG\r\n\x1a\n":
+        return "png"
+    if head[:3] == b"\xff\xd8\xff":
+        return "jpg"
+    return "jpg"  # 兜底：按 jpg 处理
+
+
+# 大背景图写死的资源路径所在文件，换扩展名时需同步更新
+_LOGIN_BG_REF_FILES = [
+    os.path.join(discover_project_root(), "scenes", "ui", "screens", "main_menu", "MainMenu.gd"),
+    os.path.join(discover_project_root(), "scenes", "ui", "screens", "save_load", "SaveLoadScreen.gd"),
+    os.path.join(discover_project_root(), "scenes", "ui", "screens", "loading", "LoadingScreen.gd"),
+    os.path.join(discover_project_root(), "scenes", "ui", "components", "ui_background", "UIBackground.gd"),
+]
+
+
+def _patch_login_bg_refs(ext):
+    # 把游戏里写死的 main_menu_bg.<old> 资源路径同步成新扩展名，避免指向不存在的文件
+    new = "res://assets/ui/main_menu_bg.%s" % ext
+    for fp in _LOGIN_BG_REF_FILES:
+        if not os.path.exists(fp):
+            continue
+        txt = open(fp, "r", encoding="utf-8").read()
+        if "main_menu_bg." not in txt:
+            continue
+        txt2 = re.sub(r"res://assets/ui/main_menu_bg\.(jpg|png)", new, txt)
+        txt2 = re.sub(r"main_menu_bg\.(jpg|png)（或改", "main_menu_bg.%s（或改" % ext, txt2)
+        txt2 = re.sub(r"把图命名为 main_menu_bg\.(jpg|png)", "把图命名为 main_menu_bg.%s" % ext, txt2)
+        if txt2 != txt:
+            _backup(fp)
+            open(fp, "w", encoding="utf-8").write(txt2)
+
+
 def _login_bg_path():
-    return os.path.join(discover_project_root(), "assets", "ui", "main_menu_bg.jpg")
+    # 返回当前实际存在的大背景图路径（优先 png，其次 jpg），供信息展示/校验使用
+    base = _login_bg_base()
+    for ext in ("png", "jpg"):
+        p = "%s.%s" % (base, ext)
+        if os.path.exists(p):
+            return p
+    return "%s.png" % base
 
 
 def _login_strings_path():
@@ -586,19 +636,32 @@ LOGIN_TEXT_KEYS = [
 def login_bg_info():
     p = _login_bg_path()
     if not os.path.exists(p):
-        return {"exists": False, "size": 0, "mtime": 0}
+        return {"exists": False, "size": 0, "mtime": 0, "ext": ""}
     st = os.stat(p)
-    return {"exists": True, "size": st.st_size, "mtime": st.st_mtime}
+    return {"exists": True, "size": st.st_size, "mtime": st.st_mtime,
+            "ext": os.path.splitext(p)[1].lstrip(".")}
 
 
 def login_bg_replace(src_path):
-    dst = _login_bg_path()
-    d = os.path.dirname(dst)
-    os.makedirs(d, exist_ok=True)
-    _backup(dst)
+    ext = _detect_image_ext(src_path)
+    base = _login_bg_base()
+    dst = "%s.%s" % (base, ext)
+    other = "%s.%s" % (base, "jpg" if ext == "png" else "png")
+    # 先备份当前已有的旧背景（任一扩展名），避免覆盖/换扩展名时丢图
+    for old in (dst, other):
+        if os.path.exists(old):
+            _backup(old)
+    # 删掉另一种扩展名的残留文件，否则 Godot 可能误导入旧格式
+    if os.path.exists(other):
+        try:
+            os.remove(other)
+        except OSError:
+            pass
+    os.makedirs(os.path.dirname(dst), exist_ok=True)
     shutil.copy2(src_path, dst)
-    log_event("login_bg", dst, "替换登录界面大背景图（影响主菜单/加载/读档三处共用图）")
-    return True, "已替换登录界面大背景图（主菜单/加载/读档界面共用此图，下次进游戏即生效）"
+    _patch_login_bg_refs(ext)
+    log_event("login_bg", dst, "替换登录界面大背景图（影响主菜单/加载/读档三处共用图），识别格式=%s" % ext)
+    return True, "已替换登录界面大背景图（%s，主菜单/加载/读档界面共用，下次进游戏即生效）" % ext
 
 
 def login_texts():
@@ -694,11 +757,11 @@ def login_btn_bg_set(btn_id, src_path):
     if "map" not in data:
         data["map"] = {}
     data["map"][btn_id] = "res://assets/ui/main_menu_btn/%s.png" % btn_id
-    data["_doc"] = "登录主菜单各按钮背景图映射。当前游戏代码未读取此表，需在 MainMenu.gd 加数行读取并应用到 MenuItem 才会在游戏内显示。"
+    data["_doc"] = "登录主菜单各按钮背景图映射。游戏代码已读取此表（MainMenu._load_btn_bg_map → MenuItem.set_background），上传图片后下次进主菜单即生效。"
     with open(cfg, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
     log_event("login_btn_bg", btn_id, "存储按钮背景图（待代码启用）")
-    return True, "已存储 %s 的按钮背景图（需一小段代码变更才会在游戏内显示）" % btn_id
+    return True, "已存储 %s 的按钮背景图（游戏代码已读取，下次进主菜单即生效）" % btn_id
 
 
 # === 登录背景布局（方案B：游戏 UIBackground 运行时读取此 JSON） ===
