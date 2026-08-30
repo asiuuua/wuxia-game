@@ -9,6 +9,8 @@
 extends BaseScreen
 
 const SaveCard = preload("res://scenes/ui/components/save_card/SaveCard.gd")
+# B 路线（2026-08-30）：存档卡片静态结构迁入 SaveCard.tscn，实例化走场景（原 _build 全删）
+const SaveCardScene = preload("res://scenes/ui/components/save_card/SaveCard.tscn")
 const UIBackground = preload("res://scenes/ui/components/ui_background/UIBackground.gd")
 # B 路线（2026-08-30）：命名弹窗的静态结构迁入 SaveNameDialog.tscn，脚本只连线（原 ~90 行代码搭 UI 全部删除）
 const SaveNameDialogScript = preload("res://scenes/ui/components/save_name_dialog/SaveNameDialog.gd")
@@ -128,7 +130,7 @@ func _rebuild_list() -> void:
 	_update_selection()
 
 func _add_card(info: Dictionary) -> void:
-	var card: SaveCard = SaveCard.new()
+	var card: SaveCard = SaveCardScene.instantiate()
 	card.card_focused.connect(_on_card_focused)
 	card.load_requested.connect(_on_load_requested)
 	card.delete_requested.connect(_on_delete_requested)

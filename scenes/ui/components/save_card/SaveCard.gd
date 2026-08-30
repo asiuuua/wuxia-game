@@ -1,7 +1,7 @@
 # scenes/ui/components/save_card/SaveCard.gd
-# 存档卡片组件（代码构建 Control，无 .tscn；对齐 MenuItem / MainMenu 惯例）
+# 存档卡片组件（静态结构迁入 SaveCard.tscn，脚本只做连线与动态逻辑；对齐 B 路线 .tscn 化）
 # 交互约定：鼠标悬停高亮金边；点击卡片体或 [读取] 触发读取；[删除] 触发删除；空槽 [新的旅程] 触发新游戏
-# 颜色集中引用 UIPalette，不硬编码。消费方用 const SaveCard = preload(...) 引用本类型
+# 颜色集中引用 UIPalette，不硬编码。消费方用 preload(SaveCard.tscn).instantiate() 实例化本类型
 
 @warning_ignore("shadowed_global_identifier")
 
@@ -30,31 +30,31 @@ var _is_empty: bool = true
 var _is_auto: bool = false
 var _mode: String = "load"   # "load" 读取模式 / "save" 保存模式（ESC 菜单「保存游戏」进入）
 
-var _bg: Panel = null
+# 动态高亮用的两套 StyleBox（静态底由 .tscn 提供，这里只管悬停态）
 var _normal_sb: StyleBoxFlat = null
 var _highlight_sb: StyleBoxFlat = null
-var _number_label: Label = null
-var _name_label: Label = null
-var _level_label: Label = null
-var _faction_label: Label = null
-var _playtime_label: Label = null
-var _savetime_label: Label = null
-var _scene_label: Label = null
-var _empty_label: Label = null
-var _load_btn: Button = null
-var _delete_btn: Button = null
-var _new_game_btn: Button = null
+
+@onready var _bg: Panel = $BG
+@onready var _number_label: Label = $Content/Info/NumberLabel
+@onready var _name_label: Label = $Content/Info/NameLabel
+@onready var _level_label: Label = $Content/Info/LevelLabel
+@onready var _faction_label: Label = $Content/Info/FactionLabel
+@onready var _playtime_label: Label = $Content/Info/PlaytimeLabel
+@onready var _savetime_label: Label = $Content/Info/SavetimeLabel
+@onready var _scene_label: Label = $Content/Info/SceneLabel
+@onready var _empty_label: Label = $Content/Info/EmptyLabel
+@onready var _load_btn: Button = $Content/Actions/LoadBtn
+@onready var _delete_btn: Button = $Content/Actions/DeleteBtn
+@onready var _new_game_btn: Button = $Content/Actions/NewGameBtn
 
 func _ready() -> void:
-	custom_minimum_size = Vector2(CARD_W, CARD_H)
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	_build()
-	if not mouse_entered.is_connected(_on_mouse_entered):
-		mouse_entered.connect(_on_mouse_entered)
-	if not gui_input.is_connected(_on_gui_input):
-		gui_input.connect(_on_gui_input)
+	_build_dynamic_styles()
+	_connect_signals()
+	_refresh_mode_visuals()
 
-func _build() -> void:
+# 悬停高亮态用代码生成的 StyleBox（金色描边 2px），静态底由 .tscn 提供
+func _build_dynamic_styles() -> void:
 	_normal_sb = StyleBoxFlat.new()
 	_normal_sb.bg_color = UIPalette.PANEL_DARK
 	_normal_sb.border_width_left = 1
@@ -73,111 +73,25 @@ func _build() -> void:
 	_highlight_sb.border_color = UIPalette.GOLD
 	_highlight_sb.set_content_margin_all(10)
 
-	_bg = Panel.new()
-	_bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_bg.add_theme_stylebox_override("panel", _normal_sb)
-	add_child(_bg)
 
-	var content: HBoxContainer = HBoxContainer.new()
-	content.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	content.add_theme_constant_override("separation", 14)
-	add_child(content)
+func _connect_signals() -> void:
+	if not mouse_entered.is_connected(_on_mouse_entered):
+		mouse_entered.connect(_on_mouse_entered)
+	if not gui_input.is_connected(_on_gui_input):
+		gui_input.connect(_on_gui_input)
+	if not _load_btn.pressed.is_connected(_on_primary_pressed):
+		_load_btn.pressed.connect(_on_primary_pressed)
+	if not _delete_btn.pressed.is_connected(_on_delete_pressed):
+		_delete_btn.pressed.connect(_on_delete_pressed)
+	if not _new_game_btn.pressed.is_connected(_on_new_game_pressed):
+		_new_game_btn.pressed.connect(_on_new_game_pressed)
 
-	# --- 缩略图占位（真实截图后改用 TextureRect + thumbnail_path） ---
-	var thumb: Panel = Panel.new()
-	thumb.custom_minimum_size = Vector2(THUMB_W, THUMB_H)
-	var thumb_sb := StyleBoxFlat.new()
-	thumb_sb.bg_color = UIPalette.BG_DARK
-	thumb_sb.border_width_left = 1
-	thumb_sb.border_width_top = 1
-	thumb_sb.border_width_right = 1
-	thumb_sb.border_width_bottom = 1
-	thumb_sb.border_color = UIPalette.GOLD_DARK
-	thumb.add_theme_stylebox_override("panel", thumb_sb)
-	var thumb_label: Label = Label.new()
-	thumb_label.text = tr("ui_save_thumb")
-	thumb_label.add_theme_font_size_override("font_size", UIPalette.FS_BODY)
-	thumb_label.add_theme_color_override("font_color", UIPalette.GOLD_DARK)
-	thumb_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	thumb_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	thumb_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	thumb.add_child(thumb_label)
-	content.add_child(thumb)
+func _on_delete_pressed() -> void:
+	delete_requested.emit(_slot)
 
-	# --- 信息区 ---
-	var info: VBoxContainer = VBoxContainer.new()
-	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	info.add_theme_constant_override("separation", 4)
-	content.add_child(info)
-
-	_number_label = Label.new()
-	_number_label.add_theme_font_size_override("font_size", UIPalette.FS_SMALL)
-	_number_label.add_theme_color_override("font_color", UIPalette.GOLD)
-	info.add_child(_number_label)
-
-	_name_label = Label.new()
-	_name_label.add_theme_font_size_override("font_size", UIPalette.FS_NAME)
-	_name_label.add_theme_color_override("font_color", UIPalette.TEXT_MAIN)
-	info.add_child(_name_label)
-
-	_level_label = Label.new()
-	_level_label.add_theme_font_size_override("font_size", UIPalette.FS_SMALL)
-	_level_label.add_theme_color_override("font_color", UIPalette.TEXT_SECONDARY)
-	info.add_child(_level_label)
-
-	_faction_label = Label.new()
-	_faction_label.add_theme_font_size_override("font_size", UIPalette.FS_SMALL)
-	_faction_label.add_theme_color_override("font_color", UIPalette.TEXT_SECONDARY)
-	info.add_child(_faction_label)
-
-	_playtime_label = Label.new()
-	_playtime_label.add_theme_font_size_override("font_size", UIPalette.FS_TINY)
-	_playtime_label.add_theme_color_override("font_color", UIPalette.TEXT_SECONDARY)
-	info.add_child(_playtime_label)
-
-	_savetime_label = Label.new()
-	_savetime_label.add_theme_font_size_override("font_size", UIPalette.FS_TINY)
-	_savetime_label.add_theme_color_override("font_color", UIPalette.TEXT_SECONDARY)
-	info.add_child(_savetime_label)
-
-	_scene_label = Label.new()
-	_scene_label.add_theme_font_size_override("font_size", UIPalette.FS_TINY)
-	_scene_label.add_theme_color_override("font_color", UIPalette.TEXT_SECONDARY)
-	info.add_child(_scene_label)
-
-	_empty_label = Label.new()
-	_empty_label.text = tr("ui_save_empty")
-	_empty_label.add_theme_font_size_override("font_size", UIPalette.FS_BODY)
-	_empty_label.add_theme_color_override("font_color", UIPalette.TEXT_SECONDARY)
-	_empty_label.visible = false
-	info.add_child(_empty_label)
-
-	# --- 操作区 ---
-	var actions: VBoxContainer = VBoxContainer.new()
-	actions.alignment = BoxContainer.ALIGNMENT_CENTER
-	actions.custom_minimum_size = Vector2(130, 0)
-	content.add_child(actions)
-
-	# 主操作按钮：读取/保存模式共用，文字与 emit 信号随 _mode 切换（见 _on_primary_pressed）
-	_load_btn = Button.new()
-	_load_btn.add_theme_color_override("font_color", UIPalette.TEXT_MAIN)
-	_load_btn.pressed.connect(_on_primary_pressed)
-	actions.add_child(_load_btn)
-
-	_delete_btn = Button.new()
-	_delete_btn.text = tr("ui_save_delete")
-	_delete_btn.add_theme_color_override("font_color", UIPalette.DANGER)
-	_delete_btn.pressed.connect(func(): delete_requested.emit(_slot))
-	actions.add_child(_delete_btn)
-
-	_new_game_btn = Button.new()
-	_new_game_btn.text = tr("ui_save_new")
-	_new_game_btn.add_theme_color_override("font_color", UIPalette.SUCCESS)
-	_new_game_btn.pressed.connect(func(): new_game_requested.emit(_slot))
-	_new_game_btn.visible = false
-	actions.add_child(_new_game_btn)
-
-	_refresh_mode_visuals()
+func _on_new_game_pressed() -> void:
+	new_game_requested.emit(_slot)
 
 ## info: SaveManager.list_saves() 返回的单个槽位摘要 dict
 func setup(info: Dictionary) -> void:
