@@ -36,18 +36,20 @@ const ACTION_LABELS := {
 # B 路线（2026-08-29）：静态壳（压暗底 Backdrop + 磨砂玻璃 Panel + Header + Body 内
 # CategoryList / PanelContainer / PanelVBox）已迁入 SettingsScreen.tscn，美术可在编辑器改框架
 # 外观/边距；脚本只保留动态内容（分类按钮 + 各分类面板滑块/下拉/开关/键位重绑）与交互逻辑。
+# B 路线（2026-08-30）：顶部栏三个静态节点（BackBtn / TitleLabel / HintLabel）一并迁入 .tscn。
 # B 路线：Header / Body 已迁入 Panel 内部（受磨砂玻璃面板框住），故路径需带 $Panel 前缀
 @onready var _backdrop: ColorRect = $Backdrop
 @onready var _panel: Panel = $Panel
-@onready var _header: HBoxContainer = $Panel/Header
 @onready var _category_list: VBoxContainer = $Panel/Body/CategoryList
 @onready var _panel_container: ScrollContainer = $Panel/Body/PanelContainer
 @onready var _panel_vbox: VBoxContainer = $Panel/Body/PanelContainer/PanelVBox
+# B 路线（2026-08-30）：顶部栏三个静态节点已迁入 SettingsScreen.tscn，美术可直接改样式/顺序
+@onready var _back_btn: Button = $Panel/Header/BackBtn
+@onready var _title_label: Label = $Panel/Header/TitleLabel
+@onready var _hint_label: Label = $Panel/Header/HintLabel
 
 var _current_category: String = "audio"
 var _category_buttons: Array = []      # 左侧分类按钮（Control）
-var _title_label: Label = null
-var _hint_label: Label = null
 
 # 键位重绑定临时态
 var _rebinding_action: String = ""
@@ -95,28 +97,12 @@ func _fit_panel() -> void:
 	_panel.custom_minimum_size = Vector2(w, h)
 	UICenterUtils.center_panel(_panel)   # 修复 Godot4.7.2 PRESET_CENTER 不居中
 
-# === 顶部栏（返回 + 标题 + 重绑提示），位于面板内部 ===
+# === 顶部栏（返回 + 标题 + 重绑提示）：静态节点在 SettingsScreen.tscn，这里只填文案与连线 ===
 func _build_header() -> void:
-	var back_btn: Button = Button.new()
-	back_btn.text = tr("back_btn")
-	_apply_glass_button_style(back_btn, UIPalette.TEXT_SECONDARY)
-	back_btn.pressed.connect(_go_back)
-	_header.add_child(back_btn)
-
-	var title: Label = Label.new()
-	title.text = tr("settings_title")
-	title.add_theme_font_size_override("font_size", UIPalette.FS_HEADER)
-	title.add_theme_color_override("font_color", UIPalette.GOLD)
-	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_header.add_child(title)
-	_title_label = title
-
-	_hint_label = Label.new()
+	_back_btn.text = tr("back_btn")
+	_back_btn.pressed.connect(_go_back)
+	_title_label.text = tr("settings_title")
 	_hint_label.text = ""
-	_hint_label.add_theme_color_override("font_color", UIPalette.GOLD)
-	_hint_label.add_theme_font_size_override("font_size", UIPalette.FS_SMALL)
-	_header.add_child(_hint_label)
 
 # === 主体布局：左分类 + 右面板（位于面板内部，header 之下撑满） ===
 # 静态结构（Body + CategoryList + PanelContainer + PanelVBox）已迁入 SettingsScreen.tscn，
