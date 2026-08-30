@@ -20,6 +20,8 @@ import shutil
 import datetime
 import threading
 import sys
+import io
+import base64
 
 MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -120,7 +122,118 @@ def _paths():
         "dlg_index": os.path.join(root, "data", "configs", "npcs", "dialogs", "_index.json"),
         "dlg_dir": os.path.join(root, "data", "configs", "npcs", "dialogs", "shards"),
         "cel": os.path.join(root, "data", "configs", "bond", "celebrations.json"),
+        "assets": os.path.join(root, "assets"),
     }
+
+
+# 半身立绘（动态可导入）资源根目录：assets/characters/half_body/
+def _half_body_dir():
+    return os.path.join(_paths()["assets"], "characters", "half_body")
+
+
+# ============================ NPC 动态立绘一键导入 ============================
+# 合并进 NPC 编辑列：支持「静态图片 / 帧动画(ZIP) / Spine骨骼(ZIP)」三种类型一键导入。
+# 导入后写入 NPC 的 half_body_portrait 字段（静态取该图路径；动态取目录），
+# 并附带 portrait_type / portrait_frames(NPC 面板与对话框后续按此切换动态立绘)。
+# ⚠️ 这些字段是「共享地基纯追加」——旧 NPC 无这些字段时游戏侧 resolve_half_body 会回退占位，零破坏。
+import zipfile
+
+def _safe_id(nid):
+    # 仅保留安全字符，避免路径穿越
+    return "".join(ch for ch in str(nid) if ch.isalnum() or ch in ("_", "-"))
+
+
+def npc_portrait_import(npc_id, payload):
+    """payload: {"ptype": "static"|"frame"|"spine",
+                 "filename": "xxx.png",
+                 "data": "<base64 单图>" 或 "zip": "<base64 zip>"}
+    返回 (ok, msg, meta) ；meta 含写入 NPC 的字段。"""
+    nid = _safe_id(npc_id)
+    if not nid:
+        return False, "NPC id 非法", {}
+    ptype = str(payload.get("ptype", "static"))
+    hb = _half_body_dir()
+    os.makedirs(hb, exist_ok=True)
+    import base64
+    if ptype == "static":
+        raw = base64.b64decode(payload.get("data", b"") or b"")
+        if not raw:
+            return False, "空数据", {}
+        # 推断扩展名
+        ext = ".png"
+        fn = str(payload.get("filename", "")).lower()
+        if fn.endswith(".webp"):
+            ext = ".webp"
+        elif fn.endswith((".jpg", ".jpeg")):
+            ext = ".jpg"
+        dst = os.path.join(hb, "%s%s" % (nid, ext))
+        with open(dst, "wb") as f:
+            f.write(raw)
+        res = "res://assets/characters/half_body/%s%s" % (nid, ext)
+        meta = {"half_body_portrait": res, "portrait_type": "static", "portrait_frames": [], "portrait_skeleton": ""}
+        # 同步覆盖占位（保证上帝视角下立即可见）
+        log_event("npc_portrait", nid, "导入静态半身立绘 %s" % res)
+        return True, "已导入静态半身立绘", meta
+    elif ptype in ("frame", "spine"):
+        raw = base64.b64decode(payload.get("zip", b"") or b"")
+        if not raw:
+            return False, "空 ZIP 数据", {}
+        sub = "frames" if ptype == "frame" else "spine"
+        out_dir = os.path.join(hb, "%s_%s" % (nid, sub))
+        # 清空旧目录（保险：先备份再覆盖）
+        if os.path.isdir(out_dir):
+            _backup_dir(out_dir)
+            shutil.rmtree(out_dir)
+        os.makedirs(out_dir, exist_ok=True)
+        try:
+            zf = zipfile.ZipFile(io.BytesIO(raw))
+            zf.extractall(out_dir)
+        except Exception as e:
+            return False, "ZIP 解压失败：%s" % e, {}
+        # 列出帧（帧动画按文件名排序；spine 找 .skel/.json + .atlas）
+        frames = []
+        if ptype == "frame":
+            for name in sorted(os.listdir(out_dir)):
+                if name.lower().endswith((".png", ".webp", ".jpg", ".jpeg")):
+                    frames.append("res://assets/characters/half_body/%s_%s/%s" % (nid, sub, name))
+        if ptype == "spine":
+            # 记录关键文件，供后续骨骼加载器使用（当前游戏侧占位静态图）
+            skel = ""
+            atlas = ""
+            for name in os.listdir(out_dir):
+                low = name.lower()
+                if low.endswith((".skel", ".json")) and "skeleton" not in low and skel == "":
+                    skel = "res://assets/characters/half_body/%s_%s/%s" % (nid, sub, name)
+                if low.endswith(".atlas"):
+                    atlas = "res://assets/characters/half_body/%s_%s/%s" % (nid, sub, name)
+            meta = {"half_body_portrait": "res://assets/characters/half_body/%s_%s" % (nid, sub),
+                    "portrait_type": "spine", "portrait_frames": [],
+                    "portrait_skeleton": skel, "portrait_atlas": atlas}
+            log_event("npc_portrait", nid, "导入 Spine 骨骼立绘 %s" % sub)
+            return True, "已导入 Spine 骨骼立绘（动态播放接口预留）", meta
+        meta = {"half_body_portrait": "res://assets/characters/half_body/%s_%s" % (nid, sub),
+                "portrait_type": "frame", "portrait_frames": frames, "portrait_skeleton": ""}
+        log_event("npc_portrait", nid, "导入帧动画立绘 %s 帧" % len(frames))
+        return True, "已导入帧动画立绘（%d 帧，动态播放接口预留）" % len(frames), meta
+    return False, "未知立绘类型：%s" % ptype, {}
+
+
+def npc_portrait_clear(npc_id):
+    """清除立绘字段，回退到游戏侧按 id 的占位图（不删文件，仅清字段）。"""
+    nid = _safe_id(npc_id)
+    if not nid:
+        return False, "NPC id 非法"
+    meta = {"half_body_portrait": "", "portrait_type": "static", "portrait_frames": [], "portrait_skeleton": ""}
+    return True, "已清除立绘字段（游戏将回退占位图）", meta
+
+
+def _backup_dir(src):
+    try:
+        ts = int(datetime.datetime.now().timestamp() * 1000)
+        dst = os.path.join(BACKUP_DIR, "hb_%s_%d" % (_safe_id(os.path.basename(src)), ts))
+        shutil.copytree(src, dst)
+    except Exception:
+        pass
 
 
 # ============================ JSON 读写 ============================
@@ -332,6 +445,7 @@ def npc_upsert(fields):
     nid = str(fields.get("id", "")).strip()
     if not nid:
         return False, "id 不能为空"
+    # 原有基础字段
     entry = {}
     for k in ("id", "name", "sprite", "portrait", "dialog_id", "quest_id", "battle_id"):
         entry[k] = str(fields.get(k, ""))
@@ -341,9 +455,20 @@ def npc_upsert(fields):
     except Exception:
         entry["pos_x"] = 0
         entry["pos_y"] = 0
+    # 半身立绘（动态可导入）字段：合并进 NPC 列，旧 NPC 无这些字段时保留空值（游戏侧回退占位）
+    for k in ("half_body_portrait", "portrait_type", "portrait_skeleton", "portrait_atlas"):
+        if k in fields:
+            entry[k] = str(fields.get(k, ""))
+    if "portrait_frames" in fields and isinstance(fields["portrait_frames"], list):
+        entry["portrait_frames"] = list(fields["portrait_frames"])
     found = False
     for i, n in enumerate(data["npcs"]):
         if n.get("id") == nid:
+            # 仅当本次请求显式带立绘字段时才覆盖；否则保留旧值（避免保存时清空已导入立绘）
+            if "half_body_portrait" not in fields:
+                for k in ("half_body_portrait", "portrait_type", "portrait_frames", "portrait_skeleton", "portrait_atlas"):
+                    if k in n:
+                        entry[k] = n[k]
             data["npcs"][i] = entry
             found = True
             break

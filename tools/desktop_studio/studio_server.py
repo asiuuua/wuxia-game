@@ -129,6 +129,26 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/npc":
             ok, m = core.npc_upsert(body)
             return _send_json(self, {"ok": ok, "msg": m})
+        if path == "/api/npc/portrait":
+            nid = body.get("npc_id", "")
+            ok, m, meta = core.npc_portrait_import(nid, body)
+            if ok:
+                # 把导入得到的立绘字段合并写回该 NPC 记录
+                f = dict(body.get("fields", {}))
+                f["id"] = nid
+                f.update(meta)
+                ok2, m2 = core.npc_upsert(f)
+                return _send_json(self, {"ok": ok and ok2, "msg": m + "；" + m2, "meta": meta})
+            return _send_json(self, {"ok": False, "msg": m})
+        if path == "/api/npc/portrait_clear":
+            nid = body.get("npc_id", "")
+            ok, m, meta = core.npc_portrait_clear(nid)
+            if ok:
+                f = {"id": nid}
+                f.update(meta)
+                ok2, m2 = core.npc_upsert(f)
+                return _send_json(self, {"ok": ok and ok2, "msg": m + "；" + m2})
+            return _send_json(self, {"ok": False, "msg": m})
         if path == "/api/dialog":
             action = body.get("action")
             if action == "new":

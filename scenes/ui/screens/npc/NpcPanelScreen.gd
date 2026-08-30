@@ -107,12 +107,13 @@ func _refresh() -> void:
 func _refresh_qq() -> void:
 	if GameManager.romance_service != null and GameManager.romance_service.is_spouse(_npc_id):
 		var qq: Dictionary = GameManager.romance_service.get_quanquan(_npc_id)
-		var lv: int = int(qq.get("level", 1))
+		var lv: int = int(qq.get("level", 0))
 		var xp_in: int = int(qq.get("xp_in_level", 0))
-		var xp_need: int = int(qq.get("xp_per_level", 1000))
+		var xp_need: int = int(qq.get("xp_per_level", 200))
 		var up: int = int(qq.get("unlocked_portraits", 0))
 		var to_next: int = int(qq.get("xp_to_next_portrait", 0))
-		_qq_info.text = "婘眷值 Lv.%d  %d/%d  已解锁特殊立绘 %d 张（再 %d 经验解锁下一张）" % [lv, xp_in, xp_need, up, to_next]
+		var hint: String = "（满级，2 张特殊立绘已全部解锁）" if to_next <= 0 and up >= 2 else "（再 %d 经验解锁下一张特殊立绘）" % to_next
+		_qq_info.text = "婘眷值 Lv.%d  %d/%d  已解锁特殊立绘 %d/2 张%s" % [lv, xp_in, xp_need, up, hint]
 	else:
 		_qq_info.text = "（未结缘：婚后方可培养婘眷值）"
 

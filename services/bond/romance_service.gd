@@ -15,15 +15,14 @@ var children: Dictionary = {}         # child_id -> {mother_id, born_day, name}
 # 欢庆每日配额（按 npc_id 独立，与配偶字典解耦：避免非配偶欢庆时误写进 spouses 污染配偶列表）
 var celebration_quotas: Dictionary = {}  # npc_id -> {day, quota, used}
 
-# === 婘眷值（用户 2026-08-30 拍板：只保留婘眷值，去掉夫妻同心） ===
-# 规则：1~10 级，每级 1000 经验；结婚后仅下列功能增加：
+# === 婘眷值（用户 2026-08-30 拍板：只保留婘眷值，去掉夫妻同心；2026-08-30 夜间修订为 5 级制） ===
+# 规则：初始 0 级，1~5 级，每级 200 经验，合计 1000 经验封顶；结婚后仅下列功能增加：
 #   同游旅行 +5 / 寝欢(欢庆) +10 / 一家人协同出游(有子嗣) +15
-# 每满 500 经验解锁 1 张特殊立绘（可在该 NPC 立绘里左右滑动查看；勾选后对话框+属性面板解锁该形象）。
-# 特殊立绘图片资源由 data/configs/bond/special_portraits.json 配置（后续美术导入，预留空表）。
-const QQ_MAX_LEVEL := 10
-const QQ_XP_PER_LEVEL := 1000
-const QQ_XP_PER_PORTRAIT := 500
-const QQ_MAX_PORTRAITS := 20  # 500*20=10000 经验上限，约 10 级满级时全部解锁，留余量
+# 仅「3 级」与「5 级」各解锁 1 张特殊立绘（共 2 张，可在该 NPC 立绘里左右滑动查看；
+# 勾选后对话框+属性面板解锁该形象）。特殊立绘图片资源由 data/configs/bond/special_portraits.json 配置（预留空表）。
+const QQ_MAX_LEVEL := 5
+const QQ_XP_PER_LEVEL := 200
+const QQ_MAX_PORTRAITS := 2  # 仅 3 级与 5 级各解锁 1 张，共 2 张
 const SPECIAL_PORTRAITS_PATH := "res://data/configs/bond/special_portraits.json"
 
 # === 配置读取辅助 ===
@@ -325,11 +324,11 @@ func get_quanquan(npc_id: String) -> Dictionary:
 		rec["quanquan"] = _new_quanquan()
 		spouses[npc_id] = rec
 	var qq: Dictionary = rec["quanquan"]
-	var level: int = int(qq.get("level", 1))
 	var xp: int = int(qq.get("xp", 0))
+	var level: int = int(qp_get_level(xp))
 	var unlocked: int = int(qq.get("unlocked_portraits", 0))
 	# 当前这一级还差多少经验升级（用于 UI 进度条）
-	var xp_in_level: int = xp - (level - 1) * QQ_XP_PER_LEVEL
+	var xp_in_level: int = xp - level * QQ_XP_PER_LEVEL
 	return {
 		"level": level,
 		"xp": xp,
@@ -337,20 +336,27 @@ func get_quanquan(npc_id: String) -> Dictionary:
 		"xp_per_level": QQ_XP_PER_LEVEL,
 		"unlocked_portraits": unlocked,
 		"max_portraits": QQ_MAX_PORTRAITS,
-		# 下一张立绘还需经验（到 500 整数倍）：当前 xp 到下一个 500 倍数的差
+		# 下一张特殊立绘还需经验（仅 3 级 / 5 级触发；满级后返回 0）
 		"xp_to_next_portrait": _xp_to_next_portrait(xp),
 	}
 
 func _new_quanquan() -> Dictionary:
-	return {"level": 1, "xp": 0, "unlocked_portraits": 0}
+	return {"level": 0, "xp": 0, "unlocked_portraits": 0}
+
+# 等级 → 已解锁特殊立绘数：仅 3 级解锁第 1 张、5 级解锁第 2 张
+func _unlocked_from_level(lv: int) -> int:
+	return (1 if lv >= 3 else 0) + (1 if lv >= 5 else 0)
 
 func _xp_to_next_portrait(xp: int) -> int:
-	var cur_block: int = int(xp / QQ_XP_PER_PORTRAIT)
-	var next_xp: int = (cur_block + 1) * QQ_XP_PER_PORTRAIT
-	return next_xp - xp
+	var lv: int = qp_get_level(xp)
+	if lv >= QQ_MAX_LEVEL:
+		return 0
+	if lv < 3:
+		return 3 * QQ_XP_PER_LEVEL - xp
+	return 5 * QQ_XP_PER_LEVEL - xp
 
 # 增加婘眷值（内部统一入口）；返回更新后的状态字典。
-# 每满 500 经验解锁 1 张特殊立绘（上限 QQ_MAX_PORTRAITS）；满级后不再升级但立绘继续解锁到上限。
+# 仅当等级跨过 3 级 / 5 级时解锁对应特殊立绘（共 2 张）。
 func add_quanquan(npc_id: String, amount: int) -> Dictionary:
 	if not spouses.has(npc_id):
 		return {}
@@ -363,10 +369,8 @@ func add_quanquan(npc_id: String, amount: int) -> Dictionary:
 	var xp: int = int(qq.get("xp", 0)) + amount
 	var level: int = int(qp_get_level(xp))
 	var unlocked: int = int(qq.get("unlocked_portraits", 0))
-	var new_unlocked: int = mini(int(xp / QQ_XP_PER_PORTRAIT), QQ_MAX_PORTRAITS)
-	var just_unlocked := false
+	var new_unlocked: int = _unlocked_from_level(level)
 	if new_unlocked > unlocked:
-		just_unlocked = true
 		# 解锁事件：广播供 UI 弹喜讯 / NPC 面板刷新
 		EventBus.bond_special_portrait_unlocked.emit(npc_id, new_unlocked)
 	qq["level"] = level
@@ -377,9 +381,9 @@ func add_quanquan(npc_id: String, amount: int) -> Dictionary:
 	EventBus.bond_relationship_changed.emit()
 	return get_quanquan(npc_id)
 
-# 经验 → 等级（1~10 级，每 1000 经验一级，10 级封顶）
+# 经验 → 等级（初始 0 级，每 200 经验升 1 级，5 级封顶；0 经验即 0 级）
 func qp_get_level(xp: int) -> int:
-	return mini(int(xp / QQ_XP_PER_LEVEL) + 1, QQ_MAX_LEVEL)
+	return mini(int(xp / QQ_XP_PER_LEVEL), QQ_MAX_LEVEL)
 
 # 同游旅行：+5 婘眷值（需已婚配偶）
 func travel_together(npc_id: String) -> Dictionary:

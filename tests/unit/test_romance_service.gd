@@ -148,29 +148,35 @@ func test_debug_max_all_affection() -> void:
 	expect(rs.can_propose("npc_su_waner"), "苏婉儿可求婚")
 	expect(rs.can_propose("npc_xiao_ying"), "小樱可求婚")
 
-# === 婘眷值（2026-08-30 新增） ===
+# === 婘眷值（2026-08-30 新增，5 级制：初始 0 级，每级 200 经验，合计 1000；仅 3/5 级解锁立绘） ===
 # before_each 已 reset，直接造配偶即可从干净状态开始。
 func test_quanquan_add_and_level() -> void:
 	var rs = GameManager.romance_service
 	rs.debug_make_spouse("npc_su_waner")
 	var qq0 = rs.get_quanquan("npc_su_waner")
-	expect_eq(int(qq0.get("level", 0)), 1, "初始应为 1 级")
+	expect_eq(int(qq0.get("level", 0)), 0, "初始应为 0 级")
 	expect_eq(int(qq0.get("xp", 0)), 0, "初始经验应为 0")
-	# +10：未满 500 不应解锁立绘
-	rs.add_quanquan("npc_su_waner", 10)
+	# +190 → 190 经验：仍 0 级，未解锁立绘
+	rs.add_quanquan("npc_su_waner", 190)
 	var qq1 = rs.get_quanquan("npc_su_waner")
-	expect_eq(int(qq1.get("xp", 0)), 10, "加 10 后经验应为 10")
-	expect_eq(int(qq1.get("unlocked_portraits", 0)), 0, "未满 500 不应解锁立绘")
-	# 凑到 500 → 解锁第 1 张
-	rs.add_quanquan("npc_su_waner", 490)
+	expect_eq(int(qq1.get("xp", 0)), 190, "加 190 后经验应为 190")
+	expect_eq(int(qq1.get("level", 0)), 0, "190 经验仍为 0 级")
+	expect_eq(int(qq1.get("unlocked_portraits", 0)), 0, "未到 3 级不应解锁立绘")
+	# 凑到 600 → 3 级：解锁第 1 张立绘
+	rs.add_quanquan("npc_su_waner", 410)
 	var qq2 = rs.get_quanquan("npc_su_waner")
-	expect_eq(int(qq2.get("xp", 0)), 500, "应累计到 500")
-	expect_eq(int(qq2.get("unlocked_portraits", 0)), 1, "满 500 应解锁 1 张立绘")
-	# 再 +500 → 1000，升 2 级、解锁第 2 张
-	rs.add_quanquan("npc_su_waner", 500)
+	expect_eq(int(qq2.get("xp", 0)), 600, "应累计到 600")
+	expect_eq(int(qq2.get("level", 0)), 3, "600 经验应为 3 级")
+	expect_eq(int(qq2.get("unlocked_portraits", 0)), 1, "3 级应解锁 1 张立绘")
+	# 再 +400 → 1000，5 级：解锁第 2 张立绘
+	rs.add_quanquan("npc_su_waner", 400)
 	var qq3 = rs.get_quanquan("npc_su_waner")
-	expect_eq(int(qq3.get("level", 0)), 2, "满 1000 应升到 2 级")
-	expect_eq(int(qq3.get("unlocked_portraits", 0)), 2, "满 1000 应解锁 2 张立绘")
+	expect_eq(int(qq3.get("level", 0)), 5, "满 1000 应为 5 级（封顶）")
+	expect_eq(int(qq3.get("unlocked_portraits", 0)), 2, "5 级应解锁 2 张立绘")
+	# 超过上限不再升级
+	rs.add_quanquan("npc_su_waner", 500)
+	var qq4 = rs.get_quanquan("npc_su_waner")
+	expect_eq(int(qq4.get("level", 0)), 5, "超过 1000 仍封顶 5 级")
 
 func test_quanquan_travel_and_family() -> void:
 	var rs = GameManager.romance_service

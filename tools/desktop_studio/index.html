@@ -98,6 +98,25 @@
         <div class="row"><label>pos_y（垂直）</label><input id="n_py" type="number" value="0"></div>
         <div class="row"><label>立绘 sprite</label><input id="n_sprite" placeholder="res://assets/characters/player.png"></div>
         <div class="row"><label>头像 portrait</label><input id="n_portrait"></div>
+        <div class="refbox">
+          <h4>🖼 半身立绘（动态可一键导入 · 合并在 NPC 列）</h4>
+          <div class="row" style="align-items:center">
+            <label>类型</label>
+            <select id="n_ptype">
+              <option value="static">静态图片</option>
+              <option value="frame">帧动画（上传 ZIP 多帧）</option>
+              <option value="spine">Spine / SK2D 骨骼（上传 ZIP）</option>
+            </select>
+          </div>
+          <div class="row" style="align-items:center">
+            <label>导入文件</label>
+            <input type="file" id="n_pfile" accept=".png,.webp,.jpg,.jpeg,.zip">
+            <button class="act" onclick="npcImportPortrait()">⏫ 一键导入</button>
+            <button class="act sec" onclick="npcClearPortrait()">清除立绘</button>
+          </div>
+          <div class="hint" id="n_ptype_hint">静态：选一张 png/webp/jpg 直接导入。帧动画/Spine：把若干文件打成一个 ZIP 上传，解压到该 NPC 的半身立绘目录。游戏侧动态播放接口已预留，当前显示占位静态图，后续接入即生效。</div>
+          <div id="n_preview" style="margin-top:6px"></div>
+        </div>
         <div class="row"><label>对话 id</label><input id="n_dialog" onchange="refChange('dialog',this)" placeholder="与剧情对话表里的 id 对应"></div>
         <div class="row"><label>任务 id</label><input id="n_quest" onchange="refChange('quest',this)"></div>
         <div class="row"><label>战斗 id</label><input id="n_battle" onchange="refChange('battle',this)"></div>
@@ -311,10 +330,50 @@ function npcSel(n){
   document.getElementById('n_py').value=n.pos_y||0;
   document.getElementById('n_sprite').value=n.sprite||'';
   document.getElementById('n_portrait').value=n.portrait||'';
+  renderPortraitInfo(n);
   document.getElementById('n_dialog').value=n.dialog_id||'';
   document.getElementById('n_quest').value=n.quest_id||'';
   document.getElementById('n_battle').value=n.battle_id||'';
   drawMap();
+}
+function renderPortraitInfo(n){
+  const ptype=document.getElementById('n_ptype');
+  ptype.value=n.portrait_type||'static';
+  const prev=document.getElementById('n_preview');prev.innerHTML='';
+  const hb=n.half_body_portrait||'';
+  if(!hb){
+    prev.innerHTML='<span class="pill npc">当前：无立绘（游戏显示按 id 占位图）</span>';
+    return;
+  }
+  const typeName={static:'静态图片',frame:'帧动画('+((n.portrait_frames||[]).length)+'帧)',spine:'Spine 骨骼'}[n.portrait_type||'static']||'静态图片';
+  let html='<span class="pill npc">类型：'+typeName+'</span> ';
+  if(n.portrait_type!=='frame'&&n.portrait_type!=='spine'){
+    html+='<img src="'+hb+'" style="height:90px;border:1px solid var(--line);border-radius:6px;vertical-align:middle">';
+  }else{
+    html+='<code style="font-size:12px">'+hb+(n.portrait_skeleton?' （骨骼：'+n.portrait_skeleton+'）':'')+'</code>';
+  }
+  prev.innerHTML=html;
+}
+async function npcImportPortrait(){
+  const nid=document.getElementById('n_id').value.trim();
+  if(!nid){show('npcStat','请先填 NPC id（或选择已有 NPC）',false);return;}
+  const f=document.getElementById('n_pfile');
+  if(!f.files||f.files.length===0){show('npcStat','请先选择要导入的文件',false);return;}
+  const ptype=document.getElementById('n_ptype').value;
+  const file=await f.files[0].arrayBuffer();
+  const b64=btoa(String.fromCharCode(...new Uint8Array(file)));
+  const body={npc_id:nid,ptype:ptype,filename:f.files[0].name};
+  if(ptype==='static')body.data=b64;else body.zip=b64;
+  const r=await A('POST','/api/npc/portrait',body);
+  show('npcStat',r.msg,r.ok);
+  if(r.ok){await npcLoad();const sel=window._npcCache.find(x=>x.id===nid);if(sel)renderPortraitInfo(sel);}
+}
+async function npcClearPortrait(){
+  const nid=document.getElementById('n_id').value.trim();
+  if(!nid){show('npcStat','请先填 NPC id',false);return;}
+  const r=await A('POST','/api/npc/portrait_clear',{npc_id:nid});
+  show('npcStat',r.msg,r.ok);
+  if(r.ok){await npcLoad();renderPortraitInfo({});}
 }
 function npcNew(){window._loaded=null;window._prevId='';window._lastRename=null;
   document.getElementById('n_undorename').style.display='none';
@@ -322,6 +381,7 @@ function npcNew(){window._loaded=null;window._prevId='';window._lastRename=null;
   const idEl=document.getElementById('n_id');idEl.disabled=false;idEl.value='';
   document.getElementById('n_lock').style.display='none';
   document.getElementById('n_px').value=0;document.getElementById('n_py').value=0;
+  renderPortraitInfo({});
   drawMap();show('npcStat','新建模式：填好 id 和名称后点保存',true);}
 function npcUnlockId(){
   const old=window._prevId||document.getElementById('n_id').value;
