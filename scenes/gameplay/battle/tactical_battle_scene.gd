@@ -105,8 +105,10 @@ func _build_world() -> void:
 	var pan_x: float = float(meta.get("pan_x", 0))
 	var pan_y: float = float(meta.get("pan_y", 0))
 	var grid_zoom: float = clampf(float(meta.get("zoom", 1.0)), 0.2, 4.0)
+	var grid_rot: float = float(meta.get("rotation", 0))
 	_grid_node.position = Vector2(pan_x, pan_y)
 	_grid_node.scale = Vector2(grid_zoom, grid_zoom)
+	_grid_node.rotation_degrees = grid_rot   # 棋盘整体绕自身原点旋转（底图/地形/单位落点随之旋转）
 	bf.add_child(_grid_node)
 	_entities_node = Node2D.new()
 	_entities_node.name = "Entities"

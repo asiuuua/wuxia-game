@@ -379,6 +379,13 @@
             <label style="white-space:nowrap">缩放 <span id="blZoomVal">100</span>%</label>
             <button class="act sec" onclick="blResetTrans()">复位位置/缩放</button>
           </div>
+          <div class="row" style="align-items:center;gap:10px;margin-top:6px;flex-wrap:wrap">
+            <span>棋盘旋转：</span>
+            <button class="act sec" onclick="blRotate(-90)">↺ 逆时针</button>
+            <button class="act sec" onclick="blRotate(90)">↻ 顺时针</button>
+            <label style="white-space:nowrap">角度 <span id="blRotVal">0</span>°</label>
+            <button class="act sec" onclick="blResetRot()">复位旋转</button>
+          </div>
           <div id="blCanvasWrap" style="position:relative;border:1px solid #444;border-radius:8px;overflow:hidden;background:#0c0e16;width:100%;max-width:720px;aspect-ratio:16/9;margin-top:8px">
             <img id="blBg" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.85" src="" onerror="this.style.display='none'">
             <canvas id="blCanvas" style="position:absolute;inset:0;width:100%;height:100%;cursor:crosshair"></canvas>
@@ -1308,7 +1315,9 @@ async function blLoadOne(id){
   if(window._bl.pan_x===undefined)window._bl.pan_x=0;
   if(window._bl.pan_y===undefined)window._bl.pan_y=0;
   if(window._bl.zoom===undefined)window._bl.zoom=1.0;
+  if(window._bl.rotation===undefined)window._bl.rotation=0;
   document.getElementById('blZoomVal').textContent=Math.round((window._bl.zoom||1)*100);
+  document.getElementById('blRotVal').textContent=Math.round(window._bl.rotation||0);
   blRender();
   const cnt=document.getElementById('blGridCount');
   if(cnt)cnt.textContent='当前 '+window._bl.width+'×'+window._bl.height+' = '+(window._bl.width*window._bl.height)+' 格';
@@ -1383,7 +1392,7 @@ function blClearTerrain(){
   window._bl.obstacles=[];window._bl.heights=[];blRender();
 }
 // 网格几何：把 cell(i,j) 投到 720p 画布坐标（与游戏侧 BattleGrid 同公式）
-// 含用户平移(pan_x/pan_y，像素)与缩放(zoom，倍率)：先算基准居中坐标，再乘 zoom 并加 pan 偏移。
+// 含用户平移(pan_x/pan_y，像素)、缩放(zoom，倍率)、旋转(rotation，度，绕画布中心)：先算基准居中坐标，再乘 zoom、加 pan、最后绕中心旋转。
 function blCellToXY(i,j){
   const wrap=document.getElementById('blCanvasWrap');
   const Wc=wrap.clientWidth||720, Hc=wrap.clientHeight||405;
@@ -1391,6 +1400,7 @@ function blCellToXY(i,j){
   const isIso=window._bl.view_mode!=='ortho';
   const zoom=window._bl.zoom||1.0;
   const panX=window._bl.pan_x||0, panY=window._bl.pan_y||0;
+  const rot=window._bl.rotation||0;
   // 单元像素尺寸：让整张网格铺满画布 92%（基准，未缩放前）
   let s;
   if(isIso){ s=Math.min(Wc*0.92/(W+H), Hc*0.92/((W+H)*0.5)); }
@@ -1399,10 +1409,17 @@ function blCellToXY(i,j){
   let x,y;
   if(isIso){ x=(i-j)*tw*0.5; y=(i+j)*th*0.5; }
   else { x=i*tw; y=j*th; }
-  // 居中
-  const ox=Wc*0.5 - ((isIso?((W-1)-(0))*tw*0.5: (W-1)*tw*0.5))*0.5;
-  const oy=Hc*0.5 - ((isIso?((W-1)+(H-1))*th*0.5: (H-1)*th*0.5))*0.5;
-  return {x:x+ox+panX, y:y+oy+panY, tw, th, isIso};
+  // 居中（先以画布中心为原点）
+  const cx=Wc*0.5, cy=Hc*0.5;
+  let dx=(x) - ((isIso?((W-1)-(0))*tw*0.5: (W-1)*tw*0.5))*0.5 + panX;
+  let dy=(y) - ((isIso?((W-1)+(H-1))*th*0.5: (H-1)*th*0.5))*0.5 + panY;
+  // 绕画布中心旋转（顺时针为正，屏幕坐标 y 向下）
+  if(rot){
+    const r=rot*Math.PI/180, cs=Math.cos(r), sn=Math.sin(r);
+    const rx=dx*cs - dy*sn, ry=dx*sn + dy*cs;
+    dx=rx; dy=ry;
+  }
+  return {x:cx+dx, y:cy+dy, tw, th, isIso};
 }
 function blXYToCell(px,py){
   const wrap=document.getElementById('blCanvasWrap');
@@ -1411,13 +1428,21 @@ function blXYToCell(px,py){
   const isIso=window._bl.view_mode!=='ortho';
   const zoom=window._bl.zoom||1.0;
   const panX=window._bl.pan_x||0, panY=window._bl.pan_y||0;
+  const rot=window._bl.rotation||0;
   let s;
   if(isIso){ s=Math.min(Wc*0.92/(W+H), Hc*0.92/((W+H)*0.5)); }
   else { s=Math.min(Wc*0.92/W, Hc*0.92/H); }
   const tw=s*zoom, th=(isIso?s*0.5:s)*zoom;
-  const ox=Wc*0.5 - ((isIso?((W-1)-(0))*tw*0.5: (W-1)*tw*0.5))*0.5;
-  const oy=Hc*0.5 - ((isIso?((W-1)+(H-1))*th*0.5: (H-1)*th*0.5))*0.5;
-  const lx=px-ox-panX, ly=py-oy-panY;
+  // 先以画布中心为原点，逆旋转回未旋转空间，再走原居中+pan 反算
+  let dx=px-Wc*0.5, dy=py-Hc*0.5;
+  if(rot){
+    const r=-rot*Math.PI/180, cs=Math.cos(r), sn=Math.sin(r);
+    const rx=dx*cs - dy*sn, ry=dx*sn + dy*cs;
+    dx=rx; dy=ry;
+  }
+  const ox=((isIso?((W-1)-(0))*tw*0.5: (W-1)*tw*0.5))*0.5;
+  const oy=((isIso?((W-1)+(H-1))*th*0.5: (H-1)*th*0.5))*0.5;
+  const lx=dx+ox-panX, ly=dy+oy-panY;
   let gx,gy;
   if(isIso){
     gx=Math.round((lx/tw + ly/th)*0.5);
@@ -1556,10 +1581,25 @@ function blResetTrans(){
   document.getElementById('blZoomVal').textContent='100';
   blRender();
 }
+// 棋盘旋转：顺时针 +deg / 逆时针 -deg（90° 步进最贴合战棋；任意角度也支持）。绕画布中心旋转。
+function blRotate(deg){
+  if(!window._bl)return;
+  let r=(window._bl.rotation||0)+deg;
+  r=((r%360)+360)%360;
+  window._bl.rotation=r;
+  document.getElementById('blRotVal').textContent=Math.round(r);
+  blRender();
+}
+function blResetRot(){
+  if(!window._bl)return;
+  window._bl.rotation=0;
+  document.getElementById('blRotVal').textContent='0';
+  blRender();
+}
 async function blSave(){
   if(!window._bl||!window._blSel){show('blStat','先选或新建布局',false);return;}
   const d=window._bl;
-  const payload={id:window._blSel,data:{name:d.name||window._blSel,view_mode:d.view_mode,width:d.width,height:d.height,pan_x:d.pan_x||0,pan_y:d.pan_y||0,zoom:d.zoom||1.0,obstacles:d.obstacles||[],heights:d.heights||[],deployment:d.deployment||{}}};
+  const payload={id:window._blSel,data:{name:d.name||window._blSel,view_mode:d.view_mode,width:d.width,height:d.height,pan_x:d.pan_x||0,pan_y:d.pan_y||0,zoom:d.zoom||1.0,rotation:d.rotation||0,obstacles:d.obstacles||[],heights:d.heights||[],deployment:d.deployment||{}}};
   const r=await A('POST','/api/battle_layout/save',payload);
   show('blStat',(r&&r.msg)?r.msg:(r&&r.ok?'已保存':'失败'),!!(r&&r.ok));
   if(r&&r.ok)blLoadList();

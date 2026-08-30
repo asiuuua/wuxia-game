@@ -339,13 +339,14 @@ func _build_grid(grid_cfg: Dictionary, battle: Dictionary) -> void:
 		push_error("[Combat] 战术战斗缺少网格几何配置: %s（请检查 battle.grid / battle.layout / 底图 tactical_layout）" % _state.combat_id)
 		return
 	# 战棋底图元数据（编辑器写入）：view_mode(默认 iso) / background(默认空=程序化占位)
-	# pan_x/pan_y(像素平移，默认 0) / zoom(缩放倍率，默认 1.0)：编辑器可调整棋盘位置与大小
+	# pan_x/pan_y(像素平移，默认 0) / zoom(缩放倍率，默认 1.0) / rotation(旋转角度，默认 0)：编辑器可调整棋盘位置/大小/朝向
 	_grid_meta = {
 		"view_mode": String(geom.get("view_mode", "iso")),
 		"background": String(geom.get("background", "")),
 		"pan_x": int(geom.get("pan_x", 0)),
 		"pan_y": int(geom.get("pan_y", 0)),
 		"zoom": float(geom.get("zoom", 1.0)),
+		"rotation": int(geom.get("rotation", 0)) % 360,
 	}
 	var g := BattleGrid.new()
 	g.width = int(geom.get("width", 10))
