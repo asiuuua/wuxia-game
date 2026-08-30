@@ -15,11 +15,18 @@ import json
 import webbrowser
 import datetime
 import base64
+import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import studio_core as core
 
 MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+_MIME = {"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg", "webp": "image/webp"}
+
+
+def _mime_of(path):
+    return _MIME.get(os.path.splitext(path)[1].lstrip(".").lower(), "application/octet-stream")
 
 
 def _send_json(handler, obj, code=200):
@@ -78,13 +85,31 @@ class Handler(BaseHTTPRequestHandler):
                 with open(fp, "rb") as f:
                     data = f.read()
                 self.send_response(200)
-                self.send_header("Content-Type", "image/jpeg")
+                self.send_header("Content-Type", _mime_of(fp))
                 self.send_header("Content-Length", str(len(data)))
                 self.end_headers()
                 self.wfile.write(data)
                 return
             _send_json(self, {"error": "no bg"}, 404)
             return
+        if path == "/api/login/btn_bg/file":
+            # 按映射表里的真实扩展名回图（扩展名由工具按文件头写入，可能是 png/jpg/webp）
+            qs = urllib.parse.parse_qs(self.path.split("?", 1)[1] if "?" in self.path else "")
+            btn_id = (qs.get("btn_id") or [""])[0]
+            fp = core.login_btn_bg_file(btn_id)
+            if fp:
+                with open(fp, "rb") as f:
+                    data = f.read()
+                self.send_response(200)
+                self.send_header("Content-Type", _mime_of(fp))
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+                return
+            _send_json(self, {"error": "no btn bg"}, 404)
+            return
+        if path == "/api/login/bg_variants":
+            return _send_json(self, core.login_bg_variants())
         if path == "/api/login/texts":
             return _send_json(self, core.login_texts())
         if path == "/api/login/version":
@@ -217,6 +242,25 @@ class Handler(BaseHTTPRequestHandler):
             return _send_json(self, {"ok": ok, "msg": m})
         if path == "/api/login/btn_bg_clear":
             ok, m = core.login_btn_bg_clear(body.get("btn_id", ""))
+            return _send_json(self, {"ok": ok, "msg": m})
+        if path == "/api/login/btn_bg_fix":
+            ok, m = core.login_btn_bg_scan_fix()
+            return _send_json(self, {"ok": ok, "msg": m})
+        if path == "/api/login/bg_variant":
+            raw = base64.b64decode(body.get("data", "") or b"")
+            if not raw:
+                return _send_json(self, {"ok": False, "msg": "空数据"}, 400)
+            tmp = os.path.join(core.SAFETY_DIR, "up_bgvar_%s.bin" % (body.get("tag", "v")))
+            with open(tmp, "wb") as f:
+                f.write(raw)
+            ok, m = core.login_bg_variant_set(tmp, body.get("tag", ""), body.get("min_width", 0))
+            try:
+                os.remove(tmp)
+            except Exception:
+                pass
+            return _send_json(self, {"ok": ok, "msg": m})
+        if path == "/api/login/bg_variant_remove":
+            ok, m = core.login_bg_variant_remove(body.get("min_width", -1))
             return _send_json(self, {"ok": ok, "msg": m})
         _send_json(self, {"error": "not found"}, 404)
 

@@ -1,7 +1,7 @@
 {
   "map": {
     "menu_new_game": "res://assets/ui/main_menu_btn/menu_new_game.png",
-    "menu_continue": "res://assets/ui/main_menu_btn/menu_continue.png"
+    "menu_continue": "res://assets/ui/main_menu_btn/menu_continue.jpg"
   },
-  "_doc": "登录主菜单各按钮背景图映射。游戏代码已读取此表（MainMenu._load_btn_bg_map → MenuItem.set_background），上传图片后下次进主菜单即生效。"
+  "_doc": "登录主菜单各按钮背景图映射。游戏代码已读取此表（MainMenu._load_btn_bg_map → MenuItem.set_background），上传图片后下次进主菜单即生效。扩展名由工具按文件头真实格式写入，勿手改。"
 }

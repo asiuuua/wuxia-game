@@ -208,7 +208,36 @@
       <div class="row"><img id="loginBgImg" src="" style="max-width:440px;border:1px solid #555;border-radius:8px;display:none"></div>
       <div class="row"><input type="file" id="loginBgFile" accept="image/*"></div>
       <div class="btns"><button class="act" onclick="loginBgReplace()">替换大背景图</button><span id="loginBgStat" class="status"></span></div>
-      <div class="hint">选一张图片点上面的按钮，即覆盖 assets/ui/main_menu_bg.jpg（支持 jpg/png）。替换前会自动备份旧图（回收站 / 备份机制）。覆盖后主菜单、加载界面、读档界面三处的背景会一起变。</div>
+      <div class="hint">选一张图片点上面的按钮，即覆盖 assets/ui/main_menu_bg.png（支持 png / jpg / webp，工具按文件头判真实格式自动存对扩展名）。替换前会自动备份旧图（回收站 / 备份机制）。覆盖后主菜单、加载界面、读档界面三处的背景会一起变。</div>
+
+      <div class="refbox" style="margin-top:10px">
+        <h4>🔍 清晰度诊断</h4>
+        <div id="clarityBox" class="hint">读取中…</div>
+        <div class="hint">放大倍率是按「铺满裁切」算的：倍率 &gt; 1.25 判定为模糊。想让 4K 屏清晰，就准备一张至少 3840×2160 的图。
+        图太大（4K PNG 动辄十几 MB）怕手机扛不住？用下面的<b>多分辨率变体</b>，让不同屏幕各取所需。</div>
+      </div>
+
+      <div class="refbox">
+        <h4>📐 多分辨率变体（按屏幕自动挑图，任务 #47）</h4>
+        <div class="hint">可为同一张背景准备几档不同分辨率：游戏启动时按<b>窗口宽度</b>自动挑最合适的一档——
+        4K 屏吃 4K 图不糊，1080p 屏也不必白扛一张 4K 图的内存。没配变体就继续用主图，零影响。</div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr style="text-align:left;color:#9aa3bd;border-bottom:1px solid var(--line)">
+            <th style="padding:4px">生效宽度 ≥</th><th style="padding:4px">图片</th><th style="padding:4px">尺寸</th><th style="padding:4px">体积</th><th style="padding:4px"></th>
+          </tr></thead>
+          <tbody id="variantTbl"></tbody>
+        </table>
+        <div class="row" style="align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap">
+          <label style="white-space:nowrap">档位名</label>
+          <input id="varTag" placeholder="例如 2k" style="width:90px">
+          <label style="white-space:nowrap">生效宽度</label>
+          <input id="varMinW" type="number" value="1921" style="width:100px">
+          <input type="file" id="varFile" accept="image/*">
+          <button class="act" onclick="variantUpload()">⏫ 上传这一档</button>
+        </div>
+        <div class="hint">常用档位：1080p 填 <code>0</code>，2K 填 <code>1921</code>，4K 填 <code>3000</code>。档位名只用于文件名（如 <code>main_menu_bg_2k.png</code>），同一生效宽度重复上传会覆盖旧档。</div>
+        <div id="variantStat" class="status"></div>
+      </div>
 
       <h3>🎛 背景布局（实时预览）</h3>
       <div class="hint">选一种布局，下方会按你<b>当前背景图</b>实时预览在 4 种设备比例下的效果。满意后点「保存布局」，游戏里任意窗口比例都会自动适配（无黑边）。这正是大厂做法：背景铺满裁切 + 菜单落在安全区，一套界面通吃 PC / 带鱼屏 / iPad / 手机。</div>
@@ -246,8 +275,12 @@
       <div class="hint" id="loginVerNote"></div>
 
       <h3>🎴 各按钮背景图（高级）</h3>
-      <div class="hint">给每个主菜单按钮单独换背景图。游戏代码现在已读取此映射（data/configs/ui/login_button_bg.json），上传图片后下次进主菜单即生效；图会铺满按钮并以「cover」方式裁切，外加一层轻压暗保证文字可读。</div>
+      <div class="hint">给每个主菜单按钮单独换背景图。游戏代码现在已读取此映射（data/configs/ui/login_button_bg.json），上传图片后下次进主菜单即生效；图会铺满按钮并以「cover」方式裁切，外加一层轻压暗保证文字可读。
+      <b>注意：</b>按钮是 280×44 的横条，请上传<b>横版</b>图，竖图会被裁得只剩中间一小条。</div>
+      <div class="btns" style="margin:6px 0"><button class="act sec" onclick="btnBgScanFix()">🔧 体检：修复扩展名错配</button>
+        <span class="hint" style="margin:0">图片内容与扩展名不符时（如 JPEG 存成 .png），Godot 会导入失败、按钮背景静默消失。点此自动按真实格式改名并更新映射，不丢图。</span></div>
       <div id="loginBtnBgList"></div>
+      <div id="btnBgFixStat" class="status"></div>
     </div>
   </section>
 
@@ -696,6 +729,8 @@ async function loginLoad(){
     show('loginStat',r.msg,r.ok);if(r.ok)loginLoad();
   });
   await loginLayoutLoad();
+  await loginClarityLoad();
+  await variantLoad();
 }
 
 // ---------- 登录背景布局（多设备实时预览） ----------
@@ -817,7 +852,7 @@ async function loginBgReplace(){
   const d=await f.arrayBuffer();const b64=bufToB64(d);
   const r=await A('POST','/api/login/bg',{data:b64,name:f.name});
   show('loginBgStat',r.msg||(r.ok?'已替换':'失败'),r.ok);
-  if(r.ok){const img=document.getElementById('loginBgImg');img.style.display='';img.src='/api/login/bg/file?t='+Date.now();loginLayoutRender();}
+  if(r.ok){const img=document.getElementById('loginBgImg');img.style.display='';img.src='/api/login/bg/file?t='+Date.now();loginLayoutRender();loginClarityLoad();}
 }
 async function loginTextsSave(){
   const inputs=document.querySelectorAll('#loginTextTbl input[data-k]');
@@ -826,6 +861,63 @@ async function loginTextsSave(){
   const rows=Object.values(map);
   const r=await A('POST','/api/login/texts',{rows});
   show('loginTextStat',r.msg||(r.ok?'已保存':'失败'),r.ok);
+}
+
+// ---------- 清晰度诊断 + 多分辨率变体（任务 #47） ----------
+function verdictClass(v){return v==='清晰'?'ok':(v==='轻微发虚'?'':'bad');}
+async function loginClarityLoad(){
+  const box=document.getElementById('clarityBox');if(!box)return;
+  try{
+    const d=await A('GET','/api/login/bg');
+    if(!d||!d.exists){box.innerHTML='<span class="pill">未设置背景图</span>';return;}
+    const rows=(d.targets||[]).map(t=>{
+      const cls=t.verdict==='清晰'?'ok':(t.verdict==='轻微发虚'?'':'bad');
+      return '<tr><td style="padding:2px 10px 2px 0">'+t.name+'（'+t.width+'×'+t.height+'）</td>'
+        +'<td style="padding:2px 10px 2px 0">放大 <b>'+t.scale+'×</b></td>'
+        +'<td style="padding:2px 10px 2px 0" class="status '+cls+'">'+t.verdict+'</td></tr>';
+    }).join('');
+    box.innerHTML='当前图：<b>'+(d.width||'?')+' × '+(d.height||'?')+'</b> 像素（'+(d.ext||'')+'，'
+      +((d.size||0)/1048576).toFixed(2)+' MB）<table style="margin-top:4px">'+rows+'</table>';
+  }catch(e){box.textContent='读取失败：'+e;}
+}
+async function variantLoad(){
+  const tb=document.getElementById('variantTbl');if(!tb)return;
+  tb.innerHTML='<tr><td colspan="5" class="hint">读取中…</td></tr>';
+  try{
+    const d=await A('GET','/api/login/bg_variants');
+    const vs=(d&&d.variants)||[];
+    if(vs.length===0){tb.innerHTML='<tr><td colspan="5" class="hint">还没配置变体，游戏当前用主图。</td></tr>';return;}
+    tb.innerHTML=vs.map(v=>
+      '<tr>'+
+      '<td style="padding:4px"><b>'+v.min_width+'</b> px</td>'+
+      '<td style="padding:4px;font-size:12px">'+(v.exists?'<code>'+v.path+'</code>':'<span class="status bad">文件缺失</span>')+'</td>'+
+      '<td style="padding:4px">'+(v.width?v.width+'×'+v.height:'—')+'</td>'+
+      '<td style="padding:4px">'+(v.size?(v.size/1048576).toFixed(2)+' MB':'—')+'</td>'+
+      '<td style="padding:4px"><button class="act bad" onclick="variantRemove('+v.min_width+')">删除</button></td>'+
+      '</tr>').join('');
+  }catch(e){tb.innerHTML='<tr><td colspan="5" class="status bad">读取失败</td></tr>';}
+}
+async function variantUpload(){
+  const tag=document.getElementById('varTag').value.trim();
+  const mw=document.getElementById('varMinW').value;
+  const f=document.getElementById('varFile').files[0];
+  if(!f){show('variantStat','请先选一张图片',false);return;}
+  if(!tag){show('variantStat','请填档位名（例如 2k）',false);return;}
+  const d=await f.arrayBuffer();const b64=bufToB64(d);
+  const r=await A('POST','/api/login/bg_variant',{tag:tag,min_width:mw,data:b64});
+  show('variantStat',(r&&r.msg)?r.msg:(r.ok?'已保存':'失败'),!!(r&&r.ok));
+  if(r&&r.ok){document.getElementById('varFile').value='';variantLoad();}
+}
+async function btnBgScanFix(){
+  const r=await A('POST','/api/login/btn_bg_fix',{});
+  show('btnBgFixStat',(r&&r.msg)?r.msg:(r.ok?'体检完成':'失败'),!!(r&&r.ok));
+  if(r&&r.ok)loginLoad();
+}
+async function variantRemove(min_width){
+  if(!confirm('删除「视口宽 ≥ '+min_width+'」这一档变体？游戏会回退到主图。'))return;
+  const r=await A('POST','/api/login/bg_variant_remove',{min_width:min_width});
+  show('variantStat',(r&&r.msg)?r.msg:(r.ok?'已删除':'失败'),!!(r&&r.ok));
+  if(r&&r.ok)variantLoad();
 }
 
 // ---------- 预加载界面（自由拖拽可视化编辑） ----------

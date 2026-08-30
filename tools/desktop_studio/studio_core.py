@@ -678,22 +678,144 @@ def cel_delete(npc_id):
 import re
 
 
+def _ensure_gdignore():
+    """确保工具目录里有 .gdignore：否则 Godot 会把 studio 目录（含 safety_data/backups 里的
+    历史备份图）当游戏资源扫描导入，遇到扩展名错配的备份就刷屏报 ERR_FILE_CORRUPT。"""
+    p = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".gdignore")
+    if os.path.exists(p):
+        return
+    try:
+        with open(p, "w", encoding="utf-8") as f:
+            f.write("# 让 Godot 忽略「内容工作室」工具目录（非游戏资源，且备份区含历史坏图）\n")
+    except Exception:
+        pass
+
+
+_ensure_gdignore()
+
+
 def _login_bg_base():
     return os.path.join(discover_project_root(), "assets", "ui", "main_menu_bg")
 
 
 def _detect_image_ext(src_path):
-    # 读文件头判定真实图片格式（Godot 按扩展名选解码器，扩展名错配会导入出坏图）
+    """读文件头判定真实图片格式。返回 'png' / 'jpg' / 'webp'；**无法识别时返回 None**（调用方必须拒绝，
+    不能兜底成 jpg —— 曾因兜底把 TIFF 存成 .png，Godot 导入失败，按钮背景静默消失）。"""
     try:
         with open(src_path, "rb") as f:
-            head = f.read(8)
+            head = f.read(16)
     except Exception:
-        return "jpg"
+        return None
     if head[:8] == b"\x89PNG\r\n\x1a\n":
         return "png"
     if head[:3] == b"\xff\xd8\xff":
         return "jpg"
-    return "jpg"  # 兜底：按 jpg 处理
+    # WEBP: "RIFF" + 4 字节长度 + "WEBP"
+    if head[:4] == b"RIFF" and head[8:12] == b"WEBP":
+        return "webp"
+    return None
+
+
+def _image_size(path):
+    """纯 Python 读取图片像素尺寸 (w, h)，失败返回 (0, 0)。
+    刻意不依赖 Pillow —— 打包 exe 用的是精简解释器，装不上第三方库。"""
+    try:
+        with open(path, "rb") as f:
+            head = f.read(64)
+        if head[:8] == b"\x89PNG\r\n\x1a\n" and len(head) >= 24:
+            import struct as _s
+            return _s.unpack(">II", head[16:24])
+        if head[:3] == b"\xff\xd8\xff":
+            return _jpeg_size(path)
+        if head[:4] == b"RIFF" and head[8:12] == b"WEBP":
+            return _webp_size(path)
+    except Exception:
+        pass
+    return (0, 0)
+
+
+def _jpeg_size(path):
+    import struct as _s
+    with open(path, "rb") as f:
+        f.read(2)
+        while True:
+            b = f.read(1)
+            if not b:
+                return (0, 0)
+            if b != b"\xff":
+                continue
+            while b == b"\xff":
+                b = f.read(1)
+                if not b:
+                    return (0, 0)
+            marker = b[0]
+            if marker in (0xD8, 0x01) or 0xD0 <= marker <= 0xD7:
+                continue
+            ln_bytes = f.read(2)
+            if len(ln_bytes) < 2:
+                return (0, 0)
+            ln = _s.unpack(">H", ln_bytes)[0]
+            if marker in (0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7,
+                          0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF):
+                seg = f.read(5)
+                if len(seg) < 5:
+                    return (0, 0)
+                h, w = _s.unpack(">HH", seg[1:5])
+                return (w, h)
+            if ln < 2:
+                return (0, 0)
+            f.seek(ln - 2, 1)
+
+
+def _webp_size(path):
+    import struct as _s
+    with open(path, "rb") as f:
+        f.read(12)
+        while True:
+            chunk = f.read(8)
+            if len(chunk) < 8:
+                return (0, 0)
+            fourcc = chunk[0:4]
+            size = _s.unpack("<I", chunk[4:8])[0]
+            data = f.read(min(size, 32))
+            if fourcc == b"VP8 " and len(data) >= 10:
+                return (_s.unpack("<H", data[6:8])[0] & 0x3FFF,
+                        _s.unpack("<H", data[8:10])[0] & 0x3FFF)
+            if fourcc == b"VP8L" and len(data) >= 5:
+                bits = int.from_bytes(data[1:5], "little")
+                return ((bits & 0x3FFF) + 1, ((bits >> 14) & 0x3FFF) + 1)
+            if fourcc == b"VP8X" and len(data) >= 12:
+                return (int.from_bytes(data[4:7], "little") + 1,
+                        int.from_bytes(data[7:10], "little") + 1)
+            f.seek(size % 2, 1)
+
+
+# 清晰度诊断参考分辨率（任务 #47：判断当前图在目标屏上会不会被放大到模糊）
+CLARITY_TARGETS = [
+    ("1080p", 1920, 1080),
+    ("2K", 2560, 1440),
+    ("4K", 3840, 2160),
+]
+
+
+def clarity_report(path):
+    """给出背景图的清晰度诊断：像素尺寸 + 在各目标屏上的放大倍率与是否模糊。"""
+    w, h = _image_size(path)
+    if w <= 0 or h <= 0:
+        return {"exists": False, "width": 0, "height": 0, "targets": []}
+    out = []
+    for name, tw, th in CLARITY_TARGETS:
+        # 铺满裁切(cover)下要按「较大的那个方向」放大才能填满，取 max 才是真实采样倍率
+        scale = max(tw / float(w), th / float(h))
+        if scale > 1.25:
+            verdict = "模糊"
+        elif scale > 1.05:
+            verdict = "轻微发虚"
+        else:
+            verdict = "清晰"
+        out.append({"name": name, "width": tw, "height": th,
+                    "scale": round(scale, 2), "verdict": verdict})
+    return {"exists": True, "width": w, "height": h, "targets": out}
 
 
 # 大背景图写死的资源路径所在文件，换扩展名时需同步更新
@@ -761,14 +883,19 @@ LOGIN_TEXT_KEYS = [
 def login_bg_info():
     p = _login_bg_path()
     if not os.path.exists(p):
-        return {"exists": False, "size": 0, "mtime": 0, "ext": ""}
+        return {"exists": False, "size": 0, "mtime": 0, "ext": "", "width": 0, "height": 0, "targets": []}
     st = os.stat(p)
-    return {"exists": True, "size": st.st_size, "mtime": st.st_mtime,
-            "ext": os.path.splitext(p)[1].lstrip(".")}
+    w, h = _image_size(p)
+    info = {"exists": True, "size": st.st_size, "mtime": st.st_mtime,
+            "ext": os.path.splitext(p)[1].lstrip("."), "width": w, "height": h,
+            "targets": clarity_report(p).get("targets", [])}
+    return info
 
 
 def login_bg_replace(src_path):
     ext = _detect_image_ext(src_path)
+    if ext is None:
+        return False, "无法识别的图片格式（Godot 只支持 PNG / JPG / WEBP）。请先把 TIFF、BMP、HEIC 等转成 PNG 再上传。"
     base = _login_bg_base()
     dst = "%s.%s" % (base, ext)
     other = "%s.%s" % (base, "jpg" if ext == "png" else "png")
@@ -866,12 +993,30 @@ def login_btn_bg_list():
 
 
 def login_btn_bg_set(btn_id, src_path):
+    # 关键：先读文件头判真实格式再决定扩展名。Godot 按扩展名选解码器，
+    # 扩展名错配（如 TIFF 存成 .png）会导致导入失败、按钮背景静默消失。
+    ext = _detect_image_ext(src_path)
+    if ext is None:
+        return False, "无法识别的图片格式（Godot 只支持 PNG / JPG / WEBP）。请先把 TIFF、BMP、HEIC 等转成 PNG 再上传。"
     d = _login_btn_bg_dir()
     os.makedirs(d, exist_ok=True)
     os.makedirs(os.path.dirname(_login_btn_bg_cfg()), exist_ok=True)
-    dst = os.path.join(d, "%s.png" % btn_id)
+    fname = "%s.%s" % (btn_id, ext)
+    dst = os.path.join(d, fname)
+    # 清掉其它扩展名的同名残留（上次可能是另一种格式），避免 Godot 导入到旧文件
+    for other_ext in ("png", "jpg", "webp"):
+        if other_ext == ext:
+            continue
+        stale = os.path.join(d, "%s.%s" % (btn_id, other_ext))
+        if os.path.exists(stale):
+            _backup(stale)
+            try:
+                os.remove(stale)
+            except OSError:
+                pass
     _backup(dst)
     shutil.copy2(src_path, dst)
+    w, h = _image_size(dst)
     cfg = _login_btn_bg_cfg()
     data = {}
     if os.path.exists(cfg):
@@ -881,12 +1026,18 @@ def login_btn_bg_set(btn_id, src_path):
             data = {}
     if "map" not in data:
         data["map"] = {}
-    data["map"][btn_id] = "res://assets/ui/main_menu_btn/%s.png" % btn_id
-    data["_doc"] = "登录主菜单各按钮背景图映射。游戏代码已读取此表（MainMenu._load_btn_bg_map → MenuItem.set_background），上传图片后下次进主菜单即生效。"
+    data["map"][btn_id] = "res://assets/ui/main_menu_btn/%s" % fname
+    data["_doc"] = "登录主菜单各按钮背景图映射。游戏代码已读取此表（MainMenu._load_btn_bg_map → MenuItem.set_background），上传图片后下次进主菜单即生效。扩展名由工具按文件头真实格式写入，勿手改。"
     with open(cfg, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
-    log_event("login_btn_bg", btn_id, "存储按钮背景图（待代码启用）")
-    return True, "已存储 %s 的按钮背景图（游戏代码已读取，下次进主菜单即生效）" % btn_id
+    log_event("login_btn_bg", btn_id, "存储按钮背景图（真实格式=%s，%dx%d）" % (ext, w, h))
+    tip = ""
+    if w > 0 and h > 0:
+        ratio = w / float(h)
+        # 按钮是 280x44 的横条，贴图严重竖长会被 cover 裁得只剩中间一条
+        if ratio < 1.2:
+            tip = " ⚠️ 这张是竖图（%dx%d），按钮是横条，会被裁得只剩中间一小条，建议换横版图。" % (w, h)
+    return True, "已存储 %s 的按钮背景图（%s，%dx%d，下次进主菜单即生效）%s" % (btn_id, ext, w, h, tip)
 
 
 # === 登录背景布局（方案B：游戏 UIBackground 运行时读取此 JSON） ===
@@ -1011,15 +1162,215 @@ def login_btn_bg_clear(btn_id):
         with open(cfg, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
     d = _login_btn_bg_dir()
-    fp = os.path.join(d, "%s.png" % btn_id)
-    if os.path.exists(fp):
-        _backup(fp)
-        try:
-            os.remove(fp)
-        except Exception:
-            pass
+    # 图片可能是 png/jpg/webp 任一真实格式，逐个清掉同名残留
+    for ext in ("png", "jpg", "webp"):
+        fp = os.path.join(d, "%s.%s" % (btn_id, ext))
+        if os.path.exists(fp):
+            _backup(fp)
+            try:
+                os.remove(fp)
+            except OSError:
+                pass
     log_event("login_btn_bg_clear", btn_id, "清除按钮背景图（设为默认）")
     return True, "已清除 %s 的按钮背景图（回退默认）" % btn_id
+
+
+def login_btn_bg_scan_fix():
+    """体检：扫描所有按钮背景图，找出「文件内容真实格式 ≠ 文件扩展名」的错配并自动改名修复。
+
+    背景：Godot 按扩展名选解码器。JPEG 数据存成 .png 会导致导入失败（生成不出 .ctex），
+    游戏侧 ResourceLoader.exists() 判定为假，按钮背景**静默消失**且不报错，极难排查。
+    本函数按文件头重新定扩展名，同步更新映射表，救回图片且不丢数据。
+    """
+    d = _login_btn_bg_dir()
+    cfg = _login_btn_bg_cfg()
+    data = {}
+    if os.path.exists(cfg):
+        try:
+            data = json.load(open(cfg, "r", encoding="utf-8"))
+        except Exception:
+            data = {}
+    mp = data.get("map", {})
+    if not isinstance(mp, dict):
+        mp = {}
+    fixed, clean = [], []
+    for btn_id, rel in list(mp.items()):
+        if not rel:
+            continue
+        disk = os.path.join(discover_project_root(), rel.replace("res://", "").replace("/", os.sep))
+        if not os.path.exists(disk):
+            continue
+        real = _detect_image_ext(disk)
+        if real is None:
+            # 既不是 png/jpg/webp —— Godot 无论如何都读不了，只能提示用户换图
+            fixed.append({"btn_id": btn_id, "action": "unsupported", "detail": os.path.basename(disk)})
+            continue
+        cur = os.path.splitext(disk)[1].lstrip(".").lower()
+        if cur == real:
+            clean.append(btn_id)
+            continue
+        new_disk = "%s.%s" % (os.path.splitext(disk)[0], real)
+        try:
+            _backup(disk)
+            shutil.move(disk, new_disk)
+            # 清掉可能残留的 .import（指向旧扩展名，留着会让 Godot 认错文件）
+            stale_import = disk + ".import"
+            if os.path.exists(stale_import):
+                try:
+                    os.remove(stale_import)
+                except OSError:
+                    pass
+            mp[btn_id] = "res://assets/ui/main_menu_btn/%s" % os.path.basename(new_disk)
+            fixed.append({"btn_id": btn_id, "action": "renamed",
+                          "detail": "%s → %s" % (os.path.basename(disk), os.path.basename(new_disk))})
+        except Exception as e:
+            fixed.append({"btn_id": btn_id, "action": "failed", "detail": str(e)})
+    data["map"] = mp
+    if os.path.exists(cfg) or mp:
+        os.makedirs(os.path.dirname(cfg), exist_ok=True)
+        _backup(cfg)
+        data["_doc"] = ("登录主菜单各按钮背景图映射。游戏代码已读取此表（MainMenu._load_btn_bg_map → "
+                        "MenuItem.set_background），上传图片后下次进主菜单即生效。扩展名由工具按文件头真实格式写入，勿手改。")
+        with open(cfg, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    for it in fixed:
+        if it["action"] == "renamed":
+            log_event("btn_bg_fix", it["btn_id"], "修复扩展名错配：%s" % it["detail"])
+    n_bad = len([x for x in fixed if x["action"] in ("renamed", "unsupported")])
+    if n_bad == 0:
+        return True, "体检完成：所有按钮背景图的扩展名都与真实格式一致，无需修复。"
+    return True, "体检完成：修复 %d 处错配（%s）。Godot 需要重新导入一次才会生效。" % (
+        n_bad, "；".join("%s %s" % (x["btn_id"], x["detail"]) for x in fixed if x["action"] != "failed"))
+
+
+def login_btn_bg_file(btn_id):
+    """返回该按钮背景图的真实磁盘路径（按映射表里的真实扩展名），不存在返回 None。"""
+    cfg = _login_btn_bg_cfg()
+    data = {}
+    if os.path.exists(cfg):
+        try:
+            data = json.load(open(cfg, "r", encoding="utf-8")).get("map", {})
+        except Exception:
+            data = {}
+    rel = data.get(btn_id, "")
+    if not rel:
+        return None
+    p = os.path.join(discover_project_root(), rel.replace("res://", "").replace("/", os.sep))
+    return p if os.path.exists(p) else None
+
+
+# ============================ 登录背景多分辨率变体（任务 #47） ============================
+# 思路：准备 1080p / 2K / 4K 三档图，游戏按当前视口宽度自动挑最合适的一档。
+# 好处：4K 屏不吃 1080p 图的放大模糊；1080p 屏也不必白扛一张 4K 图的内存。
+def _bg_variants_cfg_path():
+    return os.path.join(discover_project_root(), "data", "configs", "ui", "login_bg_variants.json")
+
+
+def _bg_variant_base():
+    return os.path.join(discover_project_root(), "assets", "ui", "main_menu_bg")
+
+
+def _load_variants():
+    p = _bg_variants_cfg_path()
+    if not os.path.exists(p):
+        return {"variants": []}
+    try:
+        d = json.load(open(p, "r", encoding="utf-8"))
+        if isinstance(d, dict) and isinstance(d.get("variants"), list):
+            return d
+    except Exception:
+        pass
+    return {"variants": []}
+
+
+def _save_variants(d):
+    p = _bg_variants_cfg_path()
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+    _backup(p)
+    d["_doc"] = ("登录背景多分辨率变体。游戏按视口宽度挑选 min_width 最大且不超过视口宽的那一档；"
+                 "配置缺失或文件不存在时回退主图 main_menu_bg.png，零破坏。由工作室「登录界面→清晰度」面板维护。")
+    with open(p, "w", encoding="utf-8") as f:
+        json.dump(d, f, ensure_ascii=False, indent=2)
+
+
+def login_bg_variants():
+    """返回主图清晰度诊断 + 已配置的变体列表。"""
+    base_path = _login_bg_path()
+    info = clarity_report(base_path) if os.path.exists(base_path) else {"exists": False, "width": 0, "height": 0, "targets": []}
+    out = []
+    for v in _load_variants().get("variants", []):
+        rel = v.get("path", "")
+        disk = os.path.join(discover_project_root(), rel.replace("res://", "").replace("/", os.sep))
+        w, h = _image_size(disk) if os.path.exists(disk) else (0, 0)
+        out.append({"min_width": v.get("min_width", 0), "path": rel,
+                    "exists": os.path.exists(disk), "width": w, "height": h,
+                    "size": os.path.getsize(disk) if os.path.exists(disk) else 0})
+    out.sort(key=lambda x: x["min_width"])
+    return {"base": info, "base_path": ("res://assets/ui/%s" % os.path.basename(base_path)) if info.get("exists") else "",
+            "variants": out}
+
+
+def login_bg_variant_set(src_path, tag, min_width):
+    """上传一档变体：存成 assets/ui/main_menu_bg_<tag>.<真实格式>，并写入变体表。"""
+    ext = _detect_image_ext(src_path)
+    if ext is None:
+        return False, "无法识别的图片格式（Godot 只支持 PNG / JPG / WEBP）。请转成 PNG 再上传。"
+    tag = re.sub(r"[^0-9A-Za-z_\-]", "", str(tag or "").strip())
+    if not tag:
+        return False, "档位名不能为空（例如 1080p / 2k / 4k）"
+    try:
+        min_width = int(min_width)
+    except Exception:
+        return False, "生效宽度必须是数字（例如 1080p 填 0，2K 填 1921，4K 填 3000）"
+    if min_width < 0:
+        return False, "生效宽度不能为负"
+    dst = "%s_%s.%s" % (_bg_variant_base(), tag, ext)
+    _backup(dst)
+    shutil.copy2(src_path, dst)
+    w, h = _image_size(dst)
+    d = _load_variants()
+    rel = "res://assets/ui/main_menu_bg_%s.%s" % (tag, ext)
+    hit = None
+    for v in d["variants"]:
+        if v.get("min_width") == min_width:
+            hit = v
+            break
+    if hit is None:
+        d["variants"].append({"min_width": min_width, "path": rel})
+        hit = d["variants"][-1]
+    else:
+        hit["path"] = rel
+    d["variants"].sort(key=lambda x: x.get("min_width", 0))
+    _save_variants(d)
+    log_event("bg_variant", tag, "设置登录背景变体 min_width=%d（%dx%d）" % (min_width, w, h))
+    return True, "已保存 %s 档（视口宽 ≥ %d 时启用，%dx%d）" % (tag, min_width, w, h)
+
+
+def login_bg_variant_remove(min_width):
+    """删除一档变体（文件进回收站，配置项移除）。"""
+    try:
+        min_width = int(min_width)
+    except Exception:
+        return False, "档位标识无效"
+    d = _load_variants()
+    hit = None
+    for v in d["variants"]:
+        if v.get("min_width") == min_width:
+            hit = v
+            break
+    if hit is None:
+        return False, "没有这一档"
+    disk = os.path.join(discover_project_root(), hit["path"].replace("res://", "").replace("/", os.sep))
+    if os.path.exists(disk):
+        _backup(disk)
+        try:
+            os.remove(disk)
+        except OSError:
+            pass
+    d["variants"] = [v for v in d["variants"] if v.get("min_width") != min_width]
+    _save_variants(d)
+    log_event("bg_variant_remove", str(min_width), "删除登录背景变体")
+    return True, "已删除该档变体（游戏回退到主图）"
 
 
 # ============================ 自检（供无头测试） ============================

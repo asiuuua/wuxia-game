@@ -2,12 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://rncjqllabdf3"
-valid=false
+uid="uid://fyk0ijlb3plm"
+path="res://.godot/imported/menu_continue.jpg-5fe91c85dac9bcf3eaa1c629b4172e19.ctex"
+metadata={
+"vram_texture": false
+}
 
 [deps]
 
-source_file="res://assets/ui/main_menu_btn/menu_continue.png"
+source_file="res://assets/ui/main_menu_btn/menu_continue.jpg"
+dest_files=["res://.godot/imported/menu_continue.jpg-5fe91c85dac9bcf3eaa1c629b4172e19.ctex"]
 
 [params]
 

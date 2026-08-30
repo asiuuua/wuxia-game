@@ -1,0 +1,7 @@
+# 让 Godot 完全忽略「内容工作室」工具目录。
+#
+# 原因：本目录是独立的 Python + HTML 桌面工具，不是游戏资源，Godot 不该扫描它。
+# 尤其 safety_data/backups/ 会存放用户上传图片的备份（含内容与扩展名不符的历史坏图），
+# 一旦被 Godot 当资源导入，就会刷屏报 "Error importing ... ERR_FILE_CORRUPT"。
+#
+# 注意：只忽略本目录，tools/ 下的其它 .gd 脚本（gen_contract.gd 等）仍正常参与项目。
