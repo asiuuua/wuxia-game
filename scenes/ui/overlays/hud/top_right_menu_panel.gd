@@ -46,3 +46,10 @@ func _refresh_badge(_p: Variant = null) -> void:
 		return
 	var ids: Array = GameManager.romance_service.get_marriageable_npc_ids()
 	_bond_badge.visible = not ids.is_empty()
+
+# === 编辑器预览（UIPreview 调用）：手动赋值 @onready 后连线按钮（红点依赖运行态，预览中隐藏） ===
+func _editor_preview() -> void:
+	if not Engine.is_editor_hint():
+		return
+	_bond_badge = get_node_or_null("BondBtn/RomanceBadge")
+	_hook_buttons()

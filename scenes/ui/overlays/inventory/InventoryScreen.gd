@@ -269,3 +269,36 @@ func _exit_tree() -> void:
 		EventBus.inventory_item_added.disconnect(_on_inv_changed)
 	if EventBus.inventory_item_removed.is_connected(_on_inv_changed):
 		EventBus.inventory_item_removed.disconnect(_on_inv_changed)
+
+# === 编辑器预览（UIPreview 调用）：填标题/重量 + 各栏铺空槽，展示布局（不依赖存档） ===
+func _editor_preview() -> void:
+	if not Engine.is_editor_hint():
+		return
+	var title: Label = get_node_or_null("Center/Panel/Margin/VBox/Header/Title")
+	if title != null:
+		title.text = tr("ui_inventory_title")
+		title.add_theme_font_size_override("font_size", 22)
+		title.add_theme_color_override("font_color", UIPalette.GOLD)
+	var weight: Label = get_node_or_null("Center/Panel/Margin/VBox/Header/Weight")
+	if weight != null:
+		weight.text = tr("ui_inventory_weight") % [12, 100]
+	var sort_btn: Button = get_node_or_null("Center/Panel/Margin/VBox/Header/SortBtn")
+	if sort_btn != null:
+		sort_btn.text = tr("ui_inventory_tidy")
+	var close: Button = get_node_or_null("Center/Panel/Margin/VBox/Header/CloseBtn")
+	if close != null:
+		close.text = tr("ui_inventory_close")
+	var grids: Array = [
+		get_node_or_null("Center/Panel/Margin/VBox/MainScroll/MainGrid"),
+		get_node_or_null("Center/Panel/Margin/VBox/MaterialScroll/MaterialGrid"),
+		get_node_or_null("Center/Panel/Margin/VBox/QuestScroll/QuestGrid")
+	]
+	for g in grids:
+		if g == null:
+			continue
+		for i in 6:
+			var slot: Control = ItemSlotScene.instantiate()
+			g.add_child(slot)
+			slot.owner = null
+			if slot.has_method("set_empty"):
+				slot.set_empty()

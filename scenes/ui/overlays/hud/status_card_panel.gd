@@ -106,3 +106,33 @@ func _refresh(_a: Variant = null, _b: Variant = null, _c: Variant = null) -> voi
 			# 用 `or 0` 兜底缺省属性，避免解析期 “Too many arguments for get()”。
 			var raw: Variant = ps.get(a["key"])
 			b.set_level(int(raw) if raw != null else 0, 100)
+
+# === 编辑器预览（UIPreview 调用）：手动赋值 @onready 后 _setup_bars + 注入模拟数值，展示填满状态卡 ===
+func _editor_preview() -> void:
+	if not Engine.is_editor_hint():
+		return
+	_name_label = get_node_or_null("Panel/Margin/V/Top/Info/NameLabel")
+	_lv_label = get_node_or_null("Panel/Margin/V/Top/Info/LvLabel")
+	_money_label = get_node_or_null("Panel/Margin/V/Top/Info/MoneyLabel")
+	_avatar_char = get_node_or_null("Panel/Margin/V/Top/Avatar/AvatarChar")
+	_avatar_tex = get_node_or_null("Panel/Margin/V/Top/Avatar/AvatarTex")
+	_hp_bar = get_node_or_null("Panel/Margin/V/HPBar") as StatusBar
+	_mp_bar = get_node_or_null("Panel/Margin/V/MPBar") as StatusBar
+	if _name_label == null or _hp_bar == null:
+		return
+	_setup_bars()
+	_name_label.text = "侠客无名"
+	_lv_label.text = "等级 12"
+	_money_label.text = "银两 9999"
+	if _avatar_char != null:
+		_avatar_char.text = "侠"
+	if _avatar_tex != null:
+		_avatar_tex.visible = false
+	if _avatar_char != null:
+		_avatar_char.visible = true
+	_hp_bar.set_value(220, 300)
+	_mp_bar.set_value(150, 300)
+	for a in _ATTRS:
+		var b: StatusBar = get_node_or_null("Panel/Margin/V/AttrGrid/" + String(a["node"])) as StatusBar
+		if b != null:
+			b.set_level(70, 100)

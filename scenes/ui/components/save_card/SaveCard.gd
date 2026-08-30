@@ -186,3 +186,30 @@ func _on_mouse_entered() -> void:
 func _on_gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		trigger_primary()
+
+# === 编辑器预览（UIPreview 调用）：手动赋值 @onready 后注入模拟存档摘要，展示填满卡片 ===
+func _editor_preview() -> void:
+	if not Engine.is_editor_hint():
+		return
+	_bg = get_node_or_null("BG")
+	_number_label = get_node_or_null("Content/Info/NumberLabel")
+	_name_label = get_node_or_null("Content/Info/NameLabel")
+	_level_label = get_node_or_null("Content/Info/LevelLabel")
+	_faction_label = get_node_or_null("Content/Info/FactionLabel")
+	_playtime_label = get_node_or_null("Content/Info/PlaytimeLabel")
+	_savetime_label = get_node_or_null("Content/Info/SavetimeLabel")
+	_scene_label = get_node_or_null("Content/Info/SceneLabel")
+	_empty_label = get_node_or_null("Content/Info/EmptyLabel")
+	_load_btn = get_node_or_null("Content/Actions/LoadBtn")
+	_delete_btn = get_node_or_null("Content/Actions/DeleteBtn")
+	_new_game_btn = get_node_or_null("Content/Actions/NewGameBtn")
+	if _number_label == null or _load_btn == null:
+		return
+	_build_dynamic_styles()
+	var info := {
+		"slot": 0, "exists": true, "is_auto": false,
+		"player_name": "侠客无名", "level": 12, "faction": "逍遥派",
+		"playtime": "3小时20分", "save_time": "2026-08-31 00:30", "scene": "新手村"
+	}
+	setup(info)
+	set_mode("load")

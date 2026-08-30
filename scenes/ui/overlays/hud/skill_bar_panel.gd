@@ -78,3 +78,14 @@ func _on_cd_update(skill_id: String, remain_time: float) -> void:
 	for s in _slots:
 		if s.get_ability_id() == skill_id:
 			s.set_cd(remain_time)
+
+# === 编辑器预览（UIPreview 调用）：收集 .tscn 静态槽位并置空，展示技能栏布局 ===
+func _editor_preview() -> void:
+	if not Engine.is_editor_hint():
+		return
+	_hbox = get_node_or_null("HBox")
+	if _hbox == null:
+		return
+	_collect_slots()
+	for s in _slots:
+		s.set_empty()

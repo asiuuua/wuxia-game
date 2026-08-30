@@ -311,3 +311,30 @@ func _music_vol_label() -> String:
 
 func _on_language_placeholder() -> void:
 	print("[MainMenu] 语言（本地化待 M6 实现）")
+
+# === 编辑器预览（UIPreview 调用）：只填常量/配置，不碰 GameManager/存档 ===
+func _editor_preview() -> void:
+	if not Engine.is_editor_hint():
+		return
+	var container: VBoxContainer = get_node_or_null("MenuContainer")
+	if container == null:
+		return
+	for i in MENU_ITEMS.size():
+		var item: Control = MenuItemScene.instantiate()
+		item.name = "MenuItem_%d" % i
+		item.set_text(tr(MENU_ITEMS[i]["text"]))
+		item.set_icon("menu/" + MENU_ITEMS[i]["key"])
+		container.add_child(item)
+		item.owner = null
+	var bl: Label = get_node_or_null("BottomLeft")
+	if bl != null:
+		bl.text = "%s  |  %s" % [VERSION_TEXT, tr("studio_name")]
+	var sb: Button = get_node_or_null("BottomRight/SettingsBtn")
+	if sb != null:
+		sb.text = tr("btn_settings")
+	var vb: Button = get_node_or_null("BottomRight/VolBtn")
+	if vb != null:
+		vb.text = "有声"
+	var lb: Button = get_node_or_null("BottomRight/LangBtn")
+	if lb != null:
+		lb.text = tr("btn_language")

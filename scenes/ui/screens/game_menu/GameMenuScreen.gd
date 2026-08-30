@@ -93,6 +93,17 @@ func _build_item(item: Dictionary) -> Control:
 func _on_relationship_changed() -> void:
 	_refresh_romance_badge()
 
+# === 编辑器预览（UIPreview 调用）：手动赋值 @onready 后调真实 _build_ui（仅读配置，无 GameManager） ===
+func _editor_preview() -> void:
+	if not Engine.is_editor_hint():
+		return
+	_title = get_node_or_null("Panel/Margin/VLayout/Title")
+	_content = get_node_or_null("Panel/Margin/VLayout/BodyAnchor/Content")
+	_close = get_node_or_null("Panel/Margin/VLayout/Close")
+	if _title == null or _content == null or _close == null:
+		return
+	_build_ui()
+
 func _refresh_romance_badge() -> void:
 	if _romance_badge == null or GameManager.romance_service == null:
 		return

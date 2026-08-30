@@ -435,3 +435,20 @@ func _apply_glass_button_style(btn: Button, font_color: Color) -> void:
 	btn.add_theme_color_override("font_hover_color", UIPalette.TEXT_MAIN)
 	btn.add_theme_color_override("font_pressed_color", font_color)
 	btn.add_theme_font_size_override("font_size", UIPalette.FS_SUB)
+
+# === 编辑器预览（UIPreview 调用）：手动赋值 @onready 后调真实构建方法；面板内容在 SettingsManager 可用时展开 ===
+func _editor_preview() -> void:
+	if not Engine.is_editor_hint():
+		return
+	_back_btn = get_node_or_null("Panel/Header/BackBtn")
+	_title_label = get_node_or_null("Panel/Header/TitleLabel")
+	_hint_label = get_node_or_null("Panel/Header/HintLabel")
+	_category_list = get_node_or_null("Panel/Body/CategoryList")
+	_panel_vbox = get_node_or_null("Panel/Body/PanelContainer/PanelVBox")
+	_current_category = "audio"
+	if _back_btn == null or _title_label == null or _category_list == null or _panel_vbox == null:
+		return
+	_build_header()
+	_build_categories()
+	if is_instance_valid(SettingsManager):
+		_select_category("audio")

@@ -244,3 +244,30 @@ func _add_quest_entry(state: QuestState) -> void:
 		line.add_theme_font_size_override("font_size", UIPalette.FS_TINY)
 		line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		_entries.add_child(line)
+
+# === 编辑器预览（UIPreview 调用）：手动赋值 @onready 后注入一条模拟追踪任务，展示完整条目样式 ===
+func _editor_preview() -> void:
+	if not Engine.is_editor_hint():
+		return
+	_entries = get_node_or_null("Panel/Margin/V/Scroll/Entries")
+	_scroll = get_node_or_null("Panel/Margin/V/Scroll")
+	if _entries == null or _scroll == null:
+		return
+	var title_lab := Label.new()
+	title_lab.text = "◆ 新手村奇遇"
+	title_lab.add_theme_color_override("font_color", UIPalette.TEXT_MAIN)
+	title_lab.add_theme_font_size_override("font_size", UIPalette.FS_SMALL)
+	_entries.add_child(title_lab)
+	var objs := [
+		{"desc": "与村长对话", "need": 1, "cur": 1},
+		{"desc": "击败山贼", "need": 3, "cur": 1}
+	]
+	for obj in objs:
+		var line := Label.new()
+		var done: bool = int(obj["cur"]) >= int(obj["need"])
+		var mark := "✔" if done else "▢"
+		line.text = "  %s %s  %d/%d" % [mark, obj["desc"], int(obj["cur"]), int(obj["need"])]
+		line.add_theme_color_override("font_color", UIPalette.TEXT_SECONDARY if not done else UIPalette.SUCCESS)
+		line.add_theme_font_size_override("font_size", UIPalette.FS_TINY)
+		_entries.add_child(line)
+	_scroll.custom_minimum_size.y = 120.0

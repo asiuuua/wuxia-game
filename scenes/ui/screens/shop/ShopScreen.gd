@@ -105,3 +105,50 @@ func _exit_tree() -> void:
 		EventBus.notify_trade_failed.disconnect(_on_trade_failed)
 	if EventBus.player_money_changed.is_connected(_on_money_changed):
 		EventBus.player_money_changed.disconnect(_on_money_changed)
+
+# === 编辑器预览（UIPreview 调用）：填标题 + 读真实商店配置建列表，按钮仅显示不接 GameManager ===
+func _editor_preview() -> void:
+	if not Engine.is_editor_hint():
+		return
+	_title = get_node_or_null("Panel/Margin/VLayout/Title")
+	_silver_label = get_node_or_null("Panel/Margin/VLayout/SilverLabel")
+	_list = get_node_or_null("Panel/Margin/VLayout/BodyAnchor/List")
+	_close = get_node_or_null("Panel/Margin/VLayout/Close")
+	if _title == null or _list == null or _close == null:
+		return
+	_title.text = tr("ui_shop_title")
+	_close.text = tr("ui_shop_close")
+	_close.pressed.connect(request_close)
+	if _silver_label != null:
+		_silver_label.text = "银两：9999"
+	for child in _list.get_children():
+		child.queue_free()
+	var shop_ids: Array = ConfigManager.get_all_shop_ids()
+	if shop_ids.is_empty():
+		var e := Label.new()
+		e.text = tr("ui_shop_empty")
+		_list.add_child(e)
+		return
+	for sid in shop_ids:
+		var shop: Dictionary = ConfigManager.get_shop(sid)
+		var head := Label.new()
+		head.text = "[%s]" % shop.get("name", sid)
+		_list.add_child(head)
+		for entry in shop.get("stock", []):
+			_list.add_child(_build_row_preview(sid, entry))
+
+func _build_row_preview(shop_id: String, entry: Dictionary) -> HBoxContainer:
+	var item_id: String = String(entry.get("item_id", ""))
+	var nm: String = ConfigManager.get_item(item_id).get("name", item_id)
+	var h := HBoxContainer.new()
+	var info := Label.new()
+	info.custom_minimum_size = Vector2(340, 0)
+	info.text = "%s  (预览)" % nm
+	var buy := Button.new()
+	buy.text = tr("ui_shop_buy")
+	var sell := Button.new()
+	sell.text = tr("ui_shop_sell")
+	h.add_child(info)
+	h.add_child(buy)
+	h.add_child(sell)
+	return h
