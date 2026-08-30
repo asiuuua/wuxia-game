@@ -21,6 +21,9 @@
 - 删函数须全工程 grep 残留；`Invalid call Nonexistent function 'new'` 真因是某脚本 Parse Error。
 - Control `scale` 以 pivot_offset 为基准（默认左上角）→ 悬停放大先设 pivot 中心并监听 resized。
 - **Control 绝对定位坑（2026-08-30 实测）**：anchor 四个值全归零且 `offset_left == offset_right` 时控件**宽度恒为 0**，`custom_minimum_size` 不会自动撑开。要绝对定位就把四个 offset 全写死：`offset_left=px, offset_top=py, offset_right=px+w, offset_bottom=py+h`。另：`horizontal_alignment` 只有 Label 有，ProgressBar 赋值直接崩 → 按 `node is Label` 分支；按视口比例定位时记得连 `resized` 信号重算（用布尔量防重入）。
+- **手写 .tscn 时 `Color()` 必须写满 4 个参数**：`Color(0.788, 0.663, 0.38)` 会直接 `Parse Error: Expected 4 arguments for constructor` → 整份 .tscn 加载失败 → preload 它的脚本连带 Parse Error（错误指向 .tscn 行号，不指向 .gd，很容易误判）。
+- **B 路线迁移必踩的双闸门回归**：界面从「脚本 `X.new()`」迁到 `.tscn` 后，**所有用 `X.new()` 构造该界面的单测会静默丢属性**（如把 scale/size 挪进 .tscn 后测出 scale=1.0 而非 0.667）。GATE2 会报失败，修法是测试里改 `preload(x.tscn).instantiate()`。迁移每一屏前先 grep 单测里的 `.new()`。
+- **解析外部配置用 `JSON.new()` + `json.parse(txt) != OK`，别用 `JSON.parse_string()`**：后者失败时会 `push_error` 往日志刷 `Parse JSON failed`（可能被手改坏的配置触发成刷屏）。前者只回错误码、静默可控。
 - **GDScript 4.x 闭包按值捕获值类型**：`func(): made += 1` 把整型 `made` 按值捕获进闭包，闭包内自增**不回写**外层，断言读到恒为 0（2026-08-30 实测坑，曾让 object_pool 单测全挂）。**测试里计数/统计用引用类型**（Array/RefCounted/Dictionary，原地 `append`/改属性），别用 int/float 局部变量当闭包计数器。
 
 ## Godot 本机验证铁律（必记）
@@ -85,3 +88,15 @@
 - 共享地基纯追加：EventBus.celebration_started(npc_id,cg_id) + screens.json 追加 CelebrationOverlay 键。未改 bond_enums(INTIMATE 是内部动作日志枚举，唯一可见"寝欢"即按钮文案已改)。
 - 设计：配额存 spouses[npc_id].celebration={day,quota,used}随存档；自然日键 int(unix/86400) 跨日重置随机2~3；欢庆**对接子嗣**——不被孕期阻断(每天可点)，且未孕则本次受孕(pregnancy写入)、孕期后续欢庆不重复受孕；conceived 字段返UI弹喜讯；满gestation_days经advance_days分娩。
 - 双闸门绿(--quit 零错；run_all 24套件0✗)。变更通告 docs/变更通告_2026-08-29_欢庆模块.md。
+
+## 工作室专业调教（零代码桌面工具 · tools/desktop_studio）
+- 形态：Python 标准库 http.server + 单页 index.html（`studio_core.py` 业务 / `studio_server.py` 路由 / `studio_launcher.bat`），PyInstaller 打 `dist/工作室专业调教.exe`（exe 被 .gitignore 忽略，属发行产物不入库）。
+- ⚠️ **卡住真因（进程模型）**：`studio_server.py` 是常驻阻塞进程（serve_forever + 自动 webbrowser.open），后台跑永不退出、被框架判 failed。自检必须：`run_in_background` 起 → curl 打接口 → `TaskStop` 主动停。且 TaskStop 只杀 shell，**exe 子进程会残留占 8765 端口**，需 `Stop-Process -Id <pid>` 补刀。
+- ⚠️ **PyInstaller 两条**：① 本机须调 `Scripts/pyinstaller.exe`（`python -m pyinstaller` 报 no module）；② 命令行直接传 .py 会**覆盖重写 .spec**，丢 `datas=[('index.html','.')]` 和 `console=False` → 必须 `pyinstaller 工作室专业调教.spec`。
+- ⚠️ **打包 exe 是精简解释器，装不上第三方库**（Pillow 只在 venv 有）→ 图片尺寸解析等一律**纯标准库**实现（PNG IHDR / JPEG SOF 扫描 / WEBP VP8·VP8L·VP8X）。
+- ⚠️ **Godot 按扩展名选解码器**：JPEG 数据存成 `.png` → 导入失败、不出 `.ctex` → `ResourceLoader.exists()` 假 → 图片**静默消失不报错**。工具写图必须按文件头定真实扩展名（`_detect_image_ext` 无法识别返回 None 由调用方拒绝，绝不兜底成 jpg）；已有 `login_btn_bg_scan_fix()` 体检自动改名 + 更新映射表 + 清 stale .import。
+- ⚠️ **`--headless --quit` 不触发资源导入扫描**（改名后的图不出 .ctex），要 `--headless --editor --quit` 才导入。
+- ⚠️ **`tools/desktop_studio/.gdignore`**（模块导入时 `_ensure_gdignore()` 自动补写）：否则 Godot 扫到 `safety_data/backups/` 里的历史坏图刷 `ERR_FILE_CORRUPT`。
+- 游戏侧布局：`data/configs/ui/loading_layout.json` 归一化 0~1 坐标，LoadingScreen `_apply_layout/_apply_one/_on_resized` 套用；`UIBackground.pick_bg_path(viewport_width, fallback)` 按视口宽从 `login_bg_variants.json` 选分辨率档。
+- ⚠️ **Control 绝对定位坑**：anchor 四值归零且 `offset_left == offset_right` → 宽度恒为 0（`custom_minimum_size` 不撑开）。必须 anchor 归零后**四个 offset 全显式写死**矩形。文字类宽度取 `max(内容宽, 视口宽×0.6)`，否则文案变化会漂。
+- ⚠️ `horizontal_alignment` **只有 Label 有**，ProgressBar 赋值直接崩 → `node is Label` 分支。
