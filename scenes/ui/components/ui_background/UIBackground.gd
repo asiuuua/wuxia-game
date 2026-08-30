@@ -137,7 +137,9 @@ static func pick_bg_path(viewport_width: float, fallback: String,
 			continue
 		var d: Dictionary = it as Dictionary
 		var p := String(d.get("path", ""))
-		if p == "" or not ResourceLoader.exists(p):
+		# 用 FileAccess 而非 ResourceLoader：headless 单测中临时创建的 PNG 可能尚未导入，
+		# ResourceLoader.exists 会误判为不存在；只要磁盘文件在，运行时再导入即可。
+		if p == "" or not FileAccess.file_exists(p):
 			continue
 		var mw := float(d.get("min_width", 0))
 		if smallest_min < 0.0 or mw < smallest_min:

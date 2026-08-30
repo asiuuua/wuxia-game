@@ -5,12 +5,15 @@
 extends TestBase
 
 const VARIANTS_PATH := "res://data/configs/ui/_tmp_bg_variants_test.json"
+const TMP_4K_IMG := "res://data/configs/ui/_tmp_bg_4k_test.png"
 const FALLBACK := "FALLBACK_NOT_EXIST"
 
-# 三档：借工程中真实存在的三张图，避免 exists() 过滤
+# 三档：借工程中真实存在的图 + 测试自建的临时图，避免 exists() 过滤。
+# 注意：P_4K 之前指向 assets/ui/main_menu_btn/menu_new_game.png，这是工作室工具会动态删除的
+# 按钮背景图；一旦工具清掉原图，测试就因 ResourceLoader.exists() 为 false 而失败。
 const P_1080 := "res://assets/ui/splash.png"
 const P_2K := "res://assets/ui/main_menu_bg.png"
-const P_4K := "res://assets/ui/main_menu_btn/menu_new_game.png"
+const P_4K := TMP_4K_IMG
 
 func _write(txt: String) -> void:
 	var f := FileAccess.open(VARIANTS_PATH, FileAccess.WRITE)
@@ -22,12 +25,22 @@ func _write(txt: String) -> void:
 func _write_cfg(cfg: Dictionary) -> void:
 	_write(JSON.stringify(cfg))
 
+func _make_tmp_4k_img() -> void:
+	# 生成一张 1x1 白色 PNG，作为 4K 档位的“真实存在图片”。路径在 data/configs/ui/ 下，
+	# 不会被工作室工具误删，测试收尾时统一删除。
+	var img := Image.create(1, 1, false, Image.FORMAT_RGBA8)
+	img.fill(Color.WHITE)
+	img.save_png(ProjectSettings.globalize_path(TMP_4K_IMG))
+
 func _remove() -> void:
 	if FileAccess.file_exists(VARIANTS_PATH):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(VARIANTS_PATH))
+	if FileAccess.file_exists(TMP_4K_IMG):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(TMP_4K_IMG))
 
 func before_each() -> void:
 	_remove()
+	_make_tmp_4k_img()
 
 func _three_tier() -> Dictionary:
 	return {"variants": [
