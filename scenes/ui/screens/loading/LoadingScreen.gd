@@ -91,12 +91,17 @@ func _apply_layout() -> void:
 	if f == null:
 		_applying_layout = false
 		return
-	var parsed: Variant = JSON.parse_string(f.get_as_text())
-	f.close()
-	if parsed == null or not parsed.has("elements"):
+	var json := JSON.new()
+	if json.parse(f.get_as_text()) != OK:
+		f.close()
 		_applying_layout = false
 		return
-	var els: Dictionary = parsed["elements"]
+	f.close()
+	var parsed: Variant = json.data
+	if parsed == null or not parsed is Dictionary or not (parsed as Dictionary).has("elements"):
+		_applying_layout = false
+		return
+	var els: Dictionary = (parsed as Dictionary)["elements"]
 	var vw: float = get_viewport_rect().size.x
 	var vh: float = get_viewport_rect().size.y
 	_apply_one(_progress_bar, els.get("progress_bar", {}), vw, vh, true)
@@ -153,8 +158,11 @@ func _apply_one(node: Control, spec: Dictionary, vw: float, vh: float, is_bar: b
 			node.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
 func _add_image_background(parent: Control, vw: float, vh: float) -> void:
+	# 多分辨率变体：与主菜单共用同一套档位表（无变体表时原样用主图）
+	# UIBackground 有全局 class_name，直接调用其静态方法即可，无需 preload
+	var use_path := UIBackground.pick_bg_path(vw, BG_IMAGE_PATH)
 	var img_rect := TextureRect.new()
-	img_rect.texture = load(BG_IMAGE_PATH) as Texture2D
+	img_rect.texture = load(use_path) as Texture2D
 	img_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	img_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
 	img_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE

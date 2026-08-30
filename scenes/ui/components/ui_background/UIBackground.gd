@@ -100,6 +100,56 @@ static func _stretch_from_string(s: String) -> int:
 		_:
 			return TextureRect.STRETCH_KEEP_ASPECT
 
+## 多分辨率变体表（工作室「登录界面 → 清晰度」面板维护，任务 #47）
+## 形如 {"variants":[{"path":"res://assets/ui/main_menu_bg_4k.png","min_width":3000}, ...]}
+## 文件不存在 / 为空 / 解析失败 → 一律回退 bg_image_path，零破坏。
+const BG_VARIANTS_PATH := "res://data/configs/ui/login_bg_variants.json"
+
+## 按视口宽度挑最合适的背景图档位：取 min_width 最大且不超过视口宽的那一档；
+## 若视口比所有档位都小，则取最小的一档。路径不存在则跳过该档。
+## 无可用变体时原样返回 fallback（老项目行为完全不变）。
+static func pick_bg_path(viewport_width: float, fallback: String,
+		variants_path: String = BG_VARIANTS_PATH) -> String:
+	if variants_path == "" or not FileAccess.file_exists(variants_path):
+		return fallback
+	var f := FileAccess.open(variants_path, FileAccess.READ)
+	if f == null:
+		return fallback
+	var txt := f.get_as_text()
+	f.close()
+	# 用 JSON.parse() 而非 parse_string()：前者只返回错误码，不会往日志里 push_error
+	# （配置文件被手改坏时不该刷屏报错，静默回退主图即可）
+	var json := JSON.new()
+	if json.parse(txt) != OK:
+		return fallback
+	var parsed: Variant = json.data
+	if not parsed is Dictionary:
+		return fallback
+	var arr: Array = (parsed as Dictionary).get("variants", [])
+	if arr.is_empty():
+		return fallback
+	var best_path := ""
+	var best_min := -1.0            # 已选中的 min_width
+	var smallest_path := ""
+	var smallest_min := -1.0        # 兜底：最小的一档
+	for it in arr:
+		if not it is Dictionary:
+			continue
+		var d: Dictionary = it as Dictionary
+		var p := String(d.get("path", ""))
+		if p == "" or not ResourceLoader.exists(p):
+			continue
+		var mw := float(d.get("min_width", 0))
+		if smallest_min < 0.0 or mw < smallest_min:
+			smallest_min = mw
+			smallest_path = p
+		if mw <= viewport_width and mw > best_min:
+			best_min = mw
+			best_path = p
+	if best_path != "":
+		return best_path
+	return smallest_path if smallest_path != "" else fallback
+
 ## 极简 JSON 读取（仅本组件用，避免引入额外依赖）
 func _load_json(p: String) -> Dictionary:
 	if not FileAccess.file_exists(p):
@@ -109,7 +159,11 @@ func _load_json(p: String) -> Dictionary:
 		return {}
 	var txt := f.get_as_text()
 	f.close()
-	var res = JSON.parse_string(txt)
+	# 同样用 JSON.parse()：配置写坏时静默回退默认，不刷屏报错
+	var json := JSON.new()
+	if json.parse(txt) != OK:
+		return {}
+	var res = json.data
 	if res is Dictionary:
 		return res
 	return {}
@@ -179,8 +233,10 @@ func _build_gradient_base() -> void:
 func _build_image() -> void:
 	if bg_image_path == "" or not ResourceLoader.exists(bg_image_path):
 		return
+	# 多分辨率变体：按视口宽挑最合适的一档（无变体表时原样用主图）
+	var use_path := UIBackground.pick_bg_path(get_viewport_rect().size.x, bg_image_path)
 	var img_rect := TextureRect.new()
-	img_rect.texture = load(bg_image_path) as Texture2D
+	img_rect.texture = load(use_path) as Texture2D
 	img_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	img_rect.stretch_mode = _stretch_mode
 	img_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
