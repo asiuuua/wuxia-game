@@ -28,6 +28,8 @@ const NPC_STATS_PATH := "res://data/configs/npcs/npc_stats.json"
 
 var _npc_id: String = ""
 var _portrait_index: int = 0  # 当前滑动到的立绘索引
+var _ready_done: bool = false
+var _pending_open: Variant = null  # _on_open 在 _ready 之前被调用时暂存
 
 func _ready() -> void:
 	if Engine.is_editor_hint():
@@ -43,8 +45,20 @@ func _ready() -> void:
 	_next_btn.pressed.connect(_on_next)
 	if not EventBus.bond_relationship_changed.is_connected(_on_relationship_changed):
 		EventBus.bond_relationship_changed.connect(_on_relationship_changed)
+	_ready_done = true
+	if _pending_open != null:
+		_open(_pending_open)
+		_pending_open = null
 
+## UIManager.open_screen 在 add_child 之前就会调用 _on_open，此时 @onready 节点未就绪；
+## 采用与 CelebrationOverlay / DialogOverlay 相同的模式：先暂存，等 _ready 后再真正刷新。
 func _on_open(data: Variant) -> void:
+	if _ready_done:
+		_open(data)
+	else:
+		_pending_open = data
+
+func _open(data: Variant) -> void:
 	if data is Dictionary and data.has("npc_id"):
 		_npc_id = String(data["npc_id"])
 	_refresh()
