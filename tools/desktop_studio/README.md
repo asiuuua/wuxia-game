@@ -35,7 +35,7 @@ pyinstaller --onefile --name 工作室专业调教 studio_server.py
 
 | 标签页 | 作用 | 改的是哪个文件 |
 |---|---|---|
-| **NPC 数据** | 增删改 NPC：名称、**地图上坐标(pos_x/pos_y，支持画布点选定位)**、立绘、头像、对话id、任务id、战斗id | `data/configs/npcs/town_npcs.json` |
+| **NPC 数据** | 增删改 NPC：名称、**地图上坐标(pos_x/pos_y，支持画布点选定位)**、立绘、头像、对话id、任务id、战斗id，以及**半身立绘（动态可一键导入）** | `data/configs/npcs/town_npcs.json` |
 | **剧情对话** | 建对话 → 建/改台词（说话人、文本、下一句、触发事件） | `dialogs/_index.json` + `shards/*.json` |
 | **欢庆模块** | 选/绑 NPC → 填 CG 媒体、音乐、台词 | `data/configs/bond/celebrations.json` |
 | **登录界面** | 一键换登录主界面大背景图、改各按钮文字（简/繁/英）、查看版本文字、为各按钮配背景图 | `assets/ui/main_menu_bg.jpg` + `data/configs/localization/strings.csv` + `data/configs/ui/login_button_bg.json` |
@@ -46,6 +46,13 @@ NPC **不是随机摆放**——游戏城镇场景会自动读取 `town_npcs.jso
 所以你只管在工具里填数据、保存，按 F5 跑游戏，NPC 就出现在地图上，**不用写任何实例化代码**。
 - 不知道坐标填多少？两招：① 用「🗺 地图坐标预览」画布，**直接点一下地图**就把 NPC 放到那个点（红点=其它 NPC，黄点=当前编辑的）；② 点「参考：现有 NPC 坐标」把某个老 NPC 的坐标抄过来再微调。
 - 立绘 `sprite` 先填 `res://assets/characters/player.png` 占位，之后换成你的美术文件。
+
+**🖼 半身立绘（动态可一键导入，已合并进 NPC 编辑区）：**
+在「NPC 数据」标签页的编辑区里，有一块「半身立绘」专门用来给这个 NPC 配立绘，**无需碰游戏代码**：
+- 选「类型」：**静态图片** / **帧动画（上传 ZIP 多帧）** / **Spine·SK2D 骨骼（上传 ZIP）**。
+- 点「⏫ 一键导入」即把文件存到 `assets/characters/half_body/`（静态=`<id>.png`；帧动画=`<id>_frames/`；Spine=`<id>_spine/`），并自动把 `half_body_portrait` / `portrait_type` / `portrait_frames` 等字段写进该 NPC 记录。
+- 「清除立绘」可把立绘字段清回空（游戏会回退到按 id 生成的占位图）。
+- 游戏侧已预留动态播放接口；当前先显示占位静态图，后续接入帧动画/Spine 即生效。
 
 **唯一 ID 的"防误改"四重保险（很重要）：**
 - **① 默认锁定**：编辑已有 NPC 时，`id` 输入框是锁定的，手滑也改不到。
