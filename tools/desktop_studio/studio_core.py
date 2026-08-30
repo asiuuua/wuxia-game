@@ -1353,6 +1353,11 @@ def battle_layout_save(layout_id, data):
     norm["width"] = max(2, int(data.get("width", 10)))
     norm["height"] = max(2, int(data.get("height", 8)))
     norm["background"] = str(data.get("background", ""))
+    # 棋盘平移（pan_x/pan_y，像素偏移，默认 0）与缩放（zoom，>0，默认 1.0）
+    # 编辑器可拖动画布空白区平移、滑块缩放，游戏侧把 grid_node 的 position/scale 套用。
+    norm["pan_x"] = int(round(float(data.get("pan_x", 0) or 0)))
+    norm["pan_y"] = int(round(float(data.get("pan_y", 0) or 0)))
+    norm["zoom"] = max(0.2, min(4.0, float(data.get("zoom", 1.0) or 1.0)))
     # obstacles: 'x,y' 字符串数组；裁剪到界内
     obs = []
     for o in (data.get("obstacles", []) or []):

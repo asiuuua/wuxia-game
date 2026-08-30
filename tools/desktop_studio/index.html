@@ -356,12 +356,23 @@
             <label><input type="radio" name="blPaint" value="high"> 高地(金)</label>
             <button class="act sec" onclick="blClearTerrain()">清空地形</button>
           </div>
+          <div class="row" style="align-items:center;gap:10px;margin-top:6px;flex-wrap:wrap">
+            <span>棋盘位置 / 缩放：</span>
+            <button class="act sec" onclick="blPan(0,-1)">↑</button>
+            <button class="act sec" onclick="blPan(-1,0)">←</button>
+            <button class="act sec" onclick="blPan(1,0)">→</button>
+            <button class="act sec" onclick="blPan(0,1)">↓</button>
+            <button class="act sec" onclick="blZoom(0.1)">放大＋</button>
+            <button class="act sec" onclick="blZoom(-0.1)">缩小－</button>
+            <label style="white-space:nowrap">缩放 <span id="blZoomVal">100</span>%</label>
+            <button class="act sec" onclick="blResetTrans()">复位位置/缩放</button>
+          </div>
           <div id="blCanvasWrap" style="position:relative;border:1px solid #444;border-radius:8px;overflow:hidden;background:#0c0e16;width:100%;max-width:720px;aspect-ratio:16/9;margin-top:8px">
             <img id="blBg" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.85" src="" onerror="this.style.display='none'">
             <canvas id="blCanvas" style="position:absolute;inset:0;width:100%;height:100%;cursor:crosshair"></canvas>
             <div id="blUnit" data-uid="player" style="position:absolute;width:18px;height:18px;border-radius:50%;background:#e6b35a;border:2px solid #fff;cursor:grab;display:none"></div>
           </div>
-          <div class="hint">画布里：左键点格子刷地形；右下角金点是「玩家」落点，可拖动（落点只在游戏内生效，编辑器里用于预览站位）。</div>
+          <div class="hint">画布里：左键点格子刷地形；右下角金点是「玩家」落点，可拖动（落点只在游戏内生效，编辑器里用于预览站位）。用上方 ↑↓←→ 移动整张棋盘、放大/缩小调整大小，复位可一键还原。</div>
           <div class="row" style="align-items:center;gap:10px;margin-top:8px">
             <label>底图</label>
             <input type="file" id="blBgFile" accept="image/*">
@@ -1276,6 +1287,10 @@ async function blLoadOne(id){
   document.getElementById('blView').value=d.view_mode||'iso';
   document.getElementById('blW').value=d.width||10;
   document.getElementById('blH').value=d.height||8;
+  if(window._bl.pan_x===undefined)window._bl.pan_x=0;
+  if(window._bl.pan_y===undefined)window._bl.pan_y=0;
+  if(window._bl.zoom===undefined)window._bl.zoom=1.0;
+  document.getElementById('blZoomVal').textContent=Math.round((window._bl.zoom||1)*100);
   blRender();
   blLoadBg();
 }
@@ -1321,36 +1336,41 @@ function blClearTerrain(){
   window._bl.obstacles=[];window._bl.heights=[];blRender();
 }
 // 网格几何：把 cell(i,j) 投到 720p 画布坐标（与游戏侧 BattleGrid 同公式）
+// 含用户平移(pan_x/pan_y，像素)与缩放(zoom，倍率)：先算基准居中坐标，再乘 zoom 并加 pan 偏移。
 function blCellToXY(i,j){
   const wrap=document.getElementById('blCanvasWrap');
   const Wc=wrap.clientWidth||720, Hc=wrap.clientHeight||405;
   const W=window._bl.width, H=window._bl.height;
   const isIso=window._bl.view_mode!=='ortho';
-  // 单元像素尺寸：让整张网格铺满画布 92%
+  const zoom=window._bl.zoom||1.0;
+  const panX=window._bl.pan_x||0, panY=window._bl.pan_y||0;
+  // 单元像素尺寸：让整张网格铺满画布 92%（基准，未缩放前）
   let s;
   if(isIso){ s=Math.min(Wc*0.92/(W+H), Hc*0.92/((W+H)*0.5)); }
   else { s=Math.min(Wc*0.92/W, Hc*0.92/H); }
-  const tw=s, th=isIso?s*0.5:s;
+  const tw=s*zoom, th=(isIso?s*0.5:s)*zoom;
   let x,y;
   if(isIso){ x=(i-j)*tw*0.5; y=(i+j)*th*0.5; }
   else { x=i*tw; y=j*th; }
   // 居中
   const ox=Wc*0.5 - ((isIso?((W-1)-(0))*tw*0.5: (W-1)*tw*0.5))*0.5;
   const oy=Hc*0.5 - ((isIso?((W-1)+(H-1))*th*0.5: (H-1)*th*0.5))*0.5;
-  return {x:x+ox, y:y+oy, tw, th, isIso};
+  return {x:x+ox+panX, y:y+oy+panY, tw, th, isIso};
 }
 function blXYToCell(px,py){
   const wrap=document.getElementById('blCanvasWrap');
   const Wc=wrap.clientWidth||720, Hc=wrap.clientHeight||405;
   const W=window._bl.width, H=window._bl.height;
   const isIso=window._bl.view_mode!=='ortho';
+  const zoom=window._bl.zoom||1.0;
+  const panX=window._bl.pan_x||0, panY=window._bl.pan_y||0;
   let s;
   if(isIso){ s=Math.min(Wc*0.92/(W+H), Hc*0.92/((W+H)*0.5)); }
   else { s=Math.min(Wc*0.92/W, Hc*0.92/H); }
-  const tw=s, th=isIso?s*0.5:s;
+  const tw=s*zoom, th=(isIso?s*0.5:s)*zoom;
   const ox=Wc*0.5 - ((isIso?((W-1)-(0))*tw*0.5: (W-1)*tw*0.5))*0.5;
   const oy=Hc*0.5 - ((isIso?((W-1)+(H-1))*th*0.5: (H-1)*th*0.5))*0.5;
-  const lx=px-ox, ly=py-oy;
+  const lx=px-ox-panX, ly=py-oy-panY;
   let gx,gy;
   if(isIso){
     gx=Math.round((lx/tw + ly/th)*0.5);
@@ -1430,10 +1450,29 @@ function blInitCanvas(){
   });
 }
 blInitCanvas();
+// ---- 棋盘平移 / 缩放 ----
+function blPan(dx,dy){
+  if(!window._bl)return;
+  window._bl.pan_x=(window._bl.pan_x||0)+dx*12;
+  window._bl.pan_y=(window._bl.pan_y||0)+dy*12;
+  blRender();
+}
+function blZoom(dz){
+  if(!window._bl)return;
+  window._bl.zoom=Math.max(0.2,Math.min(4.0,(window._bl.zoom||1.0)+dz));
+  document.getElementById('blZoomVal').textContent=Math.round(window._bl.zoom*100);
+  blRender();
+}
+function blResetTrans(){
+  if(!window._bl)return;
+  window._bl.pan_x=0;window._bl.pan_y=0;window._bl.zoom=1.0;
+  document.getElementById('blZoomVal').textContent='100';
+  blRender();
+}
 async function blSave(){
   if(!window._bl||!window._blSel){show('blStat','先选或新建布局',false);return;}
   const d=window._bl;
-  const payload={id:window._blSel,data:{name:d.name||window._blSel,view_mode:d.view_mode,width:d.width,height:d.height,obstacles:d.obstacles||[],heights:d.heights||[],deployment:d.deployment||{}}};
+  const payload={id:window._blSel,data:{name:d.name||window._blSel,view_mode:d.view_mode,width:d.width,height:d.height,pan_x:d.pan_x||0,pan_y:d.pan_y||0,zoom:d.zoom||1.0,obstacles:d.obstacles||[],heights:d.heights||[],deployment:d.deployment||{}}};
   const r=await A('POST','/api/battle_layout/save',payload);
   show('blStat',(r&&r.msg)?r.msg:(r&&r.ok?'已保存':'失败'),!!(r&&r.ok));
   if(r&&r.ok)blLoadList();

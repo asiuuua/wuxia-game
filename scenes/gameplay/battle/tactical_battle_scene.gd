@@ -100,21 +100,29 @@ func _build_world() -> void:
 		_grid_node.set_view_mode("ortho")
 	if meta.get("background", "") != "":
 		_grid_node.set_background(String(meta["background"]))
+	# 棋盘平移/缩放（编辑器可调）：pan 是相对居中的额外像素偏移，zoom 是用户指定的棋盘缩放倍率。
+	# 默认值 pan=0 / zoom=1.0 时等于原行为（仅镜头自动适配），向后兼容旧布局。
+	var pan_x: float = float(meta.get("pan_x", 0))
+	var pan_y: float = float(meta.get("pan_y", 0))
+	var grid_zoom: float = clampf(float(meta.get("zoom", 1.0)), 0.2, 4.0)
+	_grid_node.position = Vector2(pan_x, pan_y)
+	_grid_node.scale = Vector2(grid_zoom, grid_zoom)
 	bf.add_child(_grid_node)
 	_entities_node = Node2D.new()
 	_entities_node.name = "Entities"
 	_entities_node.y_sort_enabled = true
 	bf.add_child(_entities_node)
-	# 镜头自动适配（P0）：算出整张等轴测地图像素包围盒，自动缩放+居中
+	# 镜头自动适配（P0）：算出整张等轴测地图像素包围盒（含网格自身缩放），自动缩放+居中
 	# —— 小地图放大、大地图缩小，不写死镜头参数；bf 保持原点，居中完全交给 Camera2D
 	_cam = Camera2D.new()
 	add_child(_cam)
 	var bbox := _grid_pixel_rect()
 	var view := get_viewport_rect().size
-	var zoom: float = min(view.x / max(bbox.size.x, 1.0), view.y / max(bbox.size.y, 1.0)) * 0.92
-	zoom = clampf(zoom, 0.25, 1.5)
-	_cam.zoom = Vector2(zoom, zoom)
-	_cam.position = bbox.get_center()   # bf 在原点，grid_node 局部坐标即世界坐标
+	var cam_zoom: float = min(view.x / max(bbox.size.x, 1.0), view.y / max(bbox.size.y, 1.0)) * 0.92
+	cam_zoom = clampf(cam_zoom, 0.25, 1.5)
+	_cam.zoom = Vector2(cam_zoom, cam_zoom)
+	# bbox 已是 grid_node 局部坐标（已含 scale）；pan 偏移作用于 grid_node.position，镜头中心随之平移
+	_cam.position = bbox.get_center() + Vector2(pan_x, pan_y)
 
 ## 整张等轴测地图的像素包围盒（grid_node 局部坐标）：用于镜头自动缩放/居中
 func _grid_pixel_rect() -> Rect2:
