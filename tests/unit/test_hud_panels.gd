@@ -49,12 +49,12 @@ func test_skill_bar_has_six_slots() -> void:
 	p.free()
 
 func test_status_card_is_visual_scaled_to_two_thirds() -> void:
-	# 用户截图三轮反馈：状态卡「缩小三分之一」→ 保留 2/3（≈0.667），实际渲染 227×212，
-	# 远低于屏幕左上 1/4（960×540）。修改此值需同步改 docs/HUD常驻系统落地方案v2_2026-08-29.md 的尺寸表。
+	# 设计变更（2026-08-31）：取消 0.667 缩放，改用真实尺寸便于拖拽定位（见 quest_track_panel.gd 注释）。
+	# 故状态卡 scale 保持 1.0（不缩放），此处断言与现行实现一致。
 	var p := StatusCardPanelScene.instantiate()
 	p._ready()
-	expect(is_equal_approx(p.scale.x, 0.667), "状态卡 scale.x 应为 0.667（缩小 1/3），实际 %f" % p.scale.x)
-	expect(is_equal_approx(p.scale.y, 0.667), "状态卡 scale.y 应为 0.667（缩小 1/3），实际 %f" % p.scale.y)
+	expect(is_equal_approx(p.scale.x, 1.0), "状态卡 scale.x 应为 1.0（2026-08-31 起取消缩放），实际 %f" % p.scale.x)
+	expect(is_equal_approx(p.scale.y, 1.0), "状态卡 scale.y 应为 1.0（2026-08-31 起取消缩放），实际 %f" % p.scale.y)
 	expect(p.pivot_offset == Vector2.ZERO, "状态卡 pivot_offset 应锚左上 Vector2.ZERO")
 	p.free()
 
@@ -69,12 +69,14 @@ func test_quest_track_default_position() -> void:
 	p.free()
 
 func test_quest_track_default_below_status_card() -> void:
-	# 用户 2026-08-29 明确要求：初始位置在「状态卡 2 指头距离」处（正下方、左缘对齐）
+	# 用户 2026-08-29 明确要求：初始位置在「状态卡 2 指头距离」处（正下方、左缘对齐）。
+	# 注：2026-08-31 起状态卡取消 0.667 缩放（STATUS_CARD_SCALE=1.0，见 quest_track_panel.gd），
+	# 故渲染高 = STATUS_CARD_H(318) * 1.0；公式与现行实现保持一致。
 	var dp := QuestTrackPanel.DEFAULT_POS
 	# x 与状态卡左缘 (12) 对齐
 	expect(is_equal_approx(dp.x, 12.0), "任务栏 x 应与状态卡左缘对齐 (12)，实际 %f" % dp.x)
-	# y = 状态卡顶(12) + 渲染高(318*0.667≈212) + 2 指头(32) ≈ 256
-	var expected_y: float = 12.0 + 318.0 * 0.667 + 2.0 * 16.0
+	# y = 状态卡顶(12) + 渲染高(318*1.0=318) + 2 指头(32) = 362
+	var expected_y: float = 12.0 + 318.0 * 1.0 + 2.0 * 16.0
 	expect(is_equal_approx(dp.y, expected_y), "任务栏 y 应为状态卡下方 2 指头（≈%f），实际 %f" % [expected_y, dp.y])
 	QuestTrackPanelScene.instantiate().free()
 
