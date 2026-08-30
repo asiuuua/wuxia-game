@@ -348,6 +348,7 @@
             <label>长(宽) W</label><input id="blW" type="number" min="2" max="40" value="10" style="width:64px" onchange="blResize()">
             <label>宽(高) H</label><input id="blH" type="number" min="2" max="40" value="8" style="width:64px" onchange="blResize()">
             <button class="act sec" onclick="blResize()">重设尺寸</button>
+            <button class="act sec" onclick="blSwapWH()">⇄ 长宽对调</button>
             <span class="hint" style="margin:0" id="blGridCount"></span>
           </div>
           <div class="row" style="align-items:center;gap:10px;margin-top:6px;flex-wrap:wrap">
@@ -357,6 +358,8 @@
             <button class="act sec" onclick="blApplyScene(10,10)">据点防守 10×10</button>
             <button class="act sec" onclick="blApplyScene(8,14)">纵深突围 8×14</button>
             <button class="act sec" onclick="blApplyScene(16,9)">横列阵线 16×9</button>
+            <button class="act sec" onclick="blApplyScene(11,5)">窄阵 11×5</button>
+            <button class="act sec" onclick="blApplyScene(5,11)">纵阵 5×11</button>
           </div>
           <div class="row" style="align-items:center;gap:10px;margin-top:6px">
             <span>点击格子切换：</span>
@@ -1352,6 +1355,18 @@ function blApplyScene(w,h){
   const cnt=document.getElementById('blGridCount');
   if(cnt)cnt.textContent='当前 '+w+'×'+h+' = '+(w*h)+' 格（场景预设）';
 }
+// 长宽对调：把 W/H 两个数字互换（一次输入不合理直接点此即可翻转），并立即重算
+function blSwapWH(){
+  if(!window._bl){show('blStat','先选或新建一个布局',false);return;}
+  const w=window._bl.width, h=window._bl.height;
+  window._bl.width=h; window._bl.height=w;
+  document.getElementById('blW').value=h;
+  document.getElementById('blH').value=w;
+  blClipTerrain();
+  blRender();
+  const cnt=document.getElementById('blGridCount');
+  if(cnt)cnt.textContent='当前 '+window._bl.width+'×'+window._bl.height+' = '+(window._bl.width*window._bl.height)+' 格（已对调）';
+}
 function blClipTerrain(){
   const W=window._bl.width,H=window._bl.height;
   window._bl.obstacles=(window._bl.obstacles||[]).filter(s=>{const p=s.split(',');return +p[0]<W&&+p[1]<H;});
@@ -1408,6 +1423,8 @@ function blXYToCell(px,py){
   return {x:gx,y:gy};
 }
 function blHas(arr,key){return (arr||[]).indexOf(key)>=0;}
+// 高地数组元素是 "x,y,h" 格式，渲染判断要用 "x,y" 前缀匹配（修复：原 blHas 整串匹配导致高地永远画不出）
+function blHasPrefix(arr,key){return (arr||[]).some(s=>String(s).startsWith(key+','));}
 function blRender(){
   const c=document.getElementById('blCanvas');if(!c||!window._bl)return;
   const wrap=document.getElementById('blCanvasWrap');
@@ -1425,7 +1442,7 @@ function blRender(){
     ctx.closePath();
     const key=i+','+j;
     if(blHas(obs,key)){ctx.fillStyle='rgba(200,60,50,0.55)';}
-    else if(blHas(hs,key)){ctx.fillStyle='rgba(230,179,90,0.55)';}
+    else if(blHasPrefix(hs,key)){ctx.fillStyle='rgba(230,179,90,0.55)';}
     else{ctx.fillStyle='rgba(70,110,180,0.35)';}
     ctx.fill();
     ctx.strokeStyle='rgba(180,200,230,0.5)';ctx.lineWidth=1;ctx.stroke();
