@@ -1,0 +1,10 @@
+{
+  "_doc": "战棋布局预设 10x10（参见 preset_6x6.json 的 Schema 说明）。",
+  "view_mode": "iso",
+  "background": "",
+  "width": 10,
+  "height": 10,
+  "obstacles": ["4,4", "5,4", "4,5", "5,5", "8,2", "2,8", "7,7", "1,1"],
+  "heights": ["3,3,1", "6,6,1", "6,5,2"],
+  "deployment": {}
+}

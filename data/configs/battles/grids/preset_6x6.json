@@ -1,0 +1,10 @@
+{
+  "_doc": "战棋布局预设（工作室工具「战棋布局」一键套用生成）。Schema 与 combat_service._build_grid 完全兼容：width/height 网格尺寸；obstacles 为 'x,y' 字符串数组（障碍/不可走）；heights 为 'x,y,h' 字符串数组（高地，h>0 抬高制造立体感）；deployment 为 单位id -> [x,y]（落点，缺省自动补齐）。新增：view_mode=iso(45°等距)/ortho(正交轴测)；background=res:// 底图路径（空=程序化水墨占位）。",
+  "view_mode": "iso",
+  "background": "",
+  "width": 6,
+  "height": 6,
+  "obstacles": ["2,2", "3,2", "2,3", "3,3"],
+  "heights": [],
+  "deployment": {}
+}

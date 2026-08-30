@@ -94,6 +94,12 @@ func _build_world() -> void:
 	_grid_node = BattleGridNode.new()
 	_grid_node.name = "GridNode"
 	_grid_node.set_grid(_grid)
+	# 战棋底图（工作室工具写入）：view_mode(45°等距/正交轴测) + 背景图（缺省程序化占位）
+	var meta: Dictionary = GameManager.combat_service.get_grid_meta()
+	if meta.get("view_mode", "iso") == "ortho":
+		_grid_node.set_view_mode("ortho")
+	if meta.get("background", "") != "":
+		_grid_node.set_background(String(meta["background"]))
 	bf.add_child(_grid_node)
 	_entities_node = Node2D.new()
 	_entities_node.name = "Entities"

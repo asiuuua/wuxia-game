@@ -8,10 +8,16 @@ class_name CombatService
 var _state: CombatState = null
 var _core: CombatCore = null   # 战斗逻辑内核（M1 起接管流程编排与结算）
 var _escaped: bool = false   # 本场战斗是否以逃跑结束（finalize 据此判定结果）
+var _grid_meta: Dictionary = {}   # 战棋底图元数据：{view_mode, background}（编辑器写入，渲染层读取）
 
 ## 取内核（测试可注入固定 seed 验证确定性）
 func get_core() -> CombatCore:
 	return _core
+
+## 取战棋底图元数据（view_mode / background），供 TacticalBattleScene 传给 BattleGridNode 渲染底图。
+## 缺省空字典（iso + 无底图，向后兼容）。
+func get_grid_meta() -> Dictionary:
+	return _grid_meta
 
 ## 开始战斗：从配置构建玩家与敌人快照
 func start_combat(battle_id: String) -> void:
@@ -332,6 +338,11 @@ func _build_grid(grid_cfg: Dictionary, battle: Dictionary) -> void:
 	if geom.is_empty():
 		push_error("[Combat] 战术战斗缺少网格几何配置: %s（请检查 battle.grid / battle.layout / 底图 tactical_layout）" % _state.combat_id)
 		return
+	# 战棋底图元数据（编辑器写入）：view_mode(默认 iso) / background(默认空=程序化占位)
+	_grid_meta = {
+		"view_mode": String(geom.get("view_mode", "iso")),
+		"background": String(geom.get("background", "")),
+	}
 	var g := BattleGrid.new()
 	g.width = int(geom.get("width", 10))
 	g.height = int(geom.get("height", 8))
