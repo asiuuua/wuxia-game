@@ -1,0 +1,78 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scenes/ui/overlays/hud/quest_track_panel.gd" id="1_scr"]
+
+[sub_resource type="StyleBoxFlat" id="1_glass"]
+bg_color = Color(0.071, 0.078, 0.11, 0.62)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.2)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_left = 10
+corner_radius_bottom_right = 10
+shadow_size = 18
+shadow_offset = Vector2(0, 6)
+shadow_color = Color(0, 0, 0, 0.55)
+
+[node name="QuestTrackPanel" type="Control"]
+offset_left = 12.0
+offset_top = 256.106
+offset_right = 312.0
+offset_bottom = 336.106
+mouse_filter = 1
+mouse_default_cursor_shape = 2
+focus_mode = 0
+custom_minimum_size = Vector2(300, 0)
+script = ExtResource("1_scr")
+
+[node name="Panel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("1_glass")
+
+[node name="Margin" type="MarginContainer" parent="Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="V" type="VBoxContainer" parent="Panel/Margin"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="Header" type="Label" parent="Panel/Margin/V"]
+layout_mode = 2
+text = "⠿ 任 务 追 踪"
+theme_override_colors/font_color = Color(0.831, 0.686, 0.216, 1)
+theme_override_font_sizes/font_size = 14
+
+[node name="Scroll" type="ScrollContainer" parent="Panel/Margin/V"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+custom_minimum_size = Vector2(0, 360)
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 1
+
+[node name="Entries" type="VBoxContainer" parent="Panel/Margin/V/Scroll"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+theme_override_constants/separation = 8

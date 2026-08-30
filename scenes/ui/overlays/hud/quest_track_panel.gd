@@ -36,8 +36,10 @@ const DEFAULT_POS := Vector2(STATUS_CARD_POS.x, STATUS_CARD_POS.y + STATUS_CARD_
 const POS_SAVE_PATH := "user://ui/hud_positions.json"
 const POS_KEY := "quest_track"
 
-var _entries: VBoxContainer
-var _scroll: ScrollContainer
+# B 路线（2026-08-30）：静态结构（毛玻璃面板 / 标题 / 滚动容器 / 条目容器）已迁入
+# QuestTrackPanel.tscn，美术可改样式、圆角、最大可视高度；脚本只保留拖拽、位置持久化与动态条目。
+@onready var _entries: VBoxContainer = $Panel/Margin/V/Scroll/Entries
+@onready var _scroll: ScrollContainer = $Panel/Margin/V/Scroll
 
 # --- 拖拽状态 ---
 var _dragging := false
@@ -47,7 +49,7 @@ func _ready() -> void:
 	focus_mode = Control.FOCUS_NONE
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	mouse_default_cursor_shape = Control.CURSOR_MOVE   # 悬停显示「可移动」光标，提示可拖动
-	_build()
+	_make_drag_surface()                    # 静态结构已在 QuestTrackPanel.tscn，这里只统一输入靶
 	_sync_root_size()                       # 关键：先给根真实尺寸，拖拽热区才存在
 	_load_position()                        # 取存档位置（无存档/非法走默认）
 	if is_instance_valid(EventBus):
@@ -57,56 +59,6 @@ func _ready() -> void:
 	# 入树后再夹一次（确保初始位置在屏内；_load_position 时 viewport 可能尚不可用）
 	_clamp_to_screen()
 	call_deferred("_clamp_to_screen")
-
-# === 构建任务追踪面板 ===
-func _build() -> void:
-	position = DEFAULT_POS
-	custom_minimum_size = Vector2(PANEL_W, 0)
-	var panel := Panel.new()
-	panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = UIPalette.GLASS_BG
-	sb.border_color = UIPalette.GLASS_BORDER
-	for r in ["top_left", "top_right", "bottom_left", "bottom_right"]:
-		sb.set("corner_radius_" + r, 10)   # 毛玻璃圆角
-	sb.border_width_left = 1
-	sb.border_width_top = 1
-	sb.border_width_right = 1
-	sb.border_width_bottom = 1
-	sb.shadow_color = UIPalette.GLASS_SHADOW   # 柔和阴影 → 漂浮毛玻璃感
-	sb.shadow_size = 18
-	sb.shadow_offset = Vector2(0, 6)
-	panel.add_theme_stylebox_override("panel", sb)
-	add_child(panel)
-	var margin := MarginContainer.new()
-	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 12)
-	margin.add_theme_constant_override("margin_right", 12)
-	margin.add_theme_constant_override("margin_top", 10)
-	margin.add_theme_constant_override("margin_bottom", 10)
-	panel.add_child(margin)
-	var v := VBoxContainer.new()
-	v.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	v.add_theme_constant_override("separation", 6)
-	margin.add_child(v)
-	var header := Label.new()
-	header.text = "⠿ 任 务 追 踪"   # ⠿ 抓取提示
-	header.add_theme_color_override("font_color", UIPalette.GOLD)
-	header.add_theme_font_size_override("font_size", UIPalette.FS_SMALL)
-	v.add_child(header)
-	# 滚动列表：横向禁用、纵向自动；超出 MAX_VISIBLE 出滚动条
-	_scroll = ScrollContainer.new()
-	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
-	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_scroll.custom_minimum_size = Vector2(0, MAX_VISIBLE)
-	v.add_child(_scroll)
-	_entries = VBoxContainer.new()
-	_entries.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_entries.add_theme_constant_override("separation", 8)
-	_scroll.add_child(_entries)
-	# 拖拽穿透：根捕获拖拽与滚轮，所有子节点 IGNORE（事件落到根，由根统一处理滚动）
-	_make_drag_surface()
 
 # 让根成为唯一输入靶：子节点（含 ScrollContainer）全部 IGNORE，滚轮滚动由根手动驱动 _scroll.scroll_vertical
 func _make_drag_surface() -> void:

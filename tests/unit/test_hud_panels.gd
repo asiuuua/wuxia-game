@@ -9,6 +9,7 @@ const StatusCardPanel = preload("res://scenes/ui/overlays/hud/status_card_panel.
 # B 路线（2026-08-30）：状态卡静态结构已迁入 StatusCardPanel.tscn，
 # 用脚本 new() 出来的实例没有子节点（缩放/数值条全在场景里），故测试一律改为实例化场景。
 const StatusCardPanelScene = preload("res://scenes/ui/overlays/hud/StatusCardPanel.tscn")
+const QuestTrackPanelScene = preload("res://scenes/ui/overlays/hud/QuestTrackPanel.tscn")
 const TopRightMenuPanel = preload("res://scenes/ui/overlays/hud/top_right_menu_panel.gd")
 const QuestTrackPanel = preload("res://scenes/ui/overlays/hud/quest_track_panel.gd")
 const SkillBarPanel = preload("res://scenes/ui/overlays/hud/skill_bar_panel.gd")
@@ -30,7 +31,7 @@ func test_panels_build_without_crash() -> void:
 	# 各面板独立实例化 + _ready，验证订阅/构建不崩（服务可能为 null，应有 null 守卫）
 	var p1 := StatusCardPanelScene.instantiate(); p1._ready(); p1.free()
 	var p2 := TopRightMenuPanel.new(); p2._ready(); p2.free()
-	var p3 := QuestTrackPanel.new(); p3._ready(); p3.free()
+	var p3 := QuestTrackPanelScene.instantiate(); p3._ready(); p3.free()
 	var p4 := SkillBarPanel.new(); p4._ready(); p4.free()
 	expect(true, "四面板独立 _ready 未崩溃")
 
@@ -54,7 +55,7 @@ func test_status_card_is_visual_scaled_to_two_thirds() -> void:
 
 func test_quest_track_default_position() -> void:
 	# 无存档时应落到默认（状态卡正下方 2 指头距离）；拖动后写盘，重挂载沿用（用户需求：屏幕固定）
-	var p := QuestTrackPanel.new()
+	var p := QuestTrackPanelScene.instantiate()
 	p._ready()
 	p._write_json({})      # 清掉任何残留存档，确保走默认
 	p._load_position()
@@ -70,11 +71,11 @@ func test_quest_track_default_below_status_card() -> void:
 	# y = 状态卡顶(12) + 渲染高(318*0.667≈212) + 2 指头(32) ≈ 256
 	var expected_y: float = 12.0 + 318.0 * 0.667 + 2.0 * 16.0
 	expect(is_equal_approx(dp.y, expected_y), "任务栏 y 应为状态卡下方 2 指头（≈%f），实际 %f" % [expected_y, dp.y])
-	QuestTrackPanel.new().free()
+	QuestTrackPanelScene.instantiate().free()
 
 func test_quest_track_clamps_to_screen() -> void:
 	# 用户需求：可随意拖动，但不可脱离屏幕
-	var p := QuestTrackPanel.new()
+	var p := QuestTrackPanelScene.instantiate()
 	p._ready()
 	p.global_position = Vector2(99999, 99999)
 	p._clamp_to_screen()
@@ -86,13 +87,13 @@ func test_quest_track_clamps_to_screen() -> void:
 
 func test_quest_track_persists_position() -> void:
 	# 拖动落点应持久化，重载后还原
-	var p := QuestTrackPanel.new()
+	var p := QuestTrackPanelScene.instantiate()
 	p._ready()
 	p._write_json({})
 	p._load_position()
 	p.global_position = Vector2(123, 456)
 	p._save_position()
-	var d := p._read_json()
+	var d: Dictionary = p._read_json()
 	expect(d.has("quest_track"), "存档应包含 quest_track 键")
 	var kv: Dictionary = d["quest_track"]
 	expect(is_equal_approx(float(kv.get("x")), 123.0), "存档 x 应为 123")
@@ -104,7 +105,7 @@ func test_quest_track_persists_position() -> void:
 
 func test_quest_track_has_scroll_list() -> void:
 	# 用户需求：内部滑动列表，多任务滚动查看
-	var p := QuestTrackPanel.new()
+	var p := QuestTrackPanelScene.instantiate()
 	p._ready()
 	expect(p._scroll is ScrollContainer, "任务追踪应含 ScrollContainer 滚动列表")
 	if p._scroll is ScrollContainer:
@@ -115,7 +116,7 @@ func test_quest_track_has_scroll_list() -> void:
 
 func test_quest_track_scroll_caps_height() -> void:
 	# 内容超高时列表区应被封顶到 MAX_VISIBLE，触发滚动而非无限撑高
-	var p := QuestTrackPanel.new()
+	var p := QuestTrackPanelScene.instantiate()
 	p._ready()
 	p._entries.custom_minimum_size = Vector2(0, 9999)   # 模拟超长内容
 	p._apply_scroll_height()
@@ -125,7 +126,7 @@ func test_quest_track_scroll_caps_height() -> void:
 
 func test_quest_track_frosted_glass() -> void:
 	# 用户需求：毛玻璃效果（半透 + 圆角 + 阴影）
-	var p := QuestTrackPanel.new()
+	var p := QuestTrackPanelScene.instantiate()
 	p._ready()
 	expect(p.mouse_filter == Control.MOUSE_FILTER_STOP, "根应 STOP 以捕获拖拽")
 	expect(p.mouse_default_cursor_shape == Control.CURSOR_MOVE, "应显示可移动光标提示")
@@ -155,7 +156,7 @@ func test_quest_track_refreshes_on_signal() -> void:
 	st.tracked = true
 	qs.active_quests["hud_track_test"] = st
 	qs.tracked_ids.append("hud_track_test")
-	var p := QuestTrackPanel.new()
+	var p := QuestTrackPanelScene.instantiate()
 	p._ready()   # 构建 + 首次 _refresh → 渲染 1 条追踪任务
 	var found_title := false
 	for c in p._entries.get_children():
