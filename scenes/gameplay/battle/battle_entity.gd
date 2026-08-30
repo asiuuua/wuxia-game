@@ -23,6 +23,7 @@ var _grid_node: Node = null
 var _built: bool = false
 var _body: ColorRect
 var _anim_body: AnimatedSprite2D = null   # 主角动态立绘（is_player 且有帧序列时启用，否则为 null）
+var _anim_base_scale_x: float = 1.0       # 主角动态立绘基准缩放 X（set_facing 翻转向保留缩放用）
 var _name_lbl: Label
 var _hp_bg: ColorRect
 var _hp_fill: ColorRect
@@ -49,7 +50,7 @@ const MATTE_FIRST_FRAME := "res://assets/characters/matte/matte_00001.png"
 
 ## 装配（可重复调用，对象池复用安全）：首次构建视觉子节点，之后仅重置清零。
 ## frames_path：主角动态立绘的 SpriteFrames 资源路径；为空则主角仍用色块占位（与敌人一致）。
-func setup(uid: String, player: bool, name_text: String, max_hp: int, max_mp: int, grid_node: Node, frames_path: String = "res://assets/characters/matte/matte_idle.tres") -> void:
+func setup(uid: String, player: bool, name_text: String, max_hp: int, max_mp: int, grid_node: Node, frames_path: String = "res://assets/characters/matte_clean/matte_clean_idle.tres") -> void:
 	unit_id = uid
 	is_player = player
 	_max_hp = max_hp
@@ -148,6 +149,9 @@ func _build(frames_path: String = "") -> void:
 	_sel_ring.position = Vector2(-(SPRITE_W + 10) * 0.5, -SPRITE_H - 5)
 	_sel_ring.color = Color(1.0, 0.85, 0.2, 0.0)
 	add_child(_sel_ring)
+	# 记录主角动态立绘的基准缩放，供 set_facing 翻转时保留（避免 scale.x 被设成 ±1 丢失缩放）
+	if _anim_body != null:
+		_anim_base_scale_x = _anim_body.scale.x
 	# 名字
 	_name_lbl = Label.new()
 	_name_lbl.text = ""
@@ -184,7 +188,7 @@ func place_at(grid_pos: Vector2i) -> void:
 func set_facing(f: int) -> void:
 	var flip: float = -1.0 if f == CombatCharacter.FACING.LEFT else 1.0
 	if _anim_body != null:
-		_anim_body.scale.x = flip
+		_anim_body.scale.x = flip * _anim_base_scale_x   # 保留基准缩放，仅翻转向
 	elif _body != null:
 		_body.scale.x = flip
 

@@ -8,7 +8,7 @@ extends Node2D
 class_name TownScene
 
 const MOVE_SPEED := 200.0
-const PLAYER_SCENE_H := 140.0  # 玩家在场景里的目标高度（像素）
+const PLAYER_SCENE_H := 350.0  # 玩家在场景里的目标高度（像素）— 白背景视频重抠版（matte_clean），清晰度达标，固化 350
 const NPC_SCENE_H := 140.0     # NPC 同
 const SHADOW_BASE_W := 64      # 阴影纹理基准宽（运行时按角色实际宽度缩放）
 const SHADOW_BASE_H := 18      # 阴影纹理基准高
@@ -20,9 +20,10 @@ const SCENE_BG_PATH := "res://assets/scenes/town_main.png"
 # 玩家立绘（demo 硬编码；后续从 PlayerState/存档读）
 const PLAYER_SPRITE_PATH := "res://assets/characters/player.png"
 # 玩家动态立绘帧序列（31 帧 matte idle 循环动画）；非空时主角世界体改用 AnimatedSprite2D 播放
-const PLAYER_FRAMES_PATH := "res://assets/characters/matte/matte_idle.tres"
+# 白背景视频重抠版（闭运算填细孔，半透明=0）：matte_clean/matte_clean_idle.tres
+const PLAYER_FRAMES_PATH := "res://assets/characters/matte_clean/matte_clean_idle.tres"
 # 玩家动态立绘首帧 PNG（用于取真实尺寸做缩放；matte 序列固定 720×1280）
-const PLAYER_FRAME_TEX := "res://assets/characters/matte/matte_00001.png"
+const PLAYER_FRAME_TEX := "res://assets/characters/matte_clean/matte_00001.png"
 
 const _MOVE_ACTIONS := {
 	"move_up": [KEY_W, KEY_UP],

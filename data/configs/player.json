@@ -4,5 +4,5 @@
   "bust": "res://assets/characters/half_body/player.png",
   "portrait": "res://assets/characters/player_face.png",
   "half_body_portrait": "res://assets/characters/half_body/player.png",
-  "portrait_anim": "res://assets/characters/matte/matte_idle.tres"
+  "portrait_anim": "res://assets/characters/matte_clean/matte_clean_idle.tres"
 }
