@@ -70,6 +70,6 @@ animations=[
 ],
 "loop":true,
 "name":"idle",
-"speed":0.45
+"speed":0.30
 }
 ]
