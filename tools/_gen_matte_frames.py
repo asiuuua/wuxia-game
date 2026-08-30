@@ -15,7 +15,7 @@ for i in range(1, 32):
     png = "res://assets/characters/matte/matte_%s.png" % n
     rid = str(i)
     uid_lines.append('[ext_resource type="Texture2D" uid="uid://%s" path="%s" id="%s"]' % (UIDS[i-1], png, rid))
-    frames_entries.append('{"duration":0.08,"texture":"%s"}' % png)
+    frames_entries.append('{"duration":0.08,"texture":ExtResource(%s)}' % rid)
 sf_uid = "uid://matteidle0001"
 header = '[gd_resource type="SpriteFrames" load_steps=%d format=3 uid="%s"]\n\n' % (32, sf_uid)
 exts = "\n".join(uid_lines)
