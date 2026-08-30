@@ -22,6 +22,15 @@ const UIPalette = preload("res://core/constants/ui_theme.gd")
 @export var scrim_alpha: float = 0.55
 ## 是否启用落叶粒子
 @export var leaves_enabled: bool = true
+## 可选：布局配置文件路径（JSON）。留空则使用下方默认行为（向后兼容）。
+## 文件可覆盖 stretch_mode / scrim_alpha / edge_auto / leaves_enabled / edge_color。
+## 由「工作室专业调教」工具的「登录界面」标签页生成（data/configs/ui/login_bg_layout.json）。
+@export var layout_config_path: String = ""
+
+# 运行时解析出的布局参数（_ready 时由 layout_config_path 覆盖）
+var _stretch_mode: int = TextureRect.STRETCH_KEEP_ASPECT
+var _edge_auto: bool = false
+var _grad_stops: Array = GRAD_STOPS  # 默认用硬编码绿渐变；edge_auto 时改为采样图边色
 
 # 渐变色标：取自主菜单背景图左右各 60px 的竖向 5 段平均色（2026-08-29 采样）
 # 图片换成别的风格时，重采样后改这里即可，不必动逻辑
@@ -36,11 +45,110 @@ const GRAD_STOPS: Array = [
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_load_layout_config()
 	_build_gradient_base()
 	_build_image()
 	_build_scrim()
 	if leaves_enabled:
 		add_child(_build_leaves())
+
+## 读取 layout_config_path 指向的 JSON，覆盖运行时布局参数。
+## 解析失败 / 文件缺失则静默保持默认（向后兼容旧调用方）。
+func _load_layout_config() -> void:
+	if layout_config_path == "" or not ResourceLoader.exists(layout_config_path):
+		return
+	var cfg: Dictionary = _load_json(layout_config_path)
+	if cfg == null:
+		return
+	var sm: String = cfg.get("stretch_mode", "")
+	if sm != "":
+		_stretch_mode = _stretch_from_string(sm)
+	if cfg.has("scrim_alpha"):
+		var sa = cfg["scrim_alpha"]
+		if typeof(sa) == TYPE_FLOAT or typeof(sa) == TYPE_INT:
+			scrim_alpha = float(sa)
+	if cfg.has("edge_auto"):
+		_edge_auto = bool(cfg["edge_auto"])
+	if cfg.has("leaves_enabled"):
+		leaves_enabled = bool(cfg["leaves_enabled"])
+	# edge_color 仅在 edge_auto=false 时作为垫底色
+	if cfg.has("edge_color") and not _edge_auto:
+		var ec = cfg["edge_color"]
+		if typeof(ec) == TYPE_ARRAY and ec.size() >= 3:
+			_grad_stops = [[0.0, ec[0], ec[1], ec[2]], [1.0, ec[0], ec[1], ec[2]]]
+	# 自动取图边色：采样背景图顶/底边缘色，生成竖向渐变垫底（替换写死绿渐变）
+	if _edge_auto and bg_image_path != "" and ResourceLoader.exists(bg_image_path):
+		_grad_stops = _sample_edge_stops(bg_image_path)
+
+## 字符串 -> TextureRect.StretchMode 枚举（"cover" 等价于 keep_aspect_covered）
+static func _stretch_from_string(s: String) -> int:
+	match s:
+		"keep":
+			return TextureRect.STRETCH_KEEP
+		"keep_centered":
+			return TextureRect.STRETCH_KEEP_CENTERED
+		"keep_aspect":
+			return TextureRect.STRETCH_KEEP_ASPECT
+		"keep_aspect_centered":
+			return TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		"keep_aspect_covered", "cover":
+			return TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		"scale", "stretch":
+			return TextureRect.STRETCH_SCALE
+		"tile":
+			return TextureRect.STRETCH_TILE
+		_:
+			return TextureRect.STRETCH_KEEP_ASPECT
+
+## 极简 JSON 读取（仅本组件用，避免引入额外依赖）
+func _load_json(p: String) -> Dictionary:
+	if not FileAccess.file_exists(p):
+		return {}
+	var f := FileAccess.open(p, FileAccess.READ)
+	if f == null:
+		return {}
+	var txt := f.get_as_text()
+	f.close()
+	var res = JSON.parse_string(txt)
+	if res is Dictionary:
+		return res
+	return {}
+
+## 采样背景图顶/底边缘色，生成竖向渐变（顶→底），用于垫底填缝，与图片边缘同色系
+func _sample_edge_stops(p: String) -> Array:
+	var tex := load(p) as Texture2D
+	if tex == null:
+		return GRAD_STOPS
+	var img := tex.get_image()
+	if img == null:
+		return GRAD_STOPS
+	var w: int = img.get_width()
+	var h: int = img.get_height()
+	var band: int = maxi(1, h / 24)
+	var top: Color = _avg_rect(img, 0, band, w)
+	var bot: Color = _avg_rect(img, h - band, band, w)
+	return [
+		[0.0, top.r * 255.0, top.g * 255.0, top.b * 255.0],
+		[1.0, bot.r * 255.0, bot.g * 255.0, bot.b * 255.0],
+	]
+
+## 对图片某横向条带做稀疏平均色（用于边缘采样）
+func _avg_rect(img: Image, y0: int, bh: int, w: int) -> Color:
+	var r := 0.0
+	var g := 0.0
+	var b := 0.0
+	var n := 0.0
+	var step_x: int = maxi(1, w / 32)
+	for y in range(y0, y0 + bh):
+		for x in range(0, w, step_x):
+			var c: Color = img.get_pixel(x, y)
+			r += c.r
+			g += c.g
+			b += c.b
+			n += 1.0
+	if n <= 0.0:
+		return Color(0.6, 0.6, 0.6)
+	return Color(r / n, g / n, b / n)
 
 ## ① 渐变垫底：图片留出的空隙由它填补，颜色与图片边缘同源
 func _build_gradient_base() -> void:
@@ -48,7 +156,7 @@ func _build_gradient_base() -> void:
 	# 清空 Gradient 自带的默认黑白两点，避免混入
 	grad.offsets = PackedFloat32Array()
 	grad.colors = PackedColorArray()
-	for stop in GRAD_STOPS:
+	for stop in _grad_stops:
 		grad.add_point(float(stop[0]), Color8(int(stop[1]), int(stop[2]), int(stop[3])))
 
 	var tex := GradientTexture2D.new()
@@ -67,14 +175,14 @@ func _build_gradient_base() -> void:
 	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(rect)
 
-## ② 背景图：等比呈现，绝不裁切、绝不拉伸（用户硬需求）
+## ② 背景图：stretch_mode 由 layout_config_path 配置驱动（默认 keep_aspect_covered=铺满裁切，零黑边）
 func _build_image() -> void:
 	if bg_image_path == "" or not ResourceLoader.exists(bg_image_path):
 		return
 	var img_rect := TextureRect.new()
 	img_rect.texture = load(bg_image_path) as Texture2D
 	img_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	img_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
+	img_rect.stretch_mode = _stretch_mode
 	img_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	img_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(img_rect)

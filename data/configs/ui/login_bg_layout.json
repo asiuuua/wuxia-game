@@ -1,0 +1,8 @@
+{
+  "_doc": "登录主界面（及读档界面）大背景布局设置。改这里即生效，无需动代码。stretch_mode 取值：keep / keep_centered / keep_aspect / keep_aspect_centered / keep_aspect_covered(=cover) / scale(=stretch) / tile。edge_auto=true 时自动取图片顶/底边缘色填缝（替代原写死的绿渐变）；edge_auto=false 时用 edge_color。",
+  "stretch_mode": "keep_aspect_covered",
+  "scrim_alpha": 0.55,
+  "edge_auto": true,
+  "leaves_enabled": true,
+  "edge_color": [194, 195, 181]
+}

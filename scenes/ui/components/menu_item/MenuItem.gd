@@ -24,6 +24,8 @@ var _is_selected: bool = false
 var _is_enabled: bool = true
 var _pending_text: String = ""   # _ready 创建 _label 之前调用 set_text 时暂存，建好后再应用
 var _feedback: UIFeedback = null # 交互反馈（缩放动画 + 音效），配置表驱动
+var _bg: TextureRect = null           # 按钮背景图（由 login_button_bg.json 驱动；默认无，置底渲染）
+var _pending_bg_path: String = ""     # 进树前调用 set_background 时暂存路径
 
 func _ready() -> void:
 	custom_minimum_size = Vector2(280, 44)
@@ -67,6 +69,26 @@ func _configure_nodes() -> void:
 	# _label 已就绪：若 set_text 在 _ready 之前（节点未进树时）被调用过，此刻补应用
 	if _pending_text != "":
 		_label.text = _pending_text
+	# 可选按钮背景图：由 login_button_bg.json 驱动；set_background 在 _ready 前调用则此处补应用。
+	# 置底渲染（_bg 在最底层，其上叠一层轻量压暗保证米白文字可读），不抢交互。
+	if _pending_bg_path != "" and ResourceLoader.exists(_pending_bg_path):
+		var trx := TextureRect.new()
+		trx.name = "_bg"
+		trx.texture = ResourceLoader.load(_pending_bg_path, "Texture2D")
+		trx.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		trx.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		trx.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(trx)
+		move_child(trx, 0)
+		_bg = trx
+		# 轻量压暗层（0.25）：保证任意按钮背景图上米白文字仍可读；想更亮可调小到 0 或删掉
+		var scrim := ColorRect.new()
+		scrim.name = "_bg_scrim"
+		scrim.color = Color(0, 0, 0, 0.25)
+		scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		scrim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(scrim)
+		move_child(scrim, 1)
 
 func set_text(text: String) -> void:
 	if _label != null:
@@ -79,6 +101,11 @@ func set_text(text: String) -> void:
 ## 留空则不显示图标（向后兼容旧菜单项）。美术按 id 丢 resources/icons/menu/<key>.png 即生效。
 func set_icon(icon_id: String) -> void:
 	_icon_id = icon_id
+
+## 设置按钮背景图路径（res://...png）。由 data/configs/ui/login_button_bg.json 驱动；
+## 应在 add_child 之前调用，_configure_nodes 时据此创建置底背景层（图 + 轻压暗），不抢交互。
+func set_background(bg_path: String) -> void:
+	_pending_bg_path = bg_path
 
 func set_selected(value: bool) -> void:
 	_is_selected = value

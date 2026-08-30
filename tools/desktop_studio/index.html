@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>武侠游戏 · 内容工作室（桌面版）</title>
+<style>
+  :root{
+    --bg:#1b1d2a; --panel:#252838; --panel2:#2e3247; --line:#3a3f57;
+    --txt:#e6e8f0; --muted:#9aa0b8; --accent:#e6b35a; --accent2:#5ab0e6;
+    --ok:#5ad08a; --warn:#e6b35a; --bad:#e66b6b; --chip:#33384f;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;
+       background:var(--bg);color:var(--txt);font-size:14px}
+  header{padding:14px 20px;background:var(--panel);border-bottom:1px solid var(--line);
+         display:flex;align-items:center;justify-content:space-between}
+  header h1{font-size:17px;margin:0;color:var(--accent)}
+  header .st{color:var(--muted);font-size:12px}
+  nav{display:flex;gap:4px;background:var(--panel);padding:0 12px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  nav button{background:transparent;border:none;color:var(--muted);padding:10px 16px;
+             cursor:pointer;font-size:14px;border-bottom:2px solid transparent}
+  nav button.active{color:var(--txt);border-bottom-color:var(--accent)}
+  main{padding:16px 20px;max-width:1100px;margin:0 auto}
+  .tab{display:none}
+  .tab.active{display:block}
+  .layout{display:flex;gap:16px;align-items:flex-start}
+  .list{width:240px;flex:0 0 240px;background:var(--panel);border:1px solid var(--line);
+        border-radius:8px;max-height:70vh;overflow:auto}
+  .list .item{padding:9px 12px;border-bottom:1px solid var(--line);cursor:pointer}
+  .list .item:hover{background:var(--panel2)}
+  .list .item.sel{background:var(--panel2);border-left:3px solid var(--accent)}
+  .list .item small{color:var(--muted);display:block}
+  .editor{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px;min-width:0}
+  .row{display:flex;align-items:center;margin-bottom:10px;gap:10px}
+  .row label{width:130px;flex:0 0 130px;color:var(--muted)}
+  .row input,.row select,.row textarea{flex:1;min-width:0;background:var(--panel2);border:1px solid var(--line);
+        color:var(--txt);padding:7px 9px;border-radius:6px;font-size:13px}
+  .row textarea{min-height:70px;resize:vertical;font-family:inherit}
+  .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  button.act{background:var(--accent);color:#1b1d2a;border:none;padding:8px 14px;border-radius:6px;
+             cursor:pointer;font-size:13px;font-weight:600}
+  button.act.sec{background:var(--panel2);color:var(--txt);border:1px solid var(--line)}
+  button.act.bad{background:var(--bad);color:#fff}
+  button.act:hover{filter:brightness(1.08)}
+  .hint{color:var(--muted);font-size:12px;margin:6px 0 12px;line-height:1.6}
+  .status{margin-top:12px;padding:8px 12px;border-radius:6px;background:var(--panel2);
+          font-size:13px;min-height:18px}
+  .status.ok{color:var(--ok)} .status.bad{color:var(--bad)}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 12px}
+  .chip{background:var(--chip);border:1px solid var(--line);border-radius:14px;padding:4px 10px;
+        font-size:12px;cursor:pointer;color:var(--accent2)}
+  .chip:hover{border-color:var(--accent2)}
+  .refbox{background:var(--panel2);border:1px dashed var(--line);border-radius:8px;padding:10px;margin-bottom:12px}
+  .refbox h4{margin:0 0 6px;font-size:13px;color:var(--accent)}
+  table{width:100%;border-collapse:collapse;margin-top:8px}
+  th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);font-size:13px}
+  th{color:var(--muted);font-weight:600}
+  .pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;background:var(--chip);color:var(--accent2);cursor:pointer}
+  .pill.npc{color:var(--accent)} .pill.dlg_line{color:var(--ok)} .pill.celebration{color:var(--bad)}
+  .pill.dlg{color:#c98be6}
+  .logline{font-family:Consolas,monospace;font-size:12px;padding:3px 0;border-bottom:1px solid var(--line);color:var(--muted)}
+  .logline b{color:var(--txt)}
+</style>
+</head>
+<body>
+<header>
+  <h1>🗡 武侠游戏 · 内容工作室（桌面版）</h1>
+  <span class="st" id="hstat">加载中…</span>
+</header>
+<nav id="nav">
+  <button data-tab="npc" class="active">NPC 数据</button>
+  <button data-tab="dialog">剧情对话</button>
+  <button data-tab="cel">欢庆模块</button>
+  <button data-tab="login">登录界面</button>
+  <button data-tab="trash">回收站</button>
+  <button data-tab="settings">设置</button>
+  <button data-tab="log">操作日志</button>
+</nav>
+<main>
+  <!-- NPC -->
+  <section class="tab active" id="tab-npc">
+    <div class="layout">
+      <div class="list" id="npcList"></div>
+      <div class="editor">
+        <div class="hint">说明：NPC 不是随机摆放——游戏会按本表的 <b>pos_x / pos_y</b> 把它生成到地图对应坐标（无需写代码）。
+        不知道填多少？用下方<b>地图坐标预览</b>直接点一下即可定位，或点「参考坐标」抄老 NPC 的位置。立绘先填 <code>res://assets/characters/player.png</code> 占位。</div>
+        <div class="refbox">
+          <h4>参考：现有 NPC 坐标（点一下把坐标抄到表单）</h4>
+          <div class="chips" id="npcRef"></div>
+        </div>
+        <div class="row"><label>id（唯一·勿改）</label><input id="n_id" placeholder="例如 npc_xiao_er">
+          <span id="n_lock" class="pill npc" onclick="npcUnlockId()" title="修改唯一ID需二次确认">🔒 已锁定（点此修改）</span>
+          <button class="act sec" id="n_rollback" style="display:none" onclick="npcRollbackId()">↩ 回退原ID</button>
+        </div>
+        <div class="row"><label>名称</label><input id="n_name"></div>
+        <div class="row"><label>pos_x（水平）</label><input id="n_px" type="number" value="0"></div>
+        <div class="row"><label>pos_y（垂直）</label><input id="n_py" type="number" value="0"></div>
+        <div class="row"><label>立绘 sprite</label><input id="n_sprite" placeholder="res://assets/characters/player.png"></div>
+        <div class="row"><label>头像 portrait</label><input id="n_portrait"></div>
+        <div class="row"><label>对话 id</label><input id="n_dialog" onchange="refChange('dialog',this)" placeholder="与剧情对话表里的 id 对应"></div>
+        <div class="row"><label>任务 id</label><input id="n_quest" onchange="refChange('quest',this)"></div>
+        <div class="row"><label>战斗 id</label><input id="n_battle" onchange="refChange('battle',this)"></div>
+
+        <div class="refbox">
+          <h4>🗺 地图坐标预览（点一下地图，把当前 NPC 放到那里）</h4>
+          <canvas id="mapCanvas" width="760" height="380" style="background:#11131f;border:1px solid var(--line);border-radius:6px;cursor:crosshair;width:100%"></canvas>
+          <div class="hint">红点=其它 NPC，黄点=当前正在编辑的 NPC。点击地图任意位置即设定 pos_x/pos_y，记得点「保存」。</div>
+        </div>
+
+        <div class="btns">
+          <button class="act sec" onclick="npcNew()">新建</button>
+          <button class="act" onclick="npcSave()">保存</button>
+          <button class="act sec" onclick="npcRestore()">↩ 还原本次改动</button>
+          <button class="act sec" id="n_undorename" style="display:none" onclick="npcUndoRename()">↩ 撤销重命名</button>
+          <button class="act bad" onclick="npcDel()">删除</button>
+        </div>
+        <div class="status" id="npcStat"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DIALOG -->
+  <section class="tab" id="tab-dialog">
+    <div class="layout">
+      <div class="list" id="dlgList"></div>
+      <div class="editor">
+        <div class="row"><label>新对话 id</label><input id="d_new" placeholder="例如 dlg_chapter2"></div>
+        <div class="btns"><button class="act sec" onclick="dlgCreate()">新建对话</button></div>
+        <div class="hint">左侧选一个对话 → 中间选一句台词 → 右侧编辑。台词按 <b>next_id</b> 串成对话树（空=结束）。</div>
+        <div class="layout" style="margin-top:10px">
+          <div class="list" id="lineList" style="flex:0 0 160px;width:160px"></div>
+          <div class="editor" style="flex:1">
+            <div class="row"><label>台词 id</label><input id="l_id"></div>
+            <div class="row"><label>说话人 id</label><input id="l_sid"></div>
+            <div class="row"><label>说话人显示名</label><input id="l_sname"></div>
+            <div class="row"><label>台词文本</label><textarea id="l_text"></textarea></div>
+            <div class="row"><label>下一句 id</label><input id="l_next" placeholder="空=本段结束"></div>
+            <div class="row"><label>触发事件(逗号)</label><input id="l_trig"></div>
+            <div class="btns">
+              <button class="act sec" onclick="lineNew()">新建台词</button>
+              <button class="act" onclick="lineSave()">保存台词</button>
+              <button class="act bad" onclick="lineDel()">删除台词</button>
+              <button class="act bad" onclick="dlgDel()">删除整个对话</button>
+            </div>
+            <div class="status" id="dlgStat"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CELEBRATION -->
+  <section class="tab" id="tab-cel">
+    <div class="layout">
+      <div class="list" id="celList"></div>
+      <div class="editor">
+        <div class="row"><label>绑定新 NPC id</label><input id="c_new" placeholder="例如 npc_xiao_ying"></div>
+        <div class="btns"><button class="act sec" onclick="celBind()">＋绑定</button></div>
+        <div class="row"><label>媒体类型</label>
+          <select id="c_mtype"><option value="none">none</option><option value="image">image</option><option value="video">video</option></select>
+        </div>
+        <div class="row"><label>CG 媒体路径</label><input id="c_media" placeholder="res://resources/cg/... 或留空"></div>
+        <div class="row"><label>背景音乐</label><input id="c_bgm" placeholder="res://resources/... 或留空"></div>
+        <div class="row"><label>欢庆台词</label><textarea id="c_lines" placeholder="每行一条"></textarea></div>
+        <div class="row"><label>结束台词</label><textarea id="c_end" placeholder="每行一条"></textarea></div>
+        <div class="btns">
+          <button class="act" onclick="celSave()">保存</button>
+          <button class="act bad" onclick="celDel()">删除该 NPC</button>
+        </div>
+        <div class="status" id="celStat"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LOGIN UI -->
+  <section class="tab" id="tab-login">
+    <div class="editor" style="max-width:900px">
+      <div class="hint">零代码修改登录界面：换大背景图、改按钮文字、查看版本号。改完下次进游戏即生效（大背景图由主菜单 / 加载 / 读档三处共用）。</div>
+
+      <h3>🖼 大背景图</h3>
+      <div class="row"><img id="loginBgImg" src="" style="max-width:440px;border:1px solid #555;border-radius:8px;display:none"></div>
+      <div class="row"><input type="file" id="loginBgFile" accept="image/*"></div>
+      <div class="btns"><button class="act" onclick="loginBgReplace()">替换大背景图</button><span id="loginBgStat" class="status"></span></div>
+      <div class="hint">选一张图片点上面的按钮，即覆盖 assets/ui/main_menu_bg.jpg（支持 jpg/png）。替换前会自动备份旧图（回收站 / 备份机制）。覆盖后主菜单、加载界面、读档界面三处的背景会一起变。</div>
+
+      <h3>🎛 背景布局（实时预览）</h3>
+      <div class="hint">选一种布局，下方会按你<b>当前背景图</b>实时预览在 4 种设备比例下的效果。满意后点「保存布局」，游戏里任意窗口比例都会自动适配（无黑边）。这正是大厂做法：背景铺满裁切 + 菜单落在安全区，一套界面通吃 PC / 带鱼屏 / iPad / 手机。</div>
+
+      <div id="loginLayoutPresets" class="row" style="flex-wrap:wrap;gap:8px"></div>
+
+      <div class="row" style="align-items:center;gap:10px;margin-top:6px">
+        <label style="white-space:nowrap">暗化强度 <span id="loginScrimVal">55</span>%</label>
+        <input id="loginScrim" type="range" min="0" max="100" value="55" style="flex:1;max-width:360px">
+      </div>
+      <div class="row" style="gap:18px;margin-top:4px">
+        <label><input type="checkbox" id="loginEdgeAuto" checked> 自动取图边色填缝（替代写死绿渐变）</label>
+        <label><input type="checkbox" id="loginLeaves" checked> 落叶粒子</label>
+      </div>
+
+      <div id="loginDevicePreview" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px"></div>
+      <div class="btns" style="margin-top:10px"><button class="act" onclick="loginLayoutSave()">保存布局</button><span id="loginLayoutStat" class="status"></span></div>
+
+      <h3>🔤 按钮文字对照表</h3>
+      <table style="width:100%;border-collapse:collapse" id="loginTextTbl">
+        <thead><tr style="text-align:left">
+          <th style="padding:4px;border-bottom:1px solid #444">按钮</th>
+          <th style="padding:4px;border-bottom:1px solid #444">文本键</th>
+          <th style="padding:4px;border-bottom:1px solid #444">简体</th>
+          <th style="padding:4px;border-bottom:1px solid #444">繁体</th>
+          <th style="padding:4px;border-bottom:1px solid #444">英文</th>
+          <th style="padding:4px;border-bottom:1px solid #444">点击打开</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+      <div class="btns"><button class="act" onclick="loginTextsSave()">保存文案</button><span id="loginTextStat" class="status"></span></div>
+
+      <h3>🏷 版本文字</h3>
+      <div class="row"><label>当前版本号</label><input id="loginVer" readonly></div>
+      <div class="hint" id="loginVerNote"></div>
+
+      <h3>🎴 各按钮背景图（高级）</h3>
+      <div class="hint">给每个主菜单按钮单独换背景图。游戏代码现在已读取此映射（data/configs/ui/login_button_bg.json），上传图片后下次进主菜单即生效；图会铺满按钮并以「cover」方式裁切，外加一层轻压暗保证文字可读。</div>
+      <div id="loginBtnBgList"></div>
+    </div>
+  </section>
+
+  <!-- TRASH -->
+  <section class="tab" id="tab-trash">
+    <div class="hint">保险模式：删除的东西先放到这里，到期（设置里的保留天数）才自动清空。可随时「恢复」或「彻底删除」。</div>
+    <div class="btns"><button class="act sec" onclick="trashLoad()">刷新</button>
+      <button class="act" onclick="trashCleanup()">清空过期项</button></div>
+    <table id="trashTable"><thead><tr><th>类型</th><th>名称</th><th>删除时间</th><th>操作</th></tr></thead>
+      <tbody id="trashBody"></tbody></table>
+    <div class="status" id="trashStat"></div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section class="tab" id="tab-settings">
+    <div class="editor" style="max-width:560px">
+      <div class="hint">工程路径指向你的武侠游戏根目录；端口是本地工具用的（一般不用改）；保留天数=回收站项目存活天数。</div>
+      <div class="row"><label>当前识别到的工程</label><input id="s_detected" readonly value="识别中…" style="color:#888"></div>
+      <div class="row"><label>工程根目录</label><input id="s_root" value="D:/武侠游戏" placeholder="例如 D:/武侠游戏"></div>
+      <div class="row"><label>端口</label><input id="s_port" type="number" value="8765"></div>
+      <div class="row"><label>保留天数</label><input id="s_days" type="number" value="30"></div>
+      <div class="row"><label>保险模式</label>
+        <select id="s_safe"><option value="true">开（删除进回收站）</option><option value="false">关（直接删除）</option></select>
+      </div>
+      <div class="btns"><button class="act" onclick="saveSettings()">保存设置</button></div>
+      <div class="status" id="setStat"></div>
+    </div>
+  </section>
+
+  <!-- LOG -->
+  <section class="tab" id="tab-log">
+    <div class="btns"><button class="act sec" onclick="logLoad()">刷新</button></div>
+    <div id="logBox" style="margin-top:10px"></div>
+  </section>
+</main>
+
+<script>
+const A = (m,p,b)=>fetch(p,{method:m,headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined}).then(r=>r.json());
+function show(id,msg,ok){const e=document.getElementById(id);e.textContent=msg;e.className='status '+(ok?'ok':'bad');}
+async function stat(){const s=await A('GET','/api/settings');document.getElementById('hstat').textContent='工程：'+s.project_root+' ｜ 保险模式：'+(s.safe_mode?'开':'关')+' ｜ 回收站保留 '+s.retention_days+' 天';}
+
+window._npcCache=[]; window._prevId=''; window._loaded=null; window._lastRename=null;
+
+// tabs
+document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#nav button').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');
+  document.getElementById('tab-'+b.dataset.tab).classList.add('active');
+  if(b.dataset.tab==='npc')npcLoad();
+  if(b.dataset.tab==='dialog')dlgLoad();
+  if(b.dataset.tab==='cel')celLoad();
+  if(b.dataset.tab==='trash')trashLoad();
+  if(b.dataset.tab==='settings')setLoad();
+  if(b.dataset.tab==='log')logLoad();
+  if(b.dataset.tab==='login')loginLoad();
+});
+
+// ---------- NPC ----------
+async function npcLoad(){
+  const list=await A('GET','/api/npc');
+  window._npcCache=list;
+  const el=document.getElementById('npcList');el.innerHTML='';
+  const ref=document.getElementById('npcRef');ref.innerHTML='';
+  list.forEach(n=>{
+    const d=document.createElement('div');d.className='item';d.textContent=n.id;
+    const s=document.createElement('small');s.textContent=n.name||'(无名)';d.appendChild(s);
+    d.onclick=()=>npcSel(n);el.appendChild(d);
+    const c=document.createElement('span');c.className='chip';c.textContent=n.id+' ('+n.pos_x+','+n.pos_y+')';
+    c.title='点一下把坐标抄到表单';c.onclick=()=>{document.getElementById('n_px').value=n.pos_x;document.getElementById('n_py').value=n.pos_y;show('npcStat','已抄坐标 '+n.pos_x+','+n.pos_y,true);drawMap();};
+    ref.appendChild(c);
+  });
+  if(list.length===0)el.innerHTML='<div class="item">（暂无 NPC）</div>';
+  drawMap();
+}
+function lockId(on){const idEl=document.getElementById('n_id');idEl.disabled=!on;
+  document.getElementById('n_lock').style.display=on?'':'none';
+  if(on)document.getElementById('n_rollback').style.display='none';}
+function npcSel(n){
+  window._loaded=JSON.parse(JSON.stringify(n));
+  window._prevId=n.id; window._lastRename=null;
+  document.getElementById('n_undorename').style.display='none';
+  document.querySelectorAll('#npcList .item').forEach(x=>x.classList.remove('sel'));
+  const idEl=document.getElementById('n_id');idEl.value=n.id; lockId(true);
+  document.getElementById('n_name').value=n.name||'';
+  document.getElementById('n_px').value=n.pos_x||0;
+  document.getElementById('n_py').value=n.pos_y||0;
+  document.getElementById('n_sprite').value=n.sprite||'';
+  document.getElementById('n_portrait').value=n.portrait||'';
+  document.getElementById('n_dialog').value=n.dialog_id||'';
+  document.getElementById('n_quest').value=n.quest_id||'';
+  document.getElementById('n_battle').value=n.battle_id||'';
+  drawMap();
+}
+function npcNew(){window._loaded=null;window._prevId='';window._lastRename=null;
+  document.getElementById('n_undorename').style.display='none';
+  ['n_id','n_name','n_sprite','n_portrait','n_dialog','n_quest','n_battle'].forEach(i=>document.getElementById(i).value='');
+  const idEl=document.getElementById('n_id');idEl.disabled=false;idEl.value='';
+  document.getElementById('n_lock').style.display='none';
+  document.getElementById('n_px').value=0;document.getElementById('n_py').value=0;
+  drawMap();show('npcStat','新建模式：填好 id 和名称后点保存',true);}
+function npcUnlockId(){
+  const old=window._prevId||document.getElementById('n_id').value;
+  if(!old)return;
+  if(!confirm('⚠️ 修改「唯一ID」是危险操作：\n其它表（对话/任务/战斗/代码）里引用旧ID的地方不会自动更新，可能导致功能失效。\n确定要继续吗？'))return;
+  if(!confirm('再次确认：要把唯一ID从【'+old+'】改成新值？\n旧记录会被移入回收站（可恢复）。'))return;
+  const idEl=document.getElementById('n_id');idEl.disabled=false;
+  document.getElementById('n_lock').style.display='none';
+  document.getElementById('n_rollback').style.display='';
+  show('npcStat','已解锁ID，修改后点保存即重命名（旧记录进回收站）',true);
+}
+function npcRollbackId(){
+  const old=window._prevId||'';
+  const idEl=document.getElementById('n_id');idEl.value=old;lockId(true);
+  show('npcStat','已回退到原ID：'+old,true);
+}
+function npcRestore(){
+  if(!window._loaded){show('npcStat','当前是新建模式，无需还原',true);return;}
+  npcSel(window._loaded);show('npcStat','已还原本次改动',true);
+}
+async function npcUndoRename(){
+  const r=window._lastRename;if(!r)return;
+  const f={id:r.old,name:document.getElementById('n_name').value,
+    pos_x:document.getElementById('n_px').value,pos_y:document.getElementById('n_py').value,
+    sprite:document.getElementById('n_sprite').value,portrait:document.getElementById('n_portrait').value,
+    dialog_id:document.getElementById('n_dialog').value,quest_id:document.getElementById('n_quest').value,
+    battle_id:document.getElementById('n_battle').value};
+  const res=await A('POST','/api/npc/rename',{old_id:r.new, ...f});
+  show('npcStat',res.msg,res.ok);if(res.ok){window._lastRename=null;document.getElementById('n_undorename').style.display='none';await npcLoad();}
+}
+function refChange(kind,el){
+  if(!window._loaded)return; // 新建模式不拦截
+  const key=kind==='dialog'?'dialog_id':kind==='quest'?'quest_id':'battle_id';
+  const snap=window._loaded[key]||'';
+  if(el.value.trim()===snap)return;
+  if(!confirm('你正在修改『'+kind+'ID』引用为【'+el.value+'】。\n确认吗？点取消可还原。')){
+    el.value=snap;
+  }
+}
+async function npcSave(){
+  const idEl=document.getElementById('n_id');
+  const newId=idEl.value.trim();
+  if(!newId){show('npcStat','id 不能为空',false);return;}
+  const f={id:newId,name:document.getElementById('n_name').value,
+    pos_x:document.getElementById('n_px').value,pos_y:document.getElementById('n_py').value,
+    sprite:document.getElementById('n_sprite').value,portrait:document.getElementById('n_portrait').value,
+    dialog_id:document.getElementById('n_dialog').value,quest_id:document.getElementById('n_quest').value,
+    battle_id:document.getElementById('n_battle').value};
+  if(f.dialog_id){
+    const dl=await A('GET','/api/dialog');
+    if(!dl.includes(f.dialog_id)){
+      if(!confirm('对话ID【'+f.dialog_id+'】在剧情对话表里找不到，保存后点该NPC可能没台词。仍要保存？'))return;
+    }
+  }
+  let r;
+  if(window._loaded && window._loaded.id!==newId){
+    r=await A('POST','/api/npc/rename',{old_id:window._loaded.id, ...f});
+  }else{
+    r=await A('POST','/api/npc',f);
+  }
+  show('npcStat',r.msg,r.ok);
+  if(r.ok){ if(window._loaded && window._loaded.id!==newId){window._lastRename={old:window._loaded.id,new:newId};document.getElementById('n_undorename').style.display='';}
+    await npcLoad(); }
+}
+async function npcDel(){
+  const id=document.getElementById('n_id').value.trim();if(!id){show('npcStat','请先选择/新建一个 NPC',false);return;}
+  if(!confirm('确定删除 '+id+'？（保险模式下会进回收站）'))return;
+  const r=await A('DELETE','/api/npc/'+encodeURIComponent(id));show('npcStat',r.msg,r.ok);if(r.ok)npcLoad();
+}
+
+// 地图坐标预览
+function drawMap(){
+  const c=document.getElementById('mapCanvas');if(!c)return;
+  const ctx=c.getContext('2d');const W=c.width,H=c.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.strokeStyle='#2a2e44';ctx.lineWidth=1;
+  for(let x=0;x<=W;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=0;y<=H;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+  const SX=W/820,SY=H/420;
+  const curId=document.getElementById('n_id').value;
+  window._npcCache.forEach(n=>{
+    const x=(n.pos_x||0)*SX,y=(n.pos_y||0)*SY;
+    ctx.beginPath();ctx.arc(x,y,6,0,7);
+    ctx.fillStyle=(n.id===curId)?'#e6b35a':'#e66b6b';ctx.fill();
+    ctx.fillStyle='#ccd2e6';ctx.font='11px sans-serif';ctx.fillText(n.id,x+9,y+3);
+  });
+}
+document.getElementById('mapCanvas').addEventListener('click',e=>{
+  const c=e.currentTarget;const rect=c.getBoundingClientRect();
+  const scaleX=c.width/rect.width,scaleY=c.height/rect.height;
+  const mx=(e.clientX-rect.left)*scaleX,my=(e.clientY-rect.top)*scaleY;
+  const SX=c.width/820,SY=c.height/420;
+  const px=Math.max(0,Math.round(mx/SX)),py=Math.max(0,Math.round(my/SY));
+  document.getElementById('n_px').value=px;document.getElementById('n_py').value=py;
+  drawMap();show('npcStat','已设置位置 ('+px+','+py+')，记得点「保存」',true);
+});
+
+// ---------- DIALOG ----------
+let curDlg='';
+async function dlgLoad(){
+  const list=await A('GET','/api/dialog');const el=document.getElementById('dlgList');el.innerHTML='';
+  list.forEach(id=>{const d=document.createElement('div');d.className='item';d.textContent=id;d.onclick=()=>dlgSel(id);el.appendChild(d);});
+  if(list.length===0)el.innerHTML='<div class="item">（暂无对话）</div>';
+  document.getElementById('lineList').innerHTML='';
+}
+async function dlgSel(id){
+  curDlg=id;document.querySelectorAll('#dlgList .item').forEach(x=>x.classList.remove('sel'));
+  event.target.classList.add('sel');
+  const sh=await A('GET','/api/dialog/'+encodeURIComponent(id));const el=document.getElementById('lineList');el.innerHTML='';
+  (sh.lines||[]).forEach(l=>{const d=document.createElement('div');d.className='item';d.textContent=l.id;d.onclick=()=>lineSel(l);el.appendChild(d);});
+  if((sh.lines||[]).length===0)el.innerHTML='<div class="item">（暂无台词）</div>';
+}
+async function dlgCreate(){
+  const id=document.getElementById('d_new').value.trim();if(!id){show('dlgStat','请输入新对话 id',false);return;}
+  const r=await A('POST','/api/dialog',{action:'new',id});show('dlgStat',r.msg,r.ok);if(r.ok){document.getElementById('d_new').value='';dlgLoad();}
+}
+function lineSel(l){
+  document.querySelectorAll('#lineList .item').forEach(x=>x.classList.remove('sel'));
+  event.target.classList.add('sel');
+  document.getElementById('l_id').value=l.id;document.getElementById('l_sid').value=l.speaker_id||'';
+  document.getElementById('l_sname').value=l.speaker_name||'';document.getElementById('l_text').value=l.text||'';
+  document.getElementById('l_next').value=l.next_id||'';document.getElementById('l_trig').value=(l.trigger_events||[]).join(',');
+}
+function lineNew(){['l_id','l_sid','l_sname','l_text','l_next','l_trig'].forEach(i=>document.getElementById(i).value='');show('dlgStat','新建台词模式',true);}
+async function lineSave(){
+  if(!curDlg){show('dlgStat','请先选一个对话',false);return;}
+  const line={id:document.getElementById('l_id').value.trim(),speaker_id:document.getElementById('l_sid').value,
+    speaker_name:document.getElementById('l_sname').value,text:document.getElementById('l_text').value,
+    next_id:document.getElementById('l_next').value,trigger_events:document.getElementById('l_trig').value.split(',').map(s=>s.trim()).filter(Boolean)};
+  if(!line.id){show('dlgStat','台词 id 不能为空',false);return;}
+  const r=await A('POST','/api/dialog',{action:'upsert_line',dlg_id:curDlg,line});show('dlgStat',r.msg,r.ok);if(r.ok)dlgSel(curDlg);
+}
+async function lineDel(){
+  if(!curDlg){show('dlgStat','请先选一个对话',false);return;}
+  const lid=document.getElementById('l_id').value.trim();if(!lid){show('dlgStat','请先选一条台词',false);return;}
+  if(!confirm('删除台词 '+lid+'？（保险模式下进回收站）'))return;
+  const r=await A('POST','/api/dialog',{action:'delete_line',dlg_id:curDlg,line_id:lid});show('dlgStat',r.msg,r.ok);if(r.ok)dlgSel(curDlg);
+}
+async function dlgDel(){
+  if(!curDlg){show('dlgStat','请先选一个对话',false);return;}
+  if(!confirm('删除整个对话 '+curDlg+'？（保险模式下进回收站）'))return;
+  const r=await A('POST','/api/dialog',{action:'delete_dialog',dlg_id:curDlg});show('dlgStat',r.msg,r.ok);if(r.ok){curDlg='';dlgLoad();}
+}
+
+// ---------- CELEBRATION ----------
+async function celLoad(){
+  const list=await A('GET','/api/celebration');const el=document.getElementById('celList');el.innerHTML='';
+  list.forEach(id=>{const d=document.createElement('div');d.className='item';d.textContent=id;d.onclick=()=>celSel(id);el.appendChild(d);});
+  if(list.length===0)el.innerHTML='<div class="item">（暂无欢庆配置）</div>';
+}
+async function celSel(id){
+  document.querySelectorAll('#celList .item').forEach(x=>x.classList.remove('sel'));
+  event.target.classList.add('sel');
+  const e=await A('GET','/api/celebration/'+encodeURIComponent(id));const cg=e.cg||{},end=e.end||{};
+  document.getElementById('c_mtype').value=cg.media_type||'none';
+  document.getElementById('c_media').value=cg.media_path||'';document.getElementById('c_bgm').value=cg.bgm||'';
+  document.getElementById('c_lines').value=(cg.lines||[]).join('\n');
+  document.getElementById('c_end').value=(end.lines||[]).join('\n');
+  window._cel=id;
+}
+function celBind(){const id=document.getElementById('c_new').value.trim();if(!id){show('celStat','请输入 NPC id',false);return;}celSelById(id);}
+function celSelById(id){document.getElementById('c_new').value='';window._cel=id;
+  ['c_mtype','c_media','c_bgm','c_lines','c_end'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('c_mtype').value='none';show('celStat','已绑定新 NPC：'+id+'（点保存写入）',true);}
+async function celSave(){
+  const id=window._cel;if(!id){show('celStat','请先选择或绑定一个 NPC',false);return;}
+  const entry={cg:{media_type:document.getElementById('c_mtype').value,media_path:document.getElementById('c_media').value,
+    bgm:document.getElementById('c_bgm').value,lines:document.getElementById('c_lines').value.split('\n').map(s=>s.trim()).filter(Boolean)},
+    end:{media_type:'none',media_path:'',lines:document.getElementById('c_end').value.split('\n').map(s=>s.trim()).filter(Boolean)}};
+  const r=await A('POST','/api/celebration',{npc_id:id,entry});show('celStat',r.msg,r.ok);if(r.ok)celLoad();
+}
+async function celDel(){
+  const id=window._cel;if(!id){show('celStat','请先选择或绑定一个 NPC',false);return;}
+  if(!confirm('删除 '+id+' 的欢庆配置？（保险模式下进回收站）'))return;
+  const r=await A('DELETE','/api/celebration/'+encodeURIComponent(id));show('celStat',r.msg,r.ok);if(r.ok){window._cel='';celLoad();}
+}
+
+// ---------- TRASH ----------
+async function trashLoad(){
+  const list=await A('GET','/api/trash');const b=document.getElementById('trashBody');b.innerHTML='';
+  list.forEach(t=>{
+    const tr=document.createElement('tr');
+    const kind={npc:'NPC',dlg_line:'台词',celebration:'欢庆',dlg:'对话'}[t.kind]||t.kind;
+    tr.innerHTML=`<td><span class="pill ${t.kind}">${kind}</span></td><td>${t.id}</td><td>${t.ts.replace('T',' ')}</td>`;
+    const td=document.createElement('td');
+    const rb=document.createElement('button');rb.className='act sec';rb.textContent='恢复';rb.onclick=async()=>{const r=await A('POST','/api/trash/restore',{file:t._file});show('trashStat',r.msg,r.ok);trashLoad();};
+    const pb=document.createElement('button');pb.className='act bad';pb.textContent='彻底删除';pb.onclick=async()=>{if(confirm('彻底删除 '+t.id+'？不可恢复')){await A('POST','/api/trash/purge',{file:t._file});trashLoad();}};
+    td.appendChild(rb);td.appendChild(pb);tr.appendChild(td);b.appendChild(tr);
+  });
+  if(list.length===0)b.innerHTML='<tr><td colspan="4" style="color:var(--muted)">（回收站为空）</td></tr>';
+}
+async function trashCleanup(){const r=await A('POST','/api/trash/cleanup',{});show('trashStat','已清空过期项：'+(r.cleaned||0),true);trashLoad();}
+
+// ---------- SETTINGS ----------
+async function setLoad(){const s=await A('GET','/api/settings');
+  document.getElementById('s_root').value=s.project_root;document.getElementById('s_port').value=s.port;
+  document.getElementById('s_days').value=s.retention_days;document.getElementById('s_safe').value=String(s.safe_mode);
+  try{const p=await A('GET','/api/project_root');document.getElementById('s_detected').value=p.root||'(未识别)';}catch(e){document.getElementById('s_detected').value='(读取失败)';}}
+async function saveSettings(){
+  const s={project_root:document.getElementById('s_root').value.trim(),port:parseInt(document.getElementById('s_port').value)||8765,
+    retention_days:parseInt(document.getElementById('s_days').value)||30,safe_mode:document.getElementById('s_safe').value==='true'};
+  const r=await A('POST','/api/settings',s);show('setStat',r.ok?'已保存（路径等下次启动生效）':'保存失败',r.ok);if(r.ok)stat();
+}
+
+// ---------- LOGIN UI ----------
+function bufToB64(buf){let bin='';const b=new Uint8Array(buf);const c=0x8000;for(let i=0;i<b.length;i+=c){bin+=String.fromCharCode.apply(null,b.subarray(i,i+c));}return btoa(bin);}
+async function loginLoad(){
+  const info=await A('GET','/api/login/bg');
+  const img=document.getElementById('loginBgImg');
+  if(info.exists){img.style.display='';img.src='/api/login/bg/file?t='+Date.now();}
+  else{img.style.display='none';}
+  const texts=await A('GET','/api/login/texts');
+  const tb=document.querySelector('#loginTextTbl tbody');tb.innerHTML='';
+  texts.forEach(t=>{
+    const tr=document.createElement('tr');
+    const q=s=>(s||'').replace(/"/g,'&quot;');
+    tr.innerHTML=`<td style="padding:4px;border-bottom:1px solid #333">${t.desc}</td>`+
+      `<td style="padding:4px;border-bottom:1px solid #333"><code>${t.key}</code></td>`+
+      `<td style="padding:4px;border-bottom:1px solid #333"><input data-k="${t.key}" data-c="zh_CN" value="${q(t.zh_CN)}" style="width:120px"></td>`+
+      `<td style="padding:4px;border-bottom:1px solid #333"><input data-k="${t.key}" data-c="zh_TW" value="${q(t.zh_TW)}" style="width:120px"></td>`+
+      `<td style="padding:4px;border-bottom:1px solid #333"><input data-k="${t.key}" data-c="en" value="${q(t.en)}" style="width:120px"></td>`+
+      `<td style="padding:4px;border-bottom:1px solid #333">${t.target}</td>`;
+    tb.appendChild(tr);
+  });
+  const v=await A('GET','/api/login/version');
+  document.getElementById('loginVer').value=v.version||'';
+  document.getElementById('loginVerNote').textContent=v.note||'';
+  const list=await A('GET','/api/login/btn_bg');
+  const bl=document.getElementById('loginBtnBgList');bl.innerHTML='';
+  list.forEach(b=>{
+    const div=document.createElement('div');div.className='row';
+    div.innerHTML=`<label>${b.desc}</label><input type="file" data-btn="${b.key}" accept="image/*"><span id="btnbg_${b.key}" style="margin-left:8px"></span>`;
+    bl.appendChild(div);
+  });
+  bl.querySelectorAll('input[data-btn]').forEach(inp=>inp.onchange=async()=>{
+    const f=inp.files[0];if(!f)return;
+    const d=await f.arrayBuffer();const b64=bufToB64(d);
+    const r=await A('POST','/api/login/btn_bg',{btn_id:inp.dataset.btn,data:b64,name:f.name});
+    document.getElementById('btnbg_'+inp.dataset.btn).textContent=r.ok?'已存':'失败';
+  });
+  await loginLayoutLoad();
+}
+
+// ---------- 登录背景布局（多设备实时预览） ----------
+const LOGIN_PRESETS=[
+  {sm:'keep_aspect_covered',label:'铺满裁切 Cover（推荐）'},
+  {sm:'keep_aspect',label:'完整显示 Contain'},
+  {sm:'scale',label:'拉伸填满 Stretch'},
+  {sm:'tile',label:'平铺 Tile'},
+  {sm:'keep_centered',label:'居中 Center'},
+  {sm:'keep_aspect_centered',label:'等比居中'},
+];
+const LOGIN_DEVICES=[
+  {n:'PC 16:9',r:'16/9'},
+  {n:'带鱼屏 21:9',r:'21/9'},
+  {n:'iPad 4:3',r:'4/3'},
+  {n:'手机 19.5:9',r:'19.5/9'},
+];
+let loginLayoutState={stretch_mode:'keep_aspect_covered',scrim_alpha:0.55,edge_auto:true,leaves_enabled:true};
+function loginBgUrl(){return '/api/login/bg/file?t='+Date.now();}
+function smToFit(sm){
+  if(sm==='keep_aspect_covered'||sm==='cover')return 'cover';
+  if(sm==='keep_aspect'||sm==='keep_aspect_centered')return 'contain';
+  if(sm==='scale'||sm==='stretch')return 'fill';
+  if(sm==='keep_centered')return 'contain';
+  return 'cover';
+}
+function renderLoginPresets(){
+  const box=document.getElementById('loginLayoutPresets');box.innerHTML='';
+  LOGIN_PRESETS.forEach(p=>{
+    const b=document.createElement('button');
+    b.textContent=p.label;
+    b.style.padding='7px 10px';b.style.borderRadius='8px';
+    b.style.border='1px solid '+(p.sm===loginLayoutState.stretch_mode?'#4a8':'#555');
+    b.style.background=p.sm===loginLayoutState.stretch_mode?'#234':'transparent';
+    b.style.color='#eee';b.style.cursor='pointer';
+    b.onclick=()=>{loginLayoutState.stretch_mode=p.sm;renderLoginPresets();loginLayoutRender();};
+    box.appendChild(b);
+  });
+}
+function sampleEdge(url,cb){
+  const im=new Image();
+  im.onload=()=>{
+    try{
+      const c=document.createElement('canvas');c.width=32;c.height=32;
+      const ctx=c.getContext('2d');ctx.drawImage(im,0,0,32,32);
+      const dt=ctx.getImageData(0,0,32,1).data, db=ctx.getImageData(0,31,32,1).data;
+      let r=0,g=0,b=0,rb=0,gb=0,bb=0;
+      for(let i=0;i<32;i++){r+=dt[i*4];g+=dt[i*4+1];b+=dt[i*4+2];rb+=db[i*4];gb+=db[i*4+1];bb+=db[i*4+2];}
+      cb('rgb('+(r/32|0)+','+(g/32|0)+','+(b/32|0)+')','rgb('+(rb/32|0)+','+(gb/32|0)+','+(bb/32|0)+')');
+    }catch(e){cb('#444','#444');}
+  };
+  im.onerror=()=>cb('#444','#444');
+  im.src=url;
+}
+function loginLayoutRender(){
+  const box=document.getElementById('loginDevicePreview');box.innerHTML='';
+  const url=loginBgUrl();
+  const fit=smToFit(loginLayoutState.stretch_mode);
+  const scrim=loginLayoutState.scrim_alpha;
+  sampleEdge(url,(tc,bc)=>{
+    LOGIN_DEVICES.forEach(d=>{
+      const wrap=document.createElement('div');wrap.style.width='200px';
+      const lab=document.createElement('div');lab.textContent=d.n;lab.style.fontSize='12px';lab.style.color='#aaa';lab.style.marginBottom='4px';
+      const frame=document.createElement('div');
+      frame.style.width='200px';frame.style.aspectRatio=d.r;
+      frame.style.border='1px solid #555';frame.style.borderRadius='8px';
+      frame.style.overflow='hidden';frame.style.position='relative';
+      frame.style.background=loginLayoutState.edge_auto?('linear-gradient(to bottom,'+tc+','+bc+')'):'#444';
+      if(loginLayoutState.stretch_mode==='tile'){
+        frame.style.backgroundImage='url('+url+')';
+        frame.style.backgroundRepeat='repeat';
+        frame.style.backgroundSize='100px 100px';
+      }else{
+        const img=document.createElement('img');
+        img.src=url;img.style.position='absolute';img.style.inset='0';
+        img.style.width='100%';img.style.height='100%';img.style.objectFit=fit;
+        frame.appendChild(img);
+      }
+      if(scrim>0){
+        const scr=document.createElement('div');
+        scr.style.position='absolute';scr.style.inset='0';scr.style.background='#000';scr.style.opacity=scrim;
+        frame.appendChild(scr);
+      }
+      wrap.appendChild(lab);wrap.appendChild(frame);box.appendChild(wrap);
+    });
+  });
+}
+async function loginLayoutLoad(){
+  try{const d=await A('GET','/api/login/bg_layout');
+    loginLayoutState={stretch_mode:d.stretch_mode||'keep_aspect_covered',scrim_alpha:typeof d.scrim_alpha==='number'?d.scrim_alpha:0.55,edge_auto:!!d.edge_auto,leaves_enabled:!!d.leaves_enabled};
+  }catch(e){}
+  document.getElementById('loginScrim').value=Math.round(loginLayoutState.scrim_alpha*100);
+  document.getElementById('loginScrimVal').textContent=Math.round(loginLayoutState.scrim_alpha*100);
+  document.getElementById('loginEdgeAuto').checked=loginLayoutState.edge_auto;
+  document.getElementById('loginLeaves').checked=loginLayoutState.leaves_enabled;
+  renderLoginPresets();
+  loginLayoutRender();
+}
+function loginLayoutSave(){
+  loginLayoutState.scrim_alpha=(parseInt(document.getElementById('loginScrim').value,10)||55)/100;
+  loginLayoutState.edge_auto=document.getElementById('loginEdgeAuto').checked;
+  loginLayoutState.leaves_enabled=document.getElementById('loginLeaves').checked;
+  A('POST','/api/login/bg_layout',loginLayoutState).then(r=>{
+    show('loginLayoutStat',r&&r.msg?r.msg:(r&&r.ok?'已保存':'失败'),r&&r.ok);
+    loginLayoutRender();
+  });
+}
+document.getElementById('loginScrim').addEventListener('input',e=>{
+  loginLayoutState.scrim_alpha=(parseInt(e.target.value,10)||0)/100;
+  document.getElementById('loginScrimVal').textContent=e.target.value;
+  loginLayoutRender();
+});
+document.getElementById('loginEdgeAuto').addEventListener('change',e=>{loginLayoutState.edge_auto=e.target.checked;loginLayoutRender();});
+document.getElementById('loginLeaves').addEventListener('change',e=>{loginLayoutState.leaves_enabled=e.target.checked;});
+
+async function loginBgReplace(){
+  const f=document.getElementById('loginBgFile').files[0];
+  if(!f){show('loginBgStat','请先选一张图片',false);return;}
+  const d=await f.arrayBuffer();const b64=bufToB64(d);
+  const r=await A('POST','/api/login/bg',{data:b64,name:f.name});
+  show('loginBgStat',r.msg||(r.ok?'已替换':'失败'),r.ok);
+  if(r.ok){const img=document.getElementById('loginBgImg');img.style.display='';img.src='/api/login/bg/file?t='+Date.now();loginLayoutRender();}
+}
+async function loginTextsSave(){
+  const inputs=document.querySelectorAll('#loginTextTbl input[data-k]');
+  const map={};
+  inputs.forEach(i=>{const k=i.dataset.k,c=i.dataset.c;if(!map[k])map[k]={key:k};map[k][c]=i.value;});
+  const rows=Object.values(map);
+  const r=await A('POST','/api/login/texts',{rows});
+  show('loginTextStat',r.msg||(r.ok?'已保存':'失败'),r.ok);
+}
+
+// ---------- LOG ----------
+async function logLoad(){const l=await A('GET','/api/log');const box=document.getElementById('logBox');
+  box.innerHTML=l.slice().reverse().map(x=>`<div class="logline"><b>${x.ts.replace('T',' ')}</b> ［${x.action}］ ${x.target} ${x.detail||''}</div>`).join('');}
+
+stat();npcLoad();
+</script>
+</body>
+</html>

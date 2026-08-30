@@ -49,10 +49,6 @@ window/size/viewport/height=1080
 window/size/minimum/width=960
 window/size/minimum/height=540
 
-[editor_plugins]
-
-enabled=PackedStringArray("celebration_manager")
-
 [gdscript]
 
 warnings/unused_signal=0

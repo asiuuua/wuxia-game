@@ -70,6 +70,7 @@ func _add_image_background(parent: Control, _vw: float, _vh: float) -> void:
 	bg.bg_image_path = BG_IMAGE_PATH
 	bg.scrim_alpha = BG_IMAGE_SCRIM
 	bg.leaves_enabled = true
+	bg.layout_config_path = "res://data/configs/ui/login_bg_layout.json"
 	parent.add_child(bg)
 
 # === 顶部栏：返回 + 标题（内容放 add_content，已套安全区，避开刘海） ===

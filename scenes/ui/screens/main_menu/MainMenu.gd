@@ -26,6 +26,9 @@ const MENU_ITEMS := [
 # 主菜单背景图（数据驱动：把图放到该路径即生效，缺失则回退到程序化水墨背景）
 # 换背景：把图命名为 main_menu_bg.jpg（或改下面的路径）放进 assets/ui/ 即可。
 const BG_IMAGE_PATH := "res://assets/ui/main_menu_bg.jpg"
+# 各主菜单按钮背景图映射（工作室工具「登录界面」页写入：assets/ui/main_menu_btn/<menu_*>键.png）
+# 缺文件/缺键则对应按钮不显示背景（向后兼容）。
+const BTN_BG_MAP_PATH := "res://data/configs/ui/login_button_bg.json"
 # 背景图上的压暗层透明度（保证标题/菜单文字可读：0=不压暗，1=全黑）
 # 这张竹林图比较亮，调到 0.55 让金色字更清楚；想更亮就调小、更暗就调大。
 const BG_IMAGE_SCRIM := 0.55
@@ -84,6 +87,7 @@ func _add_image_background(parent: Control, _vw: float, _vh: float) -> void:
 	bg.bg_image_path = BG_IMAGE_PATH
 	bg.scrim_alpha = BG_IMAGE_SCRIM
 	bg.leaves_enabled = true
+	bg.layout_config_path = "res://data/configs/ui/login_bg_layout.json"
 	parent.add_child(bg)
 
 # 程序化水墨占位（远山/云雾/水面/孤舟/落叶）；真实素材后同名覆盖
@@ -164,15 +168,35 @@ func _build_menu() -> void:
 	# B 路线：菜单容器 MenuContainer 已迁入 MainMenu.tscn（美术可在编辑器调锚点/间距），此处仅引用并填动态 MenuItem
 	var container: VBoxContainer = _menu_container
 	add_content(container)
+	# 读取工作室工具写入的「各按钮背景图」映射（menu_* 键 -> res:// 图路径），缺则空
+	var btn_bg_map: Dictionary = _load_btn_bg_map()
 	for i in MENU_ITEMS.size():
 		var item: MenuItem = MenuItemScene.instantiate()
 		item.name = "MenuItem_%d" % i
 		item.set_text(tr(MENU_ITEMS[i]["text"]))
 		item.set_icon("menu/" + MENU_ITEMS[i]["key"])
+		var text_key: String = MENU_ITEMS[i]["text"]
+		if btn_bg_map.has(text_key):
+			item.set_background(btn_bg_map[text_key])
 		item.selected.connect(_on_item_selected.bind(i))
 		item.confirmed.connect(_on_confirm_selection.bind(i))
 		container.add_child(item)
 		_menu_items.append(item)
+
+# 读取 data/configs/ui/login_button_bg.json 的 map 字段（工作室工具「登录界面」页写入）。
+# 返回 { "menu_new_game": "res://...png", ... }；文件/字段缺失则返回空字典（不显示按钮背景，向后兼容）。
+func _load_btn_bg_map() -> Dictionary:
+	if not FileAccess.file_exists(BTN_BG_MAP_PATH):
+		return {}
+	var f := FileAccess.open(BTN_BG_MAP_PATH, FileAccess.READ)
+	if f == null:
+		return {}
+	var txt := f.get_as_text()
+	f.close()
+	var parsed: Variant = JSON.parse_string(txt)
+	if typeof(parsed) != TYPE_DICTIONARY:
+		return {}
+	return parsed.get("map", {})
 
 # === 底部栏（左：版本/制作组；右：设置/音量/语言 占位按钮） ===
 # 设计原则：
