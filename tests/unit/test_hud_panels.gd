@@ -4,6 +4,9 @@
 
 extends TestBase
 
+# 强制优先加载基类，确保 class_name HudDraggablePanel 在子类解析前注册
+# （测试运行器按 preload 顺序解析，HudDraggablePanel 若不先入则子类 extends 报「找不到基类」）
+const HudDraggablePanel = preload("res://scenes/ui/overlays/hud/hud_draggable_panel.gd")
 const Hud = preload("res://scenes/ui/overlays/hud/Hud.gd")
 const StatusCardPanel = preload("res://scenes/ui/overlays/hud/status_card_panel.gd")
 # B 路线（2026-08-30）：状态卡静态结构已迁入 StatusCardPanel.tscn，
