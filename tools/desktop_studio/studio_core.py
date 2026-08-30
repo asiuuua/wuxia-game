@@ -1531,6 +1531,122 @@ def battle_bg_clear(layout_id):
     return True, "已清除战棋底图"
 
 
+# ---- 战棋演示立绘临时调换（工作室后台测试用）----
+# 用户要在工作室里临时换「教头演示战棋」出场角色的立绘做测试：
+#   - 敌人 bandit_001 的战斗头像：resources/icons/enemies/bandit_001.png（走 IconRegistry.get_icon("enemies/bandit_001")）
+#   - 教头 tactical_demo_master 的半身立绘：assets/characters/half_body/tactical_demo_master.png（NPC.half_body_portrait）
+# kind 白名单，避免任意路径写入。
+_DEMO_PORTRAIT_TARGETS = {
+    "enemy_bandit_001": ("resources", "icons", "enemies", "bandit_001"),
+    "npc_tactical_demo_master": ("assets", "characters", "half_body", "tactical_demo_master"),
+}
+
+
+def demo_portrait_list():
+    """列出可测试的演示立绘目标及其当前是否有图。"""
+    root = discover_project_root()
+    out = []
+    for kind, parts in _DEMO_PORTRAIT_TARGETS.items():
+        base = os.path.join(root, *parts)
+        cur = ""
+        for ext in ("png", "jpg", "webp"):
+            if os.path.exists(base + "." + ext):
+                cur = "res://" + "/".join(parts) + "." + ext
+                break
+        out.append({
+            "kind": kind,
+            "label": "敌人 bandit_001 战斗头像" if kind == "enemy_bandit_001"
+                     else "教头 tactical_demo_master 半身立绘",
+            "current": cur,
+        })
+    return out
+
+
+def _demo_portrait_path_for(kind):
+    if kind not in _DEMO_PORTRAIT_TARGETS:
+        return None
+    return os.path.join(discover_project_root(), *_DEMO_PORTRAIT_TARGETS[kind])
+
+
+def demo_portrait_file(kind):
+    """返回该 kind 当前立绘绝对路径（按扩展名探测），无图返回 ''。"""
+    base = _demo_portrait_path_for(kind)
+    if base is None:
+        return ""
+    for ext in ("png", "jpg", "webp"):
+        fp = base + "." + ext
+        if os.path.exists(fp):
+            return fp
+    return ""
+
+
+def demo_portrait_upload(kind, payload):
+    """上传/替换某演示立绘：按文件头判真实格式存对扩展名 + 清旧图与 .import/imported 缓存。"""
+    if kind not in _DEMO_PORTRAIT_TARGETS:
+        return False, "立绘目标非法"
+    import base64
+    raw = base64.b64decode(payload.get("data", b"") or b"")
+    if not raw:
+        return False, "空图片数据"
+    base = _demo_portrait_path_for(kind)
+    d = os.path.dirname(base)
+    os.makedirs(d, exist_ok=True)
+    tmp = os.path.join(d, "_tmp_demo_pt_%s.bin" % kind)
+    with open(tmp, "wb") as f:
+        f.write(raw)
+    ext = _detect_image_ext(tmp)
+    if ext is None:
+        try:
+            os.remove(tmp)
+        except Exception:
+            pass
+        return False, "无法识别的图片格式（仅支持 png/jpg/webp）"
+    # 清旧图（含旧扩展名 + 旧 .import + 缓存）
+    for old_ext in ("png", "jpg", "webp"):
+        old_fp = base + "." + old_ext
+        if os.path.exists(old_fp):
+            _backup(old_fp)
+            import_fp = old_fp + ".import"
+            if os.path.exists(import_fp):
+                _purge_import_cache_for(import_fp)
+                try:
+                    os.remove(import_fp)
+                except OSError:
+                    pass
+            try:
+                os.remove(old_fp)
+            except OSError:
+                pass
+    dst = base + "." + ext
+    shutil.move(tmp, dst)
+    log_event("demo_portrait", kind, "临时替换演示立绘 %s" % dst)
+    return True, "已替换演示立绘（%s）" % ext
+
+
+def demo_portrait_reset(kind):
+    """清除临时立绘，恢复为无图（交由游戏侧缺图占位/默认逻辑）。"""
+    if kind not in _DEMO_PORTRAIT_TARGETS:
+        return False, "立绘目标非法"
+    base = _demo_portrait_path_for(kind)
+    for ext in ("png", "jpg", "webp"):
+        fp = base + "." + ext
+        if os.path.exists(fp):
+            _backup(fp)
+            import_fp = fp + ".import"
+            if os.path.exists(import_fp):
+                _purge_import_cache_for(import_fp)
+                try:
+                    os.remove(import_fp)
+                except OSError:
+                    pass
+            try:
+                os.remove(fp)
+            except OSError:
+                pass
+    log_event("demo_portrait", kind, "清除临时演示立绘")
+    return True, "已清除临时立绘，恢复默认"
+
+
 def _purge_import_cache_for(import_fp):
     """读取 .import 的 dest_files，删除 .godot/imported/ 下对应的缓存纹理与 md5。"""
     try:

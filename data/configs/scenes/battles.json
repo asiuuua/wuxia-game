@@ -72,14 +72,10 @@
       "turn_mode": "sequential",
       "tactical": true,
       "reward_exp": 20,
-      "grid": {
-        "width": 10,
-        "height": 8,
-        "obstacles": ["4,3", "5,3", "4,4", "5,4"],
-        "deployment": {
-          "player": [1, 4],
-          "bandit_001": [8, 4]
-        }
+      "layout": "preset_10x10",
+      "deployment": {
+        "player": [1, 4],
+        "bandit_001": [8, 4]
       }
     },
     {

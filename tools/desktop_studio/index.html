@@ -391,6 +391,12 @@
             <button class="act" onclick="blBgUpload()">上传底图</button>
             <button class="act sec" onclick="blBgClear()">清除底图</button>
           </div>
+          <div class="row" style="align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap">
+            <b>临时立绘测试（教头演示战棋出场角色）</b>
+            <button class="act sec" onclick="dpLoad()">刷新预览</button>
+          </div>
+          <div id="dpList" class="row" style="align-items:flex-start;gap:18px;margin-top:6px;flex-wrap:wrap"></div>
+          <div class="hint">这里可临时替换 demo 敌人的战斗头像 / 教头半身立绘做视觉测试；上传即覆盖、点「恢复默认」清除（仅本地测试图，不影响 NPC 配置字段）。</div>
           <div class="btns" style="margin-top:10px">
             <button class="act" onclick="blSave()">保存布局</button>
             <button class="act sec" onclick="blDelete()">删除布局</button>
@@ -492,7 +498,7 @@ document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{
   if(b.dataset.tab==='log')logLoad();
   if(b.dataset.tab==='login')loginLoad();
   if(b.dataset.tab==='login')mmLoad();
-  if(b.dataset.tab==='battle')blLoadList();
+  if(b.dataset.tab==='battle'){blLoadList();dpLoad();}
   if(b.dataset.tab==='loading')loadingLoad();
 });
 
@@ -1493,6 +1499,44 @@ function blInitCanvas(){
   });
 }
 blInitCanvas();
+// ---- 临时立绘测试（教头演示战棋出场角色）----
+async function dpLoad(){
+  const list=await A('GET','/api/demo_portrait/list');
+  const box=document.getElementById('dpList');box.innerHTML='';
+  (list||[]).forEach(it=>{
+    const card=document.createElement('div');
+    card.style.cssText='border:1px solid #444;border-radius:8px;padding:8px;min-width:200px;background:#0e1119';
+    const img=document.createElement('img');
+    img.style.cssText='width:120px;height:120px;object-fit:contain;background:#1a1d28;border-radius:6px;display:block';
+    if(it.current){img.src='/api/demo_portrait/file?kind='+encodeURIComponent(it.kind)+'&t='+Date.now();}
+    else{img.alt='（默认/缺图）';img.style.opacity='0.4';}
+    const t=document.createElement('div');t.textContent=it.label;t.style.cssText='margin:6px 0 4px;color:#ccd2e6;font-size:13px';
+    const up=document.createElement('input');up.type='file';up.accept='image/*';
+    const btn=document.createElement('button');btn.className='act';btn.textContent='上传替换';
+    btn.onclick=async()=>{
+      if(!up.files||!up.files[0]){alert('先选一张图片');return;}
+      const fr=new FileReader();
+      fr.onload=async()=>{
+        const b64=fr.result.split(',')[1];
+        const r=await A('POST','/api/demo_portrait/upload',{kind:it.kind,data:b64,filename:up.files[0].name});
+        show('blStat',(r&&r.msg)?r.msg:(r&&r.ok?'已替换':'失败'),!!(r&&r.ok));
+        if(r&&r.ok)dpLoad();
+      };
+      fr.readAsDataURL(up.files[0]);
+    };
+    const rst=document.createElement('button');rst.className='act sec';rst.textContent='恢复默认';
+    rst.onclick=async()=>{
+      const r=await A('POST','/api/demo_portrait/reset',{kind:it.kind});
+      show('blStat',(r&&r.msg)?r.msg:'已恢复',!!(r&&r.ok));
+      if(r&&r.ok)dpLoad();
+    };
+    const row=document.createElement('div');row.style.cssText='display:flex;gap:6px;margin-top:4px';
+    row.appendChild(btn);row.appendChild(rst);
+    card.appendChild(img);card.appendChild(t);card.appendChild(up);card.appendChild(row);
+    box.appendChild(card);
+  });
+  if(!(list||[]).length)box.innerHTML='<div class="hint">无可用立绘目标</div>';
+}
 // ---- 棋盘平移 / 缩放 ----
 function blPan(dx,dy){
   if(!window._bl)return;

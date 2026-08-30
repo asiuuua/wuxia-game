@@ -169,6 +169,23 @@ class Handler(BaseHTTPRequestHandler):
                 return
             _send_json(self, {"error": "no bg"}, 404)
             return
+        if path == "/api/demo_portrait/list":
+            return _send_json(self, core.demo_portrait_list())
+        if path == "/api/demo_portrait/file":
+            qs = urllib.parse.parse_qs(self.path.split("?", 1)[1] if "?" in self.path else {})
+            kind = (qs.get("kind") or [""])[0]
+            fp = core.demo_portrait_file(kind) if kind else ""
+            if fp and os.path.exists(fp):
+                with open(fp, "rb") as f:
+                    data = f.read()
+                self.send_response(200)
+                self.send_header("Content-Type", _mime_of(fp))
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+                return
+            _send_json(self, {"error": "no portrait"}, 404)
+            return
         if path == "/api/npc":
             return _send_json(self, core.npc_list())
         if path == "/api/dialog":
@@ -319,6 +336,12 @@ class Handler(BaseHTTPRequestHandler):
             return _send_json(self, {"ok": ok, "msg": m})
         if path == "/api/battle_bg/clear":
             ok, m = core.battle_bg_clear(str(body.get("id", "")))
+            return _send_json(self, {"ok": ok, "msg": m})
+        if path == "/api/demo_portrait/upload":
+            ok, m = core.demo_portrait_upload(str(body.get("kind", "")), body if isinstance(body, dict) else {})
+            return _send_json(self, {"ok": ok, "msg": m})
+        if path == "/api/demo_portrait/reset":
+            ok, m = core.demo_portrait_reset(str(body.get("kind", "")))
             return _send_json(self, {"ok": ok, "msg": m})
         if path == "/api/login/btn_bg_clear":
             ok, m = core.login_btn_bg_clear(body.get("btn_id", ""))
