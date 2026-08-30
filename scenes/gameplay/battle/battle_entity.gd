@@ -22,6 +22,7 @@ var _grid_node: Node = null
 
 var _built: bool = false
 var _body: ColorRect
+var _anim_body: AnimatedSprite2D = null   # 主角动态立绘（is_player 且有帧序列时启用，否则为 null）
 var _name_lbl: Label
 var _hp_bg: ColorRect
 var _hp_fill: ColorRect
@@ -45,7 +46,8 @@ const SPRITE_H: float = 52.0
 const BAR_W: float = 44.0
 
 ## 装配（可重复调用，对象池复用安全）：首次构建视觉子节点，之后仅重置清零。
-func setup(uid: String, player: bool, name_text: String, max_hp: int, max_mp: int, grid_node: Node) -> void:
+## frames_path：主角动态立绘的 SpriteFrames 资源路径；为空则主角仍用色块占位（与敌人一致）。
+func setup(uid: String, player: bool, name_text: String, max_hp: int, max_mp: int, grid_node: Node, frames_path: String = "res://assets/characters/matte/matte_idle.tres") -> void:
 	unit_id = uid
 	is_player = player
 	_max_hp = max_hp
@@ -54,7 +56,7 @@ func setup(uid: String, player: bool, name_text: String, max_hp: int, max_mp: in
 	_mp = max_mp
 	_grid_node = grid_node
 	if not _built:
-		_build()
+		_build(frames_path)
 	_reset_visual(name_text)
 
 ## 回收复用前的重置：清零血条/真气/选中/飘字，重设名称与阵营配色（对象池 release→acquire 间调用）
@@ -69,7 +71,7 @@ func reset(name_text: String = "") -> void:
 func _reset_visual(name_text: String) -> void:
 	if name_text != "" and _name_lbl != null:
 		_name_lbl.text = name_text
-	if _body != null:
+	if _body != null and _body is ColorRect:
 		_body.color = Color(0.3, 0.5, 0.95) if is_player else Color(0.85, 0.35, 0.35)
 	set_selected(false)
 	_clear_pops()
@@ -87,8 +89,32 @@ func _clear_pops() -> void:
 	_pop_active.clear()
 	_pop_pending.clear()
 
-func _build() -> void:
+func _build(frames_path: String = "") -> void:
 	_built = true
+	# 主角动态立绘：用 SpriteFrames 帧序列做 AnimatedSprite2D（脚下锚定，与色块占位同尺寸盒）
+	if is_player and frames_path != "" and ResourceLoader.exists(frames_path):
+		var frames: SpriteFrames = load(frames_path) as SpriteFrames
+		if frames != null and frames.has_animation("idle"):
+			var anim := AnimatedSprite2D.new()
+			anim.sprite_frames = frames
+			anim.play("idle")
+			var tex0: Texture2D = frames.get_frame_texture("idle", 0)
+			var fh: float = float(tex0.get_height())
+			var s: float = SPRITE_H / fh
+			anim.scale = Vector2(s, s)
+			# 居中绘制；把脚底对齐到色块占位底部（-SPRITE_H），与 ColorRect 站位一致
+			anim.position = Vector2(0.0, -SPRITE_H - (fh * s) * 0.5)
+			anim.centered = true
+			add_child(anim)
+			_anim_body = anim
+			# 占位色块仍保留（作为选中环/朝向翻转的几何参照 + 敌人降级回退），但主角用贴图覆盖显示
+			_body = ColorRect.new()
+			_body.size = Vector2(SPRITE_W, SPRITE_H)
+			_body.position = Vector2(-SPRITE_W * 0.5, -SPRITE_H)
+			_body.color = Color(0.3, 0.5, 0.95)
+			_body.visible = false
+			add_child(_body)
+			return
 	# 身体占位（玩家蓝、敌人红）
 	_body = ColorRect.new()
 	_body.size = Vector2(SPRITE_W, SPRITE_H)
@@ -133,11 +159,13 @@ func place_at(grid_pos: Vector2i) -> void:
 	set_facing(CombatCharacter.FACING.DOWN)   # 出生默认面朝下（占位；接入贴图后按枚举切帧）
 
 ## 面朝：纯逻辑枚举驱动视图表现；斜45°映射只在视图层做（P1）
-## 当前为占位矩形，左向做水平翻转示意；后续接入精灵帧时改按 facing 切贴图即可
+## 动态立绘翻转 AnimatedSprite2D；色块占位翻转 ColorRect。
 func set_facing(f: int) -> void:
-	if _body == null:
-		return
-	_body.scale.x = -1.0 if f == CombatCharacter.FACING.LEFT else 1.0
+	var flip: float = -1.0 if f == CombatCharacter.FACING.LEFT else 1.0
+	if _anim_body != null:
+		_anim_body.scale.x = flip
+	elif _body != null:
+		_body.scale.x = flip
 
 ## 动画移动（GRID_MOVE 事件驱动）；instant=true 时直接落位（跳过模式用）
 func move_to(grid_pos: Vector2i, instant: bool = false) -> void:

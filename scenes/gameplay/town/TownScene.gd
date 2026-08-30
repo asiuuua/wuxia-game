@@ -19,6 +19,8 @@ const SHADOW_ALPHA := 0.45     # 阴影最深处不透明度
 const SCENE_BG_PATH := "res://assets/scenes/town_main.png"
 # 玩家立绘（demo 硬编码；后续从 PlayerState/存档读）
 const PLAYER_SPRITE_PATH := "res://assets/characters/player.png"
+# 玩家动态立绘帧序列（31 帧 matte idle 循环动画）；非空时主角世界体改用 AnimatedSprite2D 播放
+const PLAYER_FRAMES_PATH := "res://assets/characters/matte/matte_idle.tres"
 
 const _MOVE_ACTIONS := {
 	"move_up": [KEY_W, KEY_UP],
@@ -91,10 +93,11 @@ func _build_shadow_texture() -> void:
 			img.set_pixel(x, y, Color(0, 0, 0, a))
 	_shadow_tex = ImageTexture.create_from_image(img)
 
-# === 角色工厂：返回 Node2D，子节点 [0]=阴影 [1]=Sprite2D ===
+# === 角色工厂：返回 Node2D，子节点 [0]=阴影 [1]=立绘(Sprite2D 或 AnimatedSprite2D) ===
 # 关键：Node2D 的 position 即"脚下"——Y-sort 用的就是这个点。
 # 立绘用 offset 把图片向上半身高，脚底刚好对齐 Node2D.position。
-func _make_actor(sprite_path: String, scene_h: float) -> Node2D:
+# frames_path 非空时改建 AnimatedSprite2D 播放帧序列（主角动态立绘）；否则静态 Sprite2D。
+func _make_actor(sprite_path: String, scene_h: float, frames_path: String = "") -> Node2D:
 	var actor := Node2D.new()
 	# 阴影子节点：始终在 actor 位置（脚下）
 	var shadow := Sprite2D.new()
@@ -102,7 +105,23 @@ func _make_actor(sprite_path: String, scene_h: float) -> Node2D:
 	shadow.centered = true
 	actor.add_child(shadow)
 	# 立绘子节点
-	if sprite_path != "" and ResourceLoader.exists(sprite_path):
+	if frames_path != "" and ResourceLoader.exists(frames_path):
+		var anim := AnimatedSprite2D.new()
+		var frames: SpriteFrames = load(frames_path) as SpriteFrames
+		if frames != null and frames.has_animation("idle"):
+			anim.sprite_frames = frames
+			anim.play("idle")
+			var tex0: Texture2D = frames.get_frame_texture("idle", 0)
+			var fh: float = float(tex0.get_height())
+			var s: float = scene_h / fh
+			anim.scale = Vector2(s, s)
+			anim.offset = Vector2(0, -fh / 2.0)
+			var char_w := float(tex0.get_width()) * s
+			var ss: float = (char_w * SHADOW_WIDTH_RATIO) / float(SHADOW_BASE_W)
+			shadow.scale = Vector2(ss, ss)
+			actor.add_child(anim)
+			actor.set_meta("body", anim)
+	elif sprite_path != "" and ResourceLoader.exists(sprite_path):
 		var spr := Sprite2D.new()
 		var tex: Texture2D = load(sprite_path) as Texture2D
 		if tex != null:
@@ -158,8 +177,8 @@ func _build_world() -> void:
 		bg.z_index = -10  # 兜底：万一和角色 Y 重合也能保证在所有角色之下
 		bg.y_sort_enabled = false  # 底图自身不参与 Y-sort（它的 Y 是中心 = 0，会被排序坑）
 		add_child(bg)
-	# 2) 玩家（Node2D 原点 = 脚下）
-	_player = _make_actor(PLAYER_SPRITE_PATH, PLAYER_SCENE_H)
+	# 2) 玩家（Node2D 原点 = 脚下）；有动态立绘帧序列时走 AnimatedSprite2D
+	_player = _make_actor(PLAYER_SPRITE_PATH, PLAYER_SCENE_H, PLAYER_FRAMES_PATH)
 	_player.name = "Player"
 	add_child(_player)
 	_apply_breath(_player)

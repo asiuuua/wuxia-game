@@ -1,0 +1,74 @@
+[gd_resource type="SpriteFrames" load_steps=32 format=3 uid="uid://matteidle0001"]
+
+[ext_resource type="Texture2D" uid="uid://08jorchkq6b0" path="res://assets/characters/matte/matte_00001.png" id="1"]
+[ext_resource type="Texture2D" uid="uid://bvef7ftw2gdq2" path="res://assets/characters/matte/matte_00002.png" id="2"]
+[ext_resource type="Texture2D" uid="uid://bqeiiptlioatg" path="res://assets/characters/matte/matte_00003.png" id="3"]
+[ext_resource type="Texture2D" uid="uid://c4qyito1l113f" path="res://assets/characters/matte/matte_00004.png" id="4"]
+[ext_resource type="Texture2D" uid="uid://dg028li7cwtcg" path="res://assets/characters/matte/matte_00005.png" id="5"]
+[ext_resource type="Texture2D" uid="uid://bvnjl8ga7iel6" path="res://assets/characters/matte/matte_00006.png" id="6"]
+[ext_resource type="Texture2D" uid="uid://c4n4mfagj0x02" path="res://assets/characters/matte/matte_00007.png" id="7"]
+[ext_resource type="Texture2D" uid="uid://f7cwkm24xdoc" path="res://assets/characters/matte/matte_00008.png" id="8"]
+[ext_resource type="Texture2D" uid="uid://bir1kwfkl1rrf" path="res://assets/characters/matte/matte_00009.png" id="9"]
+[ext_resource type="Texture2D" uid="uid://tuyam6pmi3e6" path="res://assets/characters/matte/matte_00010.png" id="10"]
+[ext_resource type="Texture2D" uid="uid://imm65hgolsdp" path="res://assets/characters/matte/matte_00011.png" id="11"]
+[ext_resource type="Texture2D" uid="uid://wcob7buq1aon" path="res://assets/characters/matte/matte_00012.png" id="12"]
+[ext_resource type="Texture2D" uid="uid://paa5fmbhmq73" path="res://assets/characters/matte/matte_00013.png" id="13"]
+[ext_resource type="Texture2D" uid="uid://cf675ca8wlc81" path="res://assets/characters/matte/matte_00014.png" id="14"]
+[ext_resource type="Texture2D" uid="uid://dr3kfbsck580y" path="res://assets/characters/matte/matte_00015.png" id="15"]
+[ext_resource type="Texture2D" uid="uid://bse5fq0g7xuax" path="res://assets/characters/matte/matte_00016.png" id="16"]
+[ext_resource type="Texture2D" uid="uid://hf842pcx768b" path="res://assets/characters/matte/matte_00017.png" id="17"]
+[ext_resource type="Texture2D" uid="uid://hnn7o7kdkl2t" path="res://assets/characters/matte/matte_00018.png" id="18"]
+[ext_resource type="Texture2D" uid="uid://b5u53vmbpyrht" path="res://assets/characters/matte/matte_00019.png" id="19"]
+[ext_resource type="Texture2D" uid="uid://crfi3vw0kjf5a" path="res://assets/characters/matte/matte_00020.png" id="20"]
+[ext_resource type="Texture2D" uid="uid://ml5rf0l13qvm" path="res://assets/characters/matte/matte_00021.png" id="21"]
+[ext_resource type="Texture2D" uid="uid://befef6k4srmei" path="res://assets/characters/matte/matte_00022.png" id="22"]
+[ext_resource type="Texture2D" uid="uid://be21sc0o5qayq" path="res://assets/characters/matte/matte_00023.png" id="23"]
+[ext_resource type="Texture2D" uid="uid://cajbd5itvjmfq" path="res://assets/characters/matte/matte_00024.png" id="24"]
+[ext_resource type="Texture2D" uid="uid://dlqxxgtavsmr3" path="res://assets/characters/matte/matte_00025.png" id="25"]
+[ext_resource type="Texture2D" uid="uid://niahwy7kgcmk" path="res://assets/characters/matte/matte_00026.png" id="26"]
+[ext_resource type="Texture2D" uid="uid://btm4ffwvqx6q3" path="res://assets/characters/matte/matte_00027.png" id="27"]
+[ext_resource type="Texture2D" uid="uid://hfadl3lmd0n1" path="res://assets/characters/matte/matte_00028.png" id="28"]
+[ext_resource type="Texture2D" uid="uid://b5cfq7k5qns3" path="res://assets/characters/matte/matte_00029.png" id="29"]
+[ext_resource type="Texture2D" uid="uid://ckkxrkyxsah5h" path="res://assets/characters/matte/matte_00030.png" id="30"]
+[ext_resource type="Texture2D" uid="uid://cgko1c1pkocig" path="res://assets/characters/matte/matte_00031.png" id="31"]
+[resource]
+animations=[
+{
+"frames":[
+{"duration":0.08,"texture":"res://assets/characters/matte/matte_00001.png"},
+{"duration":0.08,"texture":"res://assets/characters/matte/matte_00002.png"},
+{"duration":0.08,"texture":"res://assets/characters/matte/matte_00003.png"},
+{"duration":0.08,"texture":"res://assets/characters/matte/matte_00004.png"},
+{"duration":0.08,"texture":"res://assets/characters/matte/matte_00005.png"},
+{"duration":0.08,"texture":"res://assets/characters/matte/matte_00006.png"},
+{"duration":0.08,"texture":"res://assets/characters/matte/matte_00007.png"},
+{"duration":0.08,"texture":"res://assets/characters/matte/matte_00008.png"},
+{"duration":0.08,"texture":"res://assets/characters/matte/matte_00009.png"},
+{"duration":0.08,"texture":"res://assets/characters/matte/matte_00010.png"},
+{"duration":0.08,"texture":"res://assets/characters/matte/matte_00011.png"},
+{"duration":0.08,"texture":"res://assets/characters/matte/matte_00012.png"},
+{"duration":0.08,"texture":"res://assets/characters/matte/matte_00013.png"},
+{"duration":0.08,"texture":"res://assets/characters/matte/matte_00014.png"},
+{"duration":0.08,"texture":"res://assets/characters/matte/matte_00015.png"},
+{"duration":0.08,"texture":"res://assets/characters/matte/matte_00016.png"},
+{"duration":0.08,"texture":"res://assets/characters/matte/matte_00017.png"},
+{"duration":0.08,"texture":"res://assets/characters/matte/matte_00018.png"},
+{"duration":0.08,"texture":"res://assets/characters/matte/matte_00019.png"},
+{"duration":0.08,"texture":"res://assets/characters/matte/matte_00020.png"},
+{"duration":0.08,"texture":"res://assets/characters/matte/matte_00021.png"},
+{"duration":0.08,"texture":"res://assets/characters/matte/matte_00022.png"},
+{"duration":0.08,"texture":"res://assets/characters/matte/matte_00023.png"},
+{"duration":0.08,"texture":"res://assets/characters/matte/matte_00024.png"},
+{"duration":0.08,"texture":"res://assets/characters/matte/matte_00025.png"},
+{"duration":0.08,"texture":"res://assets/characters/matte/matte_00026.png"},
+{"duration":0.08,"texture":"res://assets/characters/matte/matte_00027.png"},
+{"duration":0.08,"texture":"res://assets/characters/matte/matte_00028.png"},
+{"duration":0.08,"texture":"res://assets/characters/matte/matte_00029.png"},
+{"duration":0.08,"texture":"res://assets/characters/matte/matte_00030.png"},
+{"duration":0.08,"texture":"res://assets/characters/matte/matte_00031.png"}
+],
+"loop":true,
+"name":"idle",
+"speed":12.0
+}
+]

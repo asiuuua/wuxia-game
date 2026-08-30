@@ -39,6 +39,7 @@ var _npc_data: Dictionary = {}
 
 var _ready_done := false
 var _pending_open: Variant = null
+var _left_anim: AnimatedSprite2D = null   # 主角动态立绘（portrait_anim 配置时启用，否则为 null）
 
 
 func _ready() -> void:
@@ -57,10 +58,31 @@ func _ready() -> void:
 func _init_static() -> void:
 	_next_button.text = tr("ui_dialog_next")
 	_next_button.pressed.connect(_on_next_pressed)
-	var pbust: Texture2D = _load_tex(ConfigManager.get_player().get("bust", ""))
+	var pdata: Dictionary = ConfigManager.get_player()
+	var pbust: Texture2D = _load_tex(pdata.get("bust", ""))
 	if pbust != null:
 		_left_bust.texture = pbust
 	_left_bust.visible = (pbust != null)
+	# 主角动态立绘：portrait_anim 指向 SpriteFrames 时在左侧半身位置叠加 AnimatedSprite2D 循环播放，
+	# 隐藏原静态半身贴图（NPC 右侧仍走静态 TextureRect，不受影响）。
+	var anim_path: String = pdata.get("portrait_anim", "")
+	if anim_path != "" and ResourceLoader.exists(anim_path):
+		var frames: SpriteFrames = load(anim_path) as SpriteFrames
+		if frames != null and frames.has_animation("idle"):
+			var anim := AnimatedSprite2D.new()
+			anim.sprite_frames = frames
+			anim.play("idle")
+			anim.centered = false
+			# 按 LeftBust 显示区高度缩放铺满（脚底对齐底部）
+			var tex0: Texture2D = frames.get_frame_texture("idle", 0)
+			var fh: float = float(tex0.get_height())
+			var s: float = _left_bust.size.y / fh
+			anim.scale = Vector2(s, s)
+			anim.position = Vector2((_left_bust.size.x - tex0.get_width() * s) * 0.5, 0.0)
+			_left_bust.add_child(anim)
+			_left_anim = anim
+			_left_bust.texture = null
+			_left_bust.visible = true   # 容器仍可见，内部贴图由动画覆盖
 
 
 ## UIManager.open_screen 标准入口：data = {"npc_id": String, "dialog_id": String}
