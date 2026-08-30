@@ -128,8 +128,10 @@ func _make_actor(sprite_path: String, scene_h: float, frames_path: String = "") 
 				actor.add_child(anim)
 				actor.set_meta("body", anim)
 			else:
-				# 帧纹理不可用降级：退回静态 Sprite2D（用玩家单图）
+				# 帧纹理不可用（如编辑器导入缓存未刷新）降级：退回静态 Sprite2D，避免只剩阴影
 				anim.queue_free()
+				actor.add_child(_build_static_sprite(sprite_path, scene_h, shadow))
+				actor.set_meta("body", actor.get_child(actor.get_child_count() - 1))
 	elif sprite_path != "" and ResourceLoader.exists(sprite_path):
 		var spr := Sprite2D.new()
 		var tex: Texture2D = load(sprite_path) as Texture2D
@@ -146,6 +148,21 @@ func _make_actor(sprite_path: String, scene_h: float, frames_path: String = "") 
 		actor.add_child(spr)
 		actor.set_meta("body", spr)
 	return actor
+
+# 静态立绘构建（动态帧序列不可用时的降级）：返回已配置好的 Sprite2D
+func _build_static_sprite(sprite_path: String, scene_h: float, shadow: Sprite2D) -> Sprite2D:
+	var spr := Sprite2D.new()
+	if sprite_path != "" and ResourceLoader.exists(sprite_path):
+		var tex: Texture2D = load(sprite_path) as Texture2D
+		if tex != null:
+			spr.texture = tex
+			var s: float = scene_h / float(tex.get_height())
+			spr.scale = Vector2(s, s)
+			spr.offset = Vector2(0, -float(tex.get_height()) / 2.0)
+			var char_w := float(tex.get_width()) * s
+			var ss: float = (char_w * SHADOW_WIDTH_RATIO) / float(SHADOW_BASE_W)
+			shadow.scale = Vector2(ss, ss)
+	return spr
 
 # === 角色呼吸：从脚底锚点（Sprite2D 局部原点=脚）做纵向缩放 Tween ===
 # 参数全部来自 ui_anim.json 的 breath 预设；幅度极小，营造「活着」的轻微起伏。
