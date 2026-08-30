@@ -10,6 +10,9 @@ extends BaseScreen
 
 const SaveCard = preload("res://scenes/ui/components/save_card/SaveCard.gd")
 const UIBackground = preload("res://scenes/ui/components/ui_background/UIBackground.gd")
+# B 路线（2026-08-30）：命名弹窗的静态结构迁入 SaveNameDialog.tscn，脚本只连线（原 ~90 行代码搭 UI 全部删除）
+const SaveNameDialogScript = preload("res://scenes/ui/components/save_name_dialog/SaveNameDialog.gd")
+const SaveNameDialogScene = preload("res://scenes/ui/components/save_name_dialog/SaveNameDialog.tscn")
 
 const TITLE := "save_title"
 const TITLE_SAVE := "save_title_save"
@@ -188,93 +191,18 @@ func _slot_has_save(slot: int) -> bool:
 			return true
 	return false
 
-## 命名弹窗：遮罩 + 磨砂玻璃面板 + LineEdit + 确认/取消；ESC 关闭、确认写入自定义名
+## 命名弹窗：B 路线——静态结构（遮罩/磨砂面板/输入框/确认取消）全在 SaveNameDialog.tscn，
+## 这里只负责实例化 + 连线，美术可在编辑器里直接改弹窗外观。
 func _open_name_dialog(slot: int) -> void:
 	if _name_dialog_open:
 		return
 	_name_dialog_open = true
-	var dialog := Control.new()
+	var dialog: SaveNameDialogScript = SaveNameDialogScene.instantiate()
 	dialog.name = "NameDialog"
-	dialog.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	dialog.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(dialog)
 	_name_dialog = dialog
-
-	var dim := ColorRect.new()
-	dim.color = UIPalette.DIM
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	dim.mouse_filter = Control.MOUSE_FILTER_STOP
-	dialog.add_child(dim)
-
-	var panel := Panel.new()
-	panel.size = Vector2(460, 190)
-	panel.custom_minimum_size = Vector2(460, 190)
-	UICenterUtils.center_panel(panel)   # 修复 Godot4.7.2 PRESET_CENTER 不居中
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = UIPalette.GLASS_BG
-	sb.border_width_left = 1
-	sb.border_width_top = 1
-	sb.border_width_right = 1
-	sb.border_width_bottom = 1
-	sb.border_color = UIPalette.GLASS_BORDER
-	sb.corner_radius_top_left = 14
-	sb.corner_radius_top_right = 14
-	sb.corner_radius_bottom_left = 14
-	sb.corner_radius_bottom_right = 14
-	sb.shadow_size = 16
-	sb.shadow_offset = Vector2(0, 6)
-	sb.shadow_color = UIPalette.GLASS_SHADOW
-	panel.add_theme_stylebox_override("panel", sb)
-	dialog.add_child(panel)
-
-	var vbox := VBoxContainer.new()
-	vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	vbox.add_theme_constant_override("separation", 14)
-	vbox.add_theme_constant_override("margin_left", 24)
-	vbox.add_theme_constant_override("margin_top", 20)
-	vbox.add_theme_constant_override("margin_right", 24)
-	vbox.add_theme_constant_override("margin_bottom", 20)
-	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	panel.add_child(vbox)
-
-	var title := Label.new()
-	title.text = tr("ui_save_name_title")
-	title.add_theme_font_size_override("font_size", UIPalette.FS_TITLE)
-	title.add_theme_color_override("font_color", UIPalette.TEXT_MAIN)
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(title)
-
-	var line := LineEdit.new()
-	line.placeholder_text = tr("ui_save_name_placeholder")
-	line.max_length = 20
-	line.add_theme_color_override("font_color", UIPalette.TEXT_MAIN)
-	line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	vbox.add_child(line)
-
-	var btn_row := HBoxContainer.new()
-	btn_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	btn_row.add_theme_constant_override("separation", 16)
-	vbox.add_child(btn_row)
-
-	var ok_btn := Button.new()
-	ok_btn.text = tr("ui_confirm_ok")
-	btn_row.add_child(ok_btn)
-	var cancel_btn := Button.new()
-	cancel_btn.text = tr("ui_confirm_cancel")
-	btn_row.add_child(cancel_btn)
-	_apply_glass_to_button(ok_btn, UIPalette.SUCCESS)
-	_apply_glass_to_button(cancel_btn, UIPalette.TEXT_SECONDARY)
-
-	ok_btn.pressed.connect(func(): _do_save(slot, line.text))
-	cancel_btn.pressed.connect(_close_name_dialog)
-	line.text_submitted.connect(func(_t: String): _do_save(slot, line.text))
-	# 弹窗层拦截 ESC：关闭命名框而非整个存档界面
-	dialog.gui_input.connect(func(ev: InputEvent):
-		if ev is InputEventKey and ev.pressed and ev.keycode == KEY_ESCAPE:
-			_close_name_dialog()
-			get_viewport().set_input_as_handled()
-	)
-	line.grab_focus()
+	dialog.confirmed.connect(func(save_name: String): _do_save(slot, save_name))
+	dialog.cancelled.connect(_close_name_dialog)
 
 ## 确认保存：写自定义名到槽位，关闭弹窗，刷新列表 + 提示
 func _do_save(slot: int, save_name: String) -> void:

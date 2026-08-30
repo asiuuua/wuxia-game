@@ -1,0 +1,115 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scenes/ui/components/save_name_dialog/SaveNameDialog.gd" id="1_scr"]
+
+[sub_resource type="StyleBoxFlat" id="1_glass"]
+bg_color = Color(0.071, 0.078, 0.11, 0.62)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.2)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_left = 14
+corner_radius_bottom_right = 14
+shadow_size = 16
+shadow_offset = Vector2(0, 6)
+shadow_color = Color(0, 0, 0, 0.55)
+content_margin_left = 1
+content_margin_right = 1
+content_margin_top = 1
+content_margin_bottom = 1
+
+[sub_resource type="StyleBoxFlat" id="2_btn"]
+bg_color = Color(0.071, 0.078, 0.11, 0.62)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.2)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_left = 8
+corner_radius_bottom_right = 8
+content_margin_left = 18
+content_margin_right = 18
+content_margin_top = 8
+content_margin_bottom = 8
+
+[node name="SaveNameDialog" type="Control"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_scr")
+
+[node name="Dim" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 1
+color = Color(0, 0, 0, 0.5)
+
+[node name="Panel" type="Panel" parent="."]
+layout_mode = 1
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -230.0
+offset_top = -95.0
+offset_right = 230.0
+offset_bottom = 95.0
+size = Vector2(460, 190)
+theme_override_styles/panel = SubResource("1_glass")
+
+[node name="VBox" type="VBoxContainer" parent="Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 20
+theme_override_constants/separation = 14
+alignment = 1
+
+[node name="TitleLabel" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.941, 0.902, 0.82, 1)
+theme_override_font_sizes/font_size = 22
+
+[node name="NameEdit" type="LineEdit" parent="Panel/VBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+max_length = 20
+theme_override_colors/font_color = Color(0.941, 0.902, 0.82, 1)
+
+[node name="BtnRow" type="HBoxContainer" parent="Panel/VBox"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 16
+
+[node name="OkBtn" type="Button" parent="Panel/VBox/BtnRow"]
+layout_mode = 2
+text = ""
+theme_override_styles/normal = SubResource("2_btn")
+theme_override_styles/hover = SubResource("2_btn")
+theme_override_styles/pressed = SubResource("2_btn")
+theme_override_styles/focus = SubResource("2_btn")
+theme_override_colors/font_color = Color(0.29, 0.404, 0.255, 1)
+theme_override_font_sizes/font_size = 16
+
+[node name="CancelBtn" type="Button" parent="Panel/VBox/BtnRow"]
+layout_mode = 2
+text = ""
+theme_override_styles/normal = SubResource("2_btn")
+theme_override_styles/hover = SubResource("2_btn")
+theme_override_styles/pressed = SubResource("2_btn")
+theme_override_styles/focus = SubResource("2_btn")
+theme_override_colors/font_color = Color(0.659, 0.608, 0.549, 1)
+theme_override_font_sizes/font_size = 16
