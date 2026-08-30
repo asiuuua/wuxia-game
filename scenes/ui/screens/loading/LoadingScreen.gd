@@ -282,3 +282,18 @@ func _next_tip() -> void:
 func _enter_main_menu() -> void:
 	UIManager.open_screen("MainMenu", UIManager.Layer.FULLSCREEN)
 	UIManager.close_screen(self)
+
+## 编辑器预览（UIPreview 调用）：手动赋值 @onready 后填充示例进度/提示
+func _editor_preview() -> void:
+	if not Engine.is_editor_hint():
+		return
+	_progress_bar = $ProgressBar
+	_progress_label = $ProgressLabel
+	_tip_label = $TipLabel
+	_version_label = $VersionLabel
+	if _progress_bar == null or _version_label == null:
+		return
+	_version_label.text = "v0.5.0 Build 20250827"
+	_progress_bar.value = 64.0
+	_progress_label.text = "加载中 %d%%" % 64
+	_tip_label.text = "江湖路远，且行且珍惜。"

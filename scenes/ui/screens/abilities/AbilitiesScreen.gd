@@ -89,3 +89,26 @@ func _build_ability_row(id: String, level: int) -> Control:
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	row.add_child(desc)
 	return row
+
+## 编辑器预览（UIPreview 调用）：手动赋值 @onready 后渲染已学武学（规避 GameManager）
+func _editor_preview() -> void:
+	if not Engine.is_editor_hint():
+		return
+	_title = $Panel/Margin/VLayout/Title
+	_content = $Panel/Margin/VLayout/BodyAnchor/List
+	_close = $Panel/Margin/VLayout/Close
+	if _title == null or _content == null:
+		return
+	_title.add_theme_color_override("font_color", UIPalette.GOLD)
+	_title.add_theme_font_size_override("font_size", UIPalette.FS_HEADER)
+	_title.text = "江湖技艺"
+	_close.text = "关闭"
+	for c in _content.get_children():
+		c.queue_free()
+	var ids: Array = []
+	if ConfigManager.has_method("get_all_ability_ids"):
+		ids = ConfigManager.get_all_ability_ids()
+	if ids.is_empty():
+		ids = ["basic_sword", "qinggong", "inner_force", "sword_21"]
+	for i in mini(ids.size(), 4):
+		_content.add_child(_build_ability_row(String(ids[i]), 1 + i))

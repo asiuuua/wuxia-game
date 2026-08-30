@@ -65,3 +65,41 @@ func _world_clock_text() -> String:
 		WorldEnums.season_name(WeatherTimeService.get_season()),
 		WorldEnums.weather_name(WeatherTimeService.get_weather()),
 	]
+
+## 编辑器预览（UIPreview 调用）：手动赋值 @onready 后填充示例地图（规避 GameManager）
+func _editor_preview() -> void:
+	if not Engine.is_editor_hint():
+		return
+	_title = $Panel/Margin/VLayout/Title
+	_area = $Panel/Margin/VLayout/Area
+	_clock = $Panel/Margin/VLayout/Clock
+	_grid_title = $Panel/Margin/VLayout/GridTitle
+	_grid = $Panel/Margin/VLayout/Grid
+	_hint = $Panel/Margin/VLayout/Hint
+	_close = $Panel/Margin/VLayout/Close
+	if _title == null or _grid == null:
+		return
+	_title.text = tr("ui_map_title")
+	_area.text = "当前区域：%s" % _first_region_name()
+	_clock.text = "第 12 天 · 春 · 晴"
+	_grid_title.text = tr("ui_map_hub")
+	_close.text = tr("ui_map_close")
+	_hint.text = tr("ui_map_hint")
+	for id in ConfigManager.get_all_region_ids():
+		var region: Dictionary = ConfigManager.get_region(id)
+		var name: String = region.get("name", id)
+		var btn := Button.new()
+		btn.text = name
+		btn.focus_mode = Control.FOCUS_NONE
+		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		btn.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		btn.add_theme_font_size_override("font_size", 16)
+		_grid.add_child(btn)
+
+## 取区域表第一个区域名（仅配置，不碰 GameManager）
+func _first_region_name() -> String:
+	var ids: Array = ConfigManager.get_all_region_ids()
+	if ids.is_empty():
+		return "未知"
+	var reg: Dictionary = ConfigManager.get_region(String(ids[0]))
+	return String(reg.get("name", ids[0]))

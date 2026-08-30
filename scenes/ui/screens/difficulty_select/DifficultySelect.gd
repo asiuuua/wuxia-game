@@ -142,3 +142,30 @@ func _apply_glass_to_button(btn: Button, font_color: Color) -> void:
 	btn.add_theme_stylebox_override("focus", sb)
 	btn.add_theme_color_override("font_color", font_color)
 	btn.add_theme_font_size_override("font_size", UIPalette.FS_SUB)
+
+## 编辑器预览（UIPreview 调用）：手动赋值 @onready 后渲染难度列表
+func _editor_preview() -> void:
+	if not Engine.is_editor_hint():
+		return
+	_title = $Title
+	_list = $List
+	_back = $Back
+	if _title == null or _list == null:
+		return
+	_diff_ids = CombatEnums.Difficulty.keys()
+	_title.text = tr("diff_select_title")
+	_title.add_theme_font_size_override("font_size", UIPalette.FS_TITLE)
+	_title.add_theme_color_override("font_color", UIPalette.GOLD)
+	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_back.text = tr("diff_select_back")
+	for i in _diff_ids.size():
+		var id: String = _diff_ids[i]
+		var btn: Button = Button.new()
+		btn.name = "Diff_%d" % i
+		btn.custom_minimum_size = Vector2(0, 120)
+		btn.alignment = HORIZONTAL_ALIGNMENT_CENTER
+		btn.text = _entry_text(id)
+		if id == "HELL":
+			btn.add_theme_color_override("font_color", UIPalette.DANGER)
+		_apply_glass_to_button(btn, UIPalette.TEXT_MAIN)
+		_list.add_child(btn)

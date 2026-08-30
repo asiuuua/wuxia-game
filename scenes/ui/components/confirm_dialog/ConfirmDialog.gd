@@ -119,3 +119,17 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("ui_cancel"):
 		_on_cancel()
 		get_viewport().set_input_as_handled()
+
+## 编辑器预览（UIPreview 调用）：手动赋值 @onready 后填示例确认框
+func _editor_preview() -> void:
+	if not Engine.is_editor_hint():
+		return
+	_title_label = $Panel/VBox/TitleLabel
+	_content_label = $Panel/VBox/ContentLabel
+	_confirm_btn = $Panel/VBox/BtnRow/ConfirmBtn
+	_cancel_btn = $Panel/VBox/BtnRow/CancelBtn
+	if _title_label == null or _confirm_btn == null:
+		return
+	_apply_glass_button_style(_confirm_btn, UIPalette.SUCCESS)
+	_apply_glass_button_style(_cancel_btn, UIPalette.TEXT_SECONDARY)
+	setup("确认操作？", "这是一段示例确认文本，用于编辑器预览。点击按钮不会发生任何事。")

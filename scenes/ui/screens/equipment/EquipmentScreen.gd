@@ -93,3 +93,35 @@ func _on_equipment_changed() -> void:
 func _exit_tree() -> void:
 	if EventBus.equipment_changed.is_connected(_on_equipment_changed):
 		EventBus.equipment_changed.disconnect(_on_equipment_changed)
+
+## 编辑器预览（UIPreview 调用）：手动赋值 @onready 后填充示例装备（规避 GameManager）
+func _editor_preview() -> void:
+	if not Engine.is_editor_hint():
+		return
+	_title = $Panel/Margin/VLayout/Title
+	_stat_label = $Panel/Margin/VLayout/StatLabel
+	_slots = $Panel/Margin/VLayout/Slots
+	_inv_list = $Panel/Margin/VLayout/BodyAnchor/List
+	_close = $Panel/Margin/VLayout/Close
+	if _title == null or _slots == null:
+		return
+	_title.text = tr("ui_equip_title")
+	_close.text = tr("ui_equip_close")
+	_build_slots()
+	_stat_label.text = tr("ui_equip_stat") % [156, 98, 920, 1180, 340, 760]
+	var mock := {"main_hand": "精钢长剑", "armor": "玄铁护甲", "accessory": "空"}
+	for slot in _slot_labels:
+		_slot_labels[slot].text = mock.get(slot, "空")
+	for child in _inv_list.get_children():
+		child.queue_free()
+	var sample := ["精钢长剑", "玄铁护甲", "轻身靴", "回春丹"]
+	for nm in sample:
+		var h := HBoxContainer.new()
+		var l := Label.new()
+		l.text = nm
+		l.custom_minimum_size = Vector2(120, 0)
+		var btn := Button.new()
+		btn.text = tr("ui_equip_equip")
+		h.add_child(l)
+		h.add_child(btn)
+		_inv_list.add_child(h)

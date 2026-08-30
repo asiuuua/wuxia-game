@@ -255,3 +255,40 @@ func _on_relationship_changed() -> void:
 func _exit_tree() -> void:
 	if EventBus.bond_relationship_changed.is_connected(_on_relationship_changed):
 		EventBus.bond_relationship_changed.disconnect(_on_relationship_changed)
+
+## 编辑器预览（UIPreview 调用）：手动赋值 @onready 后渲染示例关系列表（规避 GameManager）
+func _editor_preview() -> void:
+	if not Engine.is_editor_hint():
+		return
+	_title = $Panel/Margin/VLayout/Title
+	_content = $Panel/Margin/VLayout/BodyAnchor/Content
+	_close = $Panel/Margin/VLayout/Close
+	if _title == null or _content == null:
+		return
+	_title.text = "姻缘"
+	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_title.add_theme_font_size_override("font_size", 24)
+	_close.text = "关闭"
+	for c in _content.get_children():
+		c.queue_free()
+	_section("一、配偶")
+	_add_note("（暂无配偶，可在「五、可发展」中求婚）")
+	_section("二、子嗣")
+	_add_note("（尚无子嗣）")
+	_section("三、结义")
+	_add_note("（暂未结义）")
+	_section("四、师徒")
+	_add_note("（尚无师徒关系）")
+	_section("五、可发展")
+	var ids: Array = ConfigManager.get_all_relation_ids()
+	var shown := 0
+	for npc_id in ids:
+		var npc: Dictionary = ConfigManager.get_relation(npc_id)
+		if npc.is_empty():
+			continue
+		_row(npc_id, "候选", 66, [_btn("求婚", true, _on_propose.bind(npc_id)), _btn("结义", true, _on_swear.bind(npc_id))])
+		shown += 1
+		if shown >= 4:
+			break
+	if shown == 0:
+		_add_note("（暂无可发展对象）")

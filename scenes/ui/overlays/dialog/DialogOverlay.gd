@@ -222,3 +222,25 @@ func _close_dialog() -> void:
 	EventBus.dialogue_ended.emit(_dialog_id)
 	GameManager.dialogue_service.end()
 	EventBus.popup_close_requested.emit(self)
+
+## 编辑器预览（UIPreview 调用）：手动赋值 @onready 后填示例对话（规避 GameManager 对话服务）
+func _editor_preview() -> void:
+	if not Engine.is_editor_hint():
+		return
+	_speaker_label = $Panel/SpeakerLabel
+	_dialog_label = $Panel/DialogLabel
+	_next_button = $Panel/NextButton
+	_action_container = $Panel/ActionContainer
+	_option_container = $Panel/OptionContainer
+	_left_bust = $LeftBust
+	_right_bust = $RightBust
+	_left_dim = $LeftDim
+	_right_dim = $RightDim
+	if _speaker_label == null or _dialog_label == null:
+		return
+	_next_button.text = tr("ui_dialog_next")
+	_speaker_label.text = "柳如烟"
+	_dialog_label.text = "「少侠远道而来，可是为了那卷《天书》？」"
+	_next_button.visible = true
+	_option_container.visible = false
+	_action_container.visible = false

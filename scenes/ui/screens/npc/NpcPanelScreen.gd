@@ -238,3 +238,43 @@ func _on_relationship_changed() -> void:
 func _exit_tree() -> void:
 	if EventBus.bond_relationship_changed.is_connected(_on_relationship_changed):
 		EventBus.bond_relationship_changed.disconnect(_on_relationship_changed)
+
+## 编辑器预览（UIPreview 调用）：手动赋值 @onready 后填示例 NPC 面板（规避 GameManager）
+func _editor_preview() -> void:
+	if not Engine.is_editor_hint():
+		return
+	_name_label = $Panel/Margin/VLayout/Header/PortraitNav/NameLabel
+	_qq_info = $Panel/Margin/VLayout/Header/PortraitNav/QQInfo
+	_portrait_label = $Panel/Margin/VLayout/Header/PortraitNav/SwipeRow/PortraitLabel
+	_prev_btn = $Panel/Margin/VLayout/Header/PortraitNav/SwipeRow/PrevBtn
+	_next_btn = $Panel/Margin/VLayout/Header/PortraitNav/SwipeRow/NextBtn
+	_content = $Panel/Margin/VLayout/BodyAnchor/Content
+	_close = $Panel/Margin/VLayout/Close
+	if _name_label == null or _content == null:
+		return
+	_npc_id = ""
+	_name_label.text = "示例 NPC（预览）"
+	_qq_info.text = "（未结缘：婚后方可培养婘眷值）"
+	_portrait_label.text = "立绘 0/0"
+	_prev_btn.disabled = true
+	_next_btn.disabled = true
+	_close.text = "关闭"
+	for c in _content.get_children():
+		c.queue_free()
+	_section("一、基础数值")
+	_kv("等级", "30")
+	_kv("气血", "2500")
+	_kv("攻击", "320")
+	_kv("防御", "210")
+	_section("二、武学")
+	_note("天山六阳掌、凌波微步")
+	_section("三、可赠予偏好")
+	_note("茶具、古琴")
+	_section("四、与主角好感")
+	_kv("好感度", "68 / 100")
+	_section("五、互动")
+	_content.add_child(_btn("切磋", false, _on_spar))
+	_content.add_child(_btn("送礼", true, _on_gift))
+	_content.add_child(_btn("查看其背包", true, _on_view_backpack))
+	_section("六、个人背包")
+	_note(String(_load_stats("").get("backpack_note", "（NPC 个人背包：后续可由任务/赠予把物品给主角查看）")))

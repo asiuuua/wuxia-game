@@ -123,3 +123,46 @@ func _exit_tree() -> void:
 		EventBus.notify_sect_reputation_changed.disconnect(_on_rep_changed)
 	if EventBus.notify_sect_rank_up.is_connected(_on_rank_up):
 		EventBus.notify_sect_rank_up.disconnect(_on_rank_up)
+
+## 编辑器预览（UIPreview 调用）：手动赋值 @onready 后渲染门派列表（规避 GameManager）
+func _editor_preview() -> void:
+	if not Engine.is_editor_hint():
+		return
+	_title = $Panel/Margin/VLayout/Title
+	_status = $Panel/Margin/VLayout/StatusLabel
+	_list = $Panel/Margin/VLayout/BodyAnchor/List
+	_close = $Panel/Margin/VLayout/Close
+	if _title == null or _list == null:
+		return
+	_title.text = tr("ui_sect_title")
+	_close.text = tr("ui_sect_close")
+	_status.text = "当前：散修"
+	_editor_refresh()
+
+func _editor_refresh() -> void:
+	for child in _list.get_children():
+		child.queue_free()
+	var ids: Array[String] = ConfigManager.get_all_sect_ids()
+	for sid in ids:
+		_list.add_child(_build_row_safe(sid))
+
+func _build_row_safe(sect_id: String) -> VBoxContainer:
+	var sect: Dictionary = ConfigManager.get_sect(sect_id)
+	var v := VBoxContainer.new()
+	var head := Label.new()
+	head.text = "%s  %s 0  %s 外门弟子" % [sect.get("name", sect_id), tr("ui_sect_rep"), tr("ui_sect_rank")]
+	v.add_child(head)
+	var desc := Label.new()
+	desc.text = String(sect.get("description", ""))
+	desc.add_theme_color_override("font_color", UIPalette.TEXT_SECONDARY)
+	v.add_child(desc)
+	var h := HBoxContainer.new()
+	var join_btn := Button.new()
+	join_btn.text = tr("ui_sect_join")
+	join_btn.disabled = false
+	h.add_child(join_btn)
+	var contrib_btn := Button.new()
+	contrib_btn.text = "%s +%d" % [tr("ui_sect_contribute"), CONTRIBUTE_AMOUNT]
+	h.add_child(contrib_btn)
+	v.add_child(h)
+	return v

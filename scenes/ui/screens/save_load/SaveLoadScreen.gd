@@ -273,3 +273,62 @@ func _delete_selected() -> void:
 		return
 	var card: SaveCard = _cards[_selected_index] as SaveCard
 	card.trigger_delete()
+
+## 编辑器预览（UIPreview 调用）：手动赋值 @onready 后渲染示例存档列表（规避 SaveManager/GameManager）
+func _editor_preview() -> void:
+	if not Engine.is_editor_hint():
+		return
+	_header = $Header
+	_scroll = $Scroll
+	_list_container = $Scroll/List
+	if _header == null or _list_container == null:
+		return
+	_mode = "load"
+	var back_btn: Button = Button.new()
+	back_btn.text = "← " + tr("menu_load")
+	_apply_glass_to_button(back_btn, UIPalette.TEXT_SECONDARY)
+	_header.add_child(back_btn)
+	var title: Label = Label.new()
+	title.text = tr("save_title")
+	title.add_theme_font_size_override("font_size", UIPalette.FS_HEADER)
+	title.add_theme_color_override("font_color", UIPalette.GOLD)
+	_header.add_child(title)
+	for child in _list_container.get_children():
+		child.queue_free()
+	var mock := [
+		{"slot": 1, "exists": true, "is_auto": false, "player_name": "侠客无名", "level": 8, "faction": "逍遥派", "playtime": "3小时12分", "save_time": "2026-08-30 21:14", "scene": "新手村"},
+		{"slot": 2, "exists": true, "is_auto": false, "player_name": "剑客小李", "level": 15, "faction": "华山派", "playtime": "7小时40分", "save_time": "2026-08-29 19:02", "scene": "长安城"},
+		{"slot": 3, "exists": false},
+	]
+	for info in mock:
+		var card = SaveCardScene.instantiate()
+		_list_container.add_child(card)
+		card._editor_preview()
+		card._slot = int(info.get("slot", 0))
+		card._is_empty = not info.get("exists", false)
+		if info.get("exists", false):
+			card._name_label.text = info.get("player_name", "存档")
+			card._level_label.text = "Lv.%d" % int(info.get("level", 1))
+			card._faction_label.text = tr("ui_save_faction") % info.get("faction", "")
+			card._playtime_label.text = tr("ui_save_playtime") % info.get("playtime", "")
+			card._savetime_label.text = tr("ui_save_savetime") % info.get("save_time", "")
+			card._scene_label.text = tr("ui_save_scene") % info.get("scene", "")
+		card._refresh_mode_visuals()
+	var sep := Label.new()
+	sep.text = tr("auto_save_section")
+	sep.add_theme_font_size_override("font_size", 16)
+	sep.add_theme_color_override("font_color", UIPalette.TEXT_SECONDARY)
+	_list_container.add_child(sep)
+	var auto_card = SaveCardScene.instantiate()
+	_list_container.add_child(auto_card)
+	auto_card._editor_preview()
+	auto_card._slot = 0
+	auto_card._is_auto = true
+	auto_card._is_empty = false
+	auto_card._name_label.text = "自动存档"
+	auto_card._level_label.text = "Lv.9"
+	auto_card._faction_label.text = tr("ui_save_faction") % "逍遥派"
+	auto_card._playtime_label.text = tr("ui_save_playtime") % "1小时05分"
+	auto_card._savetime_label.text = tr("ui_save_savetime") % "2026-08-31 00:10"
+	auto_card._scene_label.text = tr("ui_save_scene") % "客栈"
+	auto_card._refresh_mode_visuals()

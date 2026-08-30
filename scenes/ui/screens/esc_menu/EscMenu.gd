@@ -132,3 +132,19 @@ func _quit_game() -> void:
 	if dlg == null:
 		return
 	dlg.setup(tr("esc_confirm_quit_title"), tr("esc_confirm_quit_content"), func(): get_tree().quit())
+
+## 编辑器预览（UIPreview 调用）：手动赋值 @onready 后渲染 ESC 菜单项
+func _editor_preview() -> void:
+	if not Engine.is_editor_hint():
+		return
+	_backdrop = $Backdrop
+	_container = $Container
+	if _backdrop == null or _container == null:
+		return
+	_backdrop.color = UIPalette.DIM_STRONG
+	for i in MENU_ITEMS.size():
+		var item: MenuItem = MenuItemScene.instantiate()
+		item.name = "EscItem_%d" % i
+		item.set_text(tr(MENU_ITEMS[i]["text"]))
+		item.set_icon("menu/" + MENU_ITEMS[i]["key"])
+		_container.add_child(item)

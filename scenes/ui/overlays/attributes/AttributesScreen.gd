@@ -96,3 +96,43 @@ func _exit_tree() -> void:
 		EventBus.player_level_up.disconnect(_on_changed)
 	if EventBus.player_money_changed.is_connected(_on_changed):
 		EventBus.player_money_changed.disconnect(_on_changed)
+
+## 编辑器预览（UIPreview 调用）：手动赋值 @onready 后填充示例属性（规避 GameManager/PlayerState）
+func _editor_preview() -> void:
+	if not Engine.is_editor_hint():
+		return
+	_title = $Panel/Margin/VLayout/Title
+	_info_label = $Panel/Margin/VLayout/InfoLabel
+	_exp_bar = $Panel/Margin/VLayout/ExpBar
+	_hp_bar = $Panel/Margin/VLayout/HpBar
+	_mp_bar = $Panel/Margin/VLayout/MpBar
+	_attr_title = $Panel/Margin/VLayout/AttrTitle
+	_attr_grid = $Panel/Margin/VLayout/AttrGrid
+	_close = $Panel/Margin/VLayout/Close
+	if _info_label == null or _attr_grid == null:
+		return
+	_title.text = tr("ui_attr_title")
+	_attr_title.text = tr("ui_attr_overview")
+	_close.text = tr("ui_attr_close")
+	_info_label.text = tr("ui_attr_info") % ["无名侠客", 12, 24]
+	_exp_bar.value = 0.6
+	_hp_bar.value = 0.78
+	_mp_bar.value = 0.45
+	var rows := [
+		["气血", "920 / 1180"], ["内力", "340 / 760"], ["攻击", "156"],
+		["防御", "98"], ["暴击", "12.5%"], ["闪避", "8.0%"],
+		["力量", "40"], ["体质", "35"], ["敏捷", "52"], ["悟性", "60"],
+		["福缘", "28"], ["专注", "44"], ["银两", "1280"],
+	]
+	for pair in rows:
+		var row := HBoxContainer.new()
+		var k := Label.new()
+		k.text = pair[0]
+		k.custom_minimum_size = Vector2(70, 0)
+		k.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var val := Label.new()
+		val.text = pair[1]
+		val.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		row.add_child(k)
+		row.add_child(val)
+		_attr_grid.add_child(row)

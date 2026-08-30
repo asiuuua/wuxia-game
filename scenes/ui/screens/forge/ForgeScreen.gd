@@ -77,3 +77,45 @@ func _exit_tree() -> void:
 		EventBus.notify_forge_completed.disconnect(_on_forge_completed)
 	if EventBus.notify_forge_failed.is_connected(_on_forge_failed):
 		EventBus.notify_forge_failed.disconnect(_on_forge_failed)
+
+## 编辑器预览（UIPreview 调用）：手动赋值 @onready 后渲染锻造列表（规避 GameManager）
+func _editor_preview() -> void:
+	if not Engine.is_editor_hint():
+		return
+	_title = $Panel/Margin/VLayout/Title
+	_list = $Panel/Margin/VLayout/BodyAnchor/List
+	_close = $Panel/Margin/VLayout/Close
+	if _title == null or _list == null:
+		return
+	_title.text = tr("ui_forge_title")
+	_close.text = tr("ui_forge_close")
+	_editor_refresh()
+
+func _editor_refresh() -> void:
+	for child in _list.get_children():
+		child.queue_free()
+	var ids: Array[String] = ConfigManager.get_all_forge_recipe_ids()
+	if ids.is_empty():
+		var e := Label.new()
+		e.text = tr("ui_forge_empty")
+		_list.add_child(e)
+		return
+	for rid in ids:
+		var recipe: Dictionary = ConfigManager.get_forge_recipe(rid)
+		var h := HBoxContainer.new()
+		var info := Label.new()
+		info.custom_minimum_size = Vector2(360, 0)
+		info.text = _recipe_summary_safe(rid, recipe)
+		var btn := Button.new()
+		btn.text = tr("ui_forge_forge")
+		btn.disabled = false
+		h.add_child(info)
+		h.add_child(btn)
+		_list.add_child(h)
+
+func _recipe_summary_safe(rid: String, recipe: Dictionary) -> String:
+	var nm: String = recipe.get("name", rid)
+	var out_id: String = String(recipe.get("output_item_id", ""))
+	var out: String = ConfigManager.get_item(out_id).get("name", out_id)
+	var lv: int = int(recipe.get("level_req", 1))
+	return "%s [Lv.%d]：（材料见配方表）-> %s" % [nm, lv, out]

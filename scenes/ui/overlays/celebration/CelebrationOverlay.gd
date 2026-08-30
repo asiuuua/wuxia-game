@@ -280,3 +280,18 @@ func _exit_tree() -> void:
 	if _bgm_player != null and is_instance_valid(_bgm_player):
 		_bgm_player.stop()
 	_clear_media()
+
+## 编辑器预览（UIPreview 调用）：手动赋值 @onready 后填示例欢庆文案（仅读配置，不碰计时/媒体加载）
+func _editor_preview() -> void:
+	if not Engine.is_editor_hint():
+		return
+	_title_label = $Panel/Margin/VBox/TitleLabel
+	_media_box = $Panel/Margin/VBox/MediaBox
+	_lines_label = $Panel/Margin/VBox/LinesLabel
+	_btn_row = $Panel/Margin/VBox/BtnRow
+	if _title_label == null or _lines_label == null or _btn_row == null:
+		return
+	var table: Dictionary = _load_table()
+	_title_label.text = String(table.get("default", {}).get("name", "欢庆"))
+	_lines_label.text = "凤冠霞帔，红烛高烧。\n一拜天地，二拜高堂，夫妻对拜，入洞房。"
+	_add_button("跳过", true, _on_skip_pressed)
