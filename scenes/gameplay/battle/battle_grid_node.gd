@@ -92,13 +92,17 @@ func _grid_pixel_rect_local() -> Rect2:
 		var h: float = grid.height * tile_height
 		return Rect2(0, 0, w, h)
 	# iso：取四个极值 cell center
-	var min_x: float = 1e9; max_x: float = -1e9
-	var min_y: float = 1e9; max_y: float = -1e9
+	var min_x: float = 1e9
+	var max_x: float = -1e9
+	var min_y: float = 1e9
+	var max_y: float = -1e9
 	for x in range(grid.width):
 		for y in range(grid.height):
 			var c := cell_center(Vector2i(x, y))
-			min_x = min(min_x, c.x); max_x = max(max_x, c.x)
-			min_y = min(min_y, c.y); max_y = max(max_y, c.y)
+			min_x = min(min_x, c.x)
+			max_x = max(max_x, c.x)
+			min_y = min(min_y, c.y)
+			max_y = max(max_y, c.y)
 	var hw: float = tile_width * 0.5
 	var hh: float = tile_height * 0.5
 	return Rect2(min_x - hw, min_y - hh, (max_x - min_x) + hw * 2.0, (max_y - min_y) + hh * 2.0)
