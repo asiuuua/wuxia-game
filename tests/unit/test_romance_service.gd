@@ -147,3 +147,56 @@ func test_debug_max_all_affection() -> void:
 	expect_eq(GameManager.bond_service.get_affection("npc_xiao_ying"), 100, "小樱好感应满")
 	expect(rs.can_propose("npc_su_waner"), "苏婉儿可求婚")
 	expect(rs.can_propose("npc_xiao_ying"), "小樱可求婚")
+
+# === 婘眷值（2026-08-30 新增） ===
+# before_each 已 reset，直接造配偶即可从干净状态开始。
+func test_quanquan_add_and_level() -> void:
+	var rs = GameManager.romance_service
+	rs.debug_make_spouse("npc_su_waner")
+	var qq0 = rs.get_quanquan("npc_su_waner")
+	expect_eq(int(qq0.get("level", 0)), 1, "初始应为 1 级")
+	expect_eq(int(qq0.get("xp", 0)), 0, "初始经验应为 0")
+	# +10：未满 500 不应解锁立绘
+	rs.add_quanquan("npc_su_waner", 10)
+	var qq1 = rs.get_quanquan("npc_su_waner")
+	expect_eq(int(qq1.get("xp", 0)), 10, "加 10 后经验应为 10")
+	expect_eq(int(qq1.get("unlocked_portraits", 0)), 0, "未满 500 不应解锁立绘")
+	# 凑到 500 → 解锁第 1 张
+	rs.add_quanquan("npc_su_waner", 490)
+	var qq2 = rs.get_quanquan("npc_su_waner")
+	expect_eq(int(qq2.get("xp", 0)), 500, "应累计到 500")
+	expect_eq(int(qq2.get("unlocked_portraits", 0)), 1, "满 500 应解锁 1 张立绘")
+	# 再 +500 → 1000，升 2 级、解锁第 2 张
+	rs.add_quanquan("npc_su_waner", 500)
+	var qq3 = rs.get_quanquan("npc_su_waner")
+	expect_eq(int(qq3.get("level", 0)), 2, "满 1000 应升到 2 级")
+	expect_eq(int(qq3.get("unlocked_portraits", 0)), 2, "满 1000 应解锁 2 张立绘")
+
+func test_quanquan_travel_and_family() -> void:
+	var rs = GameManager.romance_service
+	rs.debug_make_spouse("npc_su_waner")
+	var t = rs.travel_together("npc_su_waner")
+	expect(t.get("ok", false), "同游应成功")
+	expect_eq(int(rs.get_quanquan("npc_su_waner").get("xp", 0)), 5, "同游后经验应为 5")
+	# 无子嗣家庭出游应失败
+	var f0 = rs.family_outing("npc_su_waner")
+	expect(not f0.get("ok", false), "无子嗣家庭出游应被拒")
+	# 造子嗣后再试：寝欢启动孕期 + 推进天数分娩
+	rs.begin_intimacy("npc_su_waner")
+	rs.advance_days(400)
+	var f1 = rs.family_outing("npc_su_waner")
+	expect(f1.get("ok", false), "有子嗣家庭出游应成功")
+	expect_eq(int(rs.get_quanquan("npc_su_waner").get("xp", 0)), 20, "5+15=20")
+
+func test_quanquan_non_spouse_rejected() -> void:
+	var rs = GameManager.romance_service
+	# npc_village_chief 非配偶
+	var r = rs.travel_together("npc_village_chief")
+	expect(not r.get("ok", false), "非配偶不应获得婘眷值")
+
+func test_portrait_list_includes_base() -> void:
+	var rs = GameManager.romance_service
+	rs.debug_make_spouse("npc_su_waner")
+	var lst = rs.get_portrait_list("npc_su_waner")
+	expect(lst.size() >= 1, "立绘列表至少含基准半身立绘")
+	expect(String(lst[0]).contains("half_body"), "基准应为半身立绘路径")

@@ -254,6 +254,9 @@ signal bond_wedding_started(npc_id: String, wedding_type: int, scene_path: Strin
 # 由 romance_service.begin_celebration 在配额内 emit，UI 监听后打开 CelebrationOverlay 播放 CG。
 @warning_ignore("unused_signal")
 signal celebration_started(npc_id: String, cg_id: String)
+# 婘眷值每满 500 经验解锁一张特殊立绘时 emit（npc_id + 已解锁总数），供 UI 弹喜讯 / NPC 面板刷新。
+@warning_ignore("unused_signal")
+signal bond_special_portrait_unlocked(npc_id: String, total_unlocked: int)
 
 # === HUD 常驻系统（UI 窗口主权 · 共享地基纯追加） ===
 # 注意：本段为 UI 窗口补完 v2 HUD 四面板所需的跨窗通知信号。

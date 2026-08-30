@@ -1,6 +1,7 @@
 {
   "id": "player",
   "name": "李十五",
-  "bust": "res://assets/characters/player_bust.png",
-  "portrait": "res://assets/characters/player_face.png"
+  "bust": "res://assets/characters/half_body/player.png",
+  "portrait": "res://assets/characters/player_face.png",
+  "half_body_portrait": "res://assets/characters/half_body/player.png"
 }

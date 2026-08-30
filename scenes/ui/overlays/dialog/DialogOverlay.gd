@@ -82,7 +82,7 @@ func _open(data: Variant) -> void:
 	visible = true
 	var render: Dictionary = GameManager.dialogue_service.start(_npc_id, d.get("dialog_id", ""))
 	_dialog_id = GameManager.dialogue_service.get_dialog_id()
-	PortraitCache.preload_portrait(ConfigManager.get_npc(_npc_id).get("bust", ""))  # 预热 NPC 立绘，避免首帧卡顿
+	PortraitCache.preload_portrait(GameManager.dialogue_service.resolve_half_body(_npc_id, false))  # 预热 NPC 半身立绘，避免首帧卡顿
 	_render(render)
 
 
@@ -125,7 +125,13 @@ func _update_portraits(is_player: bool, bust: String) -> void:
 		_left_dim.visible = false          # 主角说话：左侧高亮
 	else:
 		_left_dim.visible = true           # 主角变暗
-		var tex: Texture2D = _load_tex(bust)
+		# 优先用配偶「勾选中的立绘」（婘眷值解锁的特殊形象），否则用传入半身立绘
+		var path: String = bust
+		if GameManager.romance_service != null and GameManager.romance_service.is_spouse(_npc_id):
+			var active: String = GameManager.romance_service.get_active_portrait(_npc_id)
+			if active != "":
+				path = active
+		var tex: Texture2D = _load_tex(path)
 		if tex != null:
 			_fade_right_bust(tex)
 			_right_bust.visible = true
@@ -180,6 +186,12 @@ func _show_actions() -> void:
 		close.text = tr("ui_dialog_end")
 		close.pressed.connect(_on_close_pressed)
 		_action_container.add_child(close)
+	# 新增：打开该 NPC 的「详情面板」（数值/武学/好感/立绘等，预留接口）
+	var detail := Button.new()
+	detail.text = "查看详情"
+	detail.focus_mode = Control.FOCUS_NONE
+	detail.pressed.connect(_on_open_npc_panel.bind(_npc_id))
+	_action_container.add_child(detail)
 
 
 func _on_accept_pressed(quest_id: String, battle_id: String) -> void:
@@ -198,6 +210,11 @@ func _on_fight_pressed(battle_id: String) -> void:
 
 func _on_close_pressed() -> void:
 	_close_dialog()
+
+
+func _on_open_npc_panel(npc_id: String) -> void:
+	_close_dialog()
+	UIManager.open_screen("NpcPanel", UIManager.Layer.POPUP, {"npc_id": npc_id})
 
 
 ## 对话真正关闭时统一发射一次 dialogue_ended（避免与台词行耗尽重复发射）

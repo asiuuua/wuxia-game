@@ -1,0 +1,11 @@
+{
+  "_doc": "婚后特殊立绘配置（预留接口，后续美术导入即可生效）。\n结构：以 NPC 的 id 为顶层键，其值为该 NPC「特殊立绘」的图片路径数组（按解锁顺序，第 1 张对应第 1 次解锁、第 2 张对应第 2 次……）。\n婘眷值每满 500 经验解锁 1 张（上限见 RomanceService.QQ_MAX_PORTRAITS）。解锁后，玩家可在该 NPC 的立绘里左右滑动查看；勾选某张特殊立绘，则对话框与 NPC 属性面板中该 NPC 的形象切换为该立绘。\n图片支持：静态 png/webp；也支持帧动画（spritesheet）与骨骼(SK2D/Spine)——在 portrait_type 字段标注（预留，当前仅 static 生效）。\ndefault 与示例 npc_su_waner 为占位，实际图片路径由你后续替换。",
+  "default": {
+    "portraits": [],
+    "portrait_type": "static"
+  },
+  "npc_su_waner": {
+    "portraits": [],
+    "portrait_type": "static"
+  }
+}

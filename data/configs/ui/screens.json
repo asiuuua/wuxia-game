@@ -18,5 +18,6 @@
   "BondRomance": "res://scenes/ui/screens/bond_romance/BondRomanceScreen.tscn",
   "GameMenu": "res://scenes/ui/screens/game_menu/GameMenuScreen.tscn",
   "AbilitiesScreen": "res://scenes/ui/screens/abilities/AbilitiesScreen.tscn",
-  "CelebrationOverlay": "res://scenes/ui/overlays/celebration/CelebrationOverlay.tscn"
+  "CelebrationOverlay": "res://scenes/ui/overlays/celebration/CelebrationOverlay.tscn",
+  "NpcPanel": "res://scenes/ui/screens/npc/NpcPanelScreen.tscn"
 }

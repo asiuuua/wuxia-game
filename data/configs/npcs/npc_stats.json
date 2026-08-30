@@ -1,0 +1,25 @@
+{
+  "_doc": "NPC 属性预留配置（后续填充真实数值）。键为 NPC id，值为其各项预留接口数据。\n当前均为占位，NPC 面板据此渲染「数值/武学/攻击/送礼/好感/切磋/背包」各区块；\n未配置 NPC 时面板显示「暂无详细资料」占位文案，不报错。",
+  "npc_village_chief": {
+    "title": "村长",
+    "level": 12,
+    "attack": 88,
+    "defense": 60,
+    "hp": 320,
+    "martial_arts": ["村中拳法", "稳根桩"],
+    "gift_prefs": ["茶叶", "好酒"],
+    "can_spar": true,
+    "backpack_note": "（NPC 个人背包：后续可由任务/赠予把物品给主角查看）"
+  },
+  "demo_npc": {
+    "title": "村口老乞丐",
+    "level": 3,
+    "attack": 21,
+    "defense": 15,
+    "hp": 90,
+    "martial_arts": ["乞讨十八式"],
+    "gift_prefs": ["剩饭", "铜钱"],
+    "can_spar": false,
+    "backpack_note": "（NPC 个人背包：后续可由任务/赠予把物品给主角查看）"
+  }
+}

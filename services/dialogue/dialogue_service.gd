@@ -214,16 +214,32 @@ func _resolve_name(sid: String) -> String:
 		return npc["name"]
 	return sid
 
-func _resolve_bust(sid: String, is_player: bool) -> String:
+# 半身立绘解析（统一入口，供对话框/欢庆/NPC 面板复用）：
+# 优先级 half_body_portrait → portrait → bust（主角用 player.json 同名字段）。
+# 三者皆空时回退到「按 id 计算的占位立绘路径」res://assets/characters/half_body/<id>.png，
+# 该文件由 tools/gen_placeholder_portraits.py 为所有 NPC 生成，保证「每个 NPC 都有立绘可看」。
+func resolve_half_body(sid: String, is_player: bool) -> String:
 	if is_player:
-		return ConfigManager.get_player().get("bust", "")
+		var pl: Dictionary = ConfigManager.get_player()
+		var b: String = pl.get("half_body_portrait", "")
+		if b == "":
+			b = pl.get("bust", "")
+		if b != "":
+			return b
+		return "res://assets/characters/half_body/player.png"
 	var npc: Dictionary = ConfigManager.get_npc(sid)
 	if not npc.is_empty():
-		var b: String = npc.get("bust", "")
+		var b: String = npc.get("half_body_portrait", "")
 		if b == "":
 			b = npc.get("portrait", "")
-		return b
-	return ""
+		if b == "":
+			b = npc.get("bust", "")
+		if b != "":
+			return b
+	return "res://assets/characters/half_body/%s.png" % sid
+
+func _resolve_bust(sid: String, is_player: bool) -> String:
+	return resolve_half_body(sid, is_player)
 
 ## 条件系统：对接任务/背包/好感；cond 为 null/空 表示恒真。
 ## cond 结构：{"kind":"quest_active"|"has_item"|"favor", "arg":<String|int>}

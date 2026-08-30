@@ -11,7 +11,8 @@
       "portrait": "res://assets/characters/village_chief_face.png",
       "dialog_id": "npc_village_chief",
       "quest_id": "q_bandit_001",
-      "battle_id": "battle_bandit_001"
+      "battle_id": "battle_bandit_001",
+      "half_body_portrait": "res://assets/characters/half_body/npc_village_chief.png"
     },
     {
       "id": "demo_npc",
@@ -22,7 +23,8 @@
       "portrait": "res://assets/characters/beggar_face.png",
       "dialog_id": "demo_npc",
       "quest_id": "demo_quest",
-      "battle_id": "demo_battle"
+      "battle_id": "demo_battle",
+      "half_body_portrait": "res://assets/characters/half_body/demo_npc.png"
     },
     {
       "id": "npc_bandit",
@@ -33,7 +35,8 @@
       "portrait": "res://assets/characters/village_chief_face.png",
       "dialog_id": "npc_bandit",
       "quest_id": "q_bandit_001",
-      "battle_id": "battle_bandit_001"
+      "battle_id": "battle_bandit_001",
+      "half_body_portrait": "res://assets/characters/half_body/npc_bandit.png"
     },
     {
       "id": "npc_hunter",
@@ -43,7 +46,8 @@
       "sprite": "res://assets/characters/player.png",
       "dialog_id": "npc_hunter",
       "quest_id": "q_wolf_001",
-      "battle_id": "battle_wolf_001"
+      "battle_id": "battle_wolf_001",
+      "half_body_portrait": "res://assets/characters/half_body/npc_hunter.png"
     },
     {
       "id": "npc_sect_elder",
@@ -53,7 +57,8 @@
       "sprite": "res://assets/characters/player.png",
       "dialog_id": "npc_sect_elder",
       "quest_id": "q_sect_join_001",
-      "battle_id": "battle_sect_trials"
+      "battle_id": "battle_sect_trials",
+      "half_body_portrait": "res://assets/characters/half_body/npc_sect_elder.png"
     },
     {
       "id": "npc_merchant",
@@ -61,7 +66,8 @@
       "pos_x": 480,
       "pos_y": 170,
       "sprite": "res://assets/characters/player.png",
-      "dialog_id": "npc_merchant"
+      "dialog_id": "npc_merchant",
+      "half_body_portrait": "res://assets/characters/half_body/npc_merchant.png"
     },
     {
       "id": "tactical_demo_master",
@@ -71,7 +77,8 @@
       "sprite": "",
       "portrait": "",
       "dialog_id": "tactical_demo_master",
-      "battle_id": "tactical_demo_001"
+      "battle_id": "tactical_demo_001",
+      "half_body_portrait": "res://assets/characters/half_body/tactical_demo_master.png"
     },
     {
       "id": "event_demo_npc",
@@ -80,7 +87,8 @@
       "pos_y": 350,
       "sprite": "res://assets/characters/player.png",
       "portrait": "res://assets/characters/village_chief_face.png",
-      "dialog_id": "dlg_event_demo"
+      "dialog_id": "dlg_event_demo",
+      "half_body_portrait": "res://assets/characters/half_body/event_demo_npc.png"
     }
   ]
 }

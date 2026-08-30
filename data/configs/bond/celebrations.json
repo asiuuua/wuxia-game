@@ -1,6 +1,7 @@
 {
 	"_doc": "欢庆模块内容表（开放接口）。后续你可直接改本文件一键替换：把 media_path 指向自己的视频/图片，bgm 填音乐路径，lines 填台词。media_type 取值：image | video | none。视频最长 10 秒（CelebrationOverlay 自动截断）。视频格式建议用 .ogv（Theora，Godot 原生支持，最稳）；.webm/.mp4 取决于编译选项，可能需自行验证。视频与图片均自动铺满媒体框，无需关心尺寸。\n  per-NPC 覆盖：以某个 NPC 的 id 作为顶层键（如 \"npc_su_waner\"），其结构与 default 完全一致（含 cg / end 两段），即为该 NPC 专属的欢庆内容；CelebrationOverlay 按 cg_id=npc_id 查找，找不到时自动回退到 default。所以你给每个可结缘 NPC 各写一段，就能实现「不同 NPC 不同 CG/台词」。default 与 over_limit 是保留键，勿删。编辑器插件「Celebration Manager」可一键导入/修改并自动写回本表。",
 	"default": {
+		"name": "欢庆",
 		"cg": {
 			"bgm": "",
 			"lines": [
@@ -19,12 +20,13 @@
 		}
 	},
 	"npc_su_waner": {
+		"name": "欢庆 · 苏婉儿",
 		"cg": {
 			"bgm": "",
 			"lines": [
 				"今天是上元节"
 			],
-			"media_path": "res://resources/cg/npc_su_waner/1787996843939..mp4",
+			"media_path": "res://resources/cg/npc_su_waner/1787996843939.mp4",
 			"media_type": "video"
 		},
 		"end": {
@@ -36,6 +38,7 @@
 		}
 	},
 	"over_limit": {
+		"name": "欢庆 · 今日已尽",
 		"lines": [
 			"（今日欢庆已尽，明日再续。）",
 			"（对话框内容预留接口：把 media_type 改成 video、media_path 指向视频，bgm 填音乐，lines 填台词即可替换）"

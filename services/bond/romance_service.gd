@@ -10,10 +10,21 @@ extends ISaveable
 class_name RomanceService
 
 # === 运行时状态（全部进存档） ===
-var spouses: Dictionary = {}          # npc_id -> {stage, wed_day, children: Array[String], pregnancy: Dictionary}
+var spouses: Dictionary = {}          # npc_id -> {stage, wed_day, children: Array[String], pregnancy: Dictionary, quanquan: Dictionary}
 var children: Dictionary = {}         # child_id -> {mother_id, born_day, name}
 # 欢庆每日配额（按 npc_id 独立，与配偶字典解耦：避免非配偶欢庆时误写进 spouses 污染配偶列表）
 var celebration_quotas: Dictionary = {}  # npc_id -> {day, quota, used}
+
+# === 婘眷值（用户 2026-08-30 拍板：只保留婘眷值，去掉夫妻同心） ===
+# 规则：1~10 级，每级 1000 经验；结婚后仅下列功能增加：
+#   同游旅行 +5 / 寝欢(欢庆) +10 / 一家人协同出游(有子嗣) +15
+# 每满 500 经验解锁 1 张特殊立绘（可在该 NPC 立绘里左右滑动查看；勾选后对话框+属性面板解锁该形象）。
+# 特殊立绘图片资源由 data/configs/bond/special_portraits.json 配置（后续美术导入，预留空表）。
+const QQ_MAX_LEVEL := 10
+const QQ_XP_PER_LEVEL := 1000
+const QQ_XP_PER_PORTRAIT := 500
+const QQ_MAX_PORTRAITS := 20  # 500*20=10000 经验上限，约 10 级满级时全部解锁，留余量
+const SPECIAL_PORTRAITS_PATH := "res://data/configs/bond/special_portraits.json"
 
 # === 配置读取辅助 ===
 func _romance_cfg(npc_id: String) -> Dictionary:
@@ -300,8 +311,154 @@ func begin_celebration(npc_id: String) -> Dictionary:
 			conceived = true
 		spouses[npc_id] = rec
 	EventBus.celebration_started.emit(npc_id, npc_id)
+	var qq := add_quanquan(npc_id, 10)  # 寝欢 +10 婘眷值
 	EventBus.bond_relationship_changed.emit()
-	return {"ok": true, "reason": "SUCCESS", "cg_id": npc_id, "used": cel["used"], "quota": cel["quota"], "conceived": conceived}
+	return {"ok": true, "reason": "SUCCESS", "cg_id": npc_id, "used": cel["used"], "quota": cel["quota"], "conceived": conceived, "quanquan": qq}
+
+# === 婘眷值（婚后专属，仅经下列功能增加） ===
+# 取得某配偶婘眷值状态；非配偶返回空字典。
+func get_quanquan(npc_id: String) -> Dictionary:
+	if not spouses.has(npc_id):
+		return {}
+	var rec: Dictionary = spouses[npc_id]
+	if not rec.has("quanquan"):
+		rec["quanquan"] = _new_quanquan()
+		spouses[npc_id] = rec
+	var qq: Dictionary = rec["quanquan"]
+	var level: int = int(qq.get("level", 1))
+	var xp: int = int(qq.get("xp", 0))
+	var unlocked: int = int(qq.get("unlocked_portraits", 0))
+	# 当前这一级还差多少经验升级（用于 UI 进度条）
+	var xp_in_level: int = xp - (level - 1) * QQ_XP_PER_LEVEL
+	return {
+		"level": level,
+		"xp": xp,
+		"xp_in_level": xp_in_level,
+		"xp_per_level": QQ_XP_PER_LEVEL,
+		"unlocked_portraits": unlocked,
+		"max_portraits": QQ_MAX_PORTRAITS,
+		# 下一张立绘还需经验（到 500 整数倍）：当前 xp 到下一个 500 倍数的差
+		"xp_to_next_portrait": _xp_to_next_portrait(xp),
+	}
+
+func _new_quanquan() -> Dictionary:
+	return {"level": 1, "xp": 0, "unlocked_portraits": 0}
+
+func _xp_to_next_portrait(xp: int) -> int:
+	var cur_block: int = int(xp / QQ_XP_PER_PORTRAIT)
+	var next_xp: int = (cur_block + 1) * QQ_XP_PER_PORTRAIT
+	return next_xp - xp
+
+# 增加婘眷值（内部统一入口）；返回更新后的状态字典。
+# 每满 500 经验解锁 1 张特殊立绘（上限 QQ_MAX_PORTRAITS）；满级后不再升级但立绘继续解锁到上限。
+func add_quanquan(npc_id: String, amount: int) -> Dictionary:
+	if not spouses.has(npc_id):
+		return {}
+	if amount <= 0:
+		return get_quanquan(npc_id)
+	var rec: Dictionary = spouses[npc_id]
+	if not rec.has("quanquan"):
+		rec["quanquan"] = _new_quanquan()
+	var qq: Dictionary = rec["quanquan"]
+	var xp: int = int(qq.get("xp", 0)) + amount
+	var level: int = int(qp_get_level(xp))
+	var unlocked: int = int(qq.get("unlocked_portraits", 0))
+	var new_unlocked: int = mini(int(xp / QQ_XP_PER_PORTRAIT), QQ_MAX_PORTRAITS)
+	var just_unlocked := false
+	if new_unlocked > unlocked:
+		just_unlocked = true
+		# 解锁事件：广播供 UI 弹喜讯 / NPC 面板刷新
+		EventBus.bond_special_portrait_unlocked.emit(npc_id, new_unlocked)
+	qq["level"] = level
+	qq["xp"] = xp
+	qq["unlocked_portraits"] = new_unlocked
+	rec["quanquan"] = qq
+	spouses[npc_id] = rec
+	EventBus.bond_relationship_changed.emit()
+	return get_quanquan(npc_id)
+
+# 经验 → 等级（1~10 级，每 1000 经验一级，10 级封顶）
+func qp_get_level(xp: int) -> int:
+	return mini(int(xp / QQ_XP_PER_LEVEL) + 1, QQ_MAX_LEVEL)
+
+# 同游旅行：+5 婘眷值（需已婚配偶）
+func travel_together(npc_id: String) -> Dictionary:
+	if not is_spouse(npc_id):
+		return {"ok": false, "reason": "NOT_SPOUSE"}
+	return {"ok": true, "quanquan": add_quanquan(npc_id, 5)}
+
+# 一家人协同出游：+15 婘眷值（需已婚且有子嗣）
+func family_outing(npc_id: String) -> Dictionary:
+	if not is_spouse(npc_id):
+		return {"ok": false, "reason": "NOT_SPOUSE"}
+	if get_children_of(npc_id).is_empty():
+		return {"ok": false, "reason": "NO_CHILDREN"}
+	return {"ok": true, "quanquan": add_quanquan(npc_id, 15)}
+
+# === 特殊立绘选择（对话框 / NPC 面板切换形象） ===
+# 返回该 NPC 当前可滑动查看的立绘路径列表：第 0 张为半身立绘（基准），之后为已解锁的特殊立绘。
+# 未解锁的特殊立绘不出现（玩家只能滑到「已解锁」范围）。非配偶返回仅 [基准]。
+func get_portrait_list(npc_id: String) -> Array:
+	var out: Array = []
+	var base: String = ""
+	if GameManager.dialogue_service != null:
+		base = GameManager.dialogue_service.resolve_half_body(npc_id, false)
+	else:
+		var npc: Dictionary = ConfigManager.get_npc(npc_id)
+		if not npc.is_empty():
+			base = npc.get("half_body_portrait", npc.get("portrait", ""))
+	if base != "":
+		out.append(base)
+	# 已解锁的特殊立绘（按 special_portraits.json 顺序，截断到已解锁数量）
+	var unlocked: int = 0
+	if spouses.has(npc_id) and spouses[npc_id].has("quanquan"):
+		unlocked = int(spouses[npc_id]["quanquan"].get("unlocked_portraits", 0))
+	if unlocked > 0:
+		var cfg: Dictionary = _special_portrait_cfg(npc_id)
+		var paths: Array = cfg.get("portraits", [])
+		for i in range(mini(unlocked, paths.size())):
+			out.append(String(paths[i]))
+	return out
+
+# 玩家当前勾选的立绘索引（0=基准，>=1 为第几张特殊立绘）；默认 0。
+func get_selected_portrait_index(npc_id: String) -> int:
+	if not spouses.has(npc_id):
+		return 0
+	var rec: Dictionary = spouses[npc_id]
+	return int(rec.get("selected_portrait", 0))
+
+# 勾选某张立绘（对话框/NPC 面板切换形象）；index 超出已解锁范围则忽略。
+func select_portrait(npc_id: String, index: int) -> bool:
+	if not spouses.has(npc_id):
+		return false
+	var list: Array = get_portrait_list(npc_id)
+	if index < 0 or index >= list.size():
+		return false
+	spouses[npc_id]["selected_portrait"] = index
+	EventBus.bond_relationship_changed.emit()
+	return true
+
+# 返回当前应显示的立绘路径（按勾选索引，越界回退基准）。
+func get_active_portrait(npc_id: String) -> String:
+	var list: Array = get_portrait_list(npc_id)
+	var idx: int = get_selected_portrait_index(npc_id)
+	if idx < 0 or idx >= list.size():
+		idx = 0
+	if list.is_empty():
+		return ""
+	return String(list[idx])
+
+func _special_portrait_cfg(npc_id: String) -> Dictionary:
+	if not FileAccess.file_exists(SPECIAL_PORTRAITS_PATH):
+		return {}
+	var f := FileAccess.open(SPECIAL_PORTRAITS_PATH, FileAccess.READ)
+	if f == null:
+		return {}
+	var parsed: Variant = JSON.parse_string(f.get_as_text())
+	f.close()
+	if parsed is Dictionary:
+		return parsed.get(npc_id, parsed.get("default", {}))
+	return {}
 
 # 推进游戏天数：孕期进度累加，满 gestation_days 则分娩（由 TimeService/休息动作喂天数）
 func advance_days(n: int) -> void:
