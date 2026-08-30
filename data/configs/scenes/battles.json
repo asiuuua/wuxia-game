@@ -72,6 +72,25 @@
       "turn_mode": "sequential",
       "tactical": true,
       "reward_exp": 20,
+      "grid": {
+        "width": 10,
+        "height": 8,
+        "obstacles": ["4,3", "5,3", "4,4", "5,4"],
+        "deployment": {
+          "player": [1, 4],
+          "bandit_001": [8, 4]
+        }
+      }
+    },
+    {
+      "id": "tactical_demo_master_arena",
+      "name": "战棋教头演武场（预设布局）",
+      "enemy_ids": [
+        "bandit_001"
+      ],
+      "turn_mode": "sequential",
+      "tactical": true,
+      "reward_exp": 20,
       "layout": "preset_10x10",
       "deployment": {
         "player": [1, 4],

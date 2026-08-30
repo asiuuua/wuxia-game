@@ -30,3 +30,12 @@ func test_explicit_grid_still_wins() -> void:
 	expect(grid != null, "原内嵌 grid 战斗仍应构建网格")
 	expect(grid.width == 10 and grid.height == 8, "内嵌 grid 几何优先级最高，应为 10x8，实际 %dx%d" % [grid.width, grid.height])
 	expect(grid.occupant_at(Vector2i(1, 4)) == "player", "玩家应部署在内嵌 grid 的 (1,4)")
+
+func test_demo_master_arena_uses_preset_layout() -> void:
+	var cs := CombatService.new()
+	cs.start_combat("tactical_demo_master_arena")
+	var grid: BattleGrid = cs.get_grid()
+	expect(grid != null, "教头演武场（layout 引用 preset_10x10）应成功构建网格")
+	expect(grid.width == 10 and grid.height == 10, "应复用 preset_10x10 几何 10x10，实际 %dx%d" % [grid.width, grid.height])
+	expect(grid.occupant_at(Vector2i(1, 4)) == "player", "玩家应按 battle.deployment 部署 (1,4)")
+	expect(grid.occupant_at(Vector2i(8, 4)) == "bandit_001", "敌人应按 battle.deployment 部署 (8,4)")
