@@ -1,3 +1,4 @@
+@tool
 # scenes/ui/screens/forge/ForgeScreen.gd
 # 锻造界面（B 路线：静态壳在 ForgeScreen.tscn，脚本只填动态内容）
 # 铁律：UI 只做展示与输入，业务逻辑调用 GameManager / ForgeService
@@ -13,6 +14,8 @@ const UIPalette = preload("res://core/constants/ui_theme.gd")
 @onready var _close: Button = $Panel/Margin/VLayout/Close
 
 func _ready() -> void:
+	if Engine.is_editor_hint():
+		return
 	popup_id = "ForgeScreen"
 	_build_ui()
 	refresh()

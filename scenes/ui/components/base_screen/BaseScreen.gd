@@ -42,6 +42,8 @@ var _selected_index: int = 0
 var _content_root: Control = null
 
 func _ready() -> void:
+	if Engine.is_editor_hint():
+		return
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	# 内容容器：套安全区，避开刘海/挖孔/系统手势条
 	_content_root = Control.new()

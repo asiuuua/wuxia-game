@@ -1,3 +1,4 @@
+@tool
 # scenes/ui/overlays/hud/status_card_panel.gd
 # HUD 左上角状态卡（v2 四面板之一）：头像框 + 姓名/等级/银两 + 气血条 + 内力条 + 六维属性条。
 # 纯展示层，订阅 EventBus 的 player_* 信号刷新，不修改业务数据。
@@ -36,6 +37,8 @@ const _ATTRS := [
 var _attr_bars: Dictionary = {}
 
 func _ready() -> void:
+	if Engine.is_editor_hint():
+		return
 	focus_mode = Control.FOCUS_NONE
 	_setup_bars()
 	if is_instance_valid(EventBus):

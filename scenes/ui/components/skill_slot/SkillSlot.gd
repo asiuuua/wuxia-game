@@ -1,3 +1,4 @@
+@tool
 # scenes/ui/components/skill_slot/SkillSlot.gd
 # B 路线复合控件：快捷栏单个技能槽（图标 + 名称 + 冷却读秒覆盖层）。
 # 由 skill_bar_panel.gd 的内嵌 class _Slot 抽出；节点结构见 SkillSlot.tscn，

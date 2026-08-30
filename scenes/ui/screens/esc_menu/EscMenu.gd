@@ -1,3 +1,4 @@
+@tool
 # scenes/ui/screens/esc_menu/EscMenu.gd
 # 游戏内 ESC 暂停菜单（POPUP 层级）；由 TownScene 监听 ui_cancel 开关
 # 复用 MenuItem 组件 + UIPalette 配色，与 MainMenu 交互一致

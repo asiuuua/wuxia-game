@@ -1,3 +1,4 @@
+@tool
 # scenes/ui/screens/loading/LoadingScreen.gd
 # 加载界面（代码构建 Control 覆盖层，挂在 UIManager.FULLSCREEN 层级）
 # 进度来源：EventBus.bootstrap_started / bootstrap_step_completed / bootstrap_completed
@@ -41,6 +42,8 @@ var _progress_tween: Tween = null   # 进度条平滑缓动句柄（避免每步
 var _applying_layout := false       # 工作室布局套用重入保护（resize 回调与初始化可能并发）
 
 func _ready() -> void:
+	if Engine.is_editor_hint():
+		return
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_build_ui()
 	_load_tips()

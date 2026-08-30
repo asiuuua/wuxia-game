@@ -1,3 +1,4 @@
+@tool
 # scenes/ui/screens/equipment/EquipmentScreen.gd
 # 装备界面（B 路线：静态壳在 EquipmentScreen.tscn，脚本只填动态内容）
 # 铁律：UI 只做展示与输入，业务逻辑调用 GameManager / EquipmentService
@@ -16,6 +17,8 @@ const UIPalette = preload("res://core/constants/ui_theme.gd")
 var _slot_labels: Dictionary = {}
 
 func _ready() -> void:
+	if Engine.is_editor_hint():
+		return
 	popup_id = "EquipmentScreen"
 	_build_ui()
 	refresh()

@@ -1,3 +1,4 @@
+@tool
 @warning_ignore("shadowed_global_identifier")
 extends PopupBase
 
@@ -17,6 +18,8 @@ var _current_iid: String = ""
 # 美术可在编辑器直接编辑布局与外观；本脚本只负责数据填充、状态与交互。
 # 节点引用经 $ 路径取自 .tscn（结构契约），避免硬编码 new() 重建布局。
 func _ready() -> void:
+	if Engine.is_editor_hint():
+		return
 	focus_mode = Control.FOCUS_NONE
 	popup_id = "Inventory"
 	# 压暗底（颜色取自 UIPalette，避免 .tscn 里写死）

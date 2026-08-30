@@ -1,3 +1,4 @@
+@tool
 # scenes/ui/screens/bond_romance/BondRomanceScreen.gd
 # 姻缘面板（关系总览 + 求婚/结义/拜师/收徒/欢庆/婚礼 入口）
 # 铁律：UI 只展示与输入，数据来自 GameManager 各业务服务公开方法；
@@ -17,6 +18,8 @@ const UIFeedback = preload("res://scenes/ui/components/ui_feedback/UIFeedback.gd
 @onready var _close: Button = $Panel/Margin/VLayout/Close
 
 func _ready() -> void:
+	if Engine.is_editor_hint():
+		return
 	focus_mode = Control.FOCUS_NONE
 	UIManager.apply_safe_area(self)
 	popup_id = "BondRomance"

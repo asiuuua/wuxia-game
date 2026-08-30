@@ -1,3 +1,4 @@
+@tool
 # scenes/ui/screens/main_menu/MainMenu.gd
 # 主菜单界面（B 路线：静态容器 MenuContainer / BottomLeft / BottomRight 已迁入 MainMenu.tscn，美术可在编辑器改布局；动态内容 MenuItem / 底部按钮仍由代码构建）
 # M2 范围：6 选项 + 键盘/鼠标导航 + 快捷键 + 动态背景占位 + 主题常量

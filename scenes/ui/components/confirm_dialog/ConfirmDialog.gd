@@ -1,3 +1,4 @@
+@tool
 # scenes/ui/components/confirm_dialog/ConfirmDialog.gd
 # 通用确认弹窗（代码构建 Control，无 .tscn/无 class_name；经 UIManager.show_popup("ConfirmDialog") 实例化）
 # 职责：标题 + 内容 + 确定/取消按钮；遮罩拦截点击；0.2s 淡入、0.2s 淡出关闭
@@ -28,6 +29,8 @@ var _cancel_callback: Callable = Callable()
 var _closing: bool = false
 
 func _ready() -> void:
+	if Engine.is_editor_hint():
+		return
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_build_ui()

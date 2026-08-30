@@ -1,3 +1,4 @@
+@tool
 # scenes/ui/screens/game_menu/GameMenuScreen.gd
 # 进入游戏后的分类主功能菜单（"江湖"）：把现有子系统按品类归类，点击进入对应屏幕。
 # 设计：全屏遮罩 + 居中玻璃面板，四大类（人物 / 江湖 / 技艺·生产 / 系统）各一组按钮网格。
@@ -21,6 +22,8 @@ const UIFeedback = preload("res://scenes/ui/components/ui_feedback/UIFeedback.gd
 var _romance_badge: Label
 
 func _ready() -> void:
+	if Engine.is_editor_hint():
+		return
 	focus_mode = Control.FOCUS_NONE
 	UIManager.apply_safe_area(self)
 	popup_id = "GameMenu"

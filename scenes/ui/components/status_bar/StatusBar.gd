@@ -1,3 +1,4 @@
+@tool
 # scenes/ui/components/status_bar/StatusBar.gd
 # B 路线复合控件：单条数值条（标签 + 轨道 + 填充 + 可选数值文本）。
 # 由 status_card_panel.gd 的内嵌 class _Bar 抽出；节点结构见 StatusBar.tscn，

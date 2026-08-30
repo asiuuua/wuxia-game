@@ -1,3 +1,4 @@
+@tool
 # scenes/ui/screens/settings/SettingsScreen.gd
 # 设置弹窗（独立弹窗，非全屏界面）：
 #   - 压暗遮罩(点击外部关闭) + 居中磨砂玻璃面板(GLASS_BG 风格，圆角/细白边/阴影) + 内部 header/左分类/右动态面板
@@ -56,6 +57,8 @@ var _rebinding_action: String = ""
 var _rebinding_button: Button = null
 
 func _ready() -> void:
+	if Engine.is_editor_hint():
+		return
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	popup_id = "Settings"

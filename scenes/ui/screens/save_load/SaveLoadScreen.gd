@@ -1,3 +1,4 @@
+@tool
 # 存档选择界面（代码构建 Control，挂在 UIManager.FULLSCREEN 层级；对齐 MainMenu 惯例，不依赖 .tscn）
 # 职责：展示手动存档列表 + 自动存档区；读取/删除/新游戏经 ConfirmDialog 组件确认（M5 已抽离）
 # 业务逻辑调用 SaveManager（列表/删除）与 GameManager（读档/新游戏）。颜色集中引用 UIPalette

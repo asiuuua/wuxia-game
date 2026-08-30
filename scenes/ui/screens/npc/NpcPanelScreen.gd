@@ -1,3 +1,4 @@
+@tool
 # scenes/ui/screens/npc/NpcPanelScreen.gd
 # NPC 面板（独立屏幕 · 预留接口）：展示某 NPC 的
 #   半身立绘（配偶可左右滑动查看已解锁的特殊立绘并勾选）/ 数值 / 武学 / 攻击属性 /
@@ -29,6 +30,8 @@ var _npc_id: String = ""
 var _portrait_index: int = 0  # 当前滑动到的立绘索引
 
 func _ready() -> void:
+	if Engine.is_editor_hint():
+		return
 	focus_mode = Control.FOCUS_NONE
 	UIManager.apply_safe_area(self)
 	popup_id = "NpcPanel"

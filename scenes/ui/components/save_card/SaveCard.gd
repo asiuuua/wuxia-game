@@ -1,3 +1,4 @@
+@tool
 # scenes/ui/components/save_card/SaveCard.gd
 # 存档卡片组件（静态结构迁入 SaveCard.tscn，脚本只做连线与动态逻辑；对齐 B 路线 .tscn 化）
 # 交互约定：鼠标悬停高亮金边；点击卡片体或 [读取] 触发读取；[删除] 触发删除；空槽 [新的旅程] 触发新游戏
@@ -48,6 +49,8 @@ var _highlight_sb: StyleBoxFlat = null
 @onready var _new_game_btn: Button = $Content/Actions/NewGameBtn
 
 func _ready() -> void:
+	if Engine.is_editor_hint():
+		return
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_build_dynamic_styles()
 	_connect_signals()

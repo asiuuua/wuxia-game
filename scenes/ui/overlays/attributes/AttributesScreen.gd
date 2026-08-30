@@ -1,3 +1,4 @@
+@tool
 # scenes/ui/overlays/attributes/AttributesScreen.gd
 # 人物属性面板（Tab 键开关）：基础信息 + 经验/气血/内力进度条 + 属性总览
 # 铁律：UI 只展示与输入，数据来自 GameManager.player_state
@@ -23,6 +24,8 @@ const UIFeedback = preload("res://scenes/ui/components/ui_feedback/UIFeedback.gd
 @onready var _close: Button = $Panel/Margin/VLayout/Close
 
 func _ready() -> void:
+	if Engine.is_editor_hint():
+		return
 	focus_mode = Control.FOCUS_NONE
 	UIManager.apply_safe_area(self)
 	popup_id = "Attributes"

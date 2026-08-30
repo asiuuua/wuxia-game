@@ -1,3 +1,4 @@
+@tool
 # scenes/ui/screens/abilities/AbilitiesScreen.gd
 # 江湖技艺（已学武学）面板：列出玩家习得的武学，展示名称/描述/内力消耗/修炼等级。
 # 数据来自 GameManager.ability_service.learned + ConfigManager.get_ability；纯展示，不修改业务。
@@ -15,6 +16,8 @@ const UIFeedback = preload("res://scenes/ui/components/ui_feedback/UIFeedback.gd
 @onready var _close: Button = $Panel/Margin/VLayout/Close
 
 func _ready() -> void:
+	if Engine.is_editor_hint():
+		return
 	focus_mode = Control.FOCUS_NONE
 	UIManager.apply_safe_area(self)
 	popup_id = "Abilities"

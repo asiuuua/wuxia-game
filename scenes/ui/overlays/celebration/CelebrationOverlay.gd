@@ -1,3 +1,4 @@
+@tool
 # scenes/ui/overlays/celebration/CelebrationOverlay.gd
 # 欢庆模块 CG 播放界面（结缘窗口主权）：由 BondRomanceScreen 经 UIManager.open_screen 打开。
 # 两种模式（经 _on_open(init_data) 注入）：
@@ -39,6 +40,8 @@ var _media_path: String = ""
 var _bgm_path: String = ""
 
 func _ready() -> void:
+	if Engine.is_editor_hint():
+		return
 	focus_mode = Control.FOCUS_NONE
 	_ready_done = true
 	if _pending_open != null:

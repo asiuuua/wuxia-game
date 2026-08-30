@@ -1,3 +1,4 @@
+@tool
 # scenes/ui/overlays/hud/top_right_menu_panel.gd
 # HUD 右上角功能入口（v2 四面板之一）：「姻缘」按钮（可求婚时红点）+「菜单」按钮（打开分类主菜单）。
 # 纯展示/入口层，红点轮询 GameManager.romance_service.get_marriageable_npc_ids()；
@@ -15,6 +16,8 @@ const UIFeedback = preload("res://scenes/ui/components/ui_feedback/UIFeedback.gd
 @onready var _bond_badge: Label = $BondBtn/RomanceBadge
 
 func _ready() -> void:
+	if Engine.is_editor_hint():
+		return
 	focus_mode = Control.FOCUS_NONE
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_hook_buttons()

@@ -1,3 +1,4 @@
+@tool
 # scenes/ui/overlays/map/MapScreen.gd
 # 地图面板（M 键开关）：当前区域 + 世界时钟 + 区域枢纽总览
 # 铁律：UI 只展示与输入，数据来自 WeatherTimeService / ConfigManager
@@ -23,6 +24,8 @@ const UIPalette = preload("res://core/constants/ui_theme.gd")
 @onready var _close: Button = $Panel/Margin/VLayout/Close
 
 func _ready() -> void:
+	if Engine.is_editor_hint():
+		return
 	focus_mode = Control.FOCUS_NONE
 	_build()
 

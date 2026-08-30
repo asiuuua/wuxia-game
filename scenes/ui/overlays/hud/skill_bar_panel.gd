@@ -1,3 +1,4 @@
+@tool
 # scenes/ui/overlays/hud/skill_bar_panel.gd
 # HUD 快捷技能栏（v2 四面板之一）：展示已装备到快捷栏的武学（display-only 灰发）。
 # 数据源：GameManager.ability_service.equipped_combat（武学窗主权，只读消费）。
@@ -21,6 +22,8 @@ const SkillSlot = preload("res://scenes/ui/components/skill_slot/SkillSlot.gd")
 var _slots: Array[SkillSlot] = []
 
 func _ready() -> void:
+	if Engine.is_editor_hint():
+		return
 	focus_mode = Control.FOCUS_NONE
 	_collect_slots()
 	if is_instance_valid(EventBus):

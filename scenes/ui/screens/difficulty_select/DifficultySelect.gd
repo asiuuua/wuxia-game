@@ -1,3 +1,4 @@
+@tool
 # scenes/ui/screens/difficulty_select/DifficultySelect.gd
 # 开局难度选择界面（阶段2 消费端入口）：读难度配置表渲染 5 档，选定后写入难度并开新游戏。
 # HELL 强制二次确认警告；其余直接确认。文案经 tr() 本地化。
@@ -19,6 +20,8 @@ func _init() -> void:
 	close_on_cancel = true        # ESC / ui_cancel 返回上一级
 
 func _ready() -> void:
+	if Engine.is_editor_hint():
+		return
 	_diff_ids = CombatEnums.Difficulty.keys()
 	super._ready()   # 基类：铺满 + 安全区 + _build_content() + _update_selection()
 

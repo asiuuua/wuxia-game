@@ -1,3 +1,4 @@
+@tool
 # scenes/ui/overlays/dialog/DialogOverlay.gd
 # 对话叠加层（UI 主权 · 对话框外观/位置固定）：只负责"怎么呈现"。
 # 数据来源：
@@ -41,6 +42,8 @@ var _pending_open: Variant = null
 
 
 func _ready() -> void:
+	if Engine.is_editor_hint():
+		return
 	focus_mode = Control.FOCUS_NONE
 	_init_static()
 	_ready_done = true

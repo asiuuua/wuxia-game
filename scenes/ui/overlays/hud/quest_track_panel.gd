@@ -1,3 +1,4 @@
+@tool
 # scenes/ui/overlays/hud/quest_track_panel.gd
 # HUD 任务追踪面板（v2 四面板之一）：展示当前追踪任务及目标进度。
 # 数据源：GameManager.quest_service.get_tracked()（任务窗主权，只读消费）。
@@ -46,6 +47,8 @@ var _dragging := false
 var _drag_offset := Vector2.ZERO
 
 func _ready() -> void:
+	if Engine.is_editor_hint():
+		return
 	focus_mode = Control.FOCUS_NONE
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	mouse_default_cursor_shape = Control.CURSOR_MOVE   # 悬停显示「可移动」光标，提示可拖动
