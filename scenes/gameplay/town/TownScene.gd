@@ -271,11 +271,12 @@ func _open_dialog(npc_id: String) -> void:
 	UIManager.open_screen("DialogOverlay", UIManager.Layer.FULLSCREEN,
 		{"npc_id": npc_id, "dialog_id": dialog_id})
 
-# 休息/睡觉：推进游戏天数，驱动姻缘孕期倒计时与分娩（advance_days 内部广播事件刷新面板）
+# 休息/睡觉：推进游戏天数（走 WeatherTimeService 真日历），其 world_day_advanced 会经
+# GameManager 扇入 romance_service.advance_days 驱动孕期/分娩，并广播事件刷新面板/天气。
 func _do_rest() -> void:
 	if UIManager.is_any_screen_open():
 		return
-	GameManager.romance_service.advance_days(REST_DAYS)
+	GameManager.weather_time_service.advance_day(REST_DAYS)
 	EventBus.notification_show.emit("你沉沉睡去，恍惚间过去了 %d 天" % REST_DAYS)
 
 # 调试：直接开战术战棋 demo（跳过 NPC 对话链路），反复试战斗表现用。由 F9 触发，受 DEBUG_QUICK_BATTLE 门控。

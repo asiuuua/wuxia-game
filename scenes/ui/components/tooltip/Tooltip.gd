@@ -3,55 +3,13 @@ extends Control
 
 const UIPalette = preload("res://core/constants/ui_theme.gd")
 
-var _panel: Panel
-var _title: Label
-var _type: Label
-var _desc: Label
+@onready var _panel: Panel = $Panel
+@onready var _title: Label = $Panel/VBox/Title
+@onready var _type: Label = $Panel/VBox/Type
+@onready var _desc: Label = $Panel/VBox/Desc
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_build()
-
-func _build() -> void:
-	_panel = Panel.new()
-	_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = UIPalette.GLASS_BG
-	sb.border_width_left = 1
-	sb.border_width_top = 1
-	sb.border_width_right = 1
-	sb.border_width_bottom = 1
-	sb.border_color = UIPalette.GLASS_BORDER
-	sb.corner_radius_top_left = 8
-	sb.corner_radius_top_right = 8
-	sb.corner_radius_bottom_left = 8
-	sb.corner_radius_bottom_right = 8
-	sb.shadow_size = 12
-	sb.shadow_offset = Vector2(0, 4)
-	sb.shadow_color = UIPalette.GLASS_SHADOW
-	_panel.add_theme_stylebox_override("panel", sb)
-	add_child(_panel)
-	var v := VBoxContainer.new()
-	v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	v.add_theme_constant_override("separation", 4)
-	v.add_theme_constant_override("margin_left", 12)
-	v.add_theme_constant_override("margin_top", 10)
-	v.add_theme_constant_override("margin_right", 12)
-	v.add_theme_constant_override("margin_bottom", 10)
-	_panel.add_child(v)
-	_title = Label.new()
-	_title.add_theme_font_size_override("font_size", 16)
-	_title.add_theme_color_override("font_color", UIPalette.GOLD)
-	v.add_child(_title)
-	_type = Label.new()
-	_type.add_theme_font_size_override("font_size", 12)
-	_type.add_theme_color_override("font_color", UIPalette.TEXT_SECONDARY)
-	v.add_child(_type)
-	_desc = Label.new()
-	_desc.add_theme_font_size_override("font_size", 13)
-	_desc.add_theme_color_override("font_color", UIPalette.TEXT_MAIN)
-	_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	v.add_child(_desc)
 	visible = false
 
 ## 显示某物品浮窗；global_pos 为触发位置的屏幕坐标
