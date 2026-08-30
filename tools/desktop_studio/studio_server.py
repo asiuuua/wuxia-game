@@ -24,6 +24,23 @@ MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 _MIME = {"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg", "webp": "image/webp"}
 
+# 防 CSRF：仅放行本机来源。恶意网页（如浏览器里开着 http://evil.com/x）无法再向 127.0.0.1 接口发指令。
+# 放行规则：无 Origin/Referer（curl / 非浏览器）✓；工具自身页面（127.0.0.1:端口）✓；file:// 或 null（本地双击打开的静态页）✓。
+_ALLOWED_ORIGIN_PREFIXES = (
+    "http://127.0.0.1", "http://localhost",
+    "file://", "null",
+)
+
+
+def _origin_allowed(handler):
+    origin = handler.headers.get("Origin") or handler.headers.get("Referer") or ""
+    if not origin:
+        return True
+    for ok in _ALLOWED_ORIGIN_PREFIXES:
+        if origin.startswith(ok):
+            return True
+    return False
+
 
 def _mime_of(path):
     return _MIME.get(os.path.splitext(path)[1].lstrip(".").lower(), "application/octet-stream")
@@ -67,6 +84,8 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     def do_GET(self):
+        if not _origin_allowed(self):
+            return _send_json(self, {"error": "forbidden origin"}, 403)
         path = self.path.split("?")[0]
         if path in ("/", "/index.html"):
             self._serve_file("index.html", "text/html; charset=utf-8")
@@ -140,6 +159,8 @@ class Handler(BaseHTTPRequestHandler):
         _send_json(self, {"error": "not found"}, 404)
 
     def do_POST(self):
+        if not _origin_allowed(self):
+            return _send_json(self, {"error": "forbidden origin"}, 403)
         path = self.path.split("?")[0]
         body = _read_body(self)
         parts = [p for p in path.strip("/").split("/") if p]
@@ -265,6 +286,8 @@ class Handler(BaseHTTPRequestHandler):
         _send_json(self, {"error": "not found"}, 404)
 
     def do_DELETE(self):
+        if not _origin_allowed(self):
+            return _send_json(self, {"error": "forbidden origin"}, 403)
         path = self.path.split("?")[0]
         parts = [p for p in path.strip("/").split("/") if p]
         if len(parts) == 3 and parts[0] == "api" and parts[1] == "npc":

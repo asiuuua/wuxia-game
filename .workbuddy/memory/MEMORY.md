@@ -100,3 +100,9 @@
 - 游戏侧布局：`data/configs/ui/loading_layout.json` 归一化 0~1 坐标，LoadingScreen `_apply_layout/_apply_one/_on_resized` 套用；`UIBackground.pick_bg_path(viewport_width, fallback)` 按视口宽从 `login_bg_variants.json` 选分辨率档。
 - ⚠️ **Control 绝对定位坑**：anchor 四值归零且 `offset_left == offset_right` → 宽度恒为 0（`custom_minimum_size` 不撑开）。必须 anchor 归零后**四个 offset 全显式写死**矩形。文字类宽度取 `max(内容宽, 视口宽×0.6)`，否则文案变化会漂。
 - ⚠️ `horizontal_alignment` **只有 Label 有**，ProgressBar 赋值直接崩 → `node is Label` 分支。
+
+## 工作室工具安全红线（2026-08-30 加固，改工具代码必守 + 必跑自检）
+- 服务只绑 127.0.0.1；**任何拼进文件路径的用户输入必须过 `_is_valid_id()`**（字母/数字/_/- 白名单，非法拒绝而非改名）；回收站操作先 `os.path.basename`；ZIP 解压前逐条目校验（`..`/绝对路径/越界一票否决）；HTTP 层统一 `_origin_allowed()`（无 Origin、127.0.0.1/localhost、file:///null 放行，其余 403）。
+- 改完必跑 `python tools/desktop_studio/security_selftest.py`（15 项断言，防回归）。
+- **可整体卸载**：删 `tools/desktop_studio/` + data/configs/ui 下 4 个工具专属文件（login_button_bg/login_bg_layout/login_bg_variants/loading_layout）→ 游戏回退默认、双闸门仍绿（已实证）。其余 ui_*.json/screens.json/menu_config/loading_tips 是游戏基础配置不可删。
+- **产品级脱节提示**：工具改源码 data/，发行版 exe 读打包内数据——改完必须重打包或在编辑器跑才生效（README 已注明，用户可据此判断"改没生效"不是工具坏了）。

@@ -159,3 +159,10 @@ tools/desktop_studio/
 - 编辑时**不要同时用 Godot 跑着游戏**改同一份文件，避免互相覆盖。
 - 改完数据后，进 Godot 按 F5 跑游戏查看效果。
 - 工程根目录在「设置」里可改；默认 `D:/武侠游戏`。
+
+## 七、安全与卸载说明
+
+- **只监听本机**：服务绑定 127.0.0.1，局域网/外网访问不到；没有读任意文件的能力。
+- **防篡改校验（2026-08-30 加固）**：所有写入型接口校验来源（Origin/Referer，非本机来源一律 403）；拼进文件路径的 id 一律白名单校验（仅字母/数字/下划线/短横线）；回收站操作只认文件名；立绘 ZIP 解压前校验条目——杜绝路径穿越与 Zip Slip。
+- **可整体卸载**：本工具与游戏运行时零耦合（`.gdignore` 隔离）。删掉 `tools/desktop_studio/` 整个目录即可；`data/configs/ui/` 下由工具生成的 `login_button_bg.json / login_bg_layout.json / login_bg_variants.json / loading_layout.json` 一并删除后游戏自动回退默认外观（已实证双闸门全绿）。其余 `ui_*.json / screens.json / menu_config.json / loading_tips.json` 属游戏基础配置，请勿删。
+- **改完要重打包才进发行版**：工具改的是源码目录里的数据，打开发行版 exe 看不到变化——需重新导出游戏（或用 Godot 编辑器运行）才生效。

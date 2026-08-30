@@ -143,6 +143,18 @@ def _safe_id(nid):
     return "".join(ch for ch in str(nid) if ch.isalnum() or ch in ("_", "-"))
 
 
+def _is_valid_id(nid):
+    # 白名单校验（比 _safe_id 严格：含非法字符直接拒绝，不做静默改名）。
+    # 凡是会把 id 拼进文件路径的入口（对话 id / 按钮 id / 回收站文件名）必须过这道闸，防路径穿越。
+    s = str(nid or "")
+    if not s:
+        return False
+    for ch in s:
+        if not (ch.isalnum() or ch in ("_", "-")):
+            return False
+    return True
+
+
 def npc_portrait_import(npc_id, payload):
     """payload: {"ptype": "static"|"frame"|"spine",
                  "filename": "xxx.png",
@@ -187,6 +199,15 @@ def npc_portrait_import(npc_id, payload):
         os.makedirs(out_dir, exist_ok=True)
         try:
             zf = zipfile.ZipFile(io.BytesIO(raw))
+            # 防 Zip Slip：先校验每个条目名，拒绝绝对路径与任何含 .. 的路径，再一次性解压
+            out_abs = os.path.abspath(out_dir)
+            for info in zf.infolist():
+                nm = info.filename.replace("\\", "/")
+                if nm.startswith("/") or ".." in nm.split("/"):
+                    return False, "ZIP 内含非法路径条目：%s" % info.filename, {}
+                target = os.path.normpath(os.path.join(out_abs, nm))
+                if not target.startswith(out_abs + os.sep) and target != out_abs:
+                    return False, "ZIP 条目越界：%s" % info.filename, {}
             zf.extractall(out_dir)
         except Exception as e:
             return False, "ZIP 解压失败：%s" % e, {}
@@ -337,7 +358,8 @@ def trash_list():
 
 
 def _trash_path(fn):
-    return os.path.join(TRASH_DIR, fn)
+    # 防路径穿越：只允许文件名本身（丢弃任何目录成分），杜绝 fn=../../任意文件 的删除/读取
+    return os.path.join(TRASH_DIR, os.path.basename(str(fn or "")))
 
 
 def trash_restore(fn):
@@ -542,13 +564,15 @@ def dlg_list():
 
 
 def dlg_get(dlg_id):
+    if not _is_valid_id(dlg_id):
+        return {}
     return load_json(_shard_path(dlg_id), {"id": dlg_id, "lines": []})
 
 
 def dlg_new(dlg_id):
     dlg_id = str(dlg_id).strip()
-    if not dlg_id:
-        return False, "对话 id 不能为空"
+    if not _is_valid_id(dlg_id):
+        return False, "对话 id 非法（仅允许字母/数字/下划线/短横线）"
     idx = load_json(_paths()["dlg_index"], {"shards": {}})
     if "shards" not in idx:
         idx["shards"] = {}
@@ -564,6 +588,8 @@ def dlg_new(dlg_id):
 
 
 def dlg_line_upsert(dlg_id, line):
+    if not _is_valid_id(dlg_id):
+        return False, "对话 id 非法（仅允许字母/数字/下划线/短横线）"
     lid = str(line.get("id", "")).strip()
     if not lid:
         return False, "台词 id 不能为空"
@@ -593,6 +619,8 @@ def dlg_line_upsert(dlg_id, line):
 
 
 def dlg_line_delete(dlg_id, lid):
+    if not _is_valid_id(dlg_id):
+        return False, "对话 id 非法（仅允许字母/数字/下划线/短横线）"
     p = _shard_path(dlg_id)
     data = load_json(p, {"id": dlg_id, "lines": []})
     lines = data.get("lines", [])
@@ -993,6 +1021,10 @@ def login_btn_bg_list():
 
 
 def login_btn_bg_set(btn_id, src_path):
+    # 防路径穿越：按钮 id 白名单校验（字母/数字/下划线/短横线），否则可能把图写出 assets 目录
+    btn_id = str(btn_id or "").strip()
+    if not _is_valid_id(btn_id):
+        return False, "按钮 id 非法（仅允许字母/数字/下划线/短横线）"
     # 关键：先读文件头判真实格式再决定扩展名。Godot 按扩展名选解码器，
     # 扩展名错配（如 TIFF 存成 .png）会导致导入失败、按钮背景静默消失。
     ext = _detect_image_ext(src_path)
