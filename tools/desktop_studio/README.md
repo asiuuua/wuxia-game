@@ -38,8 +38,24 @@ pyinstaller --onefile --name 工作室专业调教 studio_server.py
 | **NPC 数据** | 增删改 NPC：名称、**地图上坐标(pos_x/pos_y，支持画布点选定位)**、立绘、头像、对话id、任务id、战斗id，以及**半身立绘（动态可一键导入）** | `data/configs/npcs/town_npcs.json` |
 | **剧情对话** | 建对话 → 建/改台词（说话人、文本、下一句、触发事件） | `dialogs/_index.json` + `shards/*.json` |
 | **欢庆模块** | 选/绑 NPC → 填 CG 媒体、音乐、台词 | `data/configs/bond/celebrations.json` |
-| **登录界面** | 一键换登录主界面大背景图、改各按钮文字（简/繁/英）、查看版本文字、为各按钮配背景图 | `assets/ui/main_menu_bg.jpg` + `data/configs/localization/strings.csv` + `data/configs/ui/login_button_bg.json` |
+| **登录界面** | 一键换登录主界面大背景图、改各按钮文字（简/繁/英）、查看版本文字、为各按钮配背景图（**可实时预览 + 一键清除回退默认**） | `assets/ui/main_menu_bg.png` + `data/configs/localization/strings.csv` + `data/configs/ui/login_button_bg.json` |
+| **预加载界面** | **自由拖拽可视化排版**：直接拖动进度条 / 进度百分比 / 提示语 / 版本号 4 个元素到任意位置，进度条还能调宽度，点「保存布局」即写入游戏 | `data/configs/ui/loading_layout.json` |
 | **回收站 / 日志 / 设置** | 恢复误删、查操作记录、改工程根目录与保险天数 | `safety_data/`（本地，勿提交） |
+
+**⏳ 预加载界面（加载页）怎么调（重要）：**
+游戏启动时那张加载页上的 4 个元素，位置全部可以在这里**用鼠标拖**：
+- 打开「预加载界面」标签页，画布里那 4 个东西（进度条 / `0%` 文字 / 提示语 / 版本号）**直接按住拖**就行；
+- 进度条长度用下面的「进度条宽度」滑块调（10%~100%）；
+- 点「保存布局」写入 `data/configs/ui/loading_layout.json`，**下次启动游戏生效**；
+- 点「恢复默认」回到原始排版。
+- 存的坐标是**窗口比例（0~1）**，不是像素，所以 PC、带鱼屏、手机都会自动适配，不会跑位。
+
+**📍 NPC 坐标参考栏：**
+编辑 NPC 时上方那块「参考：现有 NPC 坐标」显示格式为 `唯一ID · 名称 · (x, y)`，**没填名称的会显示 `null`**，一眼能看出是谁。
+- 点左侧列表里某一项 → 参考栏**只显示这一条**（方便对照）；
+- 点「🎲 随机抽 5 个」→ 随机抽 5 条当参考样本；
+- 点「显示全部」→ 恢复列出全部；
+- 点任意一条即可把它的坐标抄进下方表单。
 
 **NPC 是怎么"上地图"的（重要）：**
 NPC **不是随机摆放**——游戏城镇场景会自动读取 `town_npcs.json`，按每条的 `pos_x / pos_y` 把 NPC **生成到对应坐标**。
