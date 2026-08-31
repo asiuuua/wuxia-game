@@ -44,6 +44,7 @@ const _DEBUG_ACTIONS := {
 	"debug_riverside_test": [KEY_F11],
 	"debug_swarm_test": [KEY_F12],
 	"debug_celebration": [KEY_F10],
+	"debug_studio_tactical": [KEY_F3],
 }
 # 一次“休息/睡觉”推进的游戏天数：怀胎期 gestation_days=300，按月跳进（30天/次）
 # 约 10 次休息可分娩，贴合“怀胎十月”设定且玩家可快速验证子嗣出生。
@@ -61,6 +62,10 @@ const DEBUG_QUICK_SWARM := true
 # 城镇内按 F10 一键造配偶 + 触发欢庆：跳过求婚/结婚/好感流程，反复试受孕与 CG 表现。
 const DEBUG_QUICK_CELEBRATION := true
 const DEBUG_CELEBRATION_SPOUSE_ID := "npc_su_waner"
+# 城镇内按 F3 一键进「工作室后台战棋预览」：直接打开后台布局(preset_10x10)配置的战术战斗，
+# 跳过「教头对话→开战」链路，方便反复试你在工作室里调好的战棋（旋转/平移/缩放/底图）。
+const DEBUG_QUICK_STUDIO_BATTLE := true
+const DEBUG_STUDIO_BATTLE_ID := "tactical_studio_preview"
 
 var _player: Node2D
 var _npc_nodes: Dictionary = {}   # npc_id -> Node2D
@@ -293,6 +298,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		_launch_debug_swarm_test()
 	elif event.is_action_pressed("debug_celebration") and DEBUG_QUICK_CELEBRATION:
 		_launch_debug_celebration()
+	elif event.is_action_pressed("debug_studio_tactical") and DEBUG_QUICK_STUDIO_BATTLE:
+		_launch_debug_studio_tactical()
 
 func _toggle_overlay(screen_name: String) -> void:
 	var existing: Control = UIManager.get_open_screen(screen_name)
@@ -350,6 +357,13 @@ func _launch_debug_swarm_test() -> void:
 	if UIManager.is_any_screen_open():
 		return
 	GameManager.start_test_swarm()
+
+# 调试：一键进「工作室后台战棋预览」，直接打开你在工作室里调好的战棋布局（preset_10x10）。
+# 由 F3 触发，受 DEBUG_QUICK_STUDIO_BATTLE 门控。复用正式战术战斗逻辑，仅作为快速测试入口。
+func _launch_debug_studio_tactical() -> void:
+	if UIManager.is_any_screen_open():
+		return
+	GameManager.start_battle(DEBUG_STUDIO_BATTLE_ID)
 
 # 调试：一键造已婚配偶 + 触发欢庆，反复试受孕与 CG 表现。由 F10 触发，受 DEBUG_QUICK_CELEBRATION 门控。
 # 复用与面板 _on_celebration 完全一致的开界面流程（成功开 CG / 超配额开 over_limit 对话框 / 受孕弹喜讯）。

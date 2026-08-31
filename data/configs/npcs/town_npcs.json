@@ -80,7 +80,7 @@
       "sprite": "",
       "portrait": "",
       "dialog_id": "tactical_demo_master",
-      "battle_id": "tactical_demo_master_arena",
+      "battle_id": "",
       "half_body_portrait": "res://assets/characters/half_body/tactical_demo_master.png"
     },
     {

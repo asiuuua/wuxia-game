@@ -83,8 +83,8 @@
       }
     },
     {
-      "id": "tactical_demo_master_arena",
-      "name": "战棋教头演武场（预设布局）",
+      "id": "tactical_studio_preview",
+      "name": "工作室后台战棋预览（F3）",
       "enemy_ids": [
         "bandit_001"
       ],
