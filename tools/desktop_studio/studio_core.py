@@ -1541,10 +1541,12 @@ def battle_bg_clear(layout_id):
 # 用户要在工作室里临时换「教头演示战棋」出场角色的立绘做测试：
 #   - 敌人 bandit_001 的战斗头像：resources/icons/enemies/bandit_001.png（走 IconRegistry.get_icon("enemies/bandit_001")）
 #   - 教头 tactical_demo_master 的半身立绘：assets/characters/half_body/tactical_demo_master.png（NPC.half_body_portrait）
+#   - 主角 matte 的半身立绘：assets/characters/half_body/player.png（玩家立绘固定解析到 player.png；resolve_half_body(is_player)）
 # kind 白名单，避免任意路径写入。
 _DEMO_PORTRAIT_TARGETS = {
     "enemy_bandit_001": ("resources", "icons", "enemies", "bandit_001"),
     "npc_tactical_demo_master": ("assets", "characters", "half_body", "tactical_demo_master"),
+    "protagonist_matte": ("assets", "characters", "half_body", "player"),
 }
 
 
@@ -1562,7 +1564,8 @@ def demo_portrait_list():
         out.append({
             "kind": kind,
             "label": "敌人 bandit_001 战斗头像" if kind == "enemy_bandit_001"
-                     else "教头 tactical_demo_master 半身立绘",
+                     else "教头 tactical_demo_master 半身立绘" if kind == "npc_tactical_demo_master"
+                     else "主角 matte 半身立绘",
             "current": cur,
         })
     return out
