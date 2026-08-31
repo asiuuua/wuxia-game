@@ -27,6 +27,8 @@ var _terrain: MultiMeshInstance2D = null   # P1 批处理：地形同色格一�
 var view_mode: String = "iso"
 # 底图（战棋编辑器上传的战斗场景图）。空字符串=程序化水墨占位（原行为，向后兼容）。
 var background_path: String = ""
+# 底图走独立的 CanvasLayer，铺满整个视口、在棋盘下面（不受棋盘 pan/zoom 影响，只可选随棋盘旋转）
+var _bg_layer: CanvasLayer = null
 var _bg_rect: TextureRect = null
 ## 背景是否随棋盘一起旋转（默认 false = 底图不转，只棋盘转；true = 底图跟随棋盘一起转）
 var background_rotates_with_grid: bool = false
@@ -60,19 +62,23 @@ func set_background(p: String) -> void:
 	_rebuild_background()
 	queue_redraw()
 
-## 背景旋转同步：_bg_rect 是 grid_node 的子节点，默认会随 grid_node 一起旋转。
-# 默认 background_rotates_with_grid=false → 给背景反向旋转抵消 grid_node 旋转，
-# 视觉上保持静止（底图不跟随棋盘转动）；为 true 时背景随棋盘一起转。
+## 背景旋转同步：底图在独立 CanvasLayer 上，默认不转；
+# background_rotates_with_grid=true 时，让底图和棋盘保持同一旋转角度。
 func sync_background_rotation() -> void:
 	if _bg_rect == null:
 		return
-	_bg_rect.rotation_degrees = 0.0 if background_rotates_with_grid else (-rotation_degrees)
+	_bg_rect.pivot_offset = _bg_rect.size * 0.5
+	_bg_rect.rotation_degrees = rotation_degrees if background_rotates_with_grid else 0.0
 
-## 重建底图节点：贴一张 TextureRect 铺满整张网格包围盒，压在地形 MultiMesh 之下。
+## 重建底图节点：用独立 CanvasLayer 铺满整个视口，放在棋盘下面（layer=-1）。
+## 这样后台里"全屏"的战棋底图在游戏里也是全屏，而棋盘格子始终压在底图之上。
 func _rebuild_background() -> void:
 	if _bg_rect != null:
 		_bg_rect.queue_free()
 		_bg_rect = null
+	if _bg_layer != null:
+		_bg_layer.queue_free()
+		_bg_layer = null
 	if background_path == null or background_path == "":
 		return
 	if not ResourceLoader.exists(background_path):
@@ -80,18 +86,34 @@ func _rebuild_background() -> void:
 	var tex: Texture2D = load(background_path)
 	if tex == null:
 		return
+	_bg_layer = CanvasLayer.new()
+	_bg_layer.name = "BattleBGCanvas"
+	_bg_layer.layer = -1          # 确保在默认世界棋盘（layer 0）之下
+	_bg_layer.follow_viewport_enabled = false
+	add_child(_bg_layer)
 	_bg_rect = TextureRect.new()
 	_bg_rect.name = "BattleBG"
 	_bg_rect.texture = tex
 	_bg_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_bg_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	# 底图覆盖整张网格像素包围盒（用 grid 几何算，避免依赖 CombatCore 像素）
-	var rect: Rect2 = _grid_pixel_rect_local()
-	_bg_rect.position = rect.position
-	_bg_rect.size = rect.size
+	_bg_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_bg_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_bg_rect)
-	_bg_rect.move_child(_bg_rect, 0)   # 压到最底，地形/高亮在其上
+	_bg_layer.add_child(_bg_rect)
+	if is_inside_tree():
+		_fit_bg_to_viewport()
+	sync_background_rotation()
+
+## 让底图 TextureRect 铺满当前视口（窗口大小变化后也正确）。
+func _fit_bg_to_viewport() -> void:
+	if _bg_rect == null:
+		return
+	var vr: Rect2 = get_viewport().get_visible_rect()
+	_bg_rect.size = vr.size
+	_bg_rect.position = Vector2.ZERO
+	_bg_rect.pivot_offset = vr.size * 0.5
+
+func _enter_tree() -> void:
+	_fit_bg_to_viewport()
 	sync_background_rotation()
 
 ## 整张网格的本地像素包围盒（供底图铺底 + 镜头居中）。
