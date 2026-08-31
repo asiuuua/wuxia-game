@@ -1467,9 +1467,7 @@ function blRender(){
   c.width=wrap.clientWidth||720; c.height=wrap.clientHeight||405;
   const ctx=c.getContext('2d');
   ctx.clearRect(0,0,c.width,c.height);
-  // 背景图与棋盘同步刚性旋转：整张图绕中心转同样角度，保证「图形外观不变动」
-  const bgEl=document.getElementById('blBg');
-  if(bgEl)bgEl.style.transform='rotate('+(window._bl.rotation||0)+'deg)';
+  // 底图大背景与棋盘解绑：背景始终固定不旋转，只棋盘(格子/地形/落点)随旋转角度转动
   const W=window._bl.width,H=window._bl.height;
   const obs=window._bl.obstacles||[], hs=window._bl.heights||[];
   const rotRad=(window._bl.rotation||0)*Math.PI/180;
