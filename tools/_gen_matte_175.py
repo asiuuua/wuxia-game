@@ -1,43 +1,38 @@
-import os, re
-import numpy as np
-from PIL import Image, ImageFilter
+"""
+matte_175 生成器 v3（ffmpeg + premultiplied alpha）
+
+替换 Pillow LANCZOS 重采样为 ffmpeg lanczos + premultiply/unpremultiply，
+根除半透明过渡像素带白色背景残留导致的光晕问题。
+"""
+import os
+import subprocess
 
 SRC = "D:/武侠游戏/assets/characters/matte_clean"
 DST = "D:/武侠游戏/assets/characters/matte_175"
+FFMPEG = (
+    r"C:\Users\Administrator\.workbuddy\binaries\python\envs\default"
+    r"\Lib\site-packages\imageio_ffmpeg\binaries\ffmpeg-win-x86_64-v7.1.exe"
+)
 N = 31
-TARGET_H = 175  # 与世界体 PLAYER_SCENE_H 一致
+OUT_W = 98   # 720 * (175/1280)
+OUT_H = 175
 
 
 def main():
     os.makedirs(DST, exist_ok=True)
-    # 读原图尺寸确定缩放比（所有帧同为 720x1280）
-    sample = Image.open(os.path.join(SRC, "matte_00001.png")).convert("RGBA")
-    W, H = sample.size
-    scale = TARGET_H / H
-    out_w = max(1, int(round(W * scale)))
-    out_h = TARGET_H
-    print(f"原图 {W}x{H} → 目标 {out_w}x{out_h} (scale={scale:.4f})")
+    vf = f"format=rgba,premultiply=inplace=1,scale={OUT_W}:{OUT_H}:flags=lanczos,unpremultiply=inplace=1"
 
     for i in range(1, N + 1):
-        im = Image.open(os.path.join(SRC, "matte_%05d.png" % i)).convert("RGBA")
-        # 1) 高质量降采样（LANCZOS 保细节）
-        rgb = im.resize((out_w, out_h), Image.LANCZOS)
-        # 2) alpha 通道单独轻高斯，消除硬边发丝缩小后的碎噪
-        a = im.split()[3]
-        a_small = a.resize((out_w, out_h), Image.LANCZOS)
-        a_blur = a_small.filter(ImageFilter.GaussianBlur(radius=0.6))
-        arr = np.asarray(a_blur, dtype=np.float32)
-        # 3) 反阈值化：>128 视为不透明，但保留轻过渡羽化（发丝轮廓平滑）
-        #    用 smoothstep 在 [100,180] 做柔边，避免纯硬边锯齿又不过度发虚
-        lo, hi = 100.0, 180.0
-        out_a = np.clip((arr - lo) / (hi - lo), 0.0, 1.0) * 255.0
-        out_a = out_a.astype(np.uint8)
-        rgb.putalpha(Image.fromarray(out_a, "L"))
-        rgb.save(os.path.join(DST, "matte_%05d.png" % i), "PNG")
-    print(f"已生成 {N} 帧到 {DST}")
+        inp = os.path.join(SRC, f"matte_{i:05d}.png")
+        out = os.path.join(DST, f"matte_{i:05d}.png")
+        r = subprocess.run(
+            [FFMPEG, "-y", "-i", inp, "-vf", vf, out],
+            capture_output=True,
+        )
+        if r.returncode != 0:
+            print(f"ERROR frame {i}: {r.stderr.decode('utf-8', errors='replace')[:200]}")
 
-    # 4) 触发 Godot 导入生成 .import（含真实 UID）
-    print("注：.import 由 Godot --import 生成，本脚本只出 PNG；运行后需引擎 import。")
+    print(f"已生成 {N} 帧到 {DST} (ffmpeg lanczos + premultiplied alpha)")
 
 
 if __name__ == "__main__":
