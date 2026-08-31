@@ -383,15 +383,18 @@
             <span>棋盘旋转：</span>
             <button class="act sec" onclick="blRotate(-90)">↺ 逆时针</button>
             <button class="act sec" onclick="blRotate(90)">↻ 顺时针</button>
-            <label style="white-space:nowrap">角度 <span id="blRotVal">0</span>°</label>
-            <button class="act sec" onclick="blResetRot()">复位旋转</button>
+            <label style="white-space:nowrap">精确角度</label>
+            <input id="blRotInput" type="number" step="0.5" value="0" style="width:78px" oninput="blRotLive()"> °
+            <button class="act" onclick="blSetRot()">应用角度</button>
+            <label style="white-space:nowrap">当前 <span id="blRotVal">0</span>°</label>
+            <button class="act sec" onclick="blResetRot()">复位</button>
           </div>
           <div id="blCanvasWrap" style="position:relative;border:1px solid #444;border-radius:8px;overflow:hidden;background:#0c0e16;width:100%;max-width:720px;aspect-ratio:16/9;margin-top:8px">
             <img id="blBg" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.85" src="" onerror="this.style.display='none'">
             <canvas id="blCanvas" style="position:absolute;inset:0;width:100%;height:100%;cursor:crosshair"></canvas>
             <div id="blUnit" data-uid="player" style="position:absolute;width:18px;height:18px;border-radius:50%;background:#e6b35a;border:2px solid #fff;cursor:grab;display:none"></div>
           </div>
-          <div class="hint">画布里：左键点格子刷地形；右下角金点是「玩家」落点，可拖动（落点只在游戏内生效，编辑器里用于预览站位）。用上方 ↑↓←→ 移动整张棋盘、放大/缩小调整大小，复位可一键还原。</div>
+          <div class="hint">画布里：左键点格子刷地形；右下角金点是「玩家」落点，可拖动（落点只在游戏内生效，编辑器里用于预览站位）。用上方 ↑↓←→ 移动整张棋盘、放大/缩小调整大小，复位可一键还原。旋转支持「精确角度」框直接输入任意数值（含小数、负角），回车或点「应用角度」即转动；整张棋盘连同格子形状刚性旋转，外观不变形。<b>改完点「保存布局」才会落盘。</b></div>
           <div class="row" style="align-items:center;gap:10px;margin-top:8px">
             <label>底图</label>
             <input type="file" id="blBgFile" accept="image/*">
@@ -1317,7 +1320,9 @@ async function blLoadOne(id){
   if(window._bl.zoom===undefined)window._bl.zoom=1.0;
   if(window._bl.rotation===undefined)window._bl.rotation=0;
   document.getElementById('blZoomVal').textContent=Math.round((window._bl.zoom||1)*100);
-  document.getElementById('blRotVal').textContent=Math.round(window._bl.rotation||0);
+  const r0=Math.round((window._bl.rotation||0)*100)/100;
+  document.getElementById('blRotVal').textContent=r0;
+  const ri=document.getElementById('blRotInput'); if(ri)ri.value=r0;
   blRender();
   const cnt=document.getElementById('blGridCount');
   if(cnt)cnt.textContent='当前 '+window._bl.width+'×'+window._bl.height+' = '+(window._bl.width*window._bl.height)+' 格';
@@ -1462,11 +1467,18 @@ function blRender(){
   c.width=wrap.clientWidth||720; c.height=wrap.clientHeight||405;
   const ctx=c.getContext('2d');
   ctx.clearRect(0,0,c.width,c.height);
+  // 背景图与棋盘同步刚性旋转：整张图绕中心转同样角度，保证「图形外观不变动」
+  const bgEl=document.getElementById('blBg');
+  if(bgEl)bgEl.style.transform='rotate('+(window._bl.rotation||0)+'deg)';
   const W=window._bl.width,H=window._bl.height;
   const obs=window._bl.obstacles||[], hs=window._bl.heights||[];
+  const rotRad=(window._bl.rotation||0)*Math.PI/180;
   for(let j=0;j<H;j++)for(let i=0;i<W;i++){
     const g=blCellToXY(i,j);
     const hw=g.tw*0.5, hh=g.th*0.5;
+    // 每个格子的形状也绕自身中心旋转同样角度 → 整张棋盘作为刚体旋转，格子外观不变形
+    ctx.save();
+    if(rotRad){ ctx.translate(g.x,g.y); ctx.rotate(rotRad); ctx.translate(-g.x,-g.y); }
     ctx.beginPath();
     if(g.isIso){ctx.moveTo(g.x,g.y-hh);ctx.lineTo(g.x+hw,g.y);ctx.lineTo(g.x,g.y+hh);ctx.lineTo(g.x-hw,g.y);}
     else{ctx.rect(g.x-hw,g.y-hh,g.tw,g.th);}
@@ -1477,6 +1489,7 @@ function blRender(){
     else{ctx.fillStyle='rgba(70,110,180,0.35)';}
     ctx.fill();
     ctx.strokeStyle='rgba(180,200,230,0.5)';ctx.lineWidth=1;ctx.stroke();
+    ctx.restore();
   }
   // 单位落点预览
   const u=document.getElementById('blUnit');
@@ -1582,19 +1595,41 @@ function blResetTrans(){
   blRender();
 }
 // 棋盘旋转：顺时针 +deg / 逆时针 -deg（90° 步进最贴合战棋；任意角度也支持）。绕画布中心旋转。
+function blRotSync(){
+  const r=window._bl.rotation||0;
+  const disp=Math.round(r*100)/100;
+  document.getElementById('blRotVal').textContent=disp;
+  const inp=document.getElementById('blRotInput');
+  if(inp)inp.value=disp;
+  blRender();
+}
 function blRotate(deg){
   if(!window._bl)return;
-  let r=(window._bl.rotation||0)+deg;
-  r=((r%360)+360)%360;
+  // 步进按钮保持整洁：归一到 0-360，但不丢小数精度
+  let r=((window._bl.rotation||0)+deg)%360; if(r<0)r+=360;
   window._bl.rotation=r;
-  document.getElementById('blRotVal').textContent=Math.round(r);
+  blRotSync();
+}
+function blSetRot(){
+  if(!window._bl)return;
+  const inp=document.getElementById('blRotInput');
+  let v=parseFloat(inp.value);
+  if(isNaN(v))v=0;
+  window._bl.rotation=v;   // 精确值原样保留（支持小数/负角/任意角度）
+  blRotSync();
+}
+function blRotLive(){
+  if(!window._bl)return;
+  let v=parseFloat(document.getElementById('blRotInput').value);
+  if(isNaN(v))return;
+  window._bl.rotation=v;
+  document.getElementById('blRotVal').textContent=Math.round(v*100)/100;
   blRender();
 }
 function blResetRot(){
   if(!window._bl)return;
   window._bl.rotation=0;
-  document.getElementById('blRotVal').textContent='0';
-  blRender();
+  blRotSync();
 }
 async function blSave(){
   if(!window._bl||!window._blSel){show('blStat','先选或新建布局',false);return;}

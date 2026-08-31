@@ -1358,8 +1358,9 @@ def battle_layout_save(layout_id, data):
     norm["pan_x"] = int(round(float(data.get("pan_x", 0) or 0)))
     norm["pan_y"] = int(round(float(data.get("pan_y", 0) or 0)))
     norm["zoom"] = max(0.2, min(4.0, float(data.get("zoom", 1.0) or 1.0)))
-    # 棋盘旋转（rotation，度，默认 0；取模 360 归一化，支持任意角度，战棋常用 90° 步进）
-    norm["rotation"] = int(round(float(data.get("rotation", 0) or 0))) % 360
+    # 棋盘旋转（rotation，度，默认 0；保留浮点精度以支持任意精确角度输入，
+    # 不再取整/不再归一到 0-360，确保编辑器里用户输入的任意小数角度原样落盘）
+    norm["rotation"] = float(data.get("rotation", 0) or 0)
     # obstacles: 'x,y' 字符串数组；裁剪到界内
     obs = []
     for o in (data.get("obstacles", []) or []):
