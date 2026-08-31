@@ -388,6 +388,9 @@
             <button class="act" onclick="blSetRot()">应用角度</button>
             <label style="white-space:nowrap">当前 <span id="blRotVal">0</span>°</label>
             <button class="act sec" onclick="blResetRot()">复位</button>
+            <label style="white-space:nowrap;display:flex;align-items:center;gap:4px;margin-left:6px;cursor:pointer">
+              <input type="checkbox" id="blBgSync" onchange="blBgSyncToggle()"> 场景底图跟随旋转
+            </label>
           </div>
           <div id="blCanvasWrap" style="position:relative;border:1px solid #444;border-radius:8px;overflow:hidden;background:#0c0e16;width:100%;max-width:720px;aspect-ratio:16/9;margin-top:8px">
             <img id="blBg" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.85" src="" onerror="this.style.display='none'">
@@ -1319,6 +1322,8 @@ async function blLoadOne(id){
   if(window._bl.pan_y===undefined)window._bl.pan_y=0;
   if(window._bl.zoom===undefined)window._bl.zoom=1.0;
   if(window._bl.rotation===undefined)window._bl.rotation=0;
+  if(window._bl.bg_rotate===undefined)window._bl.bg_rotate=false;
+  const syncEl=document.getElementById('blBgSync'); if(syncEl)syncEl.checked=!!window._bl.bg_rotate;
   document.getElementById('blZoomVal').textContent=Math.round((window._bl.zoom||1)*100);
   const r0=Math.round((window._bl.rotation||0)*100)/100;
   document.getElementById('blRotVal').textContent=r0;
@@ -1467,7 +1472,9 @@ function blRender(){
   c.width=wrap.clientWidth||720; c.height=wrap.clientHeight||405;
   const ctx=c.getContext('2d');
   ctx.clearRect(0,0,c.width,c.height);
-  // 底图大背景与棋盘解绑：背景始终固定不旋转，只棋盘(格子/地形/落点)随旋转角度转动
+  // 底图大背景默认与棋盘解绑（固定不转）；勾选「场景底图跟随旋转」后才一起转
+  const bgEl=document.getElementById('blBg');
+  if(bgEl)bgEl.style.transform=(window._bl.bg_rotate?('rotate('+(window._bl.rotation||0)+'deg)'):'none');
   const W=window._bl.width,H=window._bl.height;
   const obs=window._bl.obstacles||[], hs=window._bl.heights||[];
   const rotRad=(window._bl.rotation||0)*Math.PI/180;
@@ -1629,10 +1636,16 @@ function blResetRot(){
   window._bl.rotation=0;
   blRotSync();
 }
+function blBgSyncToggle(){
+  if(!window._bl)return;
+  const el=document.getElementById('blBgSync');
+  window._bl.bg_rotate=!!(el&&el.checked);
+  blRender();
+}
 async function blSave(){
   if(!window._bl||!window._blSel){show('blStat','先选或新建布局',false);return;}
   const d=window._bl;
-  const payload={id:window._blSel,data:{name:d.name||window._blSel,view_mode:d.view_mode,width:d.width,height:d.height,pan_x:d.pan_x||0,pan_y:d.pan_y||0,zoom:d.zoom||1.0,rotation:d.rotation||0,obstacles:d.obstacles||[],heights:d.heights||[],deployment:d.deployment||{}}};
+  const payload={id:window._blSel,data:{name:d.name||window._blSel,view_mode:d.view_mode,width:d.width,height:d.height,pan_x:d.pan_x||0,pan_y:d.pan_y||0,zoom:d.zoom||1.0,rotation:d.rotation||0,bg_rotate:!!d.bg_rotate,obstacles:d.obstacles||[],heights:d.heights||[],deployment:d.deployment||{}}};
   const r=await A('POST','/api/battle_layout/save',payload);
   show('blStat',(r&&r.msg)?r.msg:(r&&r.ok?'已保存':'失败'),!!(r&&r.ok));
   if(r&&r.ok)blLoadList();

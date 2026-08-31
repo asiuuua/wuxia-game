@@ -1361,6 +1361,9 @@ def battle_layout_save(layout_id, data):
     # 棋盘旋转（rotation，度，默认 0；保留浮点精度以支持任意精确角度输入，
     # 不再取整/不再归一到 0-360，确保编辑器里用户输入的任意小数角度原样落盘）
     norm["rotation"] = float(data.get("rotation", 0) or 0)
+    # 场景底图是否跟随棋盘旋转（bg_rotate，布尔，默认 False = 底图不转，只棋盘转）
+    _br = data.get("bg_rotate", False)
+    norm["bg_rotate"] = str(_br).lower() not in ("false", "0", "", "none")
     # obstacles: 'x,y' 字符串数组；裁剪到界内
     obs = []
     for o in (data.get("obstacles", []) or []):

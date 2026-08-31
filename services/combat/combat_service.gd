@@ -347,6 +347,7 @@ func _build_grid(grid_cfg: Dictionary, battle: Dictionary) -> void:
 		"pan_y": int(geom.get("pan_y", 0)),
 		"zoom": float(geom.get("zoom", 1.0)),
 		"rotation": float(geom.get("rotation", 0)),
+		"bg_rotate": bool(geom.get("bg_rotate", false)),
 	}
 	var g := BattleGrid.new()
 	g.width = int(geom.get("width", 10))

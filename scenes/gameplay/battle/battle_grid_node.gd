@@ -28,6 +28,8 @@ var view_mode: String = "iso"
 # 底图（战棋编辑器上传的战斗场景图）。空字符串=程序化水墨占位（原行为，向后兼容）。
 var background_path: String = ""
 var _bg_rect: TextureRect = null
+## 背景是否随棋盘一起旋转（默认 false = 底图不转，只棋盘转；true = 底图跟随棋盘一起转）
+var background_rotates_with_grid: bool = false
 
 func _ready() -> void:
 	if is_instance_valid(EventBus):
@@ -58,6 +60,14 @@ func set_background(p: String) -> void:
 	_rebuild_background()
 	queue_redraw()
 
+## 背景旋转同步：_bg_rect 是 grid_node 的子节点，默认会随 grid_node 一起旋转。
+# 默认 background_rotates_with_grid=false → 给背景反向旋转抵消 grid_node 旋转，
+# 视觉上保持静止（底图不跟随棋盘转动）；为 true 时背景随棋盘一起转。
+func sync_background_rotation() -> void:
+	if _bg_rect == null:
+		return
+	_bg_rect.rotation_degrees = background_rotates_with_grid ? 0.0 : (-rotation_degrees)
+
 ## 重建底图节点：贴一张 TextureRect 铺满整张网格包围盒，压在地形 MultiMesh 之下。
 func _rebuild_background() -> void:
 	if _bg_rect != null:
@@ -82,6 +92,7 @@ func _rebuild_background() -> void:
 	_bg_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_bg_rect)
 	_bg_rect.move_child(_bg_rect, 0)   # 压到最底，地形/高亮在其上
+	sync_background_rotation()
 
 ## 整张网格的本地像素包围盒（供底图铺底 + 镜头居中）。
 func _grid_pixel_rect_local() -> Rect2:
