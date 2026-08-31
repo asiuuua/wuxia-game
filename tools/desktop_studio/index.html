@@ -1645,7 +1645,10 @@ function blBgSyncToggle(){
 async function blSave(){
   if(!window._bl||!window._blSel){show('blStat','先选或新建布局',false);return;}
   const d=window._bl;
-  const payload={id:window._blSel,data:{name:d.name||window._blSel,view_mode:d.view_mode,width:d.width,height:d.height,pan_x:d.pan_x||0,pan_y:d.pan_y||0,zoom:d.zoom||1.0,rotation:d.rotation||0,bg_rotate:!!d.bg_rotate,obstacles:d.obstacles||[],heights:d.heights||[],deployment:d.deployment||{}}};
+  // 保留已上传的底图：上传底图时 background 已写入布局 json，但保存 payload 不含该字段，
+  // 若在此不回填，battle_layout_save 归一化会把 background 覆盖成空 → 底图丢失。
+  const bg = (d.background && String(d.background).trim() != "") ? d.background : "";
+  const payload={id:window._blSel,data:{name:d.name||window._blSel,view_mode:d.view_mode,width:d.width,height:d.height,pan_x:d.pan_x||0,pan_y:d.pan_y||0,zoom:d.zoom||1.0,rotation:d.rotation||0,bg_rotate:!!d.bg_rotate,background:bg,obstacles:d.obstacles||[],heights:d.heights||[],deployment:d.deployment||{}}};
   const r=await A('POST','/api/battle_layout/save',payload);
   show('blStat',(r&&r.msg)?r.msg:(r&&r.ok?'已保存':'失败'),!!(r&&r.ok));
   if(r&&r.ok)blLoadList();

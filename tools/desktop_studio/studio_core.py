@@ -1303,6 +1303,20 @@ def _battle_layout_dir():
     return os.path.join(discover_project_root(), "data", "configs", "battles", "grids")
 
 
+def _battle_bg_dir():
+    return os.path.join(discover_project_root(), "assets", "battle_bg")
+
+
+def _detect_existing_bg(layout_id):
+    """若磁盘上已存在该布局的底图文件，返回其 res:// 路径；否则返回空字符串。"""
+    d = _battle_bg_dir()
+    for ext in (".png", ".jpg", ".webp"):
+        fp = os.path.join(d, layout_id + ext)
+        if os.path.exists(fp):
+            return "res://assets/battle_bg/%s%s" % (layout_id, ext)
+    return ""
+
+
 def battle_layout_list():
     """列出所有战棋布局（id / 尺寸 / 视图模式）。"""
     d = _battle_layout_dir()
@@ -1352,7 +1366,11 @@ def battle_layout_save(layout_id, data):
     norm["view_mode"] = "ortho" if str(data.get("view_mode", "iso")) == "ortho" else "iso"
     norm["width"] = max(2, int(data.get("width", 10)))
     norm["height"] = max(2, int(data.get("height", 8)))
-    norm["background"] = str(data.get("background", ""))
+    # 底图路径：优先用传入的 background；若未传但磁盘上已有该布局的底图文件，则保留（防"保存布局"覆盖丢图）
+    _bg_in = str(data.get("background", "")).strip()
+    if _bg_in == "":
+        _bg_in = _detect_existing_bg(lid)
+    norm["background"] = _bg_in
     # 棋盘平移（pan_x/pan_y，像素偏移，默认 0）与缩放（zoom，>0，默认 1.0）
     # 编辑器可拖动画布空白区平移、滑块缩放，游戏侧把 grid_node 的 position/scale 套用。
     norm["pan_x"] = int(round(float(data.get("pan_x", 0) or 0)))

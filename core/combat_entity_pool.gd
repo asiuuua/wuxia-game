@@ -19,13 +19,14 @@ var _free_entities: Array[BattleEntity] = []
 var _free_huds: Array[UnitHud] = []
 
 ## 取一个 BattleEntity（已 setup 配置好）：空闲表空则新建，否则复用并清零重置。
-func acquire_entity(uid: String, player: bool, name_text: String, max_hp: int, max_mp: int, grid_node: Node) -> BattleEntity:
+## frames_path：主角动态立绘的 SpriteFrames 资源路径（默认走 matte 主角序列帧）。
+func acquire_entity(uid: String, player: bool, name_text: String, max_hp: int, max_mp: int, grid_node: Node, frames_path: String = "res://assets/characters/matte/matte_idle.tres") -> BattleEntity:
 	var ent: BattleEntity
 	if _free_entities.is_empty():
 		ent = BattleEntity.new()
 	else:
 		ent = _free_entities.pop_back()
-	ent.setup(uid, player, name_text, max_hp, max_mp, grid_node)
+	ent.setup(uid, player, name_text, max_hp, max_mp, grid_node, frames_path)
 	return ent
 
 ## 取一个 UnitHud（已 setup 配置好）：空闲表空则新建，否则复用并清零重置。

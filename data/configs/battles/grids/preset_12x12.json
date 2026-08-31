@@ -1,9 +1,14 @@
 {
   "name": "预设 12x12",
   "view_mode": "iso",
-  "width": 12,
-  "height": 12,
-  "background": "res://assets/battle_bg/preset_12x12.png",
+  "width": 11,
+  "height": 5,
+  "background": "res://assets/battle_bg/preset_12x12.jpg",
+  "pan_x": 48,
+  "pan_y": 36,
+  "zoom": 1.2000000000000002,
+  "rotation": -1.5,
+  "bg_rotate": false,
   "obstacles": [],
   "heights": [],
   "deployment": {}

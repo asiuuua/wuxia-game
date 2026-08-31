@@ -50,7 +50,7 @@ const MATTE_FIRST_FRAME := "res://assets/characters/matte/matte_00001.png"
 
 ## 装配（可重复调用，对象池复用安全）：首次构建视觉子节点，之后仅重置清零。
 ## frames_path：主角动态立绘的 SpriteFrames 资源路径；为空则主角仍用色块占位（与敌人一致）。
-func setup(uid: String, player: bool, name_text: String, max_hp: int, max_mp: int, grid_node: Node, frames_path: String = "res://assets/characters/matte_175/matte_175_idle.tres") -> void:
+func setup(uid: String, player: bool, name_text: String, max_hp: int, max_mp: int, grid_node: Node, frames_path: String = "res://assets/characters/matte/matte_idle.tres") -> void:
 	unit_id = uid
 	is_player = player
 	_max_hp = max_hp

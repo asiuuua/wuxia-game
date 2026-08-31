@@ -91,7 +91,7 @@
       "turn_mode": "sequential",
       "tactical": true,
       "reward_exp": 20,
-      "layout": "preset_10x10",
+      "layout": "preset_12x12",
       "deployment": {
         "player": [1, 4],
         "bandit_001": [8, 4]
