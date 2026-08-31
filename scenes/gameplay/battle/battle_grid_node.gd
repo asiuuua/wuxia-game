@@ -66,7 +66,7 @@ func set_background(p: String) -> void:
 func sync_background_rotation() -> void:
 	if _bg_rect == null:
 		return
-	_bg_rect.rotation_degrees = background_rotates_with_grid ? 0.0 : (-rotation_degrees)
+	_bg_rect.rotation_degrees = 0.0 if background_rotates_with_grid else (-rotation_degrees)
 
 ## 重建底图节点：贴一张 TextureRect 铺满整张网格包围盒，压在地形 MultiMesh 之下。
 func _rebuild_background() -> void:
