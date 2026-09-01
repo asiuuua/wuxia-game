@@ -3,7 +3,7 @@
   "view_mode": "iso",
   "width": 11,
   "height": 5,
-  "background": "res://assets/battle_bg/preset_12x12.jpg",
+  "background": "res://assets/battle_bg/preset_12x12.png",
   "pan_x": 48,
   "pan_y": 36,
   "zoom": 1.2000000000000002,

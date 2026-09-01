@@ -172,11 +172,19 @@ func _load_json(p: String) -> Dictionary:
 
 ## 采样背景图顶/底边缘色，生成竖向渐变（顶→底），用于垫底填缝，与图片边缘同色系
 func _sample_edge_stops(p: String) -> Array:
-	var tex := load(p) as Texture2D
-	if tex == null:
+	# 背景图已改为压缩导入（compress/mode=2）：压缩纹理（CompressedTexture2D）的
+	# get_image() 返回仍是压缩数据，直接 get_pixel() 会刷屏 "Can't get_pixel() on
+	# compressed image" 并拖死主线程。这里改用 Image.load_png_from_buffer 把源 PNG
+	# 直接解码成未压缩 Image 采样边缘色——与导入压缩解耦：既保留压缩纹理的小显存/
+	# 快加载，又能正常取像素（load_png_from_buffer 是跨 4.x 稳定的实例方法）。
+	# 非 PNG / 源文件缺失 / 解码失败则静默回退硬编码绿渐变（GRAD_STOPS）。
+	var f := FileAccess.open(p, FileAccess.READ)
+	if f == null:
 		return GRAD_STOPS
-	var img := tex.get_image()
-	if img == null:
+	var buf := f.get_buffer(f.get_length())
+	f.close()
+	var img := Image.new()
+	if img.load_png_from_buffer(buf) != OK:
 		return GRAD_STOPS
 	var w: int = img.get_width()
 	var h: int = img.get_height()

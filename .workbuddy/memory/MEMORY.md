@@ -18,11 +18,19 @@
 
 ## Godot 本机验证铁律（必记）
 - console：`C:\Users\Administrator\.workbuddy\binaries\godot\Godot_v4.7.2-stable_win64_console.exe`
-- 双闸门：① `--headless --path "D:/武侠游戏" --quit` 零 SCRIPT/PARSE/COMPILE ERROR；② `run_all.tscn` 零 `✗`。
+- 双闸门：① `--headless --path "D:/武侠游戏" --quit` 零 SCRIPT/PARSE/COMPILE ERROR；② **`res://tests/unit/run_all.tscn`** 零 `✗`（⚠️ 正确路径是 `tests/unit/run_all.tscn`，不是 `tests/run_all.tscn`！误用后者会报 Cannot open file 让 GATE2 根本没跑）。
 - ⚠️ 两条 Windows 致命：① ROOT 必须 Windows 风格 `D:/武侠游戏`（POSIX `/d/xxx` 让 Godot 静默不跑→门禁误报绿）；② `get_tree().quit(code)` 退出码不传播→以 `✗` 判成败。
 - ⚠️ GATE2 盲点：套件自身 Parse Error 时不打印任何 `✗` → **判绿必须同时满足** `grep -c "✗"`==0 **且** `套件：通过 N · 失败 M` 的 M==0。
 - ⚠️ 沙箱 git 写不落盘：git checkout/rm/stash 是空操作；恢复用 `git show HEAD:<path> > <path>`（重定向落盘）。**验证前必须 commit 新/改文件**，否则 Godot（沙箱给 git-HEAD 快照）看不到 untracked/未提交改动→报"数据文件不存在"。
 - ⚠️ .godot 缺失=双闸门全崩（class_name 全报 not declared）→ unsandboxed `godot --headless --editor --quit` 重建。多 Godot 进程抢 `.godot` 缓存→验证串行；门禁统一 unsandboxed 跑。
+
+## 纹理压缩铁律（2026-09-02 立，必记）
+- **本项目对 2D 纹理的「出厂默认」就是 `compress/mode=0`（未压缩）**，不是 Godot 默认的压缩。删 `.import` 让 Godot 重导仍回 mode=0 → 必须显式改 `mode=2` 才压缩。
+- **双保险机制（已落地，用户硬性要求）**：① 工作室 `tools/desktop_studio/tscn_assets.py` 的 `write_import` 写死 `mode=2`+`size_limit=2048`；② 本地/LocalSend/拖拽导入走 `tools/compress_textures.py`（扫 assets/+resources/ 改 mode=0→2+限速+删 .ctex 强制重导，跳过 `_backup`，支持 `--dry-run`）。两条都覆盖才真双保险。
+- **重导铁律**：手改 `.import` 参数**不**触发 Godot 重导（仅源 md5 变或缺 .ctex 才重导）；改完必须 `godot --headless --editor --quit --path "D:/武侠游戏"` 全量重导生成 .ctex，否则仍按旧缓存加载。
+- **项目级默认预设失效**：`.godot/imports/texture.import` 在 Godot 4.7 不识别（新图仍 mode=0），别再尝试此路线。
+- **取像素铁规**：压缩纹理（`CompressedTexture2D`）的 `get_image().get_pixel()` 会刷屏 `Can't get_pixel() on compressed image` 拖死主线程。要取像素必须用 `Image.load_png_from_buffer(FileAccess.get_buffer(...))` 解码源 PNG（跨 4.x 稳定）；`Image.load_from_file` 在 4.7.2 已非实例方法（Parse Error）。
+- **真凶教训**：把纹理改压缩后暴露的 latent bug（`UIBackground._sample_edge_stops` 取像素）才是"进主菜单卡死"的真因，不是"巨图 TDR"（用户 RTX 3070 Ti 8GB，引擎在跑）。诊断卡死先看日志刷屏量，别臆测硬件。
 
 ## 主权边界
 - 共享地基（冻结，只增不改）：EventBus.gd / ConfigManager.gd / core/enums/*_enums.gd / screens.json / strings.csv。改须写《变更通告》「共享地基增量」并打招呼。
@@ -54,3 +62,5 @@
 - 安全红线：服务只绑 127.0.0.1；用户输入拼路径必过 `_is_valid_id()` 白名单；回收站先 `basename`；ZIP 解压前逐条目校验；HTTP 层 `_origin_allowed()`（无 Origin/127.0.0.1/localhost/file 放行，其余 403）。改完必跑 `security_selftest.py`（15 断言）。
 - PyInstaller 须 `pyinstaller 工作室专业调教.spec`（直接传 .py 会覆盖丢 datas/console=False）。打包 exe 是精简解释器→第三方库装不上，图片解析纯标准库。Godot 按扩展名选解码器→写图必须按文件头定真扩展名。
 - ⚠️ 进程模型：studio_server.py 常驻阻塞，后台跑永不退出被判 failed；自检须 run_in_background 起→curl→TaskStop 主动停，且补刀 `Stop-Process` 清 8765 端口。
+- ⚠️ **更新交付 SOP（用户 2026-09-01 硬性要求，每次更新都要做）**：重打包/更新工作室 exe 后，必须自己先——① 清 8765 端口上**所有**旧进程（`Get-NetTCPConnection -LocalPort 8765` 取 PID → `Stop-Process -Force`；常驻会堆积 10+ 个旧进程，浏览器连到旧代码误以为"没更新"）；② 重打包务必 `--clean`（否则复用旧 .pyc 缓存丢功能）；③ 同步**全部**副本——工程内 4 处 + 桌面 `Desktop\` + 外部 `D:\工作室专业调教\` + 野副本 `D:\studio_push_tmp\dist\` 与 `D:\武侠游戏\tools\dist\`（不止 4 处！）；④ 启动新 exe 并 `curl` 验证 `/api/tool_version` 的 md5 与 `/api/main_menu/assets` 可用，**确认用户真能用上新版**再交差。
+- **tscn_assets.py（UI 贴图直写 .tscn，2026-09-01 新增）**：核心库扫描 35 界面/41 槽位，贴图写 ext_resource 进 .tscn。两条铁律——① ext_resource **不写 uid**（避免 invalid UID 警告）；② **不预生成 .import**（Godot 会信任残缺 .import 跳过导入→加载失败，交给 Godot 自动导入零风险）。ctex 命名 = `md5("res://" + rel_path)`。
