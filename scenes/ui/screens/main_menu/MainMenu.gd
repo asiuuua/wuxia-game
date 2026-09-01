@@ -25,17 +25,23 @@ const MENU_ITEMS := [
 
 # 主菜单背景图（数据驱动：把图放到该路径即生效，缺失则回退到程序化水墨背景）
 const BG_IMAGE_PATH := "res://assets/ui/main_menu_bg.png"
-# 标题、副标题、按钮 hover 墨迹底板、5 个图标路径
-const TITLE_LOGO_PATH := "res://assets/ui/main_menu/title_logo.png"
-const TITLE_SUB_PATH := "res://assets/ui/main_menu/title_sub.png"
-const BTN_HOVER_BG_PATH := "res://assets/ui/main_menu/btn_hover_bg.png"
-const ICON_PATHS := [
+# 主菜单资源映射（可被工作室工具的「主菜单资源替换」覆盖）
+const MAIN_MENU_ASSETS_PATH := "res://data/configs/ui/main_menu_assets.json"
+# 标题、副标题、按钮 hover 墨迹底板、5 个图标路径（作为缺省回退）
+const DEFAULT_TITLE_LOGO_PATH := "res://assets/ui/main_menu/title_logo.png"
+const DEFAULT_TITLE_SUB_PATH := "res://assets/ui/main_menu/title_sub.png"
+const DEFAULT_BTN_HOVER_BG_PATH := "res://assets/ui/main_menu/btn_hover_bg.png"
+const DEFAULT_ICON_PATHS := [
 	"res://assets/ui/main_menu/icon_1.png",
 	"res://assets/ui/main_menu/icon_2.png",
 	"res://assets/ui/main_menu/icon_3.png",
 	"res://assets/ui/main_menu/icon_4.png",
 	"res://assets/ui/main_menu/icon_5.png",
 ]
+var TITLE_LOGO_PATH: String = DEFAULT_TITLE_LOGO_PATH
+var TITLE_SUB_PATH: String = DEFAULT_TITLE_SUB_PATH
+var BTN_HOVER_BG_PATH: String = DEFAULT_BTN_HOVER_BG_PATH
+var ICON_PATHS: Array = DEFAULT_ICON_PATHS.duplicate()
 # 背景图上的压暗层透明度（保证标题/菜单文字可读）
 const BG_IMAGE_SCRIM := 0.55
 
@@ -62,8 +68,38 @@ var _last_music_vol: float = 0.6
 func _init() -> void:
 	keyboard_nav_enabled = true
 
+# === 加载主菜单资源映射配置（可被工作室工具替换） ===
+func _load_assets_config() -> void:
+	if not ResourceLoader.exists(MAIN_MENU_ASSETS_PATH):
+		return
+	var cfg: Variant = load(MAIN_MENU_ASSETS_PATH)
+	if cfg == null or not (cfg is JSON):
+		return
+	var data: Dictionary = cfg.data as Dictionary
+	if typeof(data) != TYPE_DICTIONARY:
+		return
+	TITLE_LOGO_PATH = _as_path(data.get("title_logo", DEFAULT_TITLE_LOGO_PATH), DEFAULT_TITLE_LOGO_PATH)
+	TITLE_SUB_PATH = _as_path(data.get("title_sub", DEFAULT_TITLE_SUB_PATH), DEFAULT_TITLE_SUB_PATH)
+	BTN_HOVER_BG_PATH = _as_path(data.get("btn_hover_bg", DEFAULT_BTN_HOVER_BG_PATH), DEFAULT_BTN_HOVER_BG_PATH)
+	var icons: Variant = data.get("icons", DEFAULT_ICON_PATHS)
+	if icons is Array:
+		ICON_PATHS = icons
+	else:
+		ICON_PATHS = DEFAULT_ICON_PATHS.duplicate()
+
+
+func _as_path(v: Variant, fallback: String) -> String:
+	if v == null:
+		return fallback
+	var s: String = str(v)
+	if s.strip_edges().is_empty():
+		return fallback
+	return s
+
+
 # === 构建内容（基类 _ready 调用：铺满 + 安全区已就绪） ===
 func _build_content() -> void:
+	_load_assets_config()
 	_apply_layout()
 	_build_background()
 	_build_title()
@@ -186,8 +222,9 @@ func _build_title() -> void:
 	_title_logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_title_sub.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	# 强制按控件 rect 区域缩放，而不是按纹理原始尺寸显示（否则大 PNG 会铺满屏幕）
-	_title_logo.expand_mode = TextureRect.EXPAND
-	_title_sub.expand_mode = TextureRect.EXPAND
+	# TextureRect.ExpandMode 枚举：KEEP_SIZE=0, IGNORE_SIZE=1, EXPAND=2
+	_title_logo.expand_mode = 2
+	_title_sub.expand_mode = 2
 	# 固定 Logo 高度 140px、副标题 36px，宽度按纹理比例自动缩放；不水平填充，避免被容器撑开
 	_title_logo.custom_minimum_size = Vector2(0, 140)
 	_title_sub.custom_minimum_size = Vector2(0, 36)
@@ -435,6 +472,7 @@ func _on_language_placeholder() -> void:
 func _editor_preview() -> void:
 	if not Engine.is_editor_hint():
 		return
+	_load_assets_config()
 	var tg: VBoxContainer = get_node_or_null("TitleGroup")
 	if tg != null:
 		_title_group = tg

@@ -1,0 +1,13 @@
+{
+  "title_logo": "res://assets/ui/main_menu/title_logo.png",
+  "title_sub": "res://assets/ui/main_menu/title_sub.png",
+  "btn_hover_bg": "res://assets/ui/main_menu/btn_hover_bg.png",
+  "icons": [
+    "res://assets/ui/main_menu/icon_1.png",
+    "res://assets/ui/main_menu/icon_2.png",
+    "res://assets/ui/main_menu/icon_3.png",
+    "res://assets/ui/main_menu/icon_4.png",
+    "res://assets/ui/main_menu/icon_5.png"
+  ],
+  "_doc": "主菜单（登录界面）资源路径映射。标题 Logo、副标题、按钮悬停墨迹底板、5 个菜单图标都在这里配置。工作室「登录界面 → 主菜单资源替换」可上传新图替换；游戏启动时 MainMenu.gd 会读取本配置。"
+}
