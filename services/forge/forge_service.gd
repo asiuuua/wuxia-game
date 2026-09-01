@@ -11,7 +11,7 @@ class_name ForgeService
 func forge(recipe_id: String, count: int) -> int:
 	if count <= 0:
 		EventBus.notify_forge_failed.emit(recipe_id, "INVALID_COUNT")
-		return ForgeEnums.ForgeResult.FAIL_UNKNOWN_RECIPE
+		return ForgeEnums.ForgeResult.FAIL_INVALID_COUNT
 
 	var recipe: Dictionary = ConfigManager.get_forge_recipe(recipe_id)
 	if recipe.is_empty():

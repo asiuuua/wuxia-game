@@ -35,6 +35,10 @@ var _last_known_day: int = 1             # 姻缘子嗣推进用的天数基线�
 
 var last_wedding := {}
 
+# BUG-11 修复：城镇场景重载后玩家回原位（跨战斗/回城不再传送到 (0,0)）。
+# 运行时坐标，存 autoload（切场景存活），不进存档（位置非存档数据）。
+var town_player_spawn_pos: Vector2 = Vector2.ZERO
+
 func _ready() -> void:
 	player_state = PlayerState.new()
 	player_state.init_default("李十五", 1)

@@ -12,6 +12,7 @@ enum ForgeResult {
 	FAIL_LEVEL_TOO_LOW,     # 锻造等级/角色等级不足
 	FAIL_UNKNOWN_RECIPE,    # 配方不存在
 	FAIL_BAG_FULL,          # 背包已满装不下产出（2026-08-29 背包评审新增，追加于末尾保持兼容）
+	FAIL_INVALID_COUNT,     # 锻造数量非法（<=0）
 }
 
 ## 锻造产物类型（对应装备槽位大类）

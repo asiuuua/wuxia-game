@@ -92,6 +92,22 @@ func get_all_children() -> Array:
 
 # === 求婚 / 结婚 ===
 # 能否求婚：可结缘 + 性别匹配 + 好感满 propose_affection + 还不是配偶
+# 聘礼是否足额（非锁定可用数量）：与 propose() 共用同一判定，避免 can_propose 与
+# propose 逻辑分叉（BUG-10）。dowry_required 可能含重复 item_id（"龙鳞×2"）。
+func _dowry_satisfied(npc_id: String) -> bool:
+	var cfg: Dictionary = _romance_cfg(npc_id)
+	var dowry: Array = cfg.get("dowry_required", [])
+	if dowry.is_empty():
+		return true
+	var need: Dictionary = {}
+	for item_id in dowry:
+		var k := String(item_id)
+		need[k] = int(need.get(k, 0)) + 1
+	for item_id in need.keys():
+		if GameManager.inventory_service.get_unlocked_count(item_id) < int(need[item_id]):
+			return false
+	return true
+
 func can_propose(npc_id: String) -> bool:
 	if not _is_romanceable(npc_id):
 		return false
@@ -100,6 +116,9 @@ func can_propose(npc_id: String) -> bool:
 	if is_spouse(npc_id):
 		return false
 	if GameManager.bond_service.get_affection(npc_id) < _propose_affection(npc_id):
+		return false
+	# BUG-10 修复：缺聘礼时按钮亦应禁用（与 propose() 一致），避免 enabled 却点击被拒。
+	if not _dowry_satisfied(npc_id):
 		return false
 	return true
 
@@ -155,11 +174,9 @@ func propose(npc_id: String) -> Dictionary:
 	for item_id in dowry:
 		var k := String(item_id)
 		need[k] = int(need.get(k, 0)) + 1
-	# 校验「非锁定」可用数量是否足额：remove_item_by_id 会跳过锁定实例，
-	# 若只按总数校验，含锁定道具时会“扣不净却照样结婚”（白结婚 bug，见派单 acf2246fd5f2）。
-	for item_id in need.keys():
-		if GameManager.inventory_service.get_unlocked_count(item_id) < int(need[item_id]):
-			return {"ok": false, "reason": "DOWRY_MISSING", "stage": -1}
+	# 校验「非锁定」可用数量是否足额（与 can_propose 共用 _dowry_satisfied，单一真源）
+	if not _dowry_satisfied(npc_id):
+		return {"ok": false, "reason": "DOWRY_MISSING", "stage": -1}
 	# 事务式扣除：逐项扣，任一失败则回滚已扣部分并拒绝，彻底杜绝白结婚。
 	var deducted: Array = []  # 记录已扣 [{item_id, count}] 用于回滚
 	for item_id in need.keys():

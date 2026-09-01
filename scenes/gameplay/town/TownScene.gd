@@ -214,6 +214,9 @@ func _build_world() -> void:
 	_player.name = "Player"
 	add_child(_player)
 	_apply_breath(_player)
+	# BUG-11 修复：城镇重载后据上次离开坐标归位，避免每次战斗/回城传送到 (0,0)。
+	if GameManager.town_player_spawn_pos != Vector2.ZERO:
+		_player.position = GameManager.town_player_spawn_pos
 	# 相机挂玩家身上，自动跟随
 	var cam := Camera2D.new()
 	_player.add_child(cam)
@@ -414,6 +417,9 @@ func _exit_tree() -> void:
 		EventBus.player_hp_changed.disconnect(_on_player_changed)
 	if EventBus.player_level_up.is_connected(_on_player_changed):
 		EventBus.player_level_up.disconnect(_on_player_changed)
+	# BUG-11 修复：离开城镇前记录玩家坐标，供重载后归位（autoload 跨场景存活）。
+	if is_instance_valid(_player):
+		GameManager.town_player_spawn_pos = _player.position
 	# HUD 挂在 autoload 的 HUD 层、不随本场景树销毁，须显式卸载，否则切场景后残留双 HUD
 	UIManager.unmount_hud()
 	UIManager.close_all_screens()

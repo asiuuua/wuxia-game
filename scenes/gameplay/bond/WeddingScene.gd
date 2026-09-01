@@ -58,4 +58,7 @@ func _wedding_type_name(wt: int) -> String:
 		_: return "普通"
 
 func _on_done() -> void:
-	get_tree().change_scene_to_file(PathConstants.SCENE_TOWN)
+	# BUG-06 修复：走 GameManager.return_to_town() 回城钩子，
+	# 内含 ResourceManager.reclaim_all() 回收 CG/语音/立绘等跨场景资源，
+	# 避免婚礼→城镇边界资源泄漏（原直接 change_scene_to_file 绕过回收）。
+	GameManager.return_to_town()

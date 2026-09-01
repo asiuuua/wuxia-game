@@ -48,3 +48,11 @@ tools/desktop_studio/safety_data/
 # ===== Python 字节码缓存（工作室工具运行产物，不进版本库）=====
 __pycache__/
 *.pyc
+
+# ===== 高清原图备份（压缩治理时备份的未压缩原图，体积巨大，不进版本库）=====
+_backup_hires/
+_backup/
+_jpg_backup/
+
+# ===== 临时验证/调试产物（根目录 _*.html 等，纯一次性产物）=====
+/_*.html

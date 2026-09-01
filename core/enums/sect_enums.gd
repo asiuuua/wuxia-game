@@ -10,6 +10,7 @@ enum JoinResult {
 	FAIL_ALREADY_IN_SECT,     # 已在某门派中
 	FAIL_REPUTATION_TOO_LOW,  # 声望不足
 	FAIL_UNKNOWN_SECT,        # 门派不存在
+	FAIL_MISSING_ITEM,        # 缺少入门道具
 }
 
 ## 门派阶位（由低到高，对应 sects.json 中 ranks[].rank 字符串）

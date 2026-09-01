@@ -57,7 +57,7 @@ func join(sect_id: String) -> int:
 		var inv: InventoryService = GameManager.inventory_service
 		if inv == null or inv.get_item_count(req_item) <= 0:
 			EventBus.notify_sect_join_failed.emit(sect_id, "MISSING_ITEM")
-			return SectEnums.JoinResult.FAIL_REPUTATION_TOO_LOW
+			return SectEnums.JoinResult.FAIL_MISSING_ITEM
 
 	current_sect_id = sect_id
 	if not reputation.has(sect_id):
