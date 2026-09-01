@@ -48,7 +48,7 @@ const BG_IMAGE_SCRIM := 0.55
 # 登录界面背景音乐
 const LOGIN_BGM := "res://resources/audio/bgm/login_bgm.mp3"
 
-@onready var _title_group: VBoxContainer = $TitleGroup
+@onready var _title_group: Control = $TitleGroup
 @onready var _title_logo: TextureRect = $TitleGroup/title_logo
 @onready var _title_sub: TextureRect = $TitleGroup/title_sub
 @onready var _menu_container: VBoxContainer = $MenuContainer
@@ -175,9 +175,6 @@ func _build_title() -> void:
 	# TextureRect.ExpandMode 枚举：KEEP_SIZE=0, IGNORE_SIZE=1, EXPAND=2
 	_title_logo.expand_mode = 2
 	_title_sub.expand_mode = 2
-	# 固定 Logo 高度 140px、副标题 36px，宽度按纹理比例自动缩放；不水平填充，避免被容器撑开
-	_title_logo.custom_minimum_size = Vector2(0, 140)
-	_title_sub.custom_minimum_size = Vector2(0, 36)
 	_title_logo.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_title_sub.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 
@@ -423,7 +420,7 @@ func _editor_preview() -> void:
 	if not Engine.is_editor_hint():
 		return
 	_load_assets_config()
-	var tg: VBoxContainer = get_node_or_null("TitleGroup")
+	var tg: Control = get_node_or_null("TitleGroup")
 	if tg != null:
 		_title_group = tg
 		_title_logo = tg.get_node_or_null("title_logo")
