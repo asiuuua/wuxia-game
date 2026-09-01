@@ -26,6 +26,8 @@ func run() -> int:
 			call("before_each")
 		var before: int = _failed
 		call(n)
+		if has_method("after_each"):
+			call("after_each")
 		if _failed == before:
 			_passed += 1
 			print("  ✓ %s" % n)
