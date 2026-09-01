@@ -39,6 +39,14 @@ var last_wedding := {}
 # 运行时坐标，存 autoload（切场景存活），不进存档（位置非存档数据）。
 var town_player_spawn_pos: Vector2 = Vector2.ZERO
 
+## 延迟一帧切换场景：避免在 UI 关闭/节点 queue_free 的同一帧内调用 change_scene_to_file，
+## 触发 Godot "Parent node is busy adding/removing children" 内部死锁/卡死。
+## 2026-09-02 实测：主菜单点击「继续游戏」后 freeze 根因即此。
+func _deferred_change_scene(path: String) -> void:
+	await get_tree().process_frame
+	if is_instance_valid(get_tree()):
+		_deferred_change_scene(path)
+
 func _ready() -> void:
 	player_state = PlayerState.new()
 	player_state.init_default("李十五", 1)
@@ -117,14 +125,14 @@ func start_new_game() -> void:
 	_sync_day_baseline()
 	_equip_starting_abilities()
 	current_region_id = "region_start_town"
-	get_tree().change_scene_to_file(PathConstants.SCENE_TOWN)
+	_deferred_change_scene(PathConstants.SCENE_TOWN)
 
 ## 读取存档并进入游戏（主菜单"继续江湖路"调用，M2 新增）
 func load_game(slot: int) -> void:
 	ResourceManager.reclaim_all()
 	if SaveManager.load_from_slot(slot):
 		current_region_id = "region_start_town"
-		get_tree().change_scene_to_file(PathConstants.SCENE_TOWN)
+		_deferred_change_scene(PathConstants.SCENE_TOWN)
 	else:
 		GameLogger.warn("GameManager", "读取存档失败: slot=%d" % slot)
 
@@ -135,9 +143,9 @@ func start_battle(battle_id: String) -> void:
 	ResourceManager.reclaim_all()
 	pending_battle_id = battle_id
 	if ConfigManager.get_battle(battle_id).get("tactical", false):
-		get_tree().change_scene_to_file(PathConstants.SCENE_TACTICAL_BATTLE)
+		_deferred_change_scene(PathConstants.SCENE_TACTICAL_BATTLE)
 	else:
-		get_tree().change_scene_to_file(PathConstants.SCENE_BATTLE)
+		_deferred_change_scene(PathConstants.SCENE_BATTLE)
 
 ## 调试/测试：进入「竹林水畔」战棋测试场景（包裹装饰层 demo），供 F11 一键验证遮挡/水面/雾气。
 ## 内部 TacticalBattleScene 子节点读 pending_battle_id 开局（与正式战斗逻辑完全一致），结束自动 return_to_town。
@@ -145,14 +153,14 @@ func start_test_riverside() -> void:
 	ResourceManager.reclaim_all()
 	debug_override_battle_id = ""
 	pending_battle_id = "tactical_test_riverside"
-	get_tree().change_scene_to_file("res://scenes/gameplay/battle/tactical_test_riverside.tscn")
+	_deferred_change_scene("res://scenes/gameplay/battle/tactical_test_riverside.tscn")
 
 ## 调试/测试：进入「群怪压力测试」战棋场景（复用 riverside 装饰壳），供 F12 一键验证 20 小怪同场 + 飘字队列不丢字。
 ## 复用战术测试场景壳，仅覆盖 battle 配置为 tactical_test_swarm（20 敌 + 友方），装饰层照常生效。
 func start_test_swarm() -> void:
 	ResourceManager.reclaim_all()
 	debug_override_battle_id = "tactical_test_swarm"
-	get_tree().change_scene_to_file("res://scenes/gameplay/battle/tactical_test_riverside.tscn")
+	_deferred_change_scene("res://scenes/gameplay/battle/tactical_test_riverside.tscn")
 
 ## 设置当前底图标识（世界区域切入时调用）。战棋布局映射壳据此让该底图所有小怪复用同一份共享网格几何。
 func set_current_map(map_id: String) -> void:
@@ -176,13 +184,13 @@ func _on_cmd_start_combat(attacker_list: Array, defender_list: Array) -> void:
 func return_to_town() -> void:
 	# 工业化扩容 P6：回城前集中回收（战斗实体已在本窗 finalize 释放，此处清温存/冷资源 + 立绘缓存）
 	ResourceManager.reclaim_all()
-	get_tree().change_scene_to_file(PathConstants.SCENE_TOWN)
+	_deferred_change_scene(PathConstants.SCENE_TOWN)
 
 ## 返回标题：清理 UI 栈并重新加载启动入口（Bootstrap 会再次打开加载界面并进入主菜单）
 func return_to_title() -> void:
 	UIManager.close_all_screens()
 	ResourceManager.reclaim_all()
-	get_tree().change_scene_to_file(PathConstants.SCENE_BOOTSTRAP)
+	_deferred_change_scene(PathConstants.SCENE_BOOTSTRAP)
 
 ## 读档/存档事件：记录当前槽位（仅真实槽位 >=1 才记；quick_save(-1) 忽略）
 func _on_slot_event(slot: int) -> void:
@@ -207,7 +215,7 @@ func _on_bond_wedding_started(npc_id: String, wedding_type: int, scene_path: Str
 	if scene_path == null or scene_path.is_empty():
 		GameLogger.info("GameManager", "婚礼场景路径为空，跳过切换（npc=%s）" % npc_id)
 		return
-	get_tree().change_scene_to_file(scene_path)
+	_deferred_change_scene(scene_path)
 
 ## 回安全点（EASY 团灭）：切换到城镇场景并恢复队伍状态（由 DefeatHandler 调用）
 func return_to_safe_point() -> void:
@@ -216,7 +224,7 @@ func return_to_safe_point() -> void:
 	GameLogger.info("GameManager", "回安全点: %s" % sp.get("marker", "town"))
 	ResourceManager.reclaim_all()
 	current_region_id = "region_start_town"
-	get_tree().change_scene_to_file(PathConstants.SCENE_TOWN)
+	_deferred_change_scene(PathConstants.SCENE_TOWN)
 
 ## 区域传送（填表模式）：查 regions.json 取 scene_path 切场景；scene_path 为空=尚未实装，飘字提示不卡死
 func goto_region(id: String) -> void:
@@ -234,7 +242,7 @@ func goto_region(id: String) -> void:
 	ResourceManager.reclaim_all()
 	current_region_id = id
 	current_map_id = id
-	get_tree().change_scene_to_file(scene_path)
+	_deferred_change_scene(scene_path)
 
 func _equip_starting_abilities() -> void:
 	var slot := 0
