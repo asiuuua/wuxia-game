@@ -105,25 +105,7 @@ func _build_content() -> void:
 		GameLogger.warn("MainMenu", "登录 BGM 缺失: %s" % LOGIN_BGM)
 
 	# 开场动画（仅运行时，编辑器预览不播放，避免污染布局）
-	_start_title_breathing()
 	_play_enter_animation()
-
-
-# === 开场动画：标题「墨影江湖」微弱上下呼吸浮动 ===
-func _start_title_breathing() -> void:
-	if Engine.is_editor_hint() or _title_group == null:
-		return
-	var base_y: float = _title_group.position.y
-	# 上下浮动（正弦缓动，缓慢）
-	var float_t := create_tween().set_loops()
-	float_t.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	float_t.tween_property(_title_group, "position:y", base_y - 7.0, 2.8)
-	float_t.tween_property(_title_group, "position:y", base_y, 2.8)
-	# 同时叠加极轻微的缩放呼吸，增强“活”的质感
-	var breath_t := create_tween().set_loops()
-	breath_t.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	breath_t.tween_property(_title_group, "scale", Vector2(1.025, 1.025), 3.4)
-	breath_t.tween_property(_title_group, "scale", Vector2.ONE, 3.4)
 
 
 # === 开场动画：菜单整列从左滑入，按钮依次淡入（递进出场） ===
