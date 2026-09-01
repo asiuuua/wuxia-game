@@ -298,7 +298,7 @@ def write_import(project_root, rel_res_path, ext):
         'source_file="%s"\n'
         'dest_files=["res://.godot/imported/%s"]\n\n'
         '[params]\n\n'
-        'compress/mode=0\n'
+        'compress/mode=2\n'
         'compress/high_quality=false\n'
         'compress/lossy_quality=0.7\n'
         'compress/uastc_level=0\n'
@@ -319,7 +319,7 @@ def write_import(project_root, rel_res_path, ext):
         'process/normal_map_invert_y=false\n'
         'process/hdr_as_srgb=false\n'
         'process/hdr_clamp_exposure=false\n'
-        'process/size_limit=0\n'
+        'process/size_limit=2048\n'
         'detect_3d/compress_to=1\n'
     ) % (ext_uid_of(project_root, rel_res_path, ext), ctex, res, ctex)
     with open(imp_path, "w", encoding="utf-8", newline="\n") as f:

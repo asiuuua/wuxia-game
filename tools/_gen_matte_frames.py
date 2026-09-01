@@ -19,8 +19,9 @@ for i in range(1, 32):
 sf_uid = "uid://matteidle0001"
 header = '[gd_resource type="SpriteFrames" load_steps=%d format=3 uid="%s"]\n\n' % (32, sf_uid)
 exts = "\n".join(uid_lines)
+# speed=0.55 → 31帧×0.08s ÷ 0.55 ≈ 4.5s 一轮（idle 呼吸节奏放慢，避免摇晃过快）
 anim = ('\n[resource]\nanimations=[\n{\n"frames":[\n' + ",\n".join(frames_entries) + "\n],\n"
-        '"loop":true,\n"name":"idle",\n"speed":12.0\n}\n]\n')
+        '"loop":true,\n"name":"idle",\n"speed":0.55\n}\n]\n')
 with open(out, "w", encoding="utf-8") as f:
     f.write(header)
     f.write(exts)
