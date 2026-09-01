@@ -22,7 +22,7 @@ const REG_FONT := preload("res://resources/fonts/SiYuanSongTiRegular/SourceHanSe
 @export var disabled_alpha: float = 0.45
 
 @onready var bg_panel: TextureRect = $bg_panel
-@onready var icon: TextureRect = $icon
+@onready var icon_rect: TextureRect = $icon
 @onready var label_main: Label = $label_main
 @onready var label_sub: Label = $label_sub
 
@@ -83,14 +83,14 @@ func _refresh_visual_state() -> void:
 
 	# 图标：优先用 icon_hover；没有就用金色 modulate 占位；常态压灰
 	if active and icon_hover != null:
-		icon.texture = icon_hover
-		icon.modulate = Color.WHITE
+		icon_rect.texture = icon_hover
+		icon_rect.modulate = Color.WHITE
 	elif active:
-		icon.texture = icon_normal
-		icon.modulate = UIPalette.GOLD
+		icon_rect.texture = icon_normal
+		icon_rect.modulate = UIPalette.GOLD
 	else:
-		icon.texture = icon_normal
-		icon.modulate = Color(0.55, 0.55, 0.55)
+		icon_rect.texture = icon_normal
+		icon_rect.modulate = Color(0.55, 0.55, 0.55)
 
 	# 缩放动画
 	if _is_pressed:

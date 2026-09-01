@@ -76,6 +76,62 @@ func _build_content() -> void:
 	else:
 		GameLogger.warn("MainMenu", "登录 BGM 缺失: %s" % LOGIN_BGM)
 
+	# 开场动画（仅运行时，编辑器预览不播放，避免污染布局）
+	_start_title_breathing()
+	_play_enter_animation()
+
+
+# === 开场动画：标题「墨影江湖」微弱上下呼吸浮动 ===
+func _start_title_breathing() -> void:
+	if Engine.is_editor_hint() or _title_group == null:
+		return
+	var base_y: float = _title_group.position.y
+	# 上下浮动（正弦缓动，缓慢）
+	var float_t := create_tween().set_loops()
+	float_t.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	float_t.tween_property(_title_group, "position:y", base_y - 7.0, 2.8)
+	float_t.tween_property(_title_group, "position:y", base_y, 2.8)
+	# 同时叠加极轻微的缩放呼吸，增强“活”的质感
+	var breath_t := create_tween().set_loops()
+	breath_t.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	breath_t.tween_property(_title_group, "scale", Vector2(1.025, 1.025), 3.4)
+	breath_t.tween_property(_title_group, "scale", Vector2.ONE, 3.4)
+
+
+# === 开场动画：菜单整列从左滑入，按钮依次淡入（递进出场） ===
+func _play_enter_animation() -> void:
+	if Engine.is_editor_hint() or _menu_container == null:
+		return
+	if _menu_items.is_empty():
+		return
+
+	# 1) 整列容器从左侧滑入 + 整体淡入
+	var base_x: float = _menu_container.position.x
+	_menu_container.position.x = base_x - 70.0
+	_menu_container.modulate.a = 0.0
+	var slide := create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	slide.tween_property(_menu_container, "position:x", base_x, 0.5)
+	slide.parallel().tween_property(_menu_container, "modulate:a", 1.0, 0.5)
+
+	# 2) 每个按钮错峰淡入（不被 VBox 容器布局干扰，仅动 alpha）
+	for i in _menu_items.size():
+		var item: Control = _menu_items[i] as Control
+		if item == null:
+			continue
+		item.modulate.a = 0.0
+		var tw := create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		tw.tween_property(item, "modulate:a", 1.0, 0.35).set_delay(0.18 + i * 0.09)
+
+	# 兜底保险：入场 tween 若因任何异常未跑完，1.2s 后强制全部可见，
+	# 避免「菜单永久停留在 alpha=0 的不可见状态」这类灾难级故障。
+	var guard := get_tree().create_timer(1.2)
+	guard.timeout.connect(func() -> void:
+		_menu_container.modulate.a = 1.0
+		for it in _menu_items:
+			if it is Control:
+				(it as Control).modulate.a = 1.0
+	)
+
 # === 主菜单布局（数据驱动） ===
 func _apply_layout() -> void:
 	if not FileAccess.file_exists(MAIN_MENU_LAYOUT_PATH):
