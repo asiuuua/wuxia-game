@@ -30,12 +30,14 @@ layout_mode = 2
 custom_minimum_size = Vector2(0, 140)
 size_flags_vertical = 0
 stretch_mode = 5
+expand_mode = 2
 
 [node name="title_sub" type="TextureRect" parent="TitleGroup"]
 layout_mode = 2
 custom_minimum_size = Vector2(0, 36)
 size_flags_vertical = 0
 stretch_mode = 5
+expand_mode = 2
 
 [node name="MenuContainer" type="VBoxContainer" parent="."]
 layout_mode = 1
