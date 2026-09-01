@@ -82,10 +82,13 @@ func _refresh_text() -> void:
 func _refresh_visual_state() -> void:
 	var active := _is_hovered or _is_selected
 
-	# 墨迹底板：只在 hover / 选中时显示
-	bg_panel.texture = bg_hover if active else null
+	# 墨迹底板：只在 hover / 选中时显示（节点缺失时安全跳过，避免误删节点导致崩溃）
+	if bg_panel != null:
+		bg_panel.texture = bg_hover if active else null
 
 	# 图标：优先用 icon_hover；没有就用金色 modulate 占位；常态压灰
+	if icon_rect == null:
+		return
 	if active and icon_hover != null:
 		icon_rect.texture = icon_hover
 		icon_rect.modulate = Color.WHITE
