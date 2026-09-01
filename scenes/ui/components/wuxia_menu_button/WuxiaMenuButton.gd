@@ -23,6 +23,9 @@ const TEXT_HOVER := UIPalette.GOLD_DARK         # 悬停：暗金
 @export var hover_scale: float = 1.04
 @export var press_scale: float = 0.96
 @export var disabled_alpha: float = 0.45
+# 字号（可在模板/实例的检查器里直接改，无需碰代码）
+@export var main_font_size: int = UIPalette.FS_MENU
+@export var sub_font_size: int = UIPalette.FS_TINY
 
 @onready var bg_panel: TextureRect = $bg_panel
 @onready var icon_rect: TextureRect = $icon
@@ -42,10 +45,10 @@ func _ready() -> void:
 	clip_contents = false
 
 	label_main.add_theme_font_override("font", BOLD_FONT)
-	label_main.add_theme_font_size_override("font_size", UIPalette.FS_MENU)
+	label_main.add_theme_font_size_override("font_size", main_font_size)
 
 	label_sub.add_theme_font_override("font", REG_FONT)
-	label_sub.add_theme_font_size_override("font_size", UIPalette.FS_TINY)
+	label_sub.add_theme_font_size_override("font_size", sub_font_size)
 
 	_refresh_text()
 	_refresh_visual_state()
