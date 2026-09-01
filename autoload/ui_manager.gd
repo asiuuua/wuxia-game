@@ -164,6 +164,11 @@ func open_screen(screen_name: String, layer: int = Layer.FULLSCREEN, init_data: 
 	if entry.is_empty() or String(entry.get("path", "")) == "":
 		GameLogger.error("UIManager", "未注册界面: %s" % screen_name)
 		return null
+	# BUG-02 防重复打开：界面已在打开栈中（当前可见）则直接返回现有实例，
+	# 避免背包等非缓存界面被二次 instantiate 导致实例叠加 + 信号双重监听（叠加闪烁/焦点错乱）。
+	for s in _screen_stack:
+		if is_instance_valid(s) and s.name == screen_name:
+			return s
 	var cached: Control = _screen_cache.get(screen_name, null) as Control
 	var screen: Control
 	if bool(entry.get("cache", false)) and cached != null and is_instance_valid(cached):
