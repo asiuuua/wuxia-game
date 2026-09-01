@@ -48,9 +48,6 @@ const BG_IMAGE_SCRIM := 0.55
 # 登录界面背景音乐
 const LOGIN_BGM := "res://resources/audio/bgm/login_bgm.mp3"
 
-# 主菜单布局（工作室工具「登录界面 → 主菜单布局」自由拖拽写入）
-const MAIN_MENU_LAYOUT_PATH := "res://data/configs/ui/main_menu_layout.json"
-
 @onready var _title_group: VBoxContainer = $TitleGroup
 @onready var _title_logo: TextureRect = $TitleGroup/title_logo
 @onready var _title_sub: TextureRect = $TitleGroup/title_sub
@@ -100,7 +97,6 @@ func _as_path(v: Variant, fallback: String) -> String:
 # === 构建内容（基类 _ready 调用：铺满 + 安全区已就绪） ===
 func _build_content() -> void:
 	_load_assets_config()
-	_apply_layout()
 	_build_background()
 	_build_title()
 	_build_menu()
@@ -167,52 +163,6 @@ func _play_enter_animation() -> void:
 			if it is Control:
 				(it as Control).modulate.a = 1.0
 	)
-
-# === 主菜单布局（数据驱动） ===
-func _apply_layout() -> void:
-	if not FileAccess.file_exists(MAIN_MENU_LAYOUT_PATH):
-		return
-	var f := FileAccess.open(MAIN_MENU_LAYOUT_PATH, FileAccess.READ)
-	if f == null:
-		return
-	var txt := f.get_as_text()
-	f.close()
-	var parsed: Variant = JSON.parse_string(txt)
-	if typeof(parsed) != TYPE_DICTIONARY or not parsed.has("elements"):
-		return
-	var elements: Dictionary = parsed["elements"]
-
-	_apply_block(_title_group, elements.get("title_group", {}))
-	_apply_block(_menu_container, elements.get("menu_container", {}))
-	_apply_block(_bottom_left, elements.get("bottom_left", {}))
-	_apply_block(_bottom_right, elements.get("bottom_right", {}))
-
-	if elements.has("menu_container") and typeof(elements["menu_container"]) == TYPE_DICTIONARY:
-		var mc: Dictionary = elements["menu_container"]
-		if mc.has("separation"):
-			_menu_container.add_theme_constant_override("separation", int(mc["separation"]))
-
-
-func _apply_block(node: Control, spec: Dictionary) -> void:
-	if node == null or typeof(spec) != TYPE_DICTIONARY:
-		return
-	if spec.has("anchor_left"):
-		node.anchor_left = float(spec["anchor_left"])
-	if spec.has("anchor_top"):
-		node.anchor_top = float(spec["anchor_top"])
-	if spec.has("anchor_right"):
-		node.anchor_right = float(spec["anchor_right"])
-	if spec.has("anchor_bottom"):
-		node.anchor_bottom = float(spec["anchor_bottom"])
-	if spec.has("offset_left"):
-		node.offset_left = float(spec["offset_left"])
-	if spec.has("offset_top"):
-		node.offset_top = float(spec["offset_top"])
-	if spec.has("offset_right"):
-		node.offset_right = float(spec["offset_right"])
-	if spec.has("offset_bottom"):
-		node.offset_bottom = float(spec["offset_bottom"])
-
 
 # === 标题组 ===
 func _build_title() -> void:
