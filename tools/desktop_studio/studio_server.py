@@ -145,6 +145,23 @@ class Handler(BaseHTTPRequestHandler):
             return _send_json(self, core.loading_layout_get())
         if path == "/api/main_menu/layout":
             return _send_json(self, core.main_menu_layout_get())
+        if path == "/api/main_menu/assets":
+            return _send_json(self, core.main_menu_assets_get())
+        if path == "/api/main_menu/assets/file":
+            qs = urllib.parse.parse_qs(self.path.split("?", 1)[1] if "?" in self.path else "")
+            key = (qs.get("key") or [""])[0]
+            fp = core._main_menu_asset_disk_path(key) if key else ""
+            if fp and os.path.exists(fp):
+                with open(fp, "rb") as f:
+                    data = f.read()
+                self.send_response(200)
+                self.send_header("Content-Type", _mime_of(fp))
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+                return
+            _send_json(self, {"error": "no asset"}, 404)
+            return
         if path == "/api/battle_layout/list":
             return _send_json(self, core.battle_layout_list())
         if path == "/api/battle_layout":
@@ -320,6 +337,25 @@ class Handler(BaseHTTPRequestHandler):
             return _send_json(self, {"ok": ok, "msg": m})
         if path == "/api/main_menu/layout":
             ok, m = core.main_menu_layout_update(body if isinstance(body, dict) else {})
+            return _send_json(self, {"ok": ok, "msg": m})
+        if path == "/api/main_menu/assets/replace":
+            raw = base64.b64decode(body.get("data", "") or b"")
+            if not raw:
+                return _send_json(self, {"ok": False, "msg": "空数据"}, 400)
+            key = body.get("key", "")
+            if not key:
+                return _send_json(self, {"ok": False, "msg": "缺少 key"}, 400)
+            tmp = os.path.join(core.SAFETY_DIR, "up_mm_%s_%d.bin" % (key, int(datetime.datetime.now().timestamp() * 1000)))
+            with open(tmp, "wb") as f:
+                f.write(raw)
+            ok, m = core.main_menu_asset_replace(key, tmp)
+            try:
+                os.remove(tmp)
+            except Exception:
+                pass
+            return _send_json(self, {"ok": ok, "msg": m})
+        if path == "/api/main_menu/assets/clear_icon":
+            ok, m = core.main_menu_asset_clear_icon(int(body.get("idx", 0)))
             return _send_json(self, {"ok": ok, "msg": m})
         if path == "/api/battle_layout/save":
             lid = str(body.get("id", ""))

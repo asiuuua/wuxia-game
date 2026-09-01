@@ -1228,14 +1228,18 @@ def _main_menu_layout_path():
 # 坐标统一用「视口归一化 0~1」：x/y 为块左上角位置；w/h 为占视口比例（仅用于预览框尺寸，
 # 游戏侧 MenuContainer 用 anchor 四值定位，BottomLeft/BottomRight 用 anchor+offset）。
 # separation 仅 MenuContainer 用（按钮间距，像素）。
-MAIN_MENU_ELEMS = ["menu_container", "bottom_left", "bottom_right"]
+MAIN_MENU_ELEMS = ["title_group", "menu_container", "bottom_left", "bottom_right"]
 
 _MAIN_MENU_LAYOUT_DEFAULT = {
     "elements": {
-        # MenuContainer：6 个主菜单按钮的纵向容器。anchor 四值定位（与 .tscn 默认一致）
-        "menu_container": {"anchor_left": 0.12, "anchor_top": 0.30, "anchor_right": 0.46,
-                           "anchor_bottom": 0.86, "offset_left": 0.0, "offset_top": 0.0,
-                           "offset_right": 0.0, "offset_bottom": 0.0, "separation": 14},
+        # 标题组：墨影江湖 Logo + 副标题。用绝对 offset 定位（与 .tscn 默认一致）
+        "title_group": {"anchor_left": 0.0, "anchor_top": 0.0, "anchor_right": 0.0,
+                        "anchor_bottom": 0.0, "offset_left": 60.0, "offset_top": 48.0,
+                        "offset_right": 540.0, "offset_bottom": 220.0},
+        # MenuContainer：5 个主菜单按钮的纵向容器。anchor 四值定位
+        "menu_container": {"anchor_left": 0.06, "anchor_top": 0.32, "anchor_right": 0.42,
+                           "anchor_bottom": 0.78, "offset_left": 0.0, "offset_top": 0.0,
+                           "offset_right": 0.0, "offset_bottom": 0.0, "separation": 18},
         # 左下角：版本号 / 制作组文字
         "bottom_left": {"anchor_left": 0.0, "anchor_top": 1.0, "anchor_right": 0.0,
                         "anchor_bottom": 1.0, "offset_left": 24.0, "offset_top": -56.0,
@@ -1292,6 +1296,172 @@ def main_menu_layout_update(d):
         json.dump(data, f, ensure_ascii=False, indent=2)
     log_event("main_menu_layout", p, "更新主菜单布局")
     return True, "已保存主菜单布局（游戏内下次启动生效）"
+
+
+# ============================ 主菜单(登录)界面资源映射（工作室可上传替换） ============================
+def _main_menu_assets_path():
+    return os.path.join(discover_project_root(), "data", "configs", "ui", "main_menu_assets.json")
+
+
+def _main_menu_assets_dir():
+    return os.path.join(discover_project_root(), "assets", "ui", "main_menu")
+
+
+_DEFAULT_MAIN_MENU_ASSETS = {
+    "title_logo": "res://assets/ui/main_menu/title_logo.png",
+    "title_sub": "res://assets/ui/main_menu/title_sub.png",
+    "btn_hover_bg": "res://assets/ui/main_menu/btn_hover_bg.png",
+    "icons": [
+        "res://assets/ui/main_menu/icon_1.png",
+        "res://assets/ui/main_menu/icon_2.png",
+        "res://assets/ui/main_menu/icon_3.png",
+        "res://assets/ui/main_menu/icon_4.png",
+        "res://assets/ui/main_menu/icon_5.png",
+    ],
+}
+
+
+def main_menu_assets_get():
+    """读取主菜单资源映射（与默认合并，缺字段补默认）。"""
+    p = _main_menu_assets_path()
+    data = dict(_DEFAULT_MAIN_MENU_ASSETS)
+    if os.path.exists(p):
+        try:
+            with open(p, "r", encoding="utf-8") as f:
+                parsed = json.load(f)
+            if isinstance(parsed, dict):
+                for k in ("title_logo", "title_sub", "btn_hover_bg"):
+                    if k in parsed and parsed[k]:
+                        data[k] = str(parsed[k])
+                if isinstance(parsed.get("icons"), list):
+                    data["icons"] = [str(x) for x in parsed["icons"]]
+        except Exception:
+            pass
+    # 补齐图标数量到 5 个
+    while len(data["icons"]) < 5:
+        data["icons"].append(_DEFAULT_MAIN_MENU_ASSETS["icons"][len(data["icons"]) % 5])
+    return data
+
+
+def main_menu_assets_update(paths):
+    """更新主菜单资源映射中的路径（不移动文件，仅改 JSON）。paths 为 dict。"""
+    p = _main_menu_assets_path()
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+    _backup(p)
+    data = main_menu_assets_get()
+    for k in ("title_logo", "title_sub", "btn_hover_bg"):
+        if k in paths and paths[k]:
+            data[k] = str(paths[k])
+    if "icons" in paths and isinstance(paths["icons"], list):
+        data["icons"] = [str(x) for x in paths["icons"]]
+    data["_doc"] = "主菜单（登录界面）资源路径映射。标题 Logo、副标题、按钮悬停墨迹底板、5 个菜单图标都在这里配置。工作室「登录界面 → 主菜单资源替换」可上传新图替换；游戏启动时 MainMenu.gd 会读取本配置。"
+    with open(p, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    log_event("main_menu_assets", p, "更新主菜单资源映射")
+    return True, "已保存主菜单资源映射"
+
+
+def _main_menu_asset_key_to_field(key):
+    """把上传 key 映射到 JSON 字段。"""
+    if key in ("title_logo", "title_sub", "btn_hover_bg"):
+        return key
+    if key.startswith("icon_"):
+        idx = int(key.split("_")[1]) - 1
+        if 0 <= idx < 5:
+            return ("icons", idx)
+    return None
+
+
+def _main_menu_asset_disk_path(key):
+    """根据 key 返回资源在磁盘上的真实路径（用于工作室预览）。"""
+    cfg = main_menu_assets_get()
+    field = _main_menu_asset_key_to_field(key)
+    if field is None:
+        return ""
+    if isinstance(field, tuple):
+        res = cfg.get("icons", [])[field[1]] if field[1] < len(cfg.get("icons", [])) else ""
+    else:
+        res = cfg.get(field, "")
+    if not res or not res.startswith("res://"):
+        return ""
+    rel = res[len("res://"):]
+    return os.path.join(discover_project_root(), rel.replace("/", os.sep))
+
+
+def main_menu_asset_replace(key, src_path):
+    """上传并替换单张主菜单资源图。key 可为 title_logo/title_sub/btn_hover_bg/icon_1~5。"""
+    field = _main_menu_asset_key_to_field(key)
+    if field is None:
+        return False, "未知资源 key：%s" % key
+    if not os.path.exists(src_path):
+        return False, "上传文件不存在"
+
+    # 校验图片格式并写入正确扩展名
+    ext = _detect_image_ext(src_path)
+    if not ext:
+        return False, "无法识别图片格式（请上传 png/jpg/webp）"
+    try:
+        w, h = _image_size(src_path)
+    except Exception as e:
+        return False, "无法解析图片尺寸：%s" % e
+
+    d = _main_menu_assets_dir()
+    os.makedirs(d, exist_ok=True)
+    _backup_dir(d)
+
+    if isinstance(field, tuple):
+        fname = "icon_%d.%s" % (field[1] + 1, ext)
+        cfg_field = "icons"
+        cfg_idx = field[1]
+    else:
+        fname_map = {"title_logo": "title_logo", "title_sub": "title_sub", "btn_hover_bg": "btn_hover_bg"}
+        fname = "%s.%s" % (fname_map[field], ext)
+        cfg_field = field
+        cfg_idx = None
+
+    dst = os.path.join(d, fname)
+    # 若旧文件存在且扩展名不同，备份后清理，避免残留同名不同扩展名
+    for old_ext in (".png", ".jpg", ".jpeg", ".webp"):
+        old = dst.rsplit(".", 1)[0] + old_ext
+        if old != dst and os.path.exists(old):
+            _backup(old)
+            try:
+                os.remove(old)
+            except Exception:
+                pass
+
+    shutil.copyfile(src_path, dst)
+
+    # 更新 JSON 映射
+    cfg = main_menu_assets_get()
+    res_path = "res://assets/ui/main_menu/%s" % fname
+    if cfg_idx is not None:
+        cfg["icons"][cfg_idx] = res_path
+    else:
+        cfg[cfg_field] = res_path
+    main_menu_assets_update(cfg)
+
+    # 触发 Godot 导入：删掉同文件名的 .import，让 Godot 下次启动重建
+    import_file = dst + ".import"
+    if os.path.exists(import_file):
+        try:
+            os.remove(import_file)
+        except Exception:
+            pass
+
+    log_event("main_menu_asset_replace", dst, "替换主菜单资源 %s（%s，%dx%d）" % (key, ext, w, h))
+    return True, "已替换 %s（%s，%dx%d），下次进主菜单生效" % (key, ext, w, h)
+
+
+def main_menu_asset_clear_icon(idx):
+    """将某个图标恢复为默认路径（不删文件）。"""
+    if not (1 <= idx <= 5):
+        return False, "图标编号必须在 1~5 之间"
+    cfg = main_menu_assets_get()
+    cfg["icons"][idx - 1] = _DEFAULT_MAIN_MENU_ASSETS["icons"][idx - 1]
+    main_menu_assets_update(cfg)
+    log_event("main_menu_asset_clear", "icon_%d" % idx, "恢复图标默认路径")
+    return True, "已恢复 icon_%d 为默认路径" % idx
 
 
 # ============================ 战棋布局（工作室可视化编辑器） ============================
