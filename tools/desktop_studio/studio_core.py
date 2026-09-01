@@ -2156,3 +2156,178 @@ if __name__ == "__main__":
     for name, ok, msg in self_test(d):
         print("[%s] %s -> %s" % (name, "OK" if ok else "FAIL", msg))
     print("SELF_TEST_DONE")
+
+# -*- coding: utf-8 -*-
+
+
+# ============================ UI 界面贴图（.tscn 直写） ============================
+# 与用户「UI 底层改为直接绑 .tscn、位置交给 Godot 拖拽」的改造对齐：
+#   * 本模块**只读写贴图**，绝不动任何 anchor / offset / size / layout 属性。
+#     位置、尺寸、层级一律由用户在 Godot 编辑器里拖拽调整。
+#   * 贴图以 ext_resource 形式直接写进 .tscn，不再经过任何 JSON 中间层。
+#   * 新图不预生成 .import（交给 Godot 打开工程时自动导入，避免残缺 .import
+#     导致 Godot 跳过导入而加载失败）。
+# 典型流程：工作室选界面 → 传图 → 回 Godot 编辑器拖拽摆位置。
+
+try:
+    if MODULE_DIR not in sys.path:
+        sys.path.insert(0, MODULE_DIR)
+    import tscn_assets as tscn
+except Exception as e:  # pragma: no cover
+    tscn = None
+    _TSCN_IMPORT_ERR = str(e)
+
+
+def _tscn_backup_dir():
+    d = os.path.join(BACKUP_DIR, "tscn")
+    try:
+        os.makedirs(d, exist_ok=True)
+    except Exception:
+        pass
+    return d
+
+
+def _tscn_ready():
+    if tscn is None:
+        return False, "贴图库加载失败：%s" % globals().get("_TSCN_IMPORT_ERR", "未知原因")
+    return True, ""
+
+
+def ui_screens_list():
+    """扫描工程内所有 UI 场景及其贴图槽位。返回 (ok, msg, screens)。"""
+    ok, m = _tscn_ready()
+    if not ok:
+        return False, m, []
+    root = discover_project_root()
+    try:
+        screens = tscn.scan_ui_screens(root)
+    except Exception as e:
+        return False, "扫描场景失败：%s" % e, []
+    # 附加槽位预览信息（前端按 key 请求图片）
+    for s in screens:
+        for sl in s["slots"]:
+            sl["key"] = "%s|%s|%s" % (s["screen"], sl["node"], sl["prop"])
+    return True, "共 %d 个界面" % len(screens), screens
+
+
+def _slot_to_fname(node_path):
+    """节点路径 -> 安全文件名片段（不含 / 与 .）。"""
+    if node_path in (".", ""):
+        return "root"
+    return node_path.replace("/", "_").replace(".", "_")
+
+
+def ui_slot_upload(screen_rel, node_path, prop, src_path):
+    """上传贴图并写进 .tscn 的指定槽位。返回 (ok, msg)。
+
+    screen_rel: scenes/ui/.../Xxx.tscn（相对工程根）
+    node_path : 节点完整路径，如 "TitleGroup/title_logo" 或 "."（根）
+    prop      : 贴图属性，如 texture / icon / texture_normal
+    """
+    ok, m = _tscn_ready()
+    if not ok:
+        return False, m
+    if not tscn._safe_rel(screen_rel):
+        return False, "非法场景路径"
+    if not os.path.exists(src_path):
+        return False, "上传文件不存在"
+
+    root = discover_project_root()
+    ext = _detect_image_ext(src_path)
+    if not ext:
+        return False, "无法识别图片格式（请上传 png / jpg / webp）"
+    try:
+        w, h = _image_size(src_path)
+    except Exception as e:
+        return False, "无法解析图片尺寸：%s" % e
+
+    screen_id = os.path.splitext(os.path.basename(screen_rel))[0]
+    slot = _slot_to_fname(node_path)
+    try:
+        rel, dst = tscn.save_texture(root, screen_id, slot, src_path, ext)
+    except Exception as e:
+        return False, "保存图片失败：%s" % e
+
+    # 清掉可能残留的旧 .import，确保 Godot 重新导入（扩展名变化时尤其重要）
+    try:
+        d = os.path.dirname(dst)
+        stem = os.path.splitext(os.path.basename(dst))[0]
+        for fn in os.listdir(d):
+            if fn.startswith(stem + ".") and fn.endswith(".import"):
+                os.remove(os.path.join(d, fn))
+    except Exception:
+        pass
+
+    ok2, msg2 = tscn.set_slot_texture(root, screen_rel, node_path, rel, prop,
+                                      backup_root=_tscn_backup_dir())
+    if not ok2:
+        return False, msg2
+    log_event("ui_slot_upload", "%s::%s.%s" % (screen_rel, node_path, prop),
+              "上传贴图 %s（%s %dx%d）" % (rel, ext, w, h))
+    return True, "已替换 %s.%s（%s %dx%d）。回 Godot 编辑器即可看到，位置可拖拽调整" % (
+        node_path, prop, ext, w, h)
+
+
+def ui_slot_clear(screen_rel, node_path, prop):
+    """清除槽位贴图（只删属性引用，不删磁盘图片）。"""
+    ok, m = _tscn_ready()
+    if not ok:
+        return False, m
+    if not tscn._safe_rel(screen_rel):
+        return False, "非法场景路径"
+    root = discover_project_root()
+    ok2, msg2 = tscn.clear_slot_texture(root, screen_rel, node_path, prop,
+                                        backup_root=_tscn_backup_dir())
+    if ok2:
+        log_event("ui_slot_clear", "%s::%s.%s" % (screen_rel, node_path, prop), "清除贴图引用")
+    return ok2, msg2
+
+
+def ui_bg_add(screen_rel):
+    """给界面新增一张全屏背景图槽位（空槽，随后上传图片）。"""
+    ok, m = _tscn_ready()
+    if not ok:
+        return False, m
+    if not tscn._safe_rel(screen_rel):
+        return False, "非法场景路径"
+    root = discover_project_root()
+    ok2, msg2 = tscn.add_background_slot(root, screen_rel, backup_root=_tscn_backup_dir())
+    if ok2:
+        log_event("ui_bg_add", screen_rel, "新增背景图槽位 StudioBg")
+        return True, "已新增背景图槽位，选它上传图片后回 Godot 拖拽调整"
+    return False, msg2
+
+
+def ui_slot_disk_path(screen_rel, node_path, prop):
+    """取槽位当前贴图在磁盘上的绝对路径（供预览）；无贴图返回空串。"""
+    ok, _m = _tscn_ready()
+    if not ok or not tscn._safe_rel(screen_rel):
+        return ""
+    root = discover_project_root()
+    full = os.path.join(root, screen_rel.replace("/", os.sep))
+    if not os.path.exists(full):
+        return ""
+    try:
+        info = tscn.scan_slots(full, root)
+    except Exception:
+        return ""
+    for sl in info.get("slots", []):
+        if sl["node"] == node_path and sl["prop"] == prop and sl["texture"]:
+            res = sl["texture"]
+            if not res.startswith("res://"):
+                return ""
+            return os.path.join(root, res[len("res://"):].replace("/", os.sep))
+    return ""
+
+
+def ui_slot_file(key):
+    """按 key（screen|node|prop）定位贴图文件，返回磁盘路径；找不到返回 ('', errmsg)。"""
+    if not key or key.count("|") < 2:
+        return "", "缺少参数"
+    screen_rel, node_path, prop = key.split("|", 2)
+    if not tscn or not tscn._safe_rel(screen_rel):
+        return "", "非法参数"
+    p = ui_slot_disk_path(screen_rel, node_path, prop)
+    if not p or not os.path.exists(p):
+        return "", "该槽位暂无贴图"
+    return p, ""

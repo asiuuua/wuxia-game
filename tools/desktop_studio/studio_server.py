@@ -145,6 +145,24 @@ class Handler(BaseHTTPRequestHandler):
             return _send_json(self, core.loading_layout_get())
         if path == "/api/main_menu/layout":
             return _send_json(self, core.main_menu_layout_get())
+        if path == "/api/ui_screens":
+            ok, m, screens = core.ui_screens_list()
+            return _send_json(self, {"ok": ok, "msg": m, "screens": screens})
+        if path == "/api/ui_slot/file":
+            qs = urllib.parse.parse_qs(self.path.split("?", 1)[1] if "?" in self.path else "")
+            key = (qs.get("key") or [""])[0]
+            fp, err = core.ui_slot_file(key) if key else ("", "缺少参数")
+            if fp and os.path.exists(fp):
+                with open(fp, "rb") as f:
+                    data = f.read()
+                self.send_response(200)
+                self.send_header("Content-Type", _mime_of(fp))
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+                return
+            _send_json(self, {"error": err or "no asset"}, 404)
+            return
         if path == "/api/main_menu/assets":
             return _send_json(self, core.main_menu_assets_get())
         if path == "/api/main_menu/assets/file":
@@ -337,6 +355,32 @@ class Handler(BaseHTTPRequestHandler):
             return _send_json(self, {"ok": ok, "msg": m})
         if path == "/api/main_menu/layout":
             ok, m = core.main_menu_layout_update(body if isinstance(body, dict) else {})
+            return _send_json(self, {"ok": ok, "msg": m})
+        if path == "/api/ui_slot/upload":
+            raw = base64.b64decode(body.get("data", "") or b"")
+            if not raw:
+                return _send_json(self, {"ok": False, "msg": "空数据"}, 400)
+            screen_rel = str(body.get("screen", ""))
+            node_path = str(body.get("node", ""))
+            prop = str(body.get("prop", "texture"))
+            if not screen_rel or not node_path:
+                return _send_json(self, {"ok": False, "msg": "缺少 screen / node"}, 400)
+            tmp = os.path.join(core.SAFETY_DIR,
+                               "up_uislot_%d.bin" % int(datetime.datetime.now().timestamp() * 1000))
+            with open(tmp, "wb") as f:
+                f.write(raw)
+            ok, m = core.ui_slot_upload(screen_rel, node_path, prop, tmp)
+            try:
+                os.remove(tmp)
+            except Exception:
+                pass
+            return _send_json(self, {"ok": ok, "msg": m})
+        if path == "/api/ui_slot/clear":
+            ok, m = core.ui_slot_clear(str(body.get("screen", "")), str(body.get("node", "")),
+                                       str(body.get("prop", "texture")))
+            return _send_json(self, {"ok": ok, "msg": m})
+        if path == "/api/ui_bg/add":
+            ok, m = core.ui_bg_add(str(body.get("screen", "")))
             return _send_json(self, {"ok": ok, "msg": m})
         if path == "/api/main_menu/assets/replace":
             raw = base64.b64decode(body.get("data", "") or b"")

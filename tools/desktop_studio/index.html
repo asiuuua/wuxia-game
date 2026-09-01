@@ -79,6 +79,7 @@
   <button data-tab="login">登录界面</button>
   <button data-tab="battle">战棋布局</button>
   <button data-tab="loading">预加载界面</button>
+  <button data-tab="uiart">UI 贴图</button>
   <button data-tab="trash">回收站</button>
   <button data-tab="settings">设置</button>
   <button data-tab="log">操作日志</button>
@@ -430,6 +431,32 @@
   </section>
 
   <!-- LOADING -->
+  <!-- UI 贴图：贴图直写 .tscn，位置交给 Godot 拖拽 -->
+  <section class="tab" id="tab-uiart">
+    <div class="layout">
+      <div class="list" id="uaList" style="width:280px;flex:0 0 280px"></div>
+      <div class="editor">
+        <div class="hint">
+          <b>这里只换图，不动位置。</b>贴图直接写进 <code>.tscn</code>（和你现在的架构一致，不再走 JSON）；
+          <b>位置 / 大小 / 层级一律回 Godot 编辑器拖拽</b>，本工具一个坐标都不会改。<br>
+          传图后打开 Godot，新图会自动导入；若没刷新，点菜单 <b>场景 → 重新加载场景</b> 或重启编辑器。
+        </div>
+        <div class="row">
+          <label>搜索界面</label>
+          <input id="uaSearch" placeholder="输入名称筛选，如 背包 / MainMenu" oninput="uaRenderList()">
+        </div>
+        <div class="btns">
+          <button class="act sec" onclick="uiArtLoad()">↻ 重新扫描</button>
+          <button class="act" onclick="uaAddBg()">＋ 给该界面加背景图槽位</button>
+        </div>
+        <div id="uaTitle" style="margin:14px 0 10px;font-size:15px;color:var(--accent)"></div>
+        <div id="uaSlots" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px"></div>
+        <div class="status" id="uaStat"></div>
+      </div>
+    </div>
+    <input type="file" accept="image/*" id="uaFile" style="display:none" onchange="uaFileChosen(this)">
+  </section>
+
   <section class="tab" id="tab-loading">
     <div class="editor" style="max-width:920px">
       <div class="hint">预加载（加载）界面可视化编辑：直接拖动下面画布里的 4 个元素到任意位置，点「保存布局」即写入游戏（下次启动生效）。坐标为窗口比例归一化，PC / 带鱼屏 / 手机都自动适配。</div>
@@ -522,7 +549,74 @@ document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{
   if(b.dataset.tab==='login')mmLoad();
   if(b.dataset.tab==='battle'){blLoadList();dpLoad();}
   if(b.dataset.tab==='loading')loadingLoad();
+  if(b.dataset.tab==='uiart')uiArtLoad();
 });
+
+// ===================== UI 贴图（贴图直写 .tscn；位置/大小交给 Godot 拖拽） =====================
+let UA_SCREENS=[]; let UA_CUR=null; let UA_KEYS=[]; let UA_PICK=-1;
+async function uiArtLoad(){
+  let r; try{ r=await A('GET','/api/ui_screens'); }catch(e){ show('uaStat','扫描失败：'+e,false); return; }
+  UA_SCREENS=r.screens||[];
+  if(!UA_CUR||!UA_SCREENS.some(s=>s.screen===UA_CUR)) UA_CUR=UA_SCREENS.length?UA_SCREENS[0].screen:null;
+  uaRenderList(); uaRenderSlots();
+  show('uaStat', (r.msg||'')+'（共 '+UA_SCREENS.length+' 个界面）', !!r.ok);
+}
+function uaRenderList(){
+  const kw=(document.getElementById('uaSearch').value||'').trim().toLowerCase();
+  const box=document.getElementById('uaList');
+  const arr=UA_SCREENS.filter(s=>!kw||s.title.toLowerCase().includes(kw)||s.screen.toLowerCase().includes(kw));
+  box.innerHTML = arr.length? arr.map(s=>{
+    const has=s.slots.filter(x=>x.has_texture).length;
+    return `<div class="item ${s.screen===UA_CUR?'sel':''}" onclick="uaPick(${UA_SCREENS.indexOf(s)})">
+      <b>${s.title}</b><small>${s.slots.length} 个槽位${has?' · '+has+' 张已绑':''}</small></div>`;
+  }).join('') : '<div class="item"><small>无匹配界面</small></div>';
+}
+function uaPick(i){ UA_CUR=UA_SCREENS[i].screen; uaRenderList(); uaRenderSlots(); }
+function uaRenderSlots(){
+  const s=UA_SCREENS.find(x=>x.screen===UA_CUR);
+  const box=document.getElementById('uaSlots');
+  if(!s){ document.getElementById('uaTitle').textContent=''; box.innerHTML=''; UA_KEYS=[]; return; }
+  document.getElementById('uaTitle').textContent = s.title+'  —  '+s.screen;
+  UA_KEYS=s.slots.map(sl=>sl.key);
+  box.innerHTML = s.slots.length? s.slots.map((sl,i)=>{
+    const prev = sl.has_texture
+      ? `<img src="/api/ui_slot/file?key=${encodeURIComponent(sl.key)}&t=${Date.now()}" style="width:100%;height:108px;object-fit:contain;background:#0c0e16;border-radius:6px;border:1px solid var(--line)">`
+      : `<div style="width:100%;height:108px;display:flex;align-items:center;justify-content:center;background:#0c0e16;border:1px dashed var(--line);border-radius:6px;color:var(--muted);font-size:12px">空槽位 · 未绑图</div>`;
+    return `<div style="background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px">
+      ${prev}
+      <div style="margin-top:8px;font-size:12px;word-break:break-all"><b>${sl.node}</b></div>
+      <div style="color:var(--muted);font-size:11px">${sl.type} · ${sl.prop}</div>
+      <div class="btns" style="margin-top:8px">
+        <button class="act" onclick="uaUpload(${i})">⏫ 传图</button>
+        ${sl.has_texture?`<button class="act bad" onclick="uaClear(${i})">清除</button>`:''}
+      </div></div>`;
+  }).join('') : '<div class="hint">该界面没有贴图槽位。点上方「＋ 给该界面加背景图槽位」新增一个，再上传图片。</div>';
+}
+function uaUpload(i){ UA_PICK=i; const f=document.getElementById('uaFile'); f.value=''; f.click(); }
+function uaReadB64(f){return new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result).split(',')[1]||'');fr.onerror=rej;fr.readAsDataURL(f);});}
+async function uaFileChosen(inp){
+  const f=inp.files&&inp.files[0]; if(!f||UA_PICK<0) return;
+  const key=UA_KEYS[UA_PICK]; if(!key) return;
+  const [screen,node,prop]=key.split('|');
+  show('uaStat','上传中…',true);
+  const b64=await uaReadB64(f);
+  const r=await A('POST','/api/ui_slot/upload',{screen:screen,node:node,prop:prop,data:b64});
+  show('uaStat', r.msg||(r.ok?'完成':'失败'), !!r.ok);
+  if(r.ok) await uiArtLoad();
+}
+async function uaClear(i){
+  const key=UA_KEYS[i]; if(!key) return;
+  const [screen,node,prop]=key.split('|');
+  const r=await A('POST','/api/ui_slot/clear',{screen:screen,node:node,prop:prop});
+  show('uaStat', r.msg||(r.ok?'已清除':'失败'), !!r.ok);
+  if(r.ok) await uiArtLoad();
+}
+async function uaAddBg(){
+  if(!UA_CUR) return;
+  const r=await A('POST','/api/ui_bg/add',{screen:UA_CUR});
+  show('uaStat', r.msg||(r.ok?'已新增':'失败'), !!r.ok);
+  if(r.ok) await uiArtLoad();
+}
 
 // ---------- NPC ----------
 async function npcLoad(){
