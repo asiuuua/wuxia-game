@@ -181,6 +181,14 @@ func open_screen(screen_name: String, layer: int = Layer.FULLSCREEN, init_data: 
 			screen._on_open(init_data)
 		elif screen.has_method("_on_reopen"):
 			screen._on_reopen()
+		# 缓存复用分支必须把屏幕补回栈/层/当前屏追踪：关闭时 close_screen 已从
+		# _screen_stack/_screen_layer 移除并更新了 _current_screen，若不补回，重开的
+		# 缓存屏会让 is_any_screen_open() 误报 false，且 BaseScreen 键盘守卫
+		# get_current_screen()!=self 成立 → 键盘上下/确认/取消全部失效（Critical 回归）
+		if not _screen_stack.has(screen):
+			_screen_stack.append(screen)
+		_screen_layer[screen] = layer
+		_current_screen = screen
 	else:
 		var path: String = String(entry.get("path", ""))
 		# B 路线（2026-08-29 收尾）：全量界面已迁 .tscn，不再支持 .gd 脚本路径。
@@ -247,6 +255,7 @@ func close_screen(screen: Control = null, on_closed: Callable = Callable()) -> v
 		_current_screen = null
 	# 缓存模式判定：该实例是否仍登记在缓存里（关闭时只隐藏、不销毁）
 	var name: String = target.name
+	var target_id: int = target.get_instance_id()
 	var is_cached: bool = _screen_cache.has(name) and is_instance_valid(_screen_cache.get(name, null)) and (_screen_cache[name] == target)
 	var exit_tween := create_tween()
 	exit_tween.set_trans(ConfigManager.get_anim_trans(_screen_easing()))
@@ -254,20 +263,25 @@ func close_screen(screen: Control = null, on_closed: Callable = Callable()) -> v
 	exit_tween.tween_property(target, "modulate:a", 0.0, _screen_fade_duration(false))
 	if is_cached:
 		# 缓存模式：淡出后仅隐藏（节点保留在层上，下次 open_screen 复用），不释放，省重建开销
+		# 用实例 id 代替直接捕获 target：避免转场期间 target 被其他路径释放导致 lambda 捕获失效
 		exit_tween.tween_callback(func():
-			_exit_tweens.erase(target)
-			if is_instance_valid(target):
-				target.visible = false
-				target.modulate.a = 1.0   # 复位 alpha，下次打开直接显示，避免闪一下透明
+			var t: Control = instance_from_id(target_id) as Control
+			if t != null:
+				_exit_tweens.erase(t)
+				t.visible = false
+				t.modulate.a = 1.0   # 复位 alpha，下次打开直接显示，避免闪一下透明
 			if on_closed.is_valid():
 				on_closed.call()
 		)
 	else:
 		# 销毁模式：淡出后彻底 queue_free，从场景树移除并释放显存内存（现有行为，防内存堆积）
+		# 用实例 id 代替直接捕获 target：避免转场期 target 已被其他路径释放触发
+		# "Lambda capture at index 0 was freed" 刷屏（实测 LoadingScreen→MainMenu 转场 4 次）
 		exit_tween.tween_callback(func():
-			_exit_tweens.erase(target)
-			if is_instance_valid(target):
-				target.queue_free()
+			var t: Control = instance_from_id(target_id) as Control
+			if t != null:
+				_exit_tweens.erase(t)
+				t.queue_free()
 			if on_closed.is_valid():
 				on_closed.call()
 		)
