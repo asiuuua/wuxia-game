@@ -19,7 +19,7 @@
       "offset_top": 0.0,
       "offset_right": 0.0,
       "offset_bottom": 0.0,
-      "separation": 18
+      "separation": 10
     },
     "bottom_left": {
       "anchor_left": 0.00808079332139757,
@@ -42,5 +42,5 @@
       "offset_bottom": 0.0
     }
   },
-  "_doc": "主菜单(登录)界面元素布局（工作室「登录界面 → 主菜单布局」自由拖拽编辑写入）。title_group / menu_container / bottom_* 用 anchor 四值 + offset 定位；menu_container 的 separation 为按钮间距(像素)。坐标为视口归一化 0~1。"
+  "_doc": "主菜单(登录)界面元素布局（工作室「登录界面 → 主菜单布局」自由拖拽编辑写入）。menu_container 用 anchor 四值 + offset 定位，separation 为按钮间距(像素)；“bottom_*” 用 anchor + offset 定位。坐标为视口归一化 0~1。"
 }

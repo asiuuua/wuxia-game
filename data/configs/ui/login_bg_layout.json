@@ -1,6 +1,6 @@
 {
   "stretch_mode": "keep_aspect_covered",
-  "scrim_alpha": 0.03,
+  "scrim_alpha": 0.02,
   "edge_auto": true,
   "leaves_enabled": true,
   "edge_color": [
