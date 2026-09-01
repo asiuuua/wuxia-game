@@ -17,9 +17,8 @@ var gift_count: Dictionary = {}          # npc_id -> 累计送礼次数（用于
 var fired_events: Dictionary = {}        # npc_id -> Array[String]（一次性好感度事件已触发集合）
 var interaction_log: Array = []          # 互动日志（Array of Dictionary，封顶 100 条）
 
-var sworn: Dictionary = {}             # npc_id -> {stage, sworn_day}（结义）
-var masters: Dictionary = {}           # npc_id -> {role, since_day}（玩家拜的师）
-var apprentices: Dictionary = {}       # npc_id -> {since_day, graduation_level}（玩家收的徒）
+# 注：结义/师徒关系状态已下沉至专用服务 SwornService / MasterService（唯一真源），
+# 本服务仅管好感度，不再持有关系字典，避免「双写不同步 + 脏档」（BUG-03）
 
 func _init() -> void:
 	# 不在此访问 ConfigManager（autoload 就绪顺序无关），方法调用时再取
@@ -214,97 +213,7 @@ func _sworn_affection_req(npc_id: String) -> int:
 	var npc: Dictionary = ConfigManager.get_relation(npc_id)
 	return int(npc.get("sworn_affection", 60))
 
-func is_swornable(npc_id: String) -> bool:
-	var npc: Dictionary = ConfigManager.get_relation(npc_id)
-	return not npc.is_empty() and bool(npc.get("is_swornable", false))
-
-func is_sworn(npc_id: String) -> bool:
-	return sworn.has(npc_id)
-
-func get_sworn() -> Array:
-	return sworn.keys()
-
-func can_swear(npc_id: String) -> bool:
-	if not is_swornable(npc_id):
-		return false
-	if is_sworn(npc_id):
-		return false
-	if GameManager.romance_service.is_spouse(npc_id):
-		return false
-	if get_affection(npc_id) < _sworn_affection_req(npc_id):
-		return false
-	return true
-
-func swear(npc_id: String) -> Dictionary:
-	if is_sworn(npc_id):
-		return {"ok": false, "reason": "ALREADY_SWORN"}
-	if not is_swornable(npc_id):
-		return {"ok": false, "reason": "NOT_SWORNABLE"}
-	if GameManager.romance_service.is_spouse(npc_id):
-		return {"ok": false, "reason": "IS_SPOUSE"}
-	if get_affection(npc_id) < _sworn_affection_req(npc_id):
-		return {"ok": false, "reason": "AFFECTION_NOT_FULL"}
-	sworn[npc_id] = {"stage": BondEnums.BondRelationKind.SWORN, "sworn_day": int(Time.get_unix_time_from_system())}
-	EventBus.bond_sworn_formed.emit(npc_id, BondEnums.BondRelationKind.SWORN)
-	EventBus.bond_relationship_changed.emit()
-	return {"ok": true, "reason": "SUCCESS"}
-
 ## 师徒：玩家拜 NPC 为师
-func is_masterable(npc_id: String) -> bool:
-	var npc: Dictionary = ConfigManager.get_relation(npc_id)
-	return not npc.is_empty() and bool(npc.get("is_masterable", false))
-
-func get_master() -> Array:
-	return masters.keys()
-
-func get_apprentices() -> Array:
-	return apprentices.keys()
-
-func can_become_apprentice(npc_id: String) -> bool:
-	if not is_masterable(npc_id):
-		return false
-	if masters.has(npc_id):
-		return false
-	if GameManager.romance_service.is_spouse(npc_id):
-		return false
-	if get_affection(npc_id) < 50:
-		return false
-	return true
-
-func become_apprentice(npc_id: String) -> Dictionary:
-	if masters.has(npc_id):
-		return {"ok": false, "reason": "ALREADY_APPRENTICE"}
-	if not is_masterable(npc_id):
-		return {"ok": false, "reason": "NOT_MASTERABLE"}
-	if GameManager.romance_service.is_spouse(npc_id):
-		return {"ok": false, "reason": "IS_SPOUSE"}
-	if get_affection(npc_id) < 50:
-		return {"ok": false, "reason": "AFFECTION_NOT_FULL"}
-	masters[npc_id] = {"role": BondEnums.BondRelationKind.MASTER, "since_day": int(Time.get_unix_time_from_system())}
-	EventBus.bond_master_set.emit(npc_id, BondEnums.BondRelationKind.MASTER)
-	EventBus.bond_relationship_changed.emit()
-	return {"ok": true, "reason": "SUCCESS"}
-
-## 师徒：玩家收 NPC 为徒
-func can_take_apprentice(npc_id: String) -> bool:
-	if apprentices.has(npc_id):
-		return false
-	if get_affection(npc_id) < 40:
-		return false
-	return true
-
-func take_apprentice(npc_id: String) -> Dictionary:
-	if apprentices.has(npc_id):
-		return {"ok": false, "reason": "ALREADY_APPRENTICE"}
-	if get_affection(npc_id) < 40:
-		return {"ok": false, "reason": "AFFECTION_NOT_FULL"}
-	var npc: Dictionary = ConfigManager.get_relation(npc_id)
-	var grad: int = int(npc.get("graduation_level", 10))
-	apprentices[npc_id] = {"since_day": int(Time.get_unix_time_from_system()), "graduation_level": grad}
-	EventBus.bond_apprentice_taken.emit(npc_id)
-	EventBus.bond_relationship_changed.emit()
-	return {"ok": true, "reason": "SUCCESS"}
-
 ## 婚礼演出（M3）：配偶可举办婚礼，触发演出信号并返回婚礼场景路径
 ## 实际 CG/场景播放由 UI/演出层监听 bond_wedding_started 完成（场景缺失则仅提示）
 func hold_wedding(npc_id: String) -> Dictionary:
@@ -330,9 +239,6 @@ func reset() -> void:
 	gift_count.clear()
 	fired_events.clear()
 	interaction_log.clear()
-	sworn.clear()
-	masters.clear()
-	apprentices.clear()
 
 func get_save_key() -> String:
 	return "bond"
@@ -345,9 +251,6 @@ func save() -> Dictionary:
 		"gift_count": gift_count.duplicate(true),
 		"fired": fired_events.duplicate(true),
 		"log": interaction_log.duplicate(true),
-		"sworn": sworn.duplicate(true),
-		"masters": masters.duplicate(true),
-		"apprentices": apprentices.duplicate(true),
 	}
 
 func load(data: Dictionary) -> void:
@@ -355,9 +258,6 @@ func load(data: Dictionary) -> void:
 	affection_levels = data.get("levels", {})
 	gift_count = data.get("gift_count", {})
 	fired_events = data.get("fired", {})
-	sworn = data.get("sworn", {})
-	masters = data.get("masters", {})
-	apprentices = data.get("apprentices", {})
 	interaction_log.clear()
 	for e in data.get("log", []):
 		if e is Dictionary:

@@ -106,12 +106,16 @@ func sell(shop_id: String, item_id: String, count: int) -> int:
 		EventBus.notify_trade_failed.emit(shop_id, item_id, "INVALID")
 		return ShopEnums.TradeResult.FAIL_INVALID
 
-	if inv.get_item_count(item_id) < count:
+	# 预检用「未锁定」数量：锁定物受保护不被动移除（见 inventory_service.remove_item_by_id 跳过 locked），
+	# 若用含锁定的 get_item_count 预检会出现「只扣未锁定部分却按全量付钱」的经济漏洞（白赚银两+保留锁定物）
+	if inv.get_unlocked_count(item_id) < count:
 		EventBus.notify_trade_failed.emit(shop_id, item_id, "NO_ITEM")
 		return ShopEnums.TradeResult.FAIL_NO_ITEM
 
 	var total: int = sell_price(shop_id, item_id) * count
-	inv.remove_item_by_id(item_id, count)
+	if not inv.remove_item_by_id(item_id, count):
+		EventBus.notify_trade_failed.emit(shop_id, item_id, "NO_ITEM")
+		return ShopEnums.TradeResult.FAIL_NO_ITEM
 	ps.add_money(total)
 	EventBus.notify_trade_completed.emit(shop_id, item_id, count, false)
 	return ShopEnums.TradeResult.SUCCESS
