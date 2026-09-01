@@ -23,9 +23,9 @@ const TEXT_HOVER := UIPalette.GOLD_DARK         # 悬停：暗金
 @export var hover_scale: float = 1.04
 @export var press_scale: float = 0.96
 @export var disabled_alpha: float = 0.45
-# 字号（可在模板/实例的检查器里直接改，无需碰代码）
-@export var main_font_size: int = UIPalette.FS_MENU
-@export var sub_font_size: int = UIPalette.FS_TINY
+# 字号（主菜单按钮整体缩到 65%，文字同步缩到 65%）
+@export var main_font_size: int = 15
+@export var sub_font_size: int = 8
 
 @onready var bg_panel: TextureRect = $bg_panel
 @onready var icon_rect: TextureRect = $icon
