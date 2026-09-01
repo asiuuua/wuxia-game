@@ -6,7 +6,9 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=[('index.html', '.')],
-    hiddenimports=[],
+    # tscn_assets 在 studio_core 的 try 块内导入，静态分析可能漏掉，显式声明。
+    # 缺失会导致打包后的 exe 打开「UI 贴图」标签页报「贴图库加载失败」。
+    hiddenimports=['tscn_assets'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
