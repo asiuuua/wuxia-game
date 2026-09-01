@@ -12,6 +12,9 @@ const UIPalette = preload("res://core/constants/ui_theme.gd")
 const BOLD_FONT := preload("res://resources/fonts/SiYuanSongTiRegular/SourceHanSerifCN-Bold-2.otf")
 const REG_FONT := preload("res://resources/fonts/SiYuanSongTiRegular/SourceHanSerifCN-Regular-1.otf")
 
+const TEXT_NORMAL := UIPalette.TEXT_SECONDARY   # 常态：灰白
+const TEXT_HOVER := UIPalette.GOLD_DARK         # 悬停：暗金
+
 @export var text_key: String = ""          # 本地化 key（如 menu_new_game）
 @export var sub_text: String = ""          # 底部英文/小字装饰，直接文本
 @export var icon_normal: Texture2D         # 常态图标
@@ -40,11 +43,9 @@ func _ready() -> void:
 
 	label_main.add_theme_font_override("font", BOLD_FONT)
 	label_main.add_theme_font_size_override("font_size", UIPalette.FS_MENU)
-	label_main.add_theme_color_override("font_color", UIPalette.TEXT_MAIN)
 
 	label_sub.add_theme_font_override("font", REG_FONT)
 	label_sub.add_theme_font_size_override("font_size", UIPalette.FS_TINY)
-	label_sub.add_theme_color_override("font_color", UIPalette.TEXT_SECONDARY)
 
 	_refresh_text()
 	_refresh_visual_state()
@@ -91,6 +92,11 @@ func _refresh_visual_state() -> void:
 	else:
 		icon_rect.texture = icon_normal
 		icon_rect.modulate = Color(0.55, 0.55, 0.55)
+
+	# 文字颜色：常态灰白，悬停/选中暗金（无需新 PNG，代码改色）
+	var text_color := TEXT_HOVER if active else TEXT_NORMAL
+	label_main.add_theme_color_override("font_color", text_color)
+	label_sub.add_theme_color_override("font_color", text_color)
 
 	# 缩放动画
 	if _is_pressed:

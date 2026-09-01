@@ -3,7 +3,7 @@
 [ext_resource type="Script" path="res://scenes/ui/components/wuxia_menu_button/WuxiaMenuButton.gd" id="1"]
 
 [node name="WuxiaMenuButton" type="Button"]
-custom_minimum_size = Vector2(360, 64)
+custom_minimum_size = Vector2(440, 72)
 layout_mode = 2
 focus_mode = 0
 script = ExtResource("1")
