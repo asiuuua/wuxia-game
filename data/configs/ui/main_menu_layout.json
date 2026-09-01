@@ -1,36 +1,46 @@
 {
   "elements": {
+    "title_group": {
+      "anchor_left": 0.0,
+      "anchor_top": 0.0,
+      "anchor_right": 0.0,
+      "anchor_bottom": 0.0,
+      "offset_left": 60.0,
+      "offset_top": 48.0,
+      "offset_right": 540.0,
+      "offset_bottom": 220.0
+    },
     "menu_container": {
-      "anchor_left": 0.2,
-      "anchor_top": 0.3,
-      "anchor_right": 0.46,
-      "anchor_bottom": 0.86,
+      "anchor_left": 0.06,
+      "anchor_top": 0.32,
+      "anchor_right": 0.42,
+      "anchor_bottom": 0.78,
       "offset_left": 0.0,
       "offset_top": 0.0,
       "offset_right": 0.0,
       "offset_bottom": 0.0,
-      "separation": 20
+      "separation": 18
     },
     "bottom_left": {
-      "anchor_left": 0.0,
-      "anchor_top": 1.0,
-      "anchor_right": 0.0,
-      "anchor_bottom": 1.0,
-      "offset_left": 24.0,
-      "offset_top": -56.0,
-      "offset_right": 360.0,
-      "offset_bottom": -32.0
+      "anchor_left": 0.00808079332139757,
+      "anchor_top": 0.9106605649594908,
+      "anchor_right": 0.4747474599880642,
+      "anchor_bottom": 0.96991982421875,
+      "offset_left": 8.881784197001252e-16,
+      "offset_top": 0.0,
+      "offset_right": 0.0,
+      "offset_bottom": 0.0
     },
     "bottom_right": {
-      "anchor_left": 1.0,
-      "anchor_top": 1.0,
+      "anchor_left": 0.7841791666666668,
+      "anchor_top": 0.901206386236497,
       "anchor_right": 1.0,
-      "anchor_bottom": 1.0,
-      "offset_left": -300.0,
-      "offset_top": -68.0,
-      "offset_right": -80.0,
-      "offset_bottom": -32.0
+      "anchor_bottom": 0.9896740405574846,
+      "offset_left": 0.0,
+      "offset_top": 0.0,
+      "offset_right": 64.18200000000002,
+      "offset_bottom": 0.0
     }
   },
-  "_doc": "主菜单(登录)界面元素布局（工作室「登录界面 → 主菜单布局」自由拖拽编辑写入）。menu_container 用 anchor 四值 + offset 定位，separation 为按钮间距(像素)；“bottom_*” 用 anchor + offset 定位。坐标为视口归一化 0~1。"
+  "_doc": "主菜单(登录)界面元素布局（工作室「登录界面 → 主菜单布局」自由拖拽编辑写入）。title_group / menu_container / bottom_* 用 anchor 四值 + offset 定位；menu_container 的 separation 为按钮间距(像素)。坐标为视口归一化 0~1。"
 }

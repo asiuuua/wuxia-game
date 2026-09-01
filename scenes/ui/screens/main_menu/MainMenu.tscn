@@ -16,17 +16,34 @@ layout_mode = 1
 anchors_preset = 15
 script = ExtResource("1_mm")
 
+[node name="TitleGroup" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 60.0
+offset_top = 48.0
+offset_right = 540.0
+offset_bottom = 220.0
+theme_override_constants/separation = 8
+
+[node name="title_logo" type="TextureRect" parent="TitleGroup"]
+layout_mode = 2
+stretch_mode = 5
+
+[node name="title_sub" type="TextureRect" parent="TitleGroup"]
+layout_mode = 2
+stretch_mode = 5
+
 [node name="MenuContainer" type="VBoxContainer" parent="."]
 layout_mode = 1
-anchor_left = 0.12
-anchor_top = 0.3
-anchor_right = 0.46
-anchor_bottom = 0.86
+anchor_left = 0.06
+anchor_top = 0.32
+anchor_right = 0.42
+anchor_bottom = 0.78
 offset_left = 0.0
 offset_top = 0.0
 offset_right = 0.0
 offset_bottom = 0.0
-theme_override_constants/separation = 14
+theme_override_constants/separation = 18
 
 [node name="BottomLeft" type="Label" parent="."]
 layout_mode = 1
