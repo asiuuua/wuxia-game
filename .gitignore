@@ -22,6 +22,8 @@ desktop.ini
 # ===== 导出产物 / 构建产物 =====
 export/
 build/
+dist/
+tools/desktop_studio/dist/
 *.exe
 *.pck
 *.zip
