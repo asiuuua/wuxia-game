@@ -4,6 +4,9 @@
   "width": 8,
   "height": 8,
   "background": "",
+  "pan_x": 0,
+  "pan_y": 0,
+  "zoom": 1.0,
   "obstacles": [],
   "heights": [],
   "deployment": {}
