@@ -185,10 +185,14 @@ func _build_title() -> void:
 	_title_sub.texture = _load_texture(TITLE_SUB_PATH)
 	_title_logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_title_sub.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	if _title_logo.texture != null:
-		_title_logo.custom_minimum_size = _title_logo.texture.get_size() * 0.45
-	if _title_sub.texture != null:
-		_title_sub.custom_minimum_size = _title_sub.texture.get_size() * 0.45
+	# 强制按控件 rect 区域缩放，而不是按纹理原始尺寸显示（否则大 PNG 会铺满屏幕）
+	_title_logo.expand_mode = TextureRect.EXPAND
+	_title_sub.expand_mode = TextureRect.EXPAND
+	# 固定 Logo 高度 140px、副标题 36px，宽度按纹理比例自动缩放；不水平填充，避免被容器撑开
+	_title_logo.custom_minimum_size = Vector2(0, 140)
+	_title_sub.custom_minimum_size = Vector2(0, 36)
+	_title_logo.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_title_sub.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 
 
 func _load_texture(path: String) -> Texture2D:
