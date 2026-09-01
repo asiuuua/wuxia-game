@@ -1309,7 +1309,6 @@ def _main_menu_assets_dir():
 
 _DEFAULT_MAIN_MENU_ASSETS = {
     "title_logo": "res://assets/ui/main_menu/title_logo.png",
-    "title_sub": "res://assets/ui/main_menu/title_sub.png",
     "btn_hover_bg": "res://assets/ui/main_menu/btn_hover_bg.png",
     "icons": [
         "res://assets/ui/main_menu/icon_1.png",
@@ -1330,7 +1329,7 @@ def main_menu_assets_get():
             with open(p, "r", encoding="utf-8") as f:
                 parsed = json.load(f)
             if isinstance(parsed, dict):
-                for k in ("title_logo", "title_sub", "btn_hover_bg"):
+                for k in ("title_logo", "btn_hover_bg"):
                     if k in parsed and parsed[k]:
                         data[k] = str(parsed[k])
                 if isinstance(parsed.get("icons"), list):
@@ -1349,12 +1348,12 @@ def main_menu_assets_update(paths):
     os.makedirs(os.path.dirname(p), exist_ok=True)
     _backup(p)
     data = main_menu_assets_get()
-    for k in ("title_logo", "title_sub", "btn_hover_bg"):
+    for k in ("title_logo", "btn_hover_bg"):
         if k in paths and paths[k]:
             data[k] = str(paths[k])
     if "icons" in paths and isinstance(paths["icons"], list):
         data["icons"] = [str(x) for x in paths["icons"]]
-    data["_doc"] = "主菜单（登录界面）资源路径映射。标题 Logo、副标题、按钮悬停墨迹底板、5 个菜单图标都在这里配置。工作室「登录界面 → 主菜单资源替换」可上传新图替换；游戏启动时 MainMenu.gd 会读取本配置。"
+    data["_doc"] = "主菜单（登录界面）资源路径映射。标题 Logo、按钮悬停墨迹底板、5 个菜单图标都在这里配置。工作室「登录界面 → 主菜单资源替换」可上传新图替换；游戏启动时 MainMenu.gd 会读取本配置。"
     with open(p, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
     log_event("main_menu_assets", p, "更新主菜单资源映射")
@@ -1363,7 +1362,7 @@ def main_menu_assets_update(paths):
 
 def _main_menu_asset_key_to_field(key):
     """把上传 key 映射到 JSON 字段。"""
-    if key in ("title_logo", "title_sub", "btn_hover_bg"):
+    if key in ("title_logo", "btn_hover_bg"):
         return key
     if key.startswith("icon_"):
         idx = int(key.split("_")[1]) - 1
@@ -1389,7 +1388,7 @@ def _main_menu_asset_disk_path(key):
 
 
 def main_menu_asset_replace(key, src_path):
-    """上传并替换单张主菜单资源图。key 可为 title_logo/title_sub/btn_hover_bg/icon_1~5。"""
+    """上传并替换单张主菜单资源图。key 可为 title_logo/btn_hover_bg/icon_1~5。"""
     field = _main_menu_asset_key_to_field(key)
     if field is None:
         return False, "未知资源 key：%s" % key
@@ -1414,7 +1413,7 @@ def main_menu_asset_replace(key, src_path):
         cfg_field = "icons"
         cfg_idx = field[1]
     else:
-        fname_map = {"title_logo": "title_logo", "title_sub": "title_sub", "btn_hover_bg": "btn_hover_bg"}
+        fname_map = {"title_logo": "title_logo", "btn_hover_bg": "btn_hover_bg"}
         fname = "%s.%s" % (fname_map[field], ext)
         cfg_field = field
         cfg_idx = None
