@@ -26,15 +26,15 @@ const MENU_ITEMS := [
 # 主菜单背景图（数据驱动：把图放到该路径即生效，缺失则回退到程序化水墨背景）
 const BG_IMAGE_PATH := "res://assets/ui/main_menu_bg.png"
 # 标题、副标题、按钮 hover 墨迹底板、5 个图标路径
-const TITLE_LOGO_PATH := "res://assets/ui/main_menu/title_logo.jpg"
+const TITLE_LOGO_PATH := "res://assets/ui/main_menu/title_logo.png"
 const TITLE_SUB_PATH := "res://assets/ui/main_menu/title_sub.png"
-const BTN_HOVER_BG_PATH := "res://assets/ui/main_menu/btn_hover_bg.jpg"
+const BTN_HOVER_BG_PATH := "res://assets/ui/main_menu/btn_hover_bg.png"
 const ICON_PATHS := [
-	"res://assets/ui/main_menu/icon_1.jpg",
+	"res://assets/ui/main_menu/icon_1.png",
 	"res://assets/ui/main_menu/icon_2.png",
-	"res://assets/ui/main_menu/icon_3.jpg",
-	"res://assets/ui/main_menu/icon_4.jpg",
-	"res://assets/ui/main_menu/icon_5.jpg",
+	"res://assets/ui/main_menu/icon_3.png",
+	"res://assets/ui/main_menu/icon_4.png",
+	"res://assets/ui/main_menu/icon_5.png",
 ]
 # 背景图上的压暗层透明度（保证标题/菜单文字可读）
 const BG_IMAGE_SCRIM := 0.55
