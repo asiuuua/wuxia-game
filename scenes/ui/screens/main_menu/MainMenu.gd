@@ -27,9 +27,8 @@ const MENU_ITEMS := [
 const BG_IMAGE_PATH := "res://assets/ui/main_menu_bg.png"
 # 主菜单资源映射（可被工作室工具的「主菜单资源替换」覆盖）
 const MAIN_MENU_ASSETS_PATH := "res://data/configs/ui/main_menu_assets.json"
-# 标题、副标题、按钮 hover 墨迹底板、5 个图标路径（作为缺省回退）
+# 标题、按钮 hover 墨迹底板、5 个图标路径（作为缺省回退）
 const DEFAULT_TITLE_LOGO_PATH := "res://assets/ui/main_menu/title_logo.png"
-const DEFAULT_TITLE_SUB_PATH := "res://assets/ui/main_menu/title_sub.png"
 const DEFAULT_BTN_HOVER_BG_PATH := "res://assets/ui/main_menu/btn_hover_bg.png"
 const DEFAULT_ICON_PATHS := [
 	"res://assets/ui/main_menu/icon_1.png",
@@ -39,7 +38,6 @@ const DEFAULT_ICON_PATHS := [
 	"res://assets/ui/main_menu/icon_5.png",
 ]
 var TITLE_LOGO_PATH: String = DEFAULT_TITLE_LOGO_PATH
-var TITLE_SUB_PATH: String = DEFAULT_TITLE_SUB_PATH
 var BTN_HOVER_BG_PATH: String = DEFAULT_BTN_HOVER_BG_PATH
 var ICON_PATHS: Array = DEFAULT_ICON_PATHS.duplicate()
 # 背景图上的压暗层透明度（保证标题/菜单文字可读）
@@ -50,7 +48,6 @@ const LOGIN_BGM := "res://resources/audio/bgm/login_bgm.mp3"
 
 @onready var _title_group: Control = $TitleGroup
 @onready var _title_logo: TextureRect = $TitleGroup/title_logo
-@onready var _title_sub: TextureRect = $TitleGroup/title_sub
 @onready var _menu_container: VBoxContainer = $MenuContainer
 @onready var _bottom_left: Label = $BottomLeft
 @onready var _bottom_right: HBoxContainer = $BottomRight
@@ -76,7 +73,6 @@ func _load_assets_config() -> void:
 	if typeof(data) != TYPE_DICTIONARY:
 		return
 	TITLE_LOGO_PATH = _as_path(data.get("title_logo", DEFAULT_TITLE_LOGO_PATH), DEFAULT_TITLE_LOGO_PATH)
-	TITLE_SUB_PATH = _as_path(data.get("title_sub", DEFAULT_TITLE_SUB_PATH), DEFAULT_TITLE_SUB_PATH)
 	BTN_HOVER_BG_PATH = _as_path(data.get("btn_hover_bg", DEFAULT_BTN_HOVER_BG_PATH), DEFAULT_BTN_HOVER_BG_PATH)
 	var icons: Variant = data.get("icons", DEFAULT_ICON_PATHS)
 	if icons is Array:
@@ -168,15 +164,11 @@ func _play_enter_animation() -> void:
 func _build_title() -> void:
 	add_content(_title_group)
 	_title_logo.texture = _load_texture(TITLE_LOGO_PATH)
-	_title_sub.texture = _load_texture(TITLE_SUB_PATH)
 	_title_logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	_title_sub.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	# 强制按控件 rect 区域缩放，而不是按纹理原始尺寸显示（否则大 PNG 会铺满屏幕）
 	# TextureRect.ExpandMode 枚举：KEEP_SIZE=0, IGNORE_SIZE=1, EXPAND=2
 	_title_logo.expand_mode = 2
-	_title_sub.expand_mode = 2
 	_title_logo.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	_title_sub.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 
 
 func _load_texture(path: String) -> Texture2D:
@@ -424,9 +416,7 @@ func _editor_preview() -> void:
 	if tg != null:
 		_title_group = tg
 		_title_logo = tg.get_node_or_null("title_logo")
-		_title_sub = tg.get_node_or_null("title_sub")
 		_title_logo.texture = _load_texture(TITLE_LOGO_PATH)
-		_title_sub.texture = _load_texture(TITLE_SUB_PATH)
 	var container: VBoxContainer = get_node_or_null("MenuContainer")
 	if container == null:
 		return

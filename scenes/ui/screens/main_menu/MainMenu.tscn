@@ -30,7 +30,7 @@ anchor_bottom = 0.0
 offset_left = 60.0
 offset_top = 48.0
 offset_right = 436.0
-offset_bottom = 232.0
+offset_bottom = 188.0
 
 [node name="title_logo" type="TextureRect" parent="TitleGroup" unique_id=793564277]
 layout_mode = 1
@@ -43,21 +43,6 @@ offset_left = 0.0
 offset_top = 0.0
 offset_right = 376.0
 offset_bottom = 140.0
-custom_minimum_size = Vector2(0, 0)
-expand_mode = 2
-stretch_mode = 5
-
-[node name="title_sub" type="TextureRect" parent="TitleGroup" unique_id=996161905]
-layout_mode = 1
-anchors_preset = -1
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 0.0
-anchor_bottom = 0.0
-offset_left = 0.0
-offset_top = 148.0
-offset_right = 376.0
-offset_bottom = 184.0
 custom_minimum_size = Vector2(0, 0)
 expand_mode = 2
 stretch_mode = 5
