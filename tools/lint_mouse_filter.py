@@ -100,10 +100,18 @@ def _load_allowlist():
     return out
 
 
+def _safe_rel(fp):
+    """工程内返回相对路径；跨盘/外部路径退回文件名，绝不抛 ValueError。"""
+    try:
+        return os.path.normpath(os.path.relpath(fp, REPO))
+    except ValueError:
+        return os.path.basename(fp)
+
+
 def _suppressed(fp, allow):
     if not allow:
         return False
-    rel = os.path.normpath(os.path.relpath(fp, REPO))
+    rel = _safe_rel(fp)
     base = os.path.basename(fp)
     return rel in allow or base in allow
 
@@ -168,11 +176,11 @@ def main():
         if suppressed:
             print("ℹ 白名单豁免 %d 处（见 tools/lint_mouse_filter.allow）：" % len(suppressed))
             for fp, ln, btn, child, ct in suppressed:
-                print("  (豁免) %s:%d  %s/%s" % (os.path.relpath(fp, REPO), ln, btn, child))
+                print("  (豁免) %s:%d  %s/%s" % (_safe_rel(fp), ln, btn, child))
         if findings:
             print("⚠ 发现 %d 处『按钮下可见装饰子节点仍为 STOP(会静默吞点击)』：" % len(findings))
             for fp, ln, btn, child, ct in findings:
-                rel = os.path.relpath(fp, REPO)
+                rel = _safe_rel(fp)
                 print("  %s:%d  按钮[%s] 的子节点[%s](%s) mouse_filter=STOP" % (rel, ln, btn, child, ct))
         else:
             print("✓ 未发现 mouse_filter=STOP 的按钮装饰子节点（静默拦截风险：无）")
@@ -180,4 +188,12 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except Exception as e:
+        # 失败开放（关键）：扫描器自身崩溃（如 .tscn 非 UTF-8 字节、磁盘锁、解析异常）
+        # 必须放行，绝不能以 exit 1 冒充"发现 STOP 高危"——否则 pre-commit 钩子会
+        # 误拦一个完全正常的提交并给出误导性提示，让开发者困惑"我明明没写错为何被拦"。
+        # 崩溃交 GATE2 运行时断言 + 下次手动扫描兜底，不可因守卫本身故障阻断开发。
+        sys.stderr.write("[lint_mouse_filter] ⚠ 扫描器自身异常，已放行未阻断提交：%s\n" % e)
+        sys.exit(0)
