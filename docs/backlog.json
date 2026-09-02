@@ -57,6 +57,50 @@
           "resolvedAt": "2026-09-02 10:33:26",
           "commit": "63263e2",
           "resolution": "新增 menu_hover_box.ogg + 其 .import，ui_sfx.json 的 hover 改指向该文件；零代码改动。已验证 Godot 原生识别为 AudioStreamOggVorbis、运行时 load 成功、双闸门全绿。"
+        },
+        {
+          "title": "工作室 UI 模块按『改什么』重组（屏选择器+3类+统一三步流）",
+          "type": "待办",
+          "status": "open",
+          "placeholder": false,
+          "source": "docs/提案_UI放权方案.md",
+          "detail": "当前工作室 UI 模块偏技术分类；改为按用户心智『改什么』分三类（换皮替换/布局尺寸/视觉特效）+ 顶部屏选择器 + 底部统一三步流（选目标→改→预览应用）+ 每模块『复原默认』。",
+          "suggestion": "改 tools/desktop_studio/index.html 的 UI 模块区；纯前端，不碰游戏代码。",
+          "plain": {
+            "what": "把工作室里『UI 装修』的入口重新分类，让小白一眼看懂每个按钮是改啥的。",
+            "why": "现在分类偏程序员视角，小白找不到『我想改图标/改大小』在哪。",
+            "progress": "方案已定（见提案文档+对话架构图），尚未动手。",
+            "missing": "需要一个前端改版 + 每模块的『小白引导三行』文案。",
+            "plan": "先只改工作室前端 index.html，不碰游戏；做完请小白试玩反馈。",
+            "bugs": "暂无；注意别动别的窗口的未提交文件。"
+          }
+        },
+        {
+          "title": "推广 layout/assets JSON 到所有 UI 屏 + 新增主题配色（Phase 1）",
+          "type": "待办",
+          "status": "open",
+          "placeholder": false,
+          "source": "docs/提案_UI放权方案.md",
+          "detail": "主菜单已验证 main_menu_layout.json / main_menu_assets.json 模式；推广到 设置/读档/确认框/HUD；新增 theme.json 覆盖 UIPalette token。",
+          "suggestion": "游戏侧加通用 UISkinLoader 读 data/configs/ui/skin/；工作室侧加对应拖拽/取色 UI。"
+        },
+        {
+          "title": "VFX 预设库 + 参数外置（Phase 2：飘叶/流烟/水面）",
+          "type": "待办",
+          "status": "open",
+          "placeholder": false,
+          "source": "scenes/ui/screens/main_menu/MainMenu.gd（已有飘叶/云/水/船补间）",
+          "detail": "MainMenu.gd 已有 CPUParticles2D 飘叶 + 云/水/船补间；把写死数值外置成 skin/vfx/<屏>.json 参数，开发者登记预设库 registry.json，小白挑强度/颜色/开关。",
+          "suggestion": "预算守卫（每屏层≤3、粒子桌面≤60/安卓≤24）；安卓降级。"
+        },
+        {
+          "title": "视频层 + 骨骼动画资产白名单（Phase 3，谨慎）",
+          "type": "待办",
+          "status": "open",
+          "placeholder": false,
+          "source": "docs/提案_UI放权方案.md",
+          "detail": "VideoStreamPlayer 路径外置；骨骼动画换资产+混合参数（不编骨骼）。需低端/安卓自动关与资产白名单护栏。",
+          "suggestion": "低风险评估后置后，放在 Phase 3。"
         }
       ]
     },
