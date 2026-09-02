@@ -14,6 +14,8 @@ var spouses: Dictionary = {}          # npc_id -> {stage, wed_day, children: Arr
 var children: Dictionary = {}         # child_id -> {mother_id, born_day, name}
 # 欢庆每日配额（按 npc_id 独立，与配偶字典解耦：避免非配偶欢庆时误写进 spouses 污染配偶列表）
 var celebration_quotas: Dictionary = {}  # npc_id -> {day, quota, used}
+# BUG-21 修复：special_portraits.json 静态配置解析结果缓存，避免每次取立绘列表都重读盘解析
+var _special_portrait_cache: Dictionary = {}
 
 # === 婘眷值（用户 2026-08-30 拍板：只保留婘眷值，去掉夫妻同心；2026-08-30 夜间修订为 5 级制） ===
 # 规则：初始 0 级，1~5 级，每级 200 经验，合计 1000 经验封顶；结婚后仅下列功能增加：
@@ -339,7 +341,6 @@ func get_quanquan(npc_id: String) -> Dictionary:
 	var rec: Dictionary = spouses[npc_id]
 	if not rec.has("quanquan"):
 		rec["quanquan"] = _new_quanquan()
-		spouses[npc_id] = rec
 	var qq: Dictionary = rec["quanquan"]
 	var xp: int = int(qq.get("xp", 0))
 	var level: int = int(qp_get_level(xp))
@@ -472,12 +473,15 @@ func get_active_portrait(npc_id: String) -> String:
 func _special_portrait_cfg(npc_id: String) -> Dictionary:
 	if not FileAccess.file_exists(SPECIAL_PORTRAITS_PATH):
 		return {}
+	if not _special_portrait_cache.is_empty():
+		return _special_portrait_cache.get(npc_id, _special_portrait_cache.get("default", {}))
 	var f := FileAccess.open(SPECIAL_PORTRAITS_PATH, FileAccess.READ)
 	if f == null:
 		return {}
 	var parsed: Variant = JSON.parse_string(f.get_as_text())
 	f.close()
 	if parsed is Dictionary:
+		_special_portrait_cache = parsed
 		return parsed.get(npc_id, parsed.get("default", {}))
 	return {}
 

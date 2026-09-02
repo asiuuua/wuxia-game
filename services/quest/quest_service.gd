@@ -67,7 +67,7 @@ func fail_quest(quest_id: String, reason: String = "FAILED") -> void:
 	EventBus.quest_failed.emit(quest_id, reason)
 
 func _progress(state: QuestState, obj: Dictionary, count: int) -> void:
-	var obj_id: String = obj["id"]
+	var obj_id: String = String(obj.get("id", ""))
 	if state.is_objective_completed(obj_id):
 		return
 	var current: int = state.get_objective_progress(obj_id) + count
@@ -101,7 +101,7 @@ func turn_in(quest_id: String) -> bool:
 	if rewards.get("silver", 0) > 0:
 		GameManager.player_state.silver += rewards["silver"]
 	for item_reward in rewards.get("items", []):
-		GameManager.inventory_service.add_item(item_reward["item_id"], item_reward.get("count", 1), "quest:%s" % quest_id)
+		GameManager.inventory_service.add_item(item_reward.get("item_id", ""), item_reward.get("count", 1), "quest:%s" % quest_id)
 	for ability_reward in rewards.get("abilities", []):
 		GameManager.ability_service.learn(ability_reward)
 	active_quests.erase(quest_id)

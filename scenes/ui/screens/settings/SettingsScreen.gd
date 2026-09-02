@@ -84,6 +84,11 @@ func _on_backdrop_input(event: InputEvent) -> void:
 		_go_back()
 		get_viewport().set_input_as_handled()
 
+## BUG-25 修复：离开设置界面时断开视口尺寸信号（防御性，避免非缓存化后悬空监听）
+func _exit_tree() -> void:
+	if get_viewport().size_changed.is_connected(_fit_panel):
+		get_viewport().size_changed.disconnect(_fit_panel)
+
 # === 磨砂玻璃面板框架（圆角/细白边/阴影），自适应居中 ===
 # 面板与磨砂玻璃样式已迁移到 SettingsScreen.tscn（美术可改）；本函数只负责运行时按视口居中。
 func _build_panel_frame() -> void:

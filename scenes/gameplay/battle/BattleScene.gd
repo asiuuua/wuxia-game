@@ -27,6 +27,7 @@ var _result_label: Label = null
 var _return_button: Button = null
 var _over: bool = false
 var _busy: bool = false
+var _aborted: bool = false
 var _speed_idx: int = 0
 var _speed_steps: Array[float] = [1.0, 2.0, 4.0]
 const MAX_AUTO_ROUNDS: int = 200   # 自动战斗回合上限：防双方互不可杀导致的死循环卡死
@@ -183,8 +184,12 @@ func _on_item_menu_index(index: int) -> void:
 		_busy = false
 		return
 	await _director.play_events(events)
+	if _battle_dead():
+		return
 	if not GameManager.combat_service.is_over():
 		await _director.play_events(GameManager.combat_service.enemy_phase_events())
+		if _battle_dead():
+			return
 	_refresh()
 	_refresh_order()
 	_busy = false
@@ -260,17 +265,23 @@ func _on_action_pressed(slot: int) -> void:
 		var eid: String = seq[i]
 		if _is_alive(eid) and not GameManager.combat_service.is_over():
 			await _director.play_events(GameManager.combat_service.enemy_act_events(eid))
+		if _battle_dead():
+			return
 	var events: Array[CombatEvent]
 	if slot == -1:
 		events = GameManager.combat_service.player_attack_events(_selected_enemy_id)
 	else:
 		events = GameManager.combat_service.player_cast_events(slot, _selected_enemy_id)
 	await _director.play_events(events)
+	if _battle_dead():
+		return
 	# 其余敌人（速度低于玩家）后行动
 	for i in range(player_idx + 1, seq.size()):
 		var eid: String = seq[i]
 		if _is_alive(eid) and not GameManager.combat_service.is_over():
 			await _director.play_events(GameManager.combat_service.enemy_act_events(eid))
+		if _battle_dead():
+			return
 	_refresh()
 	_refresh_order()
 	_busy = false
@@ -290,10 +301,14 @@ func _on_auto_pressed() -> void:
 		for eid in seq:
 			if GameManager.combat_service.is_over():
 				break
-			if eid == "player":
-				await _director.play_events(GameManager.combat_service.player_attack_events(""))
-			else:
-				await _director.play_events(GameManager.combat_service.enemy_act_events(eid))
+		if eid == "player":
+			await _director.play_events(GameManager.combat_service.player_attack_events(""))
+			if _battle_dead():
+				return
+		else:
+			await _director.play_events(GameManager.combat_service.enemy_act_events(eid))
+			if _battle_dead():
+				return
 	if rounds >= MAX_AUTO_ROUNDS and not GameManager.combat_service.is_over():
 		GameLogger.warn("Battle", "自动战斗超过 %d 回合上限，已强制停手" % MAX_AUTO_ROUNDS)
 	_refresh()
@@ -313,6 +328,8 @@ func _on_escape_pressed() -> void:
 		_busy = false
 		return
 	await _director.play_events(GameManager.combat_service.enemy_phase_events())
+	if _battle_dead():
+		return
 	_refresh()
 	_refresh_order()
 	_busy = false
@@ -366,5 +383,11 @@ func _on_return_pressed() -> void:
 
 ## 场景退出：释放对象池空闲实例（随场景销毁，无跨场景泄漏累积）
 func _exit_tree() -> void:
+	_aborted = true
 	if _entity_pool != null:
 		_entity_pool.clear()
+
+## BUG-12 修复：协程 await 恢复点守卫——场景被释放或战斗中止后，访问 _director/_state 会崩。
+## 每个 await _director.play_events(...) 之后调用本方法，提前退出避免访问已失效对象。
+func _battle_dead() -> bool:
+	return _aborted or not is_instance_valid(_director)

@@ -222,6 +222,15 @@ func _connect_events() -> void:
 	if not EventBus.bootstrap_completed.is_connected(_on_bootstrap_completed):
 		EventBus.bootstrap_completed.connect(_on_bootstrap_completed)
 
+## BUG-25 修复：离开加载界面时断开 bootstrap 信号，避免非缓存化后悬空监听
+func _exit_tree() -> void:
+	if EventBus.bootstrap_started.is_connected(_on_bootstrap_started):
+		EventBus.bootstrap_started.disconnect(_on_bootstrap_started)
+	if EventBus.bootstrap_step_completed.is_connected(_on_step_completed):
+		EventBus.bootstrap_step_completed.disconnect(_on_step_completed)
+	if EventBus.bootstrap_completed.is_connected(_on_bootstrap_completed):
+		EventBus.bootstrap_completed.disconnect(_on_bootstrap_completed)
+
 func _on_bootstrap_started(total: int) -> void:
 	_total_steps = total
 

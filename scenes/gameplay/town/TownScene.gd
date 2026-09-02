@@ -84,8 +84,6 @@ func _ready() -> void:
 	_spawn_npcs()
 	EventBus.scene_changed.emit("town_001")
 	GameState.set_last_safe_point("town_001", "safe_town")
-	EventBus.player_hp_changed.connect(_on_player_changed)
-	EventBus.player_level_up.connect(_on_player_changed)
 
 # === 椭圆阴影：边缘羽化的半透明黑，模拟"脚下一团软影" ===
 func _build_shadow_texture() -> void:
@@ -413,10 +411,6 @@ func _register_action(action: String, keys: Array) -> void:
 			InputMap.action_add_event(action, ev)
 
 func _exit_tree() -> void:
-	if EventBus.player_hp_changed.is_connected(_on_player_changed):
-		EventBus.player_hp_changed.disconnect(_on_player_changed)
-	if EventBus.player_level_up.is_connected(_on_player_changed):
-		EventBus.player_level_up.disconnect(_on_player_changed)
 	# BUG-11 修复：离开城镇前记录玩家坐标，供重载后归位（autoload 跨场景存活）。
 	if is_instance_valid(_player):
 		GameManager.town_player_spawn_pos = _player.position
@@ -424,5 +418,3 @@ func _exit_tree() -> void:
 	UIManager.unmount_hud()
 	UIManager.close_all_screens()
 
-func _on_player_changed(_p: Variant = null) -> void:
-	pass

@@ -482,7 +482,7 @@ func _grant_rewards() -> void:
 	for enemy in _state.enemies:
 		var edata: Dictionary = ConfigManager.get_enemy(enemy.character_id)
 		for loot in edata.get("loot", []):
-			GameManager.inventory_service.add_item(loot["item_id"], loot.get("count", 1), "drop:%s" % enemy.character_id)
+			GameManager.inventory_service.add_item(loot.get("item_id", ""), loot.get("count", 1), "drop:%s" % enemy.character_id)
 
 ## 构建参战单位状态快照：任务系统只读快照，不读战斗实时对象（规避时序 BUG）
 ## 快照元素：{ "unit_id": String, "is_player": bool, "status": int }

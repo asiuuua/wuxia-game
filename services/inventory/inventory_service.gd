@@ -236,6 +236,10 @@ func _stack_to_existing(bag: Array, item_id: String, count: int) -> int:
 			break
 		if inst != null and inst.item_id == item_id and inst.count < max_stack:
 			var put := mini(max_stack - inst.count, remaining)
+			# BUG-09: 堆叠路径同样受负重上限约束，避免整批超重被拒时漏检堆叠增量导致越上限
+			if unit_w > 0.0:
+				var room: int = maxi(0, int((get_max_weight() - current_weight) / unit_w))
+				put = mini(put, room)
 			inst.count += put
 			current_weight += unit_w * float(put)   # 增量同步负重（P2-5：移除循环内全栏重算后，堆叠路径也必须自更新）
 			remaining -= put

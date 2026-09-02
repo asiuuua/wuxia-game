@@ -44,7 +44,9 @@ func unequip_combat_skill(slot: int) -> void:
 		cd_remaining.erase(slot)
 		EventBus.notify_skill_bar_changed.emit()
 
-## 战斗中施展快捷栏武学：返回伤害结果字典 {hit, damage, crit, dodged}
+## @deprecated 战斗中施展快捷栏武学：返回伤害结果字典 {hit, damage, crit, dodged}
+##   该路径绕过 CombatCore.player_skill 直调 take_damage/mp，可能与战斗桥接双重结算。
+##   新代码请走 CombatCore.player_skill（combat_core）统一结算；保留仅为兼容旧调用方。
 func use_combat_skill(slot: int, caster: CombatCharacter, target: CombatCharacter) -> Dictionary:
 	if slot < 0 or slot >= equipped_combat.size():
 		return {"hit": false, "damage": 0, "crit": false, "dodged": false}

@@ -90,6 +90,8 @@ func _fill_grid(bag_name: String, inv: InventoryService) -> void:
 			slot = ItemSlotScene.instantiate()
 			_connect_slot(slot)
 			grid.add_child(slot)
+		if slot == null:
+			continue
 		if slot.get_meta("sig", "") != sig:
 			var old_iid: String = slot.get_iid()
 			if old_iid != "":
