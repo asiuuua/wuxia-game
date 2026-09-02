@@ -22,6 +22,7 @@ var _grid_node: Node = null
 
 var _built: bool = false
 var _body: ColorRect
+var _icon_body: Sprite2D = null           # 实体头像静态立绘（非主角且 IconRegistry 有图时启用；缺图回退色块 _body）
 var _anim_body: AnimatedSprite2D = null   # 主角动态立绘（is_player 且有帧序列时启用，否则为 null）
 var _anim_base_scale_x: float = 1.0       # 主角动态立绘基准缩放 X（set_facing 翻转向保留缩放用）
 var _name_lbl: Label
@@ -74,11 +75,49 @@ func reset(name_text: String = "") -> void:
 func _reset_visual(name_text: String) -> void:
 	if name_text != "" and _name_lbl != null:
 		_name_lbl.text = name_text
-	if _body != null and _body is ColorRect:
-		_body.color = Color(0.3, 0.5, 0.95) if is_player else Color(0.85, 0.35, 0.35)
+	# 非主角实体：优先显示 IconRegistry 头像（美术按实体 id 丢图即生效）；缺图回退色块阵营配色。
+	# 对象池复用时图会变，故每帧 reset 重新判定头像可用性。
+	_apply_body_visual()
 	set_selected(false)
 	_clear_pops()
 	_refresh_bars()
+
+## 决定身体视觉：主角用动画立绘；其余单位（敌人/同伴追随者）有头像图标则显 Sprite2D，否则显色块。
+func _apply_body_visual() -> void:
+	if _body == null:
+		return
+	if _anim_body != null:
+		return
+	if unit_id != "":
+		# 主角跟随者走"npc/"，敌人走"enemies/"；按实体 id 从中取图，缺图回退色块
+		var icon_id := ("npc/" if is_player else "enemies/") + unit_id
+		if UIManager.has_icon(icon_id):
+			if _icon_body == null:
+				_icon_body = Sprite2D.new()
+				_icon_body.centered = true
+				# 头像覆盖在色块上、脚底对齐色块底部（与主角立绘站位一致）；保持纵横比
+				add_child(_icon_body)
+			_icon_body.texture = UIManager.get_icon(icon_id)
+			_icon_body.visible = true
+			_body.visible = false
+			_reanchor_icon_body()
+			return
+	if _icon_body != null:
+		_icon_body.visible = false
+	_body.visible = true
+	_body.color = Color(0.3, 0.5, 0.95) if is_player else Color(0.85, 0.35, 0.35)
+
+## 让头像居中并保持纵横比铺在 SPRITE_W×SPRITE_H 占位盒内
+func _reanchor_icon_body() -> void:
+	if _icon_body == null:
+		return
+	var tex: Texture2D = _icon_body.texture
+	if tex == null:
+		return
+	# 头像图等比缩到占位框高，脚底对齐色块底部（-SPRITE_H*0.5 与主角立绘对齐）
+	var s: float = SPRITE_H / float(tex.get_height()) if tex.get_height() > 0 else 1.0
+	_icon_body.scale = Vector2(s, s)
+	_icon_body.position = Vector2(0.0, -SPRITE_H * 0.5)
 
 func _clear_pops() -> void:
 	if _pop_layer == null:
@@ -189,6 +228,8 @@ func set_facing(f: int) -> void:
 	var flip: float = -1.0 if f == CombatCharacter.FACING.LEFT else 1.0
 	if _anim_body != null:
 		_anim_body.scale.x = flip * _anim_base_scale_x   # 保留基准缩放，仅翻转向
+	elif _icon_body != null:
+		_icon_body.scale.x = flip * absf(_icon_body.scale.x)
 	elif _body != null:
 		_body.scale.x = flip
 

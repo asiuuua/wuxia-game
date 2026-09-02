@@ -158,7 +158,10 @@ func _spawn_entities() -> void:
 			_spawn_one(e.character_id, false, nm, e)
 
 func _spawn_one(uid: String, player: bool, nm: String, ch: CombatCharacter) -> void:
-	var ent := _entity_pool.acquire_entity(uid, player, nm, ch.max_hp, ch.max_mp, _grid_node)
+	# 主角才走动态立绘帧序列；同伴追随者走 npc 头像图标（frames_path 传空→battle_entity 落 _apply_body_visual），
+	# 避免副手误套主角脸。敌人同理走 enemies 头像，缺图回退阵营色块。
+	var frames: String = "res://assets/characters/matte/matte_idle.tres" if (player and uid == "player") else ""
+	var ent := _entity_pool.acquire_entity(uid, player, nm, ch.max_hp, ch.max_mp, _grid_node, frames)
 	ent.place_at(ch.grid_pos)
 	_entities_node.add_child(ent)
 	_entities[uid] = ent
