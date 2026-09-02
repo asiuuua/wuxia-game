@@ -511,6 +511,8 @@ class Handler(BaseHTTPRequestHandler):
             return _send_json(self, core.ui_skin_get())
         if path == "/api/hud/layout":
             return _send_json(self, core.hud_layout_get())
+        if path == "/api/settings/layout":
+            return _send_json(self, core.settings_screen_layout_get())
         if path == "/api/backlog":
             return _send_json(self, core.backlog_get())
         if path == "/api/modules":
@@ -841,6 +843,9 @@ class Handler(BaseHTTPRequestHandler):
             return _send_json(self, {"ok": ok, "msg": m})
         if path == "/api/hud/layout":
             ok, m = core.hud_layout_update(body if isinstance(body, dict) else {})
+            return _send_json(self, {"ok": ok, "msg": m})
+        if path == "/api/settings/layout":
+            ok, m = core.settings_screen_layout_update(body if isinstance(body, dict) else {})
             return _send_json(self, {"ok": ok, "msg": m})
         _send_json(self, {"error": "not found"}, 404)
 

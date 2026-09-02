@@ -1374,6 +1374,74 @@ def hud_layout_update(d):
     return True, "已保存 HUD 布局（游戏内下次启动生效）"
 
 
+# ============================ 设置弹窗布局（工作室「UI 模块 → 设置弹窗」数字编辑） ============================
+_SETTINGS_SCREEN_LAYOUT_DEFAULT = {
+    "_doc": "设置弹窗面板几何（工作室「UI 模块 → 设置弹窗」可拖拽/输入编辑）。panel_max_width/height 为面板在参考分辨率 1920x1080 下的封顶尺寸；游戏运行时按当前视口等比自适应，不超过封顶值。margin_x_ratio / margin_y_ratio 为左右/上下留白比例。category_button_* 为左侧分类按钮最小尺寸。",
+    "reference_width": 1920.0,
+    "reference_height": 1080.0,
+    "panel_max_width": 960.0,
+    "panel_max_height": 680.0,
+    "margin_x_ratio": 0.08,
+    "margin_y_ratio": 0.10,
+    "category_button_min_width": 160.0,
+    "category_button_min_height": 42.0,
+}
+_SETTINGS_SCREEN_LAYOUT_KEYS = (
+    "panel_max_width", "panel_max_height", "margin_x_ratio", "margin_y_ratio",
+    "category_button_min_width", "category_button_min_height",
+)
+
+
+def _settings_screen_layout_path():
+    return os.path.join(discover_project_root(), "data", "configs", "ui", "skin", "settings_screen.layout.json")
+
+
+def settings_screen_layout_get():
+    """读取设置弹窗面板几何（与默认合并，缺字段/坏文件回退默认）。"""
+    p = _settings_screen_layout_path()
+    data = dict(_SETTINGS_SCREEN_LAYOUT_DEFAULT)
+    if os.path.exists(p):
+        try:
+            with open(p, "r", encoding="utf-8") as f:
+                stored = json.load(f)
+            if isinstance(stored, dict):
+                for k in _SETTINGS_SCREEN_LAYOUT_KEYS:
+                    if _is_num(stored.get(k)):
+                        data[k] = float(stored[k])
+        except Exception:
+            pass
+    return data
+
+
+def settings_screen_layout_update(d):
+    """写入设置弹窗面板几何（自动备份旧文件）。d 为包含可编辑数字字段的字典。"""
+    p = _settings_screen_layout_path()
+    _backup(p)
+    data = dict(_SETTINGS_SCREEN_LAYOUT_DEFAULT)
+    if os.path.exists(p):
+        try:
+            with open(p, "r", encoding="utf-8") as f:
+                stored = json.load(f)
+            if isinstance(stored, dict):
+                for k in _SETTINGS_SCREEN_LAYOUT_KEYS:
+                    if _is_num(stored.get(k)):
+                        data[k] = float(stored[k])
+        except Exception:
+            pass
+    if isinstance(d, dict):
+        for k in _SETTINGS_SCREEN_LAYOUT_KEYS:
+            if _is_num(d.get(k)):
+                data[k] = max(0.0, float(d[k]))
+    data["_doc"] = _SETTINGS_SCREEN_LAYOUT_DEFAULT["_doc"]
+    data["reference_width"] = _SETTINGS_SCREEN_LAYOUT_DEFAULT["reference_width"]
+    data["reference_height"] = _SETTINGS_SCREEN_LAYOUT_DEFAULT["reference_height"]
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+    with open(p, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    log_event("settings_screen_layout", p, "更新设置弹窗布局")
+    return True, "已保存设置弹窗布局（游戏内下次启动生效）"
+
+
 # ============================ UI 皮肤定制（工作室「UI 皮肤定制」tab，UI 窗口主权） ============================
 # 只读写 data/configs/ui/skin/ 下的白名单文件，杜绝路径穿越；游戏侧零依赖、缺省回退。
 def _ui_skin_dir():

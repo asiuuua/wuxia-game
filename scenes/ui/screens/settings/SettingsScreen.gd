@@ -34,6 +34,16 @@ const ACTION_LABELS := {
 	"toggle_attributes": "ctrl_attributes",
 }
 
+const SETTINGS_LAYOUT_PATH := "res://data/configs/ui/skin/settings_screen.layout.json"
+const SETTINGS_LAYOUT_DEFAULT := {
+	"panel_max_width": 960.0,
+	"panel_max_height": 680.0,
+	"margin_x_ratio": 0.08,
+	"margin_y_ratio": 0.10,
+	"category_button_min_width": 160.0,
+	"category_button_min_height": 42.0,
+}
+
 # B 路线（2026-08-29）：静态壳（压暗底 Backdrop + 磨砂玻璃 Panel + Header + Body 内
 # CategoryList / PanelContainer / PanelVBox）已迁入 SettingsScreen.tscn，美术可在编辑器改框架
 # 外观/边距；脚本只保留动态内容（分类按钮 + 各分类面板滑块/下拉/开关/键位重绑）与交互逻辑。
@@ -94,13 +104,39 @@ func _exit_tree() -> void:
 func _build_panel_frame() -> void:
 	_fit_panel()
 
+static func _load_layout_config() -> Dictionary:
+	if not FileAccess.file_exists(SETTINGS_LAYOUT_PATH):
+		return SETTINGS_LAYOUT_DEFAULT.duplicate()
+	var f := FileAccess.open(SETTINGS_LAYOUT_PATH, FileAccess.READ)
+	if f == null:
+		return SETTINGS_LAYOUT_DEFAULT.duplicate()
+	var txt := f.get_as_text()
+	f.close()
+	var json := JSON.new()
+	if json.parse(txt) != OK:
+		return SETTINGS_LAYOUT_DEFAULT.duplicate()
+	var data: Variant = json.get_data()
+	if not (data is Dictionary):
+		return SETTINGS_LAYOUT_DEFAULT.duplicate()
+	var out: Dictionary = SETTINGS_LAYOUT_DEFAULT.duplicate()
+	for k in SETTINGS_LAYOUT_DEFAULT.keys():
+		if data.has(k):
+			var v: Variant = data[k]
+			if v is float or v is int:
+				out[k] = float(v)
+	return out
+
 func _fit_panel() -> void:
 	if _panel == null:
 		return
+	var cfg: Dictionary = _load_layout_config()
 	var vp: Vector2 = get_viewport_rect().size
-	# 大屏封顶，小屏自适应留边（左右各 ~4%，上下各 ~5%）
-	var w: float = mini(vp.x * 0.92, 960.0)
-	var h: float = mini(vp.y * 0.90, 680.0)
+	var margin_x: float = cfg.get("margin_x_ratio", 0.08)
+	var margin_y: float = cfg.get("margin_y_ratio", 0.10)
+	var max_w: float = cfg.get("panel_max_width", 960.0)
+	var max_h: float = cfg.get("panel_max_height", 680.0)
+	var w: float = mini(vp.x * (1.0 - margin_x), max_w)
+	var h: float = mini(vp.y * (1.0 - margin_y), max_h)
 	_panel.size = Vector2(w, h)
 	_panel.custom_minimum_size = Vector2(w, h)
 	UICenterUtils.center_panel(_panel)   # 修复 Godot4.7.2 PRESET_CENTER 不居中
@@ -120,12 +156,15 @@ func _build_body() -> void:
 
 # === 左侧分类按钮 ===
 func _build_categories() -> void:
+	var cfg: Dictionary = _load_layout_config()
+	var bw: float = cfg.get("category_button_min_width", 160.0)
+	var bh: float = cfg.get("category_button_min_height", 42.0)
 	for cat in CATEGORIES:
 		var btn: Button = Button.new()
 		btn.name = cat
 		btn.text = tr(CATEGORY_LABELS[cat])
 		btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		btn.custom_minimum_size = Vector2(160, 42)
+		btn.custom_minimum_size = Vector2(bw, bh)
 		_apply_glass_button_style(btn, UIPalette.TEXT_MAIN)
 		btn.pressed.connect(_on_category_pressed.bind(cat))
 		_category_list.add_child(btn)

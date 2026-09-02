@@ -1,0 +1,11 @@
+{
+  "_doc": "设置弹窗面板几何（工作室「UI 模块 → 设置弹窗」可拖拽/输入编辑）。panel_max_width/height 为面板在参考分辨率 1920x1080 下的封顶尺寸；游戏运行时按当前视口等比自适应，不超过封顶值。margin_x_ratio / margin_y_ratio 为左右/上下留白比例。category_button_* 为左侧分类按钮最小尺寸。",
+  "reference_width": 1920.0,
+  "reference_height": 1080.0,
+  "panel_max_width": 960.0,
+  "panel_max_height": 680.0,
+  "margin_x_ratio": 0.08,
+  "margin_y_ratio": 0.1,
+  "category_button_min_width": 160.0,
+  "category_button_min_height": 42.0
+}

@@ -13,7 +13,9 @@
 UI 模块 ⬇️
   ├─ 界面屏
   │   ├ 登录界面      ← 改登录/主菜单的图、字、布局、背景变体
-  │   └ 预加载界面    ← 改加载界面的进度条、提示文字、版本号位置
+  │   ├ 预加载界面    ← 改加载界面的进度条、提示文字、版本号位置
+  │   ├ HUD 布局      ← 战斗/地图常驻四面板默认摆放位置
+  │   └ 设置弹窗      ← 改设置面板几何（宽高封顶/留白比例/分类按钮尺寸）
   └─ UI 子功能
       ├ UI 贴图       ← 给具体界面（背包、技能、商店等）换背景图
       └ UI 皮肤定制   ← 改全局弹窗配色、确认框大小、主菜单水墨特效
@@ -161,6 +163,31 @@ UI 模块 ⬇️
 
 ---
 
+### 2.6 设置弹窗（设置面板几何）
+
+**能改什么**：设置弹窗整体的**面板几何**——面板封顶宽高、左右/上下留白比例、左侧分类按钮最小尺寸。
+
+| 参数 | 分类 | 默认值（参考分辨率 1920×1080） | 改完哪生效 |
+|---|---|---|---|
+| 面板封顶宽 `panel_max_width` | <span style="background:#2a1a35;color:#c98be6;padding:2px 8px;border-radius:10px;font-size:12px">布局</span> | 960 | `data/configs/ui/skin/settings_screen.layout.json` |
+| 面板封顶高 `panel_max_height` | <span style="background:#2a1a35;color:#c98be6;padding:2px 8px;border-radius:10px;font-size:12px">布局</span> | 680 | `data/configs/ui/skin/settings_screen.layout.json` |
+| 左右留白比例 `margin_x_ratio` | <span style="background:#2a1a35;color:#c98be6;padding:2px 8px;border-radius:10px;font-size:12px">布局</span> | 0.08 | `data/configs/ui/skin/settings_screen.layout.json` |
+| 上下留白比例 `margin_y_ratio` | <span style="background:#2a1a35;color:#c98be6;padding:2px 8px;border-radius:10px;font-size:12px">布局</span> | 0.10 | `data/configs/ui/skin/settings_screen.layout.json` |
+| 分类按钮最小宽 `category_button_min_width` | <span style="background:#2a1a35;color:#c98be6;padding:2px 8px;border-radius:10px;font-size:12px">布局</span> | 160 | `data/configs/ui/skin/settings_screen.layout.json` |
+| 分类按钮最小高 `category_button_min_height` | <span style="background:#2a1a35;color:#c98be6;padding:2px 8px;border-radius:10px;font-size:12px">布局</span> | 42 | `data/configs/ui/skin/settings_screen.layout.json` |
+
+**小白步骤**：
+1. 点顶部「UI 模块 → 设置弹窗」。
+2. 在 6 个数值框里调面板宽高、留白比例、分类按钮尺寸（也可直接拖画布里的面板色块）。
+3. 点「保存布局」→ 写入工程，游戏下次打开设置弹窗即按此几何自适应。
+4. 点「恢复默认」回到出厂值。
+
+**注意**：
+- 数值是「参考分辨率 1920×1080」下的**封顶值 / 比例值**；游戏运行时按当前视口等比自适应，且不超过封顶值——4K / 带鱼屏上比例一致。
+- 这是**出厂默认值**，游戏侧只读不写；文件缺失 / 写坏自动回退默认，零破坏。
+
+---
+
 ## 三、5 分钟快速上手路径
 
 如果你是第一次用，建议按这个顺序玩一遍：
@@ -192,6 +219,7 @@ UI 模块 ⬇️
 | UI 皮肤定制 → 主题配色 | `data/configs/ui/skin/theme.json` | `UISkin`（通用装载器） | 点「复原默认」 |
 | UI 皮肤定制 → 视觉特效 | `data/configs/ui/skin/main_menu.vfx.json` | `UIVFX`（通用装载器） | 点「复原默认」 |
 | HUD 布局 | `data/configs/ui/hud_layout.json` | `core/ui_layout.gd`（通用装载器）+ 四面板 `_init_drag` | 点「恢复默认」 |
+| 设置弹窗 | `data/configs/ui/skin/settings_screen.layout.json` | `SettingsScreen.gd`（`_load_layout_config` 通用装载器） | 点「恢复默认」 |
 
 ---
 
