@@ -25,6 +25,7 @@
 - ⚠️ GATE2 盲点：套件自身 Parse Error 时不打印任何 `✗` → **判绿必须同时满足** `grep -c "✗"`==0 **且** `套件：通过 N · 失败 M` 的 M==0。
 - ⚠️ 沙箱 git 写不落盘：git checkout/rm/stash 是空操作；恢复用 `git show HEAD:<path> > <path>`（重定向落盘）。**验证前必须 commit 新/改文件**，否则 Godot（沙箱给 git-HEAD 快照）看不到 untracked/未提交改动→报"数据文件不存在"。
 - ⚠️ .godot 缺失=双闸门全崩（class_name 全报 not declared）→ unsandboxed `godot --headless --editor --quit` 重建。多 Godot 进程抢 `.godot` 缓存→验证串行；门禁统一 unsandboxed 跑。
+- ⚠️ **新音频/资源导入**：`--quit` 模式**不**生成新文件的 `.import` 侧车 → 必须用 `godot --headless --editor --quit` 全量重导才出 `.import`。否则 `ResourceLoader.exists` 返回 false、`AudioManager.play_ui_sfx` 等会**静默跳过**（无报错、无声音）。验证资源是否真能加载：用 `godot --headless --path DIR --script res://tools/_x.gd`（`extends SceneTree` + `_initialize()` 里 `ResourceLoader.exists`/`load` 后 `quit()`）；**切勿**用位置参数场景在 `_ready` 里 `get_tree().quit()`（会 SIGTERM 无输出）。
 
 ## 纹理压缩铁律（2026-09-02 立，必记）
 - **本项目对 2D 纹理的「出厂默认」就是 `compress/mode=0`（未压缩）**，不是 Godot 默认的压缩。删 `.import` 让 Godot 重导仍回 mode=0 → 必须显式改 `mode=2` 才压缩。
