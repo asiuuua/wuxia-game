@@ -599,43 +599,72 @@ func test_query_add_overweight_clamped() -> void:
 const BUFF_PILL := "pill_buff_gongli_001"
 const CURE_PILL := "pill_cure_jiedu_001"
 
-func test_use_buff_applies_next_battle_buff() -> void:
+func test_use_buff_applies_time_buff() -> void:
 	var ps: PlayerState = GameManager.player_state
 	expect(ps != null, "player_state 应存在")
 	if ps == null:
 		return
+	ps.now_override = 1000000
 	var base_attack: int = ps.attack
 	_service.add_item(BUFF_PILL, 1, "test")
 	var res: Dictionary = _service.use_item(_first_iid(BUFF_PILL), "town")
 	expect(bool(res.get("ok", false)), "使用大力丸应成功")
-	expect_eq(int(ps.next_battle_buffs.get("attack", 0)), 10, "应登记下一场战斗 attack+10")
+	expect_eq(ps.get_time_buff_total("attack"), 10, "应登记现实时间 attack+10")
 	expect_eq(ps.attack, base_attack + 10, "攻击应临时 +10")
+	expect_eq(ps.get_time_buff_remaining("attack"), 30 * 60, "剩余应约 30 分钟")
 	expect_eq(_service.get_item_count(BUFF_PILL), 0, "大力丸应被消耗")
-	ps.clear_next_battle_buffs()
+	ps.time_buffs.clear()
+	ps.now_override = -1
+	ps.recalculate_stats()
 
-func test_buff_cleared_on_combat_finished() -> void:
-	# GameManager 在 _ready 订阅 combat_finished → 清除"下一场战斗"增益（只影响一场）
+func test_time_buff_expires_after_duration() -> void:
+	# 现实时间独立计时器：到期后由 purge 清理，属性回落
 	var ps: PlayerState = GameManager.player_state
 	expect(ps != null, "player_state 应存在")
 	if ps == null:
 		return
+	ps.now_override = 1000000
 	var base_attack: int = ps.attack
-	ps.apply_next_battle_buff("attack", 10)
+	ps.apply_time_buff("attack", 10, 30)   # 30 分钟后到期
 	expect_eq(ps.attack, base_attack + 10, "增益应先生效")
-	EventBus.combat_finished.emit("test_battle", false, false, [])
-	expect(ps.next_battle_buffs.is_empty(), "战斗结束后增益应被清除")
-	expect_eq(ps.attack, base_attack, "战斗结束后攻击应回落")
+	ps.now_override = 1000000 + 30 * 60    # 正好到期
+	var removed: int = ps.purge_expired_time_buffs()
+	expect_eq(removed, 1, "应清理 1 个过期增益")
+	expect_eq(ps.get_time_buff_total("attack"), 0, "过期后应无增益")
+	expect_eq(ps.attack, base_attack, "过期后攻击应回落")
+	ps.now_override = -1
 
-func test_buff_save_roundtrip() -> void:
+func test_time_buff_save_roundtrip() -> void:
 	var ps: PlayerState = GameManager.player_state
 	if ps == null:
 		return
-	ps.apply_next_battle_buff("attack", 10)
+	ps.now_override = 1000000
+	ps.apply_time_buff("attack", 10, 30)
 	var data: Dictionary = ps.save()
 	var ps2 := PlayerState.new()
+	ps2.now_override = 1000000
 	ps2.load(data)
-	expect_eq(int(ps2.next_battle_buffs.get("attack", 0)), 10, "读档后下一场战斗增益应保留")
-	ps.clear_next_battle_buffs()
+	expect_eq(ps2.get_time_buff_total("attack"), 10, "读档后现实时间增益应保留")
+	expect_eq(ps2.get_time_buff_remaining("attack"), 30 * 60, "读档后剩余时间应保留")
+	ps.time_buffs.clear()
+	ps.now_override = -1
+	ps.recalculate_stats()
+
+func test_load_purges_expired_buffs() -> void:
+	# 离线期间现实时间仍在流逝：读档时应清理已过期增益
+	var ps: PlayerState = GameManager.player_state
+	if ps == null:
+		return
+	ps.now_override = 1000000
+	ps.apply_time_buff("attack", 10, 30)
+	var data: Dictionary = ps.save()
+	var ps2 := PlayerState.new()
+	ps2.now_override = 1000000 + 60 * 60   # 已过 1 小时
+	ps2.load(data)
+	expect_eq(ps2.get_time_buff_total("attack"), 0, "读档时应清理已过期增益")
+	ps.time_buffs.clear()
+	ps.now_override = -1
+	ps.recalculate_stats()
 
 func test_use_cure_clears_status() -> void:
 	var ps: PlayerState = GameManager.player_state

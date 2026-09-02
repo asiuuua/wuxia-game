@@ -13,7 +13,10 @@
     { "id": "pill_xuming_001", "name": "续命金丹", "type": "pill", "rarity": "rare", "max_stack": 10, "weight": 0.1, "price": 280, "flags": 51, "heal_hp": 320, "heal_mp": 0 },
     { "id": "pill_zuixian_001", "name": "醉仙灵芙", "type": "pill", "rarity": "uncommon", "max_stack": 10, "weight": 0.1, "price": 90, "flags": 51, "heal_hp": 0, "heal_mp": 90 },
     { "id": "pill_wubao_001", "name": "五宝花蜜酒", "type": "pill", "rarity": "rare", "max_stack": 10, "weight": 0.2, "price": 160, "flags": 51, "heal_hp": 100, "heal_mp": 100 },
-    { "id": "pill_buff_gongli_001", "name": "大力丸", "type": "pill", "rarity": "common", "max_stack": 10, "weight": 0.1, "price": 40, "flags": 51, "kind": "buff", "buff_stat": "attack", "buff_value": 10 },
+    { "id": "pill_buff_xiaoli_001", "name": "小力丸", "type": "pill", "rarity": "common", "max_stack": 10, "weight": 0.1, "price": 25, "flags": 51, "kind": "buff", "buff_stat": "attack", "buff_value": 5, "buff_duration_minutes": 15 },
+    { "id": "pill_buff_gongli_001", "name": "大力丸", "type": "pill", "rarity": "common", "max_stack": 10, "weight": 0.1, "price": 40, "flags": 51, "kind": "buff", "buff_stat": "attack", "buff_value": 10, "buff_duration_minutes": 30 },
+    { "id": "pill_buff_jingang_001", "name": "金刚丸", "type": "pill", "rarity": "uncommon", "max_stack": 10, "weight": 0.1, "price": 70, "flags": 51, "kind": "buff", "buff_stat": "defense", "buff_value": 15, "buff_duration_minutes": 60 },
+    { "id": "pill_buff_longhu_001", "name": "龙虎大力丸", "type": "pill", "rarity": "rare", "max_stack": 10, "weight": 0.1, "price": 150, "flags": 51, "kind": "buff", "buff_stat": "attack", "buff_value": 20, "buff_duration_minutes": 120 },
     { "id": "pill_cure_jiedu_001", "name": "解毒丹", "type": "pill", "rarity": "common", "max_stack": 10, "weight": 0.1, "price": 35, "flags": 51, "kind": "cure", "cure_status": ["poison"] }
   ]
 }

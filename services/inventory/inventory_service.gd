@@ -463,24 +463,28 @@ func _apply_use_heal(inst: ItemInstance, data: Dictionary, context: String) -> D
 	GameLogger.info("Inventory", "使用 %s (town) hp+%d mp+%d" % [item_id, healed, restored])
 	return { "ok": true, "reason": "SUCCESS", "item_id": item_id, "effect": applied }
 
-## 增益类：读取 data.buff_stat/buff_value 应用至 PlayerState（下一场战斗生效，战斗结束自动清除）
+## 增益类：读取 data.buff_stat/buff_value/buff_duration_minutes 应用至 PlayerState
+## 按现实时间持续（15/30/60/120 分钟档位由物品配置决定），独立计时器到期自动失效
 ## 支持属性：attack / defense（临时攻击/防御加成）；其余属性返回 UNSUPPORTED_STAT 不消耗
 func _apply_use_buff(inst: ItemInstance, data: Dictionary, context: String) -> Dictionary:
 	var item_id: String = inst.item_id
 	var stat: String = String(data.get("buff_stat", ""))
 	var value: int = int(data.get("buff_value", 0))
+	var duration_minutes: int = int(data.get("buff_duration_minutes", 0))
 	if stat == "" or value <= 0:
 		return { "ok": false, "reason": "NO_EFFECT", "item_id": item_id }
+	if duration_minutes <= 0:
+		return { "ok": false, "reason": "NO_DURATION", "item_id": item_id }
 	if stat != "attack" and stat != "defense":
 		return { "ok": false, "reason": "UNSUPPORTED_STAT", "item_id": item_id, "stat": stat }
 	var ps: PlayerState = GameManager.player_state
 	if ps == null:
 		return { "ok": false, "reason": "NO_PLAYER", "item_id": item_id }
 	consume_instance(inst.instance_id)
-	ps.apply_next_battle_buff(stat, value)
-	var effect := { "buff_stat": stat, "buff_value": value }
+	ps.apply_time_buff(stat, value, duration_minutes)
+	var effect := { "buff_stat": stat, "buff_value": value, "buff_duration_minutes": duration_minutes }
 	EventBus.item_used.emit(item_id, effect)
-	GameLogger.info("Inventory", "使用 %s：下一场战斗 %s+%d" % [item_id, stat, value])
+	GameLogger.info("Inventory", "使用 %s：%s+%d 持续 %d 分钟" % [item_id, stat, value, duration_minutes])
 	return { "ok": true, "reason": "SUCCESS", "item_id": item_id, "effect": effect }
 
 ## 治疗异常状态类：读取 data.cure_status 清除 PlayerState 上的异常状态（中毒/眩晕等）

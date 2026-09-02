@@ -56,8 +56,12 @@ var companion_ids: Array = []
 # === 状态效果 ===
 var active_effects: Array[StatusEffect] = []
 
-# === 背包增益丹药：下一场战斗临时加成（战斗结束由 GameManager 清除，只影响一场） ===
-var next_battle_buffs: Dictionary = {}
+# === 背包增益丹药：按现实时间持续（独立计时器，到期由 GameManager 每秒清理） ===
+# 元素：{ "stat": String, "value": int, "expire_at": int }（expire_at 为 unix 秒）
+var time_buffs: Array = []
+
+## 测试钩子：>0 时覆盖"当前现实时间"（unix 秒）用于单测模拟时间流逝；-1=用系统时间
+var now_override: int = -1
 
 func init_default(unit_name: String, start_level: int) -> void:
 	player_name = unit_name
@@ -103,8 +107,8 @@ func recalculate_stats() -> void:
 	var base_max_mp: int = 30 + level * 10
 	max_hp = base_max_hp + int(equipment_bonuses.get("max_hp", 0))
 	max_mp = base_max_mp + int(equipment_bonuses.get("max_mp", 0))
-	attack = strength * 2 + level * 3 + int(equipment_bonuses.get("attack", 0)) + int(next_battle_buffs.get("attack", 0))
-	defense = int(constitution * 1.5) + level * 2 + int(equipment_bonuses.get("defense", 0)) + int(next_battle_buffs.get("defense", 0))
+	attack = strength * 2 + level * 3 + int(equipment_bonuses.get("attack", 0)) + get_time_buff_total("attack")
+	defense = int(constitution * 1.5) + level * 2 + int(equipment_bonuses.get("defense", 0)) + get_time_buff_total("defense")
 	crit_rate = 0.05 + luck * 0.005
 	dodge_rate = 0.05 + agility * 0.003
 	EventBus.player_stats_changed.emit()
@@ -133,19 +137,49 @@ func restore_mp(amount: int) -> int:
 		EventBus.player_mp_changed.emit(mp, max_mp)
 	return restored
 
-## 背包增益丹药：登记"下一场战斗"临时属性加成（同属性叠加），战斗结束由 GameManager 清除
-func apply_next_battle_buff(stat: String, value: int) -> void:
-	if value <= 0:
+## 当前现实时间（unix 秒）；now_override>0 时用覆盖值（单测模拟时间流逝）
+func _now_unix() -> int:
+	return now_override if now_override > 0 else int(Time.get_unix_time_from_system())
+
+## 背包增益丹药：登记一个"按现实时间持续"的临时加成（独立计时器，到期自动失效）
+## 同属性可叠加：每次服用追加一条独立记录，各自按到期时间失效
+func apply_time_buff(stat: String, value: int, duration_minutes: int) -> void:
+	if value <= 0 or duration_minutes <= 0:
 		return
-	next_battle_buffs[stat] = int(next_battle_buffs.get(stat, 0)) + value
+	var expire_at: int = _now_unix() + duration_minutes * 60
+	time_buffs.append({ "stat": stat, "value": value, "expire_at": expire_at })
 	recalculate_stats()
 
-## 战斗结束清除"下一场战斗"增益（只影响一场战斗）
-func clear_next_battle_buffs() -> void:
-	if next_battle_buffs.is_empty():
-		return
-	next_battle_buffs.clear()
-	recalculate_stats()
+## 清理已过期的现实时间增益，返回移除数量（GameManager 每秒调用一次）
+func purge_expired_time_buffs() -> int:
+	var now: int = _now_unix()
+	var removed := 0
+	var i := time_buffs.size() - 1
+	while i >= 0:
+		if int(time_buffs[i]["expire_at"]) <= now:
+			time_buffs.remove_at(i)
+			removed += 1
+		i -= 1
+	if removed > 0:
+		recalculate_stats()
+	return removed
+
+## 查询某属性当前现实时间增益总值（未过期部分）
+func get_time_buff_total(stat: String) -> int:
+	var total := 0
+	for b in time_buffs:
+		if String(b["stat"]) == stat:
+			total += int(b["value"])
+	return total
+
+## 查询某属性现实时间增益剩余秒数（取最晚到期；无则 0）
+func get_time_buff_remaining(stat: String) -> int:
+	var now: int = _now_unix()
+	var latest := 0
+	for b in time_buffs:
+		if String(b["stat"]) == stat:
+			latest = maxi(latest, int(b["expire_at"]) - now)
+	return maxi(0, latest)
 
 ## 清除指定异常状态（解毒/解眩晕丹药），返回是否确实清除了
 func clear_status(status_id: String) -> bool:
@@ -213,7 +247,7 @@ func save() -> Dictionary:
 		"silver": silver, "copper": copper, "gold": gold,
 		"debt": debt,
 		"age": age, "gender": gender, "companion_ids": companion_ids,
-		"next_battle_buffs": next_battle_buffs,
+		"time_buffs": time_buffs,
 	}
 
 func load(data: Dictionary) -> void:
@@ -239,5 +273,6 @@ func load(data: Dictionary) -> void:
 	gender = int(data.get("gender", gender))
 	# 从 Dictionary 取值为 Variant，赋给 untyped Array 不触发 typed-array 报错
 	companion_ids = data.get("companion_ids", companion_ids)
-	next_battle_buffs = data.get("next_battle_buffs", {})
+	time_buffs = data.get("time_buffs", [])
+	purge_expired_time_buffs()  # 读档后清理已过期的现实时间增益（离线期间时间仍在流逝）
 	recalculate_stats()
