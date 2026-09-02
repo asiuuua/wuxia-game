@@ -52,6 +52,10 @@ var _resize_start_scale := 1.0
 var _resize_start_pointer := Vector2.ZERO
 var _resize_origin := Vector2.ZERO
 
+# --- 条目 Label 对象池（审计派单 fdfcce7396ed：列表频繁重建子节点，回收复用替代全量 free）---
+# 追踪任务数量极少（≤ 数条），池容量天然受限；复用避免高频 refresh 反复 new/free 造成 GC 抖动。
+var _label_pool: Array[Label] = []
+
 func _ready() -> void:
 	if Engine.is_editor_hint():
 		return
@@ -249,9 +253,12 @@ func _exit_tree() -> void:
 func _refresh(_a: Variant = null, _b: Variant = null, _c: Variant = null) -> void:
 	if _entries == null:
 		return
-	# 清旧条目（free 立即释放，避免 queue_free 幽灵节点残留）
+	# 回收旧条目到对象池（复用节点，避免高频 refresh 反复 new/free 造成 GC 抖动）
 	for child in _entries.get_children():
-		child.free()
+		if child is Label:
+			_pool_release(child)
+		else:
+			child.free()
 	if not is_instance_valid(GameManager) or GameManager.quest_service == null:
 		_add_empty("（暂无追踪任务）")
 		_apply_scroll_height()
@@ -289,7 +296,7 @@ func _apply_scroll_height_deferred() -> void:
 	_clamp_to_screen()
 
 func _add_empty(text: String) -> void:
-	var lab := Label.new()
+	var lab := _pool_take()
 	lab.text = text
 	lab.add_theme_color_override("font_color", UIPalette.TEXT_SECONDARY)
 	lab.add_theme_font_size_override("font_size", UIPalette.FS_TINY)
@@ -298,7 +305,7 @@ func _add_empty(text: String) -> void:
 func _add_quest_entry(state: QuestState) -> void:
 	var cfg: Dictionary = ConfigManager.get_quest(state.quest_id) if ConfigManager.has_quest(state.quest_id) else {}
 	var title: String = cfg.get("name", state.quest_id)
-	var title_lab := Label.new()
+	var title_lab := _pool_take()
 	title_lab.text = "◆ " + str(title)
 	title_lab.add_theme_color_override("font_color", UIPalette.TEXT_MAIN)
 	title_lab.add_theme_font_size_override("font_size", UIPalette.FS_SMALL)
@@ -309,13 +316,28 @@ func _add_quest_entry(state: QuestState) -> void:
 		var need: int = int(obj.get("need", 1))
 		var cur: int = state.get_objective_progress(obj_id)
 		var done: bool = state.is_objective_completed(obj_id)
-		var line := Label.new()
+		var line := _pool_take()
 		var mark := "✔" if done else "▢"
 		line.text = "  %s %s  %d/%d" % [mark, obj.get("desc", obj_id), cur, need]
 		line.add_theme_color_override("font_color", UIPalette.TEXT_SECONDARY if not done else UIPalette.SUCCESS)
 		line.add_theme_font_size_override("font_size", UIPalette.FS_TINY)
 		line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		_entries.add_child(line)
+
+# === 条目 Label 对象池（审计派单 fdfcce7396ed）===
+func _pool_take() -> Label:
+	if _label_pool.is_empty():
+		return Label.new()
+	var lab: Label = _label_pool.pop_back()
+	lab.text = ""
+	lab.autowrap_mode = TextServer.AUTOWRAP_OFF
+	lab.remove_theme_color_override("font_color")
+	lab.remove_theme_font_size_override("font_size")
+	return lab
+
+func _pool_release(lab: Label) -> void:
+	lab.get_parent().remove_child(lab)
+	_label_pool.append(lab)
 
 # === 编辑器预览（UIPreview 调用）：手动赋值 @onready 后注入一条模拟追踪任务，展示完整条目样式 ===
 func _editor_preview() -> void:

@@ -242,3 +242,43 @@ func _qt_shows(p: Control, key: String) -> bool:
 		if c is Label and c.text.contains(key):
 			return true
 	return false
+
+## 对象池回归（审计派单 fdfcce7396ed）：高频 _refresh 应复用条目 Label 实例，
+## 而非反复 new/free。断言二次刷新后条目实例与首次一致（同一批对象）。
+func test_quest_track_pool_reuses_labels() -> void:
+	var qs = GameManager.quest_service
+	if qs == null:
+		expect(false, "GameManager.quest_service 未初始化")
+		return
+	var st := QuestState.new()
+	st.quest_id = "hud_pool_test"
+	st.status = QuestEnums.QuestStatus.ACTIVE
+	st.tracked = true
+	qs.active_quests["hud_pool_test"] = st
+	qs.tracked_ids.append("hud_pool_test")
+	var p := QuestTrackPanelScene.instantiate()
+	p._ready()   # 首次 _refresh（此刻无追踪 → 空态 1 Label）
+	# 注入后刷新 → 空态 Label 回收进池，再复用为任务标题
+	p._refresh()
+	var first: Array = []
+	for c in p._entries.get_children():
+		if c is Label:
+			first.append(c)
+	expect(first.size() >= 1, "注入追踪任务后应渲染标题 Label，实际 %d" % first.size())
+	# 再刷新：应复用同一批实例，而非新建
+	p._refresh()
+	var second: Array = []
+	for c in p._entries.get_children():
+		if c is Label:
+			second.append(c)
+	expect(second.size() == first.size(), "二次刷新条目数应一致（%d vs %d）" % [second.size(), first.size()])
+	var reused := 0
+	for lab in second:
+		if first.has(lab):
+			reused += 1
+	expect(reused == second.size(), "二次刷新应复用对象池实例（复用 %d/%d）" % [reused, second.size()])
+	# 清理：先断开订阅再释放，避免已释放节点仍挂在 EventBus 上
+	if EventBus.notify_quest_track_changed.is_connected(p._refresh):
+		EventBus.notify_quest_track_changed.disconnect(p._refresh)
+	p.free()
+	qs.reset()

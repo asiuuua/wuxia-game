@@ -31,6 +31,16 @@ var _hovering: bool = false
 var _pressed: bool = false
 var _selected: bool = false   # 键盘/外部导航选中标（供 MenuItem 这类自定义导航用）
 
+# === 令牌解析结果缓存（审计派单 fdfcce7396ed：悬停动效高频触发，避免每次重复解析令牌→枚举）===
+# 令牌→Tween 枚举映射全局复用（static，跨实例共享）；预设/时长/缩放按实例缓存（_preset 在 attach 时固定）。
+static var _trans_cache: Dictionary = {}
+static var _ease_cache: Dictionary = {}
+var _cached_preset: Dictionary = {}
+var _cached_duration_f: float = -1.0
+var _cached_hover_scale_f: float = -1.0
+var _cached_press_scale_f: float = -1.0
+var _cached_focus_scale_f: float = -1.0
+
 ## 工厂方法：把反馈挂到目标控件上
 ## 用法：UIFeedback.attach(my_button)
 ## 用法：UIFeedback.attach(menu_item, "focus", false)  # 由外部导航驱动
@@ -136,23 +146,51 @@ func _animate_to(target_scale: float) -> void:
 		_tween.kill()
 	var token: String = _easing_token()
 	_tween = create_tween()
-	_tween.set_trans(ConfigManager.get_anim_trans(token))
-	_tween.set_ease(ConfigManager.get_anim_ease(token))
-	_tween.tween_property(_target, "scale", Vector2(target_scale, target_scale),
-		ConfigManager.get_anim_preset_duration(_preset))
+	_tween.set_trans(_cached_trans(token))
+	_tween.set_ease(_cached_ease(token))
+	_tween.tween_property(_target, "scale", Vector2(target_scale, target_scale), _cached_duration())
+
+# === 令牌解析结果缓存（审计派单 fdfcce7396ed：悬停动效高频触发，避免每次重复解析令牌→枚举）===
+# 静态缓存：令牌→Tween 枚举映射跨实例共享（配置启动时固定、运行期不变，缓存安全）
+static func _cached_trans(token: String) -> int:
+	if not _trans_cache.has(token):
+		_trans_cache[token] = ConfigManager.get_anim_trans(token)
+	return _trans_cache[token]
+
+static func _cached_ease(token: String) -> int:
+	if not _ease_cache.has(token):
+		_ease_cache[token] = ConfigManager.get_anim_ease(token)
+	return _ease_cache[token]
+
+# 实例缓存：预设 dict / 时长 / 缩放幅度在 attach 时固定，缓存避免高频悬停重复查表
+func _cached_preset_dict() -> Dictionary:
+	if _cached_preset.is_empty():
+		_cached_preset = ConfigManager.get_anim_preset(_preset)
+	return _cached_preset
+
+func _cached_duration() -> float:
+	if _cached_duration_f < 0.0:
+		_cached_duration_f = ConfigManager.get_anim_preset_duration(_preset)
+	return _cached_duration_f
 
 # === 配置读数（全部带兜底，配置缺失也不崩）===
 func _hover_scale() -> float:
-	return ConfigManager.get_anim_value("hover", "scale", 1.08)
+	if _cached_hover_scale_f < 0.0:
+		_cached_hover_scale_f = ConfigManager.get_anim_value("hover", "scale", 1.08)
+	return _cached_hover_scale_f
 
 func _press_scale() -> float:
-	return ConfigManager.get_anim_value("press", "scale", 0.96)
+	if _cached_press_scale_f < 0.0:
+		_cached_press_scale_f = ConfigManager.get_anim_value("press", "scale", 0.96)
+	return _cached_press_scale_f
 
 func _focus_scale() -> float:
-	return ConfigManager.get_anim_value("focus", "scale", 1.05)
+	if _cached_focus_scale_f < 0.0:
+		_cached_focus_scale_f = ConfigManager.get_anim_value("focus", "scale", 1.05)
+	return _cached_focus_scale_f
 
 func _easing_token() -> String:
-	return String(ConfigManager.get_anim_preset(_preset).get("easing", "standard"))
+	return String(_cached_preset_dict().get("easing", "standard"))
 
 func _is_disabled() -> bool:
 	if _target == null:
