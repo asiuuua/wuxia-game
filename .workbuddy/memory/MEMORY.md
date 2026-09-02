@@ -38,4 +38,4 @@
 - **经验库增强检索（2026-09-02 落地，续篇第十一章#4）**：`/api/experience` 返回前由 `_exp_enrich()` 实时富化 `knowledge.refs`——角色/模块分面优先取每篇子文档「检索关键词」行(权威意图)，BUG 号从全文显式提取(无歧义)；零 schema/零文档改动。前端加标签云+角色/模块/BUG 分面过滤(组内OR/组间AND)+变更通告默认隐藏开关。踩坑：① `docs/变更通告_*.md` glob 展开出 79 篇会淹没核心知识→标记 `group=notice` 前端默认隐藏+勾选显示；② 标签云/分面只统计核心知识避免污染；③ 派生词表用短语级匹配(禁裸 `ui`/`平台`/`tscn`/`数据` 短串，否则过度赋值)；④ glob 绝对路径须 `os.path.relpath` 归一化正向斜杠，否则 `/api/experience/doc` 拼错。
 
 ## 当前 open 派单
-- 战斗→town 掉血崩；结缘→背包 休息未推进天数；背包→结缘 propose 聘礼跳过锁定。
+- (2026-09-02 结缘窗口对账) 结缘相关两项已闭环：178267684159(休息推进天数，结缘源窗 close，生产驱动 948d146 已落地) / acf2246fd5f2(propose 聘礼锁定，UI 修+结缘对账确认) 均已 done/closed；BondRomanceScreen debug 按钮已清。战斗→town 掉血崩(old fed3f00da584)在板亦已 [closed]。
