@@ -424,11 +424,15 @@
         {
           "title": "区域枢纽读条切换加载态优化",
           "type": "优化建议",
-          "status": "open",
+          "status": "done",
           "placeholder": false,
           "source": "场景切换体验",
           "detail": "世界区域枢纽式独立场景 + 读条切换，加载态可优化。",
-          "suggestion": "预加载相邻区域/异步加载 +  loading 界面动效。"
+          "suggestion": "预加载相邻区域/异步加载 +  loading 界面动效。",
+          "resolvedBy": "AI-战斗",
+          "resolvedAt": "2026-09-02 18:45:00",
+          "commit": "324203b",
+          "resolution": "goto_region 改走异步加载(_async_change_scene + _process 轮询 _poll_async_loading)，加载完成用已加载 PackedScene 切换避免二次加载；GameManager 自建 loading 覆盖层(CanvasLayer 层600 高于系统浮层500，不越权改 UI 文件)，提示文案读 loading_tips.json 随机展示 + 透明度呼吸动效；进入区域后台预加载相邻区域场景(_preload_adjacent_regions 按 regions.json connections，未实装 scene_path 跳过)。新增 test_loading_overlay.gd 5 项回归(覆盖层构建/清理/幂等/提示文案/预加载守卫)。GATE1 零错；GATE2 本模块 5 项全过，全量失败 1 为他人 WIP(test_responsive_anchor)基线预存。"
         }
       ]
     },
