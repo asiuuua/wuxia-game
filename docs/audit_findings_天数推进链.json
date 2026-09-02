@@ -1,0 +1,21 @@
+{
+  "findings": [
+    {
+      "module": "bond",
+      "title": "结缘/背包界面内按 R 静默不推进天数（_do_rest 遮挡吞输入）",
+      "type": "隐性BUG",
+      "status": "open",
+      "source": "scenes/gameplay/town/TownScene.gd:331",
+      "detail": "关联架构审计（背包↔结缘↔天数推进链）发现：休息动作唯一玩家入口是城镇 R 键，其处理函数 _do_rest() 在 UIManager.is_any_screen_open() 时静默 return，无任何提示。玩家在结缘/背包/关系界面内按 R 期望推进天数（催熟孕期）时什么都不会发生、也不报错。天数推进链本身（_do_rest→advance_day→world_day_advanced→GameManager→romance_service.advance_days）已完全闭环（commit 948d146 已 done），此残点属 UI 遮挡静默吞输入，与全量报告 BUG-10/11 同根因家族。",
+      "suggestion": "治本：在 UIManager 层统一处理「界面打开时输入应消费/提示而非静默吞」，消除 _do_rest/_launch_debug_tactical 各自 is_any_screen_open() 守卫的同类问题；或产品拍板：结缘界面是否需要独立「休息催孕期」入口。需对应主权窗口认领（UI 或 结缘）。",
+      "plain": {
+        "what": "在结缘/背包界面里按 R 想休息催熟孕期，结果啥也没发生、也不报错。",
+        "why": "休息推天数只在城镇 R 键生效，且界面一打开就被代码静默跳过，输入被「吞」了。",
+        "progress": "open：天数推进链本身已修好（done），这是链上唯一残留的遮挡静默问题。",
+        "missing": "_do_rest 在 is_any_screen_open() 时直接 return，缺少「界面内无法休息」的可见反馈或替代入口。",
+        "plan": "由 UI 或 结缘窗口认领：统一在 UIManager 处理遮挡输入，或给结缘界面加休息入口；属 BUG-10/11 同根因。",
+        "bugs": "⚠ 隐性BUG：表面无错，但结缘/背包界面内按 R 不推进天数，与 BUG-10/11 同类根因（UI 屏栈遮挡吞输入）。"
+      }
+    }
+  ]
+}
