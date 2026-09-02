@@ -22,6 +22,12 @@ var _drag_key := ""
 var _dragging := false
 var _drag_offset := Vector2.ZERO
 
+# --- 缩放状态（uniform scale，拖右下角手柄改大小，不改内部布局比例，0.5~2.5） ---
+var _resizing := false
+var _resize_start_scale := 1.0
+var _resize_start_pointer := Vector2.ZERO
+var _resize_origin := Vector2.ZERO
+
 # 子类 _ready 调一次：drag_key=存档键名；default_pos=首开/无存档时的默认位置（屏幕绝对坐标）
 func _init_drag(drag_key: String, default_pos: Vector2) -> void:
 	_drag_key = drag_key
@@ -38,6 +44,8 @@ func _init_drag(drag_key: String, default_pos: Vector2) -> void:
 		_config_mouse(c)
 	_apply_root_size()
 	_load_position(default_pos)
+	_apply_scale()                 # 应用工作室默认 / 玩家缩放偏好
+	_make_resize_handle()          # 右下角拖拽缩放手柄（游戏内也能改大小）
 	if not gui_input.is_connected(_on_drag_gui_input):
 		gui_input.connect(_on_drag_gui_input)
 	_clamp_to_screen()
@@ -57,6 +65,66 @@ func _apply_root_size() -> void:
 	var ms := get_combined_minimum_size()
 	if ms.x > 0 and ms.y > 0:
 		size = ms
+
+# 应用缩放：先取工作室默认（hud_layout.json），再用玩家 user:// 偏好覆盖
+func _apply_scale() -> void:
+	var s: float = UILayout.hud_default_scale(_drag_key, 1.0)
+	var d := _read_json()
+	if d.has(_drag_key) and d[_drag_key] is Dictionary:
+		var kv: Dictionary = d[_drag_key]
+		var ks = kv.get("scale", null)
+		if (ks is float or ks is int) and is_finite(float(ks)):
+			s = clampf(float(ks), 0.5, 2.5)
+	scale = Vector2(s, s)
+
+# 右下角缩放手柄：拖它改 uniform scale（保持内部布局比例）
+func _make_resize_handle() -> void:
+	var h := Control.new()
+	h.name = "ResizeHandle"
+	h.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	h.anchor_left = 1.0
+	h.anchor_top = 1.0
+	h.anchor_right = 1.0
+	h.anchor_bottom = 1.0
+	h.offset_left = -18.0
+	h.offset_top = -18.0
+	h.offset_right = 0.0
+	h.offset_bottom = 0.0
+	h.mouse_filter = Control.MOUSE_FILTER_STOP
+	h.mouse_default_cursor_shape = Control.CURSOR_BDIAGSIZE
+	h.tooltip_text = "拖拽缩放面板"
+	h.gui_input.connect(_on_resize_gui_input)
+	var grip := ColorRect.new()
+	grip.color = Color(0.55, 0.78, 1.0, 0.45)
+	grip.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	grip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	h.add_child(grip)
+	add_child(h)
+
+func _on_resize_gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.pressed:
+			_resizing = true
+			_resize_start_scale = scale.x
+			_resize_start_pointer = get_global_mouse_position()
+			_resize_origin = global_position
+			accept_event()
+		else:
+			if _resizing:
+				_resizing = false
+				_save_position()
+				accept_event()
+	elif event is InputEventMouseMotion and _resizing:
+		var cur := get_global_mouse_position()
+		var dist_now := (cur - _resize_origin).length()
+		var dist_start := (_resize_start_pointer - _resize_origin).length()
+		var ratio := 1.0
+		if dist_start > 1.0:
+			ratio = dist_now / dist_start
+		var ns := clampf(_resize_start_scale * ratio, 0.5, 2.5)
+		scale = Vector2(ns, ns)
+		_clamp_to_screen()
+		accept_event()
 
 func _on_drag_gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
@@ -109,7 +177,7 @@ func _load_position(default_pos: Vector2) -> void:
 
 func _save_position() -> void:
 	var d := _read_json()
-	d[_drag_key] = {"x": global_position.x, "y": global_position.y}
+	d[_drag_key] = {"x": global_position.x, "y": global_position.y, "scale": scale.x}
 	_write_json(d)
 
 func _read_json() -> Dictionary:

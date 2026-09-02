@@ -1306,18 +1306,21 @@ def _hud_layout_path():
 
 
 # 四面板默认位置（与游戏各面板既有硬编码默认一致，保证「恢复默认」= 当前行为）
+# scale: 统一缩放系数（uniform，不改内部布局比例；0.6~2.5 安全区间），默认 1.0
 _HUD_LAYOUT_DEFAULT = {
     "panels": {
-        "status_card":    {"x": 12.0,   "y": 12.0},
-        "quest_track":    {"x": 12.0,   "y": 362.0},
-        "top_right_menu": {"x": 1700.0, "y": 12.0},
-        "skill_bar":      {"x": 782.0,  "y": 980.0},
+        "status_card":    {"x": 12.0,   "y": 12.0,   "scale": 1.0},
+        "quest_track":    {"x": 12.0,   "y": 362.0,  "scale": 1.0},
+        "top_right_menu": {"x": 1700.0, "y": 12.0,   "scale": 1.0},
+        "skill_bar":      {"x": 782.0,  "y": 980.0,  "scale": 1.0},
     }
 }
 
 _HUD_PANEL_KEYS = ("status_card", "quest_track", "top_right_menu", "skill_bar")
 _HUD_REF_W = 1920.0
 _HUD_REF_H = 1080.0
+_HUD_SCALE_MIN = 0.6
+_HUD_SCALE_MAX = 2.5
 
 
 def _is_num(v):
@@ -1342,6 +1345,8 @@ def hud_layout_get():
                             cur["x"] = float(spec["x"])
                         if _is_num(spec.get("y")):
                             cur["y"] = float(spec["y"])
+                        if _is_num(spec.get("scale")):
+                            cur["scale"] = max(_HUD_SCALE_MIN, min(_HUD_SCALE_MAX, float(spec["scale"])))
         except Exception:
             pass
     data["_doc"] = "HUD 四面板默认位置（工作室「UI 模块 → HUD 布局」拖拽编辑写入）。坐标为参考分辨率 1920x1080 下的屏幕绝对坐标；游戏运行时按当前视口等比缩放（保证任意分辨率下布局比例一致）。玩家在游戏内拖拽后会以 user://ui/hud_positions.json 个人偏好覆盖此处设定；点「恢复默认」即回到此处数值。"
@@ -1364,6 +1369,8 @@ def hud_layout_update(d):
                 spec["x"] = max(0.0, min(_HUD_REF_W, float(incoming["x"])))
             if _is_num(incoming.get("y")):
                 spec["y"] = max(0.0, min(_HUD_REF_H, float(incoming["y"])))
+            if _is_num(incoming.get("scale")):
+                spec["scale"] = max(_HUD_SCALE_MIN, min(_HUD_SCALE_MAX, float(incoming["scale"])))
         data["panels"][k] = spec
     data["_doc"] = "HUD 四面板默认位置（工作室「UI 模块 → HUD 布局」拖拽编辑写入）。坐标为参考分辨率 1920x1080 下的屏幕绝对坐标；游戏运行时按当前视口等比缩放。玩家拖拽偏好存 user://ui/hud_positions.json，优先于此默认。"
     data["reference_width"] = _HUD_REF_W

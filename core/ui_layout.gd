@@ -40,6 +40,27 @@ static func hud_default_pos(panel_key: String, fallback: Vector2, vp: Vector2) -
 		scale_y = 1.0
 	return Vector2(rx * scale_x, ry * scale_y)
 
+## 读取某面板的默认统一缩放系数（uniform scale，不改内部布局比例）。
+## 文件缺失 / 解析失败 / 字段非法 → 返回 fallback（默认 1.0），零破坏。
+## 安全夹取 0.5~2.5，避免极端值把面板缩没或撑爆。
+static func hud_default_scale(panel_key: String, fallback: float = 1.0) -> float:
+	var data: Dictionary = _load_hud()
+	if data == null or not data.has("panels"):
+		return fallback
+	var panels: Dictionary = data["panels"]
+	if not panels.has(panel_key):
+		return fallback
+	var spec: Variant = panels[panel_key]
+	if not (spec is Dictionary):
+		return fallback
+	var s = spec.get("scale", null)
+	if not (s is float or s is int):
+		return fallback
+	var rs: float = float(s)
+	if not is_finite(rs):
+		return fallback
+	return clampf(rs, 0.5, 2.5)
+
 static func _load_hud() -> Dictionary:
 	if not FileAccess.file_exists(HUD_LAYOUT_PATH):
 		return {}
