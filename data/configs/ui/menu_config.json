@@ -3,33 +3,33 @@
     {
       "title": "人 物",
       "items": [
-        {"action_id": "open_attributes", "name": "属性", "screen": "AttributesScreen"},
-        {"action_id": "open_inventory", "name": "背包", "screen": "InventoryScreen"},
-        {"action_id": "open_equipment", "name": "装备", "screen": "EquipmentScreen"}
+        {"action_id": "open_attributes", "icon_id": "menu/attributes", "name": "属性", "screen": "AttributesScreen"},
+        {"action_id": "open_inventory", "icon_id": "menu/inventory", "name": "背包", "screen": "InventoryScreen"},
+        {"action_id": "open_equipment", "icon_id": "menu/equipment", "name": "装备", "screen": "EquipmentScreen"}
       ]
     },
     {
       "title": "江 湖",
       "items": [
-        {"action_id": "open_bond", "name": "姻缘 · 情缘录", "screen": "BondRomance", "badge": true},
-        {"action_id": "open_sect", "name": "门派", "screen": "SectScreen"},
-        {"action_id": "open_map", "name": "江湖地图", "screen": "MapScreen"}
+        {"action_id": "open_bond", "icon_id": "menu/bond", "name": "姻缘 · 情缘录", "screen": "BondRomance", "badge": true},
+        {"action_id": "open_sect", "icon_id": "menu/sect", "name": "门派", "screen": "SectScreen"},
+        {"action_id": "open_map", "icon_id": "menu/map", "name": "江湖地图", "screen": "MapScreen"}
       ]
     },
     {
       "title": "技 艺 · 生 产",
       "items": [
-        {"action_id": "open_abilities", "name": "江湖技艺", "screen": "AbilitiesScreen"},
-        {"action_id": "open_forge", "name": "锻造", "screen": "ForgeScreen"},
-        {"action_id": "open_alchemy", "name": "炼药", "screen": "AlchemyScreen"},
-        {"action_id": "open_shop", "name": "商铺", "screen": "ShopScreen"}
+        {"action_id": "open_abilities", "icon_id": "menu/abilities", "name": "江湖技艺", "screen": "AbilitiesScreen"},
+        {"action_id": "open_forge", "icon_id": "menu/forge", "name": "锻造", "screen": "ForgeScreen"},
+        {"action_id": "open_alchemy", "icon_id": "menu/alchemy", "name": "炼药", "screen": "AlchemyScreen"},
+        {"action_id": "open_shop", "icon_id": "menu/shop", "name": "商铺", "screen": "ShopScreen"}
       ]
     },
     {
       "title": "系 统",
       "items": [
-        {"action_id": "open_settings", "name": "设置", "screen": "SettingsScreen"},
-        {"action_id": "open_save", "name": "存档", "screen": "SaveLoadScreen"}
+        {"action_id": "open_settings", "icon_id": "menu/settings", "name": "设置", "screen": "SettingsScreen"},
+        {"action_id": "open_save", "icon_id": "menu/save", "name": "存档", "screen": "SaveLoadScreen"}
       ]
     }
   ]
