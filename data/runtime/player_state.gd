@@ -56,6 +56,9 @@ var companion_ids: Array = []
 # === 状态效果 ===
 var active_effects: Array[StatusEffect] = []
 
+# === 背包增益丹药：下一场战斗临时加成（战斗结束由 GameManager 清除，只影响一场） ===
+var next_battle_buffs: Dictionary = {}
+
 func init_default(unit_name: String, start_level: int) -> void:
 	player_name = unit_name
 	level = start_level
@@ -100,8 +103,8 @@ func recalculate_stats() -> void:
 	var base_max_mp: int = 30 + level * 10
 	max_hp = base_max_hp + int(equipment_bonuses.get("max_hp", 0))
 	max_mp = base_max_mp + int(equipment_bonuses.get("max_mp", 0))
-	attack = strength * 2 + level * 3 + int(equipment_bonuses.get("attack", 0))
-	defense = int(constitution * 1.5) + level * 2 + int(equipment_bonuses.get("defense", 0))
+	attack = strength * 2 + level * 3 + int(equipment_bonuses.get("attack", 0)) + int(next_battle_buffs.get("attack", 0))
+	defense = int(constitution * 1.5) + level * 2 + int(equipment_bonuses.get("defense", 0)) + int(next_battle_buffs.get("defense", 0))
 	crit_rate = 0.05 + luck * 0.005
 	dodge_rate = 0.05 + agility * 0.003
 	EventBus.player_stats_changed.emit()
@@ -129,6 +132,36 @@ func restore_mp(amount: int) -> int:
 	if restored > 0:
 		EventBus.player_mp_changed.emit(mp, max_mp)
 	return restored
+
+## 背包增益丹药：登记"下一场战斗"临时属性加成（同属性叠加），战斗结束由 GameManager 清除
+func apply_next_battle_buff(stat: String, value: int) -> void:
+	if value <= 0:
+		return
+	next_battle_buffs[stat] = int(next_battle_buffs.get(stat, 0)) + value
+	recalculate_stats()
+
+## 战斗结束清除"下一场战斗"增益（只影响一场战斗）
+func clear_next_battle_buffs() -> void:
+	if next_battle_buffs.is_empty():
+		return
+	next_battle_buffs.clear()
+	recalculate_stats()
+
+## 清除指定异常状态（解毒/解眩晕丹药），返回是否确实清除了
+func clear_status(status_id: String) -> bool:
+	for i in range(active_effects.size()):
+		if active_effects[i].effect_id == status_id:
+			active_effects.remove_at(i)
+			recalculate_stats()
+			return true
+	return false
+
+## 是否处于指定异常状态
+func has_status(status_id: String) -> bool:
+	for se in active_effects:
+		if se.effect_id == status_id:
+			return true
+	return false
 
 func consume_mp(amount: int) -> bool:
 	if mp < amount:
@@ -180,6 +213,7 @@ func save() -> Dictionary:
 		"silver": silver, "copper": copper, "gold": gold,
 		"debt": debt,
 		"age": age, "gender": gender, "companion_ids": companion_ids,
+		"next_battle_buffs": next_battle_buffs,
 	}
 
 func load(data: Dictionary) -> void:
@@ -205,4 +239,5 @@ func load(data: Dictionary) -> void:
 	gender = int(data.get("gender", gender))
 	# 从 Dictionary 取值为 Variant，赋给 untyped Array 不触发 typed-array 报错
 	companion_ids = data.get("companion_ids", companion_ids)
+	next_battle_buffs = data.get("next_battle_buffs", {})
 	recalculate_stats()

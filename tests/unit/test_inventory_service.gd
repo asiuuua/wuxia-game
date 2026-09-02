@@ -593,3 +593,105 @@ func test_query_add_overweight_clamped() -> void:
 	var q: Dictionary = _service.query_add("material_ore_001", 10)
 	expect_eq(int(q["added"]), 0, "已超重时新增应为 0（需先丢物），且不越界")
 	expect_eq(int(q["overflow"]), 10, "溢出应=请求量")
+
+# ── 消耗品增益 / 异常状态清除 / 自动整理（2026-09-02 收口）──
+
+const BUFF_PILL := "pill_buff_gongli_001"
+const CURE_PILL := "pill_cure_jiedu_001"
+
+func test_use_buff_applies_next_battle_buff() -> void:
+	var ps: PlayerState = GameManager.player_state
+	expect(ps != null, "player_state 应存在")
+	if ps == null:
+		return
+	var base_attack: int = ps.attack
+	_service.add_item(BUFF_PILL, 1, "test")
+	var res: Dictionary = _service.use_item(_first_iid(BUFF_PILL), "town")
+	expect(bool(res.get("ok", false)), "使用大力丸应成功")
+	expect_eq(int(ps.next_battle_buffs.get("attack", 0)), 10, "应登记下一场战斗 attack+10")
+	expect_eq(ps.attack, base_attack + 10, "攻击应临时 +10")
+	expect_eq(_service.get_item_count(BUFF_PILL), 0, "大力丸应被消耗")
+	ps.clear_next_battle_buffs()
+
+func test_buff_cleared_on_combat_finished() -> void:
+	# GameManager 在 _ready 订阅 combat_finished → 清除"下一场战斗"增益（只影响一场）
+	var ps: PlayerState = GameManager.player_state
+	expect(ps != null, "player_state 应存在")
+	if ps == null:
+		return
+	var base_attack: int = ps.attack
+	ps.apply_next_battle_buff("attack", 10)
+	expect_eq(ps.attack, base_attack + 10, "增益应先生效")
+	EventBus.combat_finished.emit("test_battle", false, false, [])
+	expect(ps.next_battle_buffs.is_empty(), "战斗结束后增益应被清除")
+	expect_eq(ps.attack, base_attack, "战斗结束后攻击应回落")
+
+func test_buff_save_roundtrip() -> void:
+	var ps: PlayerState = GameManager.player_state
+	if ps == null:
+		return
+	ps.apply_next_battle_buff("attack", 10)
+	var data: Dictionary = ps.save()
+	var ps2 := PlayerState.new()
+	ps2.load(data)
+	expect_eq(int(ps2.next_battle_buffs.get("attack", 0)), 10, "读档后下一场战斗增益应保留")
+	ps.clear_next_battle_buffs()
+
+func test_use_cure_clears_status() -> void:
+	var ps: PlayerState = GameManager.player_state
+	expect(ps != null, "player_state 应存在")
+	if ps == null:
+		return
+	var se := StatusEffect.new()
+	se.effect_id = "poison"
+	ps.active_effects.append(se)
+	expect(ps.has_status("poison"), "应先处于中毒状态")
+	_service.add_item(CURE_PILL, 1, "test")
+	var res: Dictionary = _service.use_item(_first_iid(CURE_PILL), "town")
+	expect(bool(res.get("ok", false)), "使用解毒丹应成功")
+	expect(not ps.has_status("poison"), "中毒应被清除")
+	expect_eq(_service.get_item_count(CURE_PILL), 0, "解毒丹应被消耗")
+	ps.active_effects.clear()
+
+func test_use_cure_not_afflicted_no_consume() -> void:
+	# 未处于所列任一状态时返回 NOT_AFFLICTED 且不消耗（避免白吃丹药）
+	_service.add_item(CURE_PILL, 1, "test")
+	var res: Dictionary = _service.use_item(_first_iid(CURE_PILL), "town")
+	expect(not bool(res.get("ok", false)), "未中毒时使用解毒丹应失败")
+	expect(String(res.get("reason", "")) == "NOT_AFFLICTED", "reason 应为 NOT_AFFLICTED")
+	expect_eq(_service.get_item_count(CURE_PILL), 1, "未中毒不应消耗解毒丹")
+
+func test_organize_merges_stacks() -> void:
+	# 拆出部分堆 → organize 合并回满堆并释放空槽
+	var ps: PlayerState = GameManager.player_state
+	if ps != null:
+		ps.strength = 1000   # 顶高负重隔离重量干扰
+	_service.add_item(PILL, 3, "test")   # 一堆 3/10
+	var iid: String = _first_iid(PILL)
+	var split: Dictionary = _service.split_instance(iid, 1)   # 拆成 2 + 1
+	expect(bool(split.get("ok", false)), "拆分应成功")
+	expect_eq(_service.get_used_slots(), 2, "拆分后应占 2 格")
+	var res: Dictionary = _service.organize()
+	expect(int(res["freed_slots"]) >= 1, "整理应释放至少 1 格")
+	expect_eq(_service.get_used_slots(), 1, "整理后应只占 1 格")
+	expect_eq(_service.get_item_count(PILL), 3, "总数应不变")
+
+func test_organize_skips_locked() -> void:
+	# 锁定实例不参与合并（保留玩家锁定意图），仅排序移动
+	var ps: PlayerState = GameManager.player_state
+	if ps != null:
+		ps.strength = 1000
+	_service.add_item(PILL, 3, "test")
+	var iid: String = _first_iid(PILL)
+	_service.split_instance(iid, 1)   # 拆成 2 + 1
+	var locked_iid: String = ""
+	for inst in _service.main_slots:
+		if inst != null and inst.item_id == PILL and int(inst.count) == 1:
+			locked_iid = String(inst.instance_id)
+			break
+	expect(locked_iid != "", "应找到 1 个的拆分堆")
+	_service.set_item_locked(locked_iid, true)
+	_service.organize()
+	expect_eq(_service.get_used_slots(), 2, "锁定堆不应被合并，仍占 2 格")
+	expect(_service.is_item_locked(locked_iid), "锁定实例整理后仍在")
+	expect_eq(_service.get_item_count(PILL), 3, "总数应不变")

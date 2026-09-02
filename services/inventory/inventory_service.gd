@@ -463,17 +463,47 @@ func _apply_use_heal(inst: ItemInstance, data: Dictionary, context: String) -> D
 	GameLogger.info("Inventory", "使用 %s (town) hp+%d mp+%d" % [item_id, healed, restored])
 	return { "ok": true, "reason": "SUCCESS", "item_id": item_id, "effect": applied }
 
-## 增益类（预留）：读取 data.buff_stat/buff_value 应用至 PlayerState。当前库未配置，安全返回 NO_EFFECT 不消耗
+## 增益类：读取 data.buff_stat/buff_value 应用至 PlayerState（下一场战斗生效，战斗结束自动清除）
+## 支持属性：attack / defense（临时攻击/防御加成）；其余属性返回 UNSUPPORTED_STAT 不消耗
 func _apply_use_buff(inst: ItemInstance, data: Dictionary, context: String) -> Dictionary:
 	var item_id: String = inst.item_id
-	# TODO(Phase 扩展): buff_stat/buff_value 应用至 PlayerState（如临时攻击/防御加成）
-	return { "ok": false, "reason": "NO_EFFECT", "item_id": item_id }
+	var stat: String = String(data.get("buff_stat", ""))
+	var value: int = int(data.get("buff_value", 0))
+	if stat == "" or value <= 0:
+		return { "ok": false, "reason": "NO_EFFECT", "item_id": item_id }
+	if stat != "attack" and stat != "defense":
+		return { "ok": false, "reason": "UNSUPPORTED_STAT", "item_id": item_id, "stat": stat }
+	var ps: PlayerState = GameManager.player_state
+	if ps == null:
+		return { "ok": false, "reason": "NO_PLAYER", "item_id": item_id }
+	consume_instance(inst.instance_id)
+	ps.apply_next_battle_buff(stat, value)
+	var effect := { "buff_stat": stat, "buff_value": value }
+	EventBus.item_used.emit(item_id, effect)
+	GameLogger.info("Inventory", "使用 %s：下一场战斗 %s+%d" % [item_id, stat, value])
+	return { "ok": true, "reason": "SUCCESS", "item_id": item_id, "effect": effect }
 
-## 治疗异常状态类（预留）：读取 data.cure_status 清除状态。当前库未配置，安全返回 NO_EFFECT 不消耗
+## 治疗异常状态类：读取 data.cure_status 清除 PlayerState 上的异常状态（中毒/眩晕等）
+## 未处于所列任一状态时返回 NOT_AFFLICTED 不消耗（避免白吃丹药）
 func _apply_use_cure(inst: ItemInstance, data: Dictionary, context: String) -> Dictionary:
 	var item_id: String = inst.item_id
-	# TODO(Phase 扩展): cure_status 清除 PlayerState 上的异常状态（中毒/眩晕等）
-	return { "ok": false, "reason": "NO_EFFECT", "item_id": item_id }
+	var cure_list: Array = data.get("cure_status", [])
+	if cure_list.is_empty():
+		return { "ok": false, "reason": "NO_EFFECT", "item_id": item_id }
+	var ps: PlayerState = GameManager.player_state
+	if ps == null:
+		return { "ok": false, "reason": "NO_PLAYER", "item_id": item_id }
+	var cured: Array = []
+	for status_id in cure_list:
+		if ps.clear_status(String(status_id)):
+			cured.append(String(status_id))
+	if cured.is_empty():
+		return { "ok": false, "reason": "NOT_AFFLICTED", "item_id": item_id }
+	consume_instance(inst.instance_id)
+	var effect := { "cured": cured }
+	EventBus.item_used.emit(item_id, effect)
+	GameLogger.info("Inventory", "使用 %s：清除异常状态 %s" % [item_id, str(cured)])
+	return { "ok": true, "reason": "SUCCESS", "item_id": item_id, "effect": effect }
 
 ## 经验类：读取 data.gain_exp 直接结算经验。当前库未配置，安全返回 NO_EFFECT 不消耗
 func _apply_use_exp(inst: ItemInstance, data: Dictionary, context: String) -> Dictionary:
@@ -775,3 +805,70 @@ func sort_bag(bag_name: String) -> void:
 	for i in range(bag.size()):
 		bag[i] = items[i] if i < items.size() else null
 	_dirty = true
+
+## 整理背包：自动堆叠同类物品（合并部分堆至满堆）、压实空槽并按 名称→类型→稀有度 排序。
+## 锁定实例不参与合并（保留玩家锁定意图），仅随排序移动。
+## 返回 { "ok": bool, "merged": int, "freed_slots": int }
+func organize() -> Dictionary:
+	var merged := 0
+	var freed := 0
+	for bag in [main_slots, material_slots, quest_slots]:
+		var res: Dictionary = _organize_bag(bag)
+		merged += int(res["merged"])
+		freed += int(res["freed"])
+	if merged > 0 or freed > 0:
+		_recalculate_weight()
+		_rebuild_count_index()
+		_dirty = true
+	return { "ok": true, "merged": merged, "freed_slots": freed }
+
+## 单栏整理：合并部分堆 + 压实 + 排序
+func _organize_bag(bag: Array) -> Dictionary:
+	var merged := 0
+	var freed := 0
+	# 1) 合并部分堆：目标实例增长、源实例缩减；跳过锁定实例避免合并丢失锁定意图
+	for i in range(bag.size()):
+		var inst = bag[i]
+		if inst == null or inst.locked:
+			continue
+		var max_stack: int = int(ConfigManager.get_item(inst.item_id).get("max_stack", 1))
+		if max_stack <= 1 or int(inst.count) >= max_stack:
+			continue
+		for j in range(bag.size()):
+			if j == i:
+				continue
+			var other = bag[j]
+			if other == null or other.locked or other.item_id != inst.item_id:
+				continue
+			if int(other.count) >= max_stack:
+				continue
+			var put: int = mini(max_stack - int(inst.count), int(other.count))
+			inst.count += put
+			other.count -= put
+			merged += put
+			if int(other.count) <= 0:
+				bag[j] = null
+				freed += 1
+			if int(inst.count) >= max_stack:
+				break
+	# 2) 压实 + 排序：非空实例排前（名称→类型→稀有度），空槽靠后
+	var items: Array = []
+	for inst in bag:
+		if inst != null:
+			items.append(inst)
+	items.sort_custom(func(a, b):
+		var da: Dictionary = ConfigManager.get_item(a.item_id)
+		var db: Dictionary = ConfigManager.get_item(b.item_id)
+		var na: String = da.get("name", a.item_id)
+		var nb: String = db.get("name", b.item_id)
+		if na != nb:
+			return na < nb
+		var ta: String = da.get("type", "")
+		var tb: String = db.get("type", "")
+		if ta != tb:
+			return ta < tb
+		return da.get("rarity", "") < db.get("rarity", "")
+	)
+	for i in range(bag.size()):
+		bag[i] = items[i] if i < items.size() else null
+	return { "merged": merged, "freed": freed }

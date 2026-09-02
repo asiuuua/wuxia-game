@@ -59,6 +59,8 @@ func _ready() -> void:
 	_register_saveables()
 	# 战斗结束 → 任务系统推进目标（事件闭环，替代原先战斗直调任务的反模式）
 	EventBus.combat_finished.connect(quest_service._on_combat_finished)
+	# 战斗结束 → 清除背包增益丹药的"下一场战斗"临时加成（只影响一场战斗）
+	EventBus.combat_finished.connect(_on_combat_finished_clear_buffs)
 	# 指令接线：任务/对话发出 cmd_start_combat 后自动开战（解耦战斗入口，消除空壳）
 	EventBus.cmd_start_combat.connect(_on_cmd_start_combat)
 	# 对话事件演出：到达某行 trigger_events 经 EventBus 派发，由执行器演出音效/震屏/接任务
@@ -217,6 +219,11 @@ func _on_world_day_advanced(day: int) -> void:
 ## 同步天数基线（新游戏/读档后避免子嗣孕期被错误快进）
 func _sync_day_baseline() -> void:
 	_last_known_day = WeatherTimeService.get_day()
+
+## 战斗结束：清除背包增益丹药的"下一场战斗"临时加成（只影响一场战斗）
+func _on_combat_finished_clear_buffs(_combat_id: String, _victory: bool, _escaped: bool, _snapshots: Array) -> void:
+	if player_state != null:
+		player_state.clear_next_battle_buffs()
 
 ## 婚礼演出：监听 bond_wedding_started，记录婚礼信息并切换到婚礼场景（路径为空则仅提示）
 func _on_bond_wedding_started(npc_id: String, wedding_type: int, scene_path: String) -> void:

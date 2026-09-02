@@ -12,6 +12,8 @@
     { "id": "pill_heiyu_001", "name": "黑玉断续膏", "type": "pill", "rarity": "uncommon", "max_stack": 10, "weight": 0.1, "price": 110, "flags": 51, "heal_hp": 180, "heal_mp": 0 },
     { "id": "pill_xuming_001", "name": "续命金丹", "type": "pill", "rarity": "rare", "max_stack": 10, "weight": 0.1, "price": 280, "flags": 51, "heal_hp": 320, "heal_mp": 0 },
     { "id": "pill_zuixian_001", "name": "醉仙灵芙", "type": "pill", "rarity": "uncommon", "max_stack": 10, "weight": 0.1, "price": 90, "flags": 51, "heal_hp": 0, "heal_mp": 90 },
-    { "id": "pill_wubao_001", "name": "五宝花蜜酒", "type": "pill", "rarity": "rare", "max_stack": 10, "weight": 0.2, "price": 160, "flags": 51, "heal_hp": 100, "heal_mp": 100 }
+    { "id": "pill_wubao_001", "name": "五宝花蜜酒", "type": "pill", "rarity": "rare", "max_stack": 10, "weight": 0.2, "price": 160, "flags": 51, "heal_hp": 100, "heal_mp": 100 },
+    { "id": "pill_buff_gongli_001", "name": "大力丸", "type": "pill", "rarity": "common", "max_stack": 10, "weight": 0.1, "price": 40, "flags": 51, "kind": "buff", "buff_stat": "attack", "buff_value": 10 },
+    { "id": "pill_cure_jiedu_001", "name": "解毒丹", "type": "pill", "rarity": "common", "max_stack": 10, "weight": 0.1, "price": 35, "flags": 51, "kind": "cure", "cure_status": ["poison"] }
   ]
 }
