@@ -121,6 +121,7 @@
         <button class="dd-item" data-tab="login">登录界面</button>
         <button class="dd-item" data-tab="loading">预加载界面</button>
         <button class="dd-item" data-tab="settings_screen">⚙️ 设置弹窗</button>
+        <button class="dd-item" data-tab="saveload_screen">📁 读档弹窗</button>
       </div>
       <div class="dd-group">
         <div class="dd-group-title">UI 子功能</div>
@@ -750,6 +751,25 @@
     </div>
   </section>
 
+  <!-- 读档弹窗布局（数值化编辑） -->
+  <section class="tab" id="tab-saveload_screen">
+    <div class="editor" style="max-width:560px">
+      <div class="hint">读档界面存档卡片列几何（跟随 1920×1080 参考分辨率，运行时按当前视口自适应封顶）。改数字后点「保存布局」即可写入游戏，下次打开读档界面生效。</div>
+      <div class="row"><label>卡片列最大宽</label><input id="sl_pw" type="number" step="1" value="640"></div>
+      <div class="row"><label>卡片列最大高</label><input id="sl_ph" type="number" step="1" value="724"></div>
+      <div class="row"><label>左右留白比</label><input id="sl_mx" type="number" step="0.01" value="0.0"></div>
+      <div class="row"><label>上下留白比</label><input id="sl_my" type="number" step="0.01" value="0.15"></div>
+      <div class="row"><label>卡片最小宽</label><input id="sl_bw" type="number" step="1" value="640"></div>
+      <div class="row"><label>卡片最小高</label><input id="sl_bh" type="number" step="1" value="112"></div>
+      <div class="btns">
+        <button class="act" onclick="saveloadScreenSave()">保存布局</button>
+        <button class="act sec" onclick="saveloadScreenLoad()">刷新</button>
+        <button class="act sec" onclick="saveloadScreenReset()">恢复默认</button>
+      </div>
+      <div class="status" id="saveloadScreenStat"></div>
+    </div>
+  </section>
+
   <!-- 已合并至 tab-sys（系统运维） -->
 
 <section class="tab" id="tab-orchestrate">
@@ -888,6 +908,7 @@ document.querySelectorAll('#nav button').forEach(b=>b.onclick=(e)=>{
   if(b.dataset.tab==='uiskin')uiSkinLoad();
   if(b.dataset.tab==='hud')hudLoad();
   if(b.dataset.tab==='settings_screen')settingsScreenLoad();
+  if(b.dataset.tab==='saveload_screen')saveloadScreenLoad();
   if(b.dataset.tab==='exp')expLoad();
   if(b.dataset.tab==='gate')gateLoad();
   if(b.dataset.tab==='orchestrate')orcLoad();
@@ -1739,6 +1760,40 @@ async function settingsScreenReset(){
   const r=await A('POST','/api/settings/layout',SS_DEFAULTS);
   show('settingsScreenStat',(r&&r.msg)?r.msg:'已恢复默认',!!(r&&r.ok));
   settingsScreenLoad();
+}
+
+// ---------- 读档弹窗布局（数值化编辑） ----------
+const SL_KEYS=['content_max_width','content_max_height','margin_x_ratio','margin_y_ratio','card_min_width','card_min_height'];
+const SL_DEFAULTS={content_max_width:640,content_max_height:724,margin_x_ratio:0.0,margin_y_ratio:0.15,card_min_width:640,card_min_height:112};
+async function saveloadScreenLoad(){
+  try{
+    const d=await A('GET','/api/saveload/layout');
+    if(!d){show('saveloadScreenStat','加载失败',false);return;}
+    document.getElementById('sl_pw').value=d.content_max_width??SL_DEFAULTS.content_max_width;
+    document.getElementById('sl_ph').value=d.content_max_height??SL_DEFAULTS.content_max_height;
+    document.getElementById('sl_mx').value=d.margin_x_ratio??SL_DEFAULTS.margin_x_ratio;
+    document.getElementById('sl_my').value=d.margin_y_ratio??SL_DEFAULTS.margin_y_ratio;
+    document.getElementById('sl_bw').value=d.card_min_width??SL_DEFAULTS.card_min_width;
+    document.getElementById('sl_bh').value=d.card_min_height??SL_DEFAULTS.card_min_height;
+    show('saveloadScreenStat','已加载读档弹窗布局',true);
+  }catch(e){show('saveloadScreenStat','加载失败：'+e,false);}
+}
+async function saveloadScreenSave(){
+  const r=await A('POST','/api/saveload/layout',{
+    content_max_width:parseFloat(document.getElementById('sl_pw').value)||0,
+    content_max_height:parseFloat(document.getElementById('sl_ph').value)||0,
+    margin_x_ratio:parseFloat(document.getElementById('sl_mx').value)||0,
+    margin_y_ratio:parseFloat(document.getElementById('sl_my').value)||0,
+    card_min_width:parseFloat(document.getElementById('sl_bw').value)||0,
+    card_min_height:parseFloat(document.getElementById('sl_bh').value)||0,
+  });
+  show('saveloadScreenStat',(r&&r.msg)?r.msg:(r&&r.ok?'已保存':'失败'),!!(r&&r.ok));
+}
+async function saveloadScreenReset(){
+  if(!confirm('把读档弹窗布局恢复成默认？'))return;
+  const r=await A('POST','/api/saveload/layout',SL_DEFAULTS);
+  show('saveloadScreenStat',(r&&r.msg)?r.msg:'已恢复默认',!!(r&&r.ok));
+  saveloadScreenLoad();
 }
 
 // ---------- 主菜单(登录)界面布局（自由拖拽可视化编辑） ----------

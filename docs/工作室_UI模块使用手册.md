@@ -188,6 +188,31 @@ UI 模块 ⬇️
 
 ---
 
+### 2.7 读档弹窗（存档卡片列几何）
+
+**能改什么**：读档界面里那一条**居中存档卡片列**的几何——卡片列封顶宽高、左右/上下留白比例、单张存档卡片最小尺寸。
+
+| 参数 | 分类 | 默认值（参考分辨率 1920×1080） | 改完哪生效 |
+|---|---|---|---|
+| 卡片列封顶宽 `content_max_width` | <span style="background:#2a1a35;color:#c98be6;padding:2px 8px;border-radius:10px;font-size:12px">布局</span> | 640 | `data/configs/ui/skin/saveload_screen.layout.json` |
+| 卡片列封顶高 `content_max_height` | <span style="background:#2a1a35;color:#c98be6;padding:2px 8px;border-radius:10px;font-size:12px">布局</span> | 724 | `data/configs/ui/skin/saveload_screen.layout.json` |
+| 左右留白比例 `margin_x_ratio` | <span style="background:#2a1a35;color:#c98be6;padding:2px 8px;border-radius:10px;font-size:12px">布局</span> | 0.0 | `data/configs/ui/skin/saveload_screen.layout.json` |
+| 上下留白比例 `margin_y_ratio` | <span style="background:#2a1a35;color:#c98be6;padding:2px 8px;border-radius:10px;font-size:12px">布局</span> | 0.15 | `data/configs/ui/skin/saveload_screen.layout.json` |
+| 卡片最小宽 `card_min_width` | <span style="background:#2a1a35;color:#c98be6;padding:2px 8px;border-radius:10px;font-size:12px">布局</span> | 640 | `data/configs/ui/skin/saveload_screen.layout.json` |
+| 卡片最小高 `card_min_height` | <span style="background:#2a1a35;color:#c98be6;padding:2px 8px;border-radius:10px;font-size:12px">布局</span> | 112 | `data/configs/ui/skin/saveload_screen.layout.json` |
+
+**小白步骤**：
+1. 点顶部「UI 模块 → 读档弹窗」。
+2. 在 6 个数值框里调卡片列宽高、留白比例、单卡尺寸。
+3. 点「保存布局」→ 写入工程，游戏下次打开读档界面即按此几何自适应。
+4. 点「恢复默认」回到出厂值。
+
+**注意**：
+- 数值是「参考分辨率 1920×1080」下的**封顶值 / 比例值**；游戏运行时按当前视口等比自适应，且不超过封顶值。
+- 这是**出厂默认值**，游戏侧只读不写；文件缺失 / 写坏自动回退默认，零破坏。
+
+---
+
 ## 三、5 分钟快速上手路径
 
 如果你是第一次用，建议按这个顺序玩一遍：
@@ -198,6 +223,7 @@ UI 模块 ⬇️
 4. **关特效省电**：UI 皮肤定制 → 视觉特效 → 关掉飘叶/小船 → 应用。
 5. **给加载界面换个布局**：UI 模块 → 预加载界面 → 拖动进度条 → 保存布局。
 6. **重新摆 HUD 四面板**：UI 模块 → HUD 布局 → 拖动面板 → 保存布局。
+7. **调读档卡片列**：UI 模块 → 读档弹窗 → 调 6 个数值 → 保存布局。
 
 全部改完，进 Godot 编辑器按 F6 运行，即可实时看到效果。
 
@@ -220,6 +246,7 @@ UI 模块 ⬇️
 | UI 皮肤定制 → 视觉特效 | `data/configs/ui/skin/main_menu.vfx.json` | `UIVFX`（通用装载器） | 点「复原默认」 |
 | HUD 布局 | `data/configs/ui/hud_layout.json` | `core/ui_layout.gd`（通用装载器）+ 四面板 `_init_drag` | 点「恢复默认」 |
 | 设置弹窗 | `data/configs/ui/skin/settings_screen.layout.json` | `SettingsScreen.gd`（`_load_layout_config` 通用装载器） | 点「恢复默认」 |
+| 读档弹窗 | `data/configs/ui/skin/saveload_screen.layout.json` | `SaveLoadScreen.gd`（`_load_layout_config` 通用装载器） | 点「恢复默认」 |
 
 ---
 

@@ -1442,6 +1442,76 @@ def settings_screen_layout_update(d):
     return True, "已保存设置弹窗布局（游戏内下次启动生效）"
 
 
+def _SAVELOAD_SCREEN_LAYOUT_DEFAULT():
+    return {
+        "_doc": "读档界面存档卡片列几何（工作室「UI 模块 → 读档弹窗」可数值编辑）。content_max_width/height 为居中列封顶尺寸；margin_x_ratio/margin_y_ratio 为左右留白/列表顶距比例；card_min_width/height 为单张存档卡最小尺寸。",
+        "reference_width": 1920.0,
+        "reference_height": 1080.0,
+        "content_max_width": 640.0,
+        "content_max_height": 724.0,
+        "margin_x_ratio": 0.0,
+        "margin_y_ratio": 0.15,
+        "card_min_width": 640.0,
+        "card_min_height": 112.0,
+    }
+
+
+_SAVELOAD_SCREEN_LAYOUT_KEYS = (
+    "content_max_width", "content_max_height", "margin_x_ratio", "margin_y_ratio",
+    "card_min_width", "card_min_height",
+)
+
+
+def _saveload_screen_layout_path():
+    return os.path.join(discover_project_root(), "data", "configs", "ui", "skin", "saveload_screen.layout.json")
+
+
+def saveload_screen_layout_get():
+    """读取读档界面卡片列几何（与默认合并，缺字段/坏文件回退默认）。"""
+    p = _saveload_screen_layout_path()
+    data = dict(_SAVELOAD_SCREEN_LAYOUT_DEFAULT())
+    if os.path.exists(p):
+        try:
+            with open(p, "r", encoding="utf-8") as f:
+                stored = json.load(f)
+            if isinstance(stored, dict):
+                for k in _SAVELOAD_SCREEN_LAYOUT_KEYS:
+                    if _is_num(stored.get(k)):
+                        data[k] = float(stored[k])
+        except Exception:
+            pass
+    return data
+
+
+def saveload_screen_layout_update(d):
+    """写入读档界面卡片列几何（自动备份旧文件）。d 为包含可编辑数字字段的字典。"""
+    p = _saveload_screen_layout_path()
+    _backup(p)
+    data = dict(_SAVELOAD_SCREEN_LAYOUT_DEFAULT())
+    if os.path.exists(p):
+        try:
+            with open(p, "r", encoding="utf-8") as f:
+                stored = json.load(f)
+            if isinstance(stored, dict):
+                for k in _SAVELOAD_SCREEN_LAYOUT_KEYS:
+                    if _is_num(stored.get(k)):
+                        data[k] = float(stored[k])
+        except Exception:
+            pass
+    if isinstance(d, dict):
+        for k in _SAVELOAD_SCREEN_LAYOUT_KEYS:
+            if _is_num(d.get(k)):
+                data[k] = max(0.0, float(d[k]))
+    data["_doc"] = _SAVELOAD_SCREEN_LAYOUT_DEFAULT()["_doc"]
+    data["reference_width"] = _SAVELOAD_SCREEN_LAYOUT_DEFAULT()["reference_width"]
+    data["reference_height"] = _SAVELOAD_SCREEN_LAYOUT_DEFAULT()["reference_height"]
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+    with open(p, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    log_event("saveload_screen_layout", p, "更新读档界面布局")
+    return True, "已保存读档界面布局（游戏内下次启动生效）"
+
+
 # ============================ UI 皮肤定制（工作室「UI 皮肤定制」tab，UI 窗口主权） ============================
 # 只读写 data/configs/ui/skin/ 下的白名单文件，杜绝路径穿越；游戏侧零依赖、缺省回退。
 def _ui_skin_dir():

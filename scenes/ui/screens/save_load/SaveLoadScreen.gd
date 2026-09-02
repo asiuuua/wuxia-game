@@ -20,6 +20,41 @@ const SaveNameDialogScene = preload("res://scenes/ui/components/save_name_dialog
 const TITLE := "save_title"
 const TITLE_SAVE := "save_title_save"
 
+# === 布局外置（UI 放权 Phase 1：读档弹窗几何，工作室「UI 模块 → 读档弹窗」可编辑） ===
+# 与 settings_screen.layout.json 同构；游戏侧只读不写，文件缺失/写坏自动回退默认，零破坏。
+const SAVELOAD_LAYOUT_PATH := "res://data/configs/ui/skin/saveload_screen.layout.json"
+const SAVELOAD_LAYOUT_DEFAULT := {
+	"content_max_width": 640.0,
+	"content_max_height": 724.0,
+	"margin_x_ratio": 0.0,
+	"margin_y_ratio": 0.15,
+	"card_min_width": 640.0,
+	"card_min_height": 112.0,
+}
+
+## 读取读档界面布局配置（静默回退默认）
+static func _load_layout_config() -> Dictionary:
+	if not FileAccess.file_exists(SAVELOAD_LAYOUT_PATH):
+		return SAVELOAD_LAYOUT_DEFAULT.duplicate()
+	var f := FileAccess.open(SAVELOAD_LAYOUT_PATH, FileAccess.READ)
+	if f == null:
+		return SAVELOAD_LAYOUT_DEFAULT.duplicate()
+	var txt := f.get_as_text()
+	f.close()
+	var json := JSON.new()
+	if json.parse(txt) != OK:
+		return SAVELOAD_LAYOUT_DEFAULT.duplicate()
+	var data: Variant = json.get_data()
+	if not (data is Dictionary):
+		return SAVELOAD_LAYOUT_DEFAULT.duplicate()
+	var out: Dictionary = SAVELOAD_LAYOUT_DEFAULT.duplicate()
+	for k in SAVELOAD_LAYOUT_DEFAULT.keys():
+		if data.has(k):
+			var v: Variant = data[k]
+			if v is float or v is int:
+				out[k] = float(v)
+	return out
+
 # 主菜单背景图（数据驱动：有图用图叠压暗层+落叶，无图回退深墨）
 const BG_IMAGE_PATH := "res://assets/ui/main_menu_bg.png"
 const BG_IMAGE_SCRIM := 0.55
@@ -49,6 +84,40 @@ func _build_content() -> void:
 	_build_header()
 	_build_list()
 	_rebuild_list()
+	_apply_layout()
+
+# === 布局外置应用（UI 放权 Phase 1：读档弹窗几何） ===
+# 把存档卡片居中列的宽度/高度/留白比例、卡片最小尺寸从 saveload_screen.layout.json 应用。
+# 默认值复现工程出厂的 640 居中列行为；文件缺失/写坏静默回退默认，零破坏。
+func _apply_layout() -> void:
+	if Engine.is_editor_hint():
+		return
+	var cfg: Dictionary = _load_layout_config()
+	var vp: Vector2 = get_viewport_rect().size
+	var mx: float = cfg.get("margin_x_ratio", 0.0)
+	var my: float = cfg.get("margin_y_ratio", 0.15)
+	var max_w: float = cfg.get("content_max_width", 640.0)
+	var max_h: float = cfg.get("content_max_height", 724.0)
+	var col_w: float = mini(vp.x * (1.0 - 2.0 * mx), max_w)
+	col_w = maxf(col_w, 200.0)
+	var col_h: float = mini(vp.y * (1.0 - 2.0 * my), max_h)
+	col_h = maxf(col_h, 200.0)
+	# 头部与列表列同宽、水平居中（anchor 0.5 + offset ±col_w/2）
+	for node in [_header, _scroll]:
+		if node == null:
+			continue
+		node.set_anchor(SIDE_LEFT, 0.5)
+		node.set_anchor(SIDE_RIGHT, 0.5)
+		node.offset_left = -col_w / 2.0
+		node.offset_right = col_w / 2.0
+	# 列表列垂直范围：从视口高×margin_y_ratio 起，高=col_h
+	if _scroll != null:
+		_scroll.set_anchor(SIDE_TOP, my)
+		_scroll.set_anchor(SIDE_BOTTOM, my + col_h / maxf(vp.y, 1.0))
+	# 卡片间距（列表 VBox 的 separation）
+	if _list_container != null and _list_container is VBoxContainer:
+		var sep: float = cfg.get("card_separation", 12.0) if cfg.has("card_separation") else 12.0
+		_list_container.add_theme_constant_override("separation", int(sep))
 
 # === 背景（数据驱动：有竹林图用图叠压暗层+落叶，无图回退深墨） ===
 # 背景全屏铺底，加在 self 并压到最底层（ContentRoot 之下），填满刘海/挖孔不留黑边
@@ -134,6 +203,8 @@ func _rebuild_list() -> void:
 
 func _add_card(info: Dictionary) -> void:
 	var card: SaveCard = SaveCardScene.instantiate()
+	var cfg: Dictionary = _load_layout_config()
+	card.custom_minimum_size = Vector2(cfg.get("card_min_width", 640.0), cfg.get("card_min_height", 112.0))
 	card.card_focused.connect(_on_card_focused)
 	card.load_requested.connect(_on_load_requested)
 	card.delete_requested.connect(_on_delete_requested)

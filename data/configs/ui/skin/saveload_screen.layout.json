@@ -1,0 +1,11 @@
+{
+  "_doc": "读档界面存档卡片列几何（工作室「UI 模块 → 读档弹窗」可数值编辑）。content_max_width 为存档卡片居中列的封顶宽度；游戏运行时按当前视口等比自适应，不超过封顶值（列宽=视口宽×(1-2×margin_x_ratio)，再与封顶值取小）。margin_x_ratio / margin_y_ratio 为左右留白比例（列宽）与列表顶距比例（列表从视口高×margin_y_ratio 处起，高=视口高×(1-2×margin_y_ratio) 与封顶值取小）。card_min_width/height 为单张存档卡最小尺寸。默认值为当前工程出厂值（640 居中列），改前先记录。",
+  "reference_width": 1920.0,
+  "reference_height": 1080.0,
+  "content_max_width": 640.0,
+  "content_max_height": 724.0,
+  "margin_x_ratio": 0.0,
+  "margin_y_ratio": 0.15,
+  "card_min_width": 640.0,
+  "card_min_height": 112.0
+}
