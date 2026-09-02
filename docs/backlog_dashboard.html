@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>武侠江湖 · 模块待办清单</title>
+<style>
+  :root{
+    --bg:#0f1119; --panel:#15182a; --panel2:#1b1f33; --line:#2a2f47;
+    --txt:#e6e8f0; --muted:#9aa0b8; --accent:#7c9cff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font:14px/1.6 system-ui,"Microsoft YaHei",sans-serif}
+  header{padding:16px 18px;border-bottom:1px solid var(--line);background:var(--panel)}
+  header h1{margin:0;font-size:18px}
+  header .sub{color:var(--muted);font-size:12px;margin-top:4px}
+  .summary{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .chip{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:12px;color:var(--muted)}
+  nav{display:flex;gap:4px;background:var(--panel);padding:0 12px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  nav button{background:transparent;border:none;color:var(--muted);padding:10px 14px;cursor:pointer;font-size:14px;border-bottom:2px solid transparent}
+  nav button:hover{color:var(--txt)}
+  nav button.active{color:var(--txt);border-bottom-color:var(--accent)}
+  .filters{display:flex;flex-wrap:wrap;gap:6px;padding:10px 14px;border-bottom:1px solid var(--line);align-items:center}
+  .filters .lbl{color:var(--muted);font-size:12px;margin-right:4px}
+  .filters label{display:inline-flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;user-select:none}
+  .filters input{accent-color:var(--accent)}
+  main{padding:16px 18px;max-width:1100px}
+  .grp-title{font-size:15px;font-weight:700;margin:18px 0 10px;padding-left:10px;border-left:4px solid var(--accent)}
+  .grp-title.done{color:#34d399;border-left-color:#34d399}
+  .moddesc{color:var(--muted);font-size:13px;margin:0 0 8px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:12px}
+  .card.done{background:#101b16;border-color:#1f3a2c}
+  .card .top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .card .title{font-size:15px;font-weight:600}
+  .badge{font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid;font-weight:600}
+  .pill{font-size:11px;padding:2px 8px;border-radius:999px;background:var(--panel2);border:1px solid var(--line);color:var(--muted)}
+  .pill.blocked{color:#f87171;border-color:#f8717155}
+  .pill.done{color:#34d399;border-color:#34d39955}
+  .kv{margin-top:6px;font-size:13px}
+  .kv .k{color:var(--muted)}
+  .sug{margin-top:8px;font-size:13px;background:var(--panel2);border-left:3px solid var(--accent);padding:6px 10px;border-radius:4px}
+  .plain{margin-top:10px;border-top:1px dashed var(--line);padding-top:8px}
+  .plain .pl{font-size:13px;margin:4px 0;display:flex;gap:6px}
+  .plain .pl b{color:var(--accent);flex:0 0 96px;font-weight:600}
+  .plain .pl span{color:var(--txt)}
+  .empty{color:var(--muted);padding:30px;text-align:center}
+</style>
+</head>
+<body>
+<header>
+  <h1>武侠江湖 · 模块待办清单</h1>
+  <div class="sub" id="sub"></div>
+  <div class="summary" id="summary"></div>
+</header>
+<nav id="nav"></nav>
+<div class="filters">
+  <span class="lbl">筛选类型：</span>
+  <span id="filters"></span>
+</div>
+<main id="main"></main>
+<script>
+const BACKLOG = {"updated": "2026-09-02", "description": "武侠江湖模块化待办清单（含隐性BUG / 未实现逻辑 / 是否占位 / 未来优化建议四维度）。由 tools/gen_backlog.py 由本文件生成 docs/待办清单.md 与 docs/backlog_dashboard.html。", "type_legend": {"待办": "已知要做、尚未开始或待决策的事项", "隐性BUG": "逻辑缺失/门禁缺陷，表面不报错但行为异常", "未实现": "接口/功能已预留但逻辑未落地", "占位": "临时占位实现，待真实资源/逻辑替换", "优化建议": "非阻塞的性能/体验改进"}, "modules": [{"id": "ui", "name": "UI 模块", "desc": "界面框架、组件、HUD、图标体系（scenes/ui、autoload/ui_manager、data/configs/ui）。", "items": [{"title": "HUD 是否在战斗中常驻", "type": "待办", "status": "open", "placeholder": false, "source": "架构待决策（MEMORY）", "detail": "BattleScene mount_hud 存在视觉重叠风险，需拍板战斗中 HUD 的常驻策略。", "suggestion": "先确认设计意图：战斗中 HUD 是否需常驻；若常驻则调整层级/布局避免与主战斗 UI 重叠。"}, {"title": "缺图标统一占位图（品红棋盘）待替换真实图标", "type": "占位", "status": "open", "placeholder": true, "source": "scenes/ui/icon_registry.gd", "detail": "UIManager.get_icon 缺图时返回 PlaceholderTexture2D（品红棋盘），保证不崩但界面显占位紫块。", "suggestion": "按图标 id 把真实 png 丢进 resources/icons/{skills,enemies,items,...} 即自动生效，无需改代码。"}, {"title": "弹窗/列表的确认框缩放动画为占位", "type": "占位", "status": "open", "placeholder": true, "source": "scenes/ui/components/confirm_dialog/ConfirmDialog.gd:6", "detail": "确认对话框动画用淡入淡出占位，真实缩放动画待美术资源。", "suggestion": "拿到美术资源后在 _show/_hide 接入 Tween 缩放。"}, {"title": "主菜单悬停音效替换为真实木质按钮音", "type": "占位", "status": "done", "placeholder": true, "source": "用户F5实测后要求（本会话）", "detail": "登录界面 5 个主菜单按钮的悬停音效，此前为程序合成短音占位，已替换为下载的木质框按钮悬停音 menu_hover_box.ogg（Ogg Vorbis，0.11s）。", "suggestion": "——", "resolvedBy": "AI-UI", "resolvedAt": "2026-09-02", "commit": "63263e2", "resolution": "新增 menu_hover_box.ogg + 其 .import，ui_sfx.json 的 hover 改指向该文件；零代码改动。已验证 Godot 原生识别为 AudioStreamOggVorbis、运行时 load 成功、双闸门全绿。"}]}, {"id": "audit", "name": "审计/质量", "desc": "跨窗口质量审计发现的待办（由审计窗口派发，多落在 UI）。", "items": [{"title": "响应式锚点覆盖其余弹窗/列表", "type": "待办", "status": "open", "placeholder": false, "source": "派单 23a9d0b92b83（审计→UI）", "detail": "当前仅部分界面做了响应式锚点，其余弹窗/列表在不同分辨率下可能错位。", "suggestion": "逐个界面补齐 anchor 响应式，优先高频弹窗（确认框/背包/结缘）。"}, {"title": "列表刷新子节点 + 悬停动效令牌解析结果池化", "type": "优化建议", "status": "open", "placeholder": false, "source": "派单 fdfcce7396ed（审计→UI）", "detail": "列表频繁重建子节点、悬停动效每次重新解析令牌，存在可观测的性能浪费。", "suggestion": "对象池复用列表项；令牌解析结果缓存复用。"}]}, {"id": "battle", "name": "战斗模块", "desc": "战术战棋逻辑与表现（scenes/gameplay/battle、services/combat）。", "items": [{"title": "战术战棋单位立绘为占位色块", "type": "占位", "status": "open", "placeholder": true, "source": "scenes/gameplay/battle/battle_entity.gd（多处）", "detail": "玩家/敌人单位用蓝/红色块占位，真实 SpriteFrames 帧序列未接入（含降级回退）。", "suggestion": "美术按实体 id 提供 SpriteFrames，battle_entity.gd 已留接入点（frames_path）。"}, {"title": "战棋底图缺省为程序化占位", "type": "占位", "status": "open", "placeholder": true, "source": "battle_grid_node.gd:28/59", "detail": "无底图时用程序化水墨菱形网格占位，需工作室工具上传真实战斗场景图。", "suggestion": "用工作室「战棋布局」页上传底图即生效。"}, {"title": "头像缺图显占位兜底图", "type": "占位", "status": "open", "placeholder": true, "source": "unit_hud.gd:87", "detail": "UnitHud.set_portrait 缺图时显占位图（不崩），真实立绘资源未到位。", "suggestion": "按 id 提供 resources/icons 或立绘资源。"}, {"title": "接入 SpriteFrames 帧动画提升表现", "type": "优化建议", "status": "open", "placeholder": false, "source": "战斗表现演进", "detail": "当前单位/头像多为色块占位，表现力弱。", "suggestion": "统一立绘资源管线后，替换占位色块为动画立绘。"}]}, {"id": "inventory", "name": "背包模块", "desc": "物品/背包数据层与界面（services/inventory、scenes/ui/overlays/inventory）。", "items": [{"title": "消耗品增益未生效", "type": "未实现", "status": "open", "placeholder": false, "source": "inventory_service.gd:469（TODO Phase 扩展）", "detail": "物品的 buff_stat/buff_value 未在服用时应用到 PlayerState（如临时攻击/防御加成）。", "suggestion": "在 consume 流程调用 PlayerState 增益接口，按 buff_stat/buff_value 落地。"}, {"title": "异常状态清除未生效", "type": "未实现", "status": "open", "placeholder": false, "source": "inventory_service.gd:475（TODO Phase 扩展）", "detail": "cure_status 类物品未清除 PlayerState 上的中毒/眩晕等异常状态。", "suggestion": "在 consume 流程接 PlayerState.clear_status(status_id)。"}, {"title": "满包溢出已有 Toast，建议自动整理", "type": "优化建议", "status": "open", "placeholder": false, "source": "背包体验演进", "detail": "溢出已弹 Toast 提示，但无自动堆叠/整理。", "suggestion": "增加「整理背包」自动堆叠同类物品，减少占用格。"}]}, {"id": "bond", "name": "结缘/子嗣模块", "desc": "关系网、婚礼、子嗣孕期（services/bond、scenes/gameplay/bond、BondRomanceScreen）。", "items": [{"title": "休息/睡觉未驱动天数推进（隐性BUG）", "type": "隐性BUG", "status": "blocked", "placeholder": false, "source": "派单 178267684159（结缘→背包，背包窗越权跳过，待重派）", "detail": "游戏内「休息/睡觉」动作未驱动天气时间服务推进天数，导致姻缘子嗣孕期不流逝；表面无报错。romance_service.advance_days 已就绪，仅缺「休息/睡觉」动作补一道 advance_day 驱动。", "suggestion": "改派「玩法/时间系统」或「结缘窗口」认领：在休息/睡觉逻辑里补 advance_day() 调用。", "plain": {"what": "在「结缘/关系」界面点「休息/睡觉」时，游戏应当让时间往前走一天，但现在的代码漏了这一步。", "why": "很多剧情和状态（比如子嗣的孕期）是靠「天数」推进的；天数不走，这些系统就全卡住了。", "progress": "受阻：修这个需要改「玩法/时间系统」或「结缘窗口」的代码，目前还没人认领这一项。", "missing": "在「休息/睡觉」的逻辑里，少了一行触发天数推进（advance_day）的调用。", "plan": "派给对应窗口，在休息/睡觉时补一句 advance_day()，孕期就能正常流逝了。", "bugs": "⚠ 这就是个隐性BUG：你点了休息/睡觉，界面一切正常、也不报错，但天数就是不增加，导致后续依赖天数的玩法全部静止。"}}, {"title": "子嗣孕期流逝依赖天数推进", "type": "未实现", "status": "blocked", "placeholder": false, "source": "bond 链路（依赖上一项）", "detail": "子嗣孕期推进依赖天数流逝，上一项未修则孕期静止。", "suggestion": "随上一项天数推进修复后自动打通。"}, {"title": "婚礼演出场景缺手动 playtest", "type": "待办", "status": "open", "placeholder": false, "source": "派单 e4161ea60416 done 备注建议", "detail": "WeddingScene.tscn 已建且接线完整，但建议做一次引擎内手动 playtest 确认演出呈现。", "suggestion": "F5 进游戏走一遍 propose→hold_wedding→切婚礼场景，核对演出。"}]}, {"id": "audio", "name": "音频模块", "desc": "音效/音乐管理与资源（autoload/AudioManager、resources/audio）。", "items": [{"title": "AudioManager 启动初始化为占位", "type": "占位", "status": "open", "placeholder": true, "source": "autoload/AudioManager.gd:17", "detail": "当前为占位初始化，Phase 2 接入总线与资源管理。", "suggestion": "接入音频总线、音量分组、资源懒加载。"}, {"title": "合成占位音效待替换为真实素材", "type": "占位", "status": "open", "placeholder": true, "source": "resources/audio/sfx（ui_click/confirm/cancel/back/open/close/error 为合成短音）", "detail": "除悬停已换木质按钮音外，其余 UI 音效仍为程序合成短音。", "suggestion": "拿到真实素材后仅改 data/configs/ui/ui_sfx.json 的 path 指向，零代码改动（悬停音已是此模式）。"}, {"title": "音频总线/音量分组", "type": "优化建议", "status": "open", "placeholder": false, "source": "音频架构演进", "detail": "目前音效/音乐混在一起，缺少分组音量控制。", "suggestion": "建 Bus（master/sfx/bgm/ui）并接设置项。"}]}, {"id": "world", "name": "世界/城镇/场景模块", "desc": "城镇、区域枢纽、场景切换（scenes/gameplay/town、data/configs/maps/scenes）。", "items": [{"title": "等距 2.5D 目标态待拍板", "type": "待办", "status": "open", "placeholder": false, "source": "架构决策（MEMORY）", "detail": "定位为等距 2.5D 武侠 RPG，但当前代码纯 2D，等距为设计目标态，待拍板。", "suggestion": "明确是否落地等距渲染；若落地需评估坐标/寻路改造量。"}, {"title": "城镇角色无立绘，暂用占位黄方块", "type": "占位", "status": "open", "placeholder": true, "source": "TownScene.gd:233", "detail": "城镇 NPC/玩家暂无立绘，用占位黄方块（保留脚底锚点+阴影，尺寸对齐 140px）。", "suggestion": "按 id 提供角色立绘资源接入。"}, {"title": "区域枢纽读条切换加载态优化", "type": "优化建议", "status": "open", "placeholder": false, "source": "场景切换体验", "detail": "世界区域枢纽式独立场景 + 读条切换，加载态可优化。", "suggestion": "预加载相邻区域/异步加载 +  loading 界面动效。"}]}, {"id": "quest", "name": "任务模块", "desc": "任务/追踪（services/quest、data/configs/quests、HUD 任务追踪）。", "items": [{"title": "notify_quest_track_changed 刷新待核验", "type": "隐性BUG", "status": "open", "placeholder": false, "source": "派单 08ec940f5674（UI→任务窗，仍 open）", "detail": "EventBus 已新增 notify_quest_track_changed 且 HUD 任务追踪已订阅，但派单仍标记 open，需核验任务追踪刷新是否完整（可能存在刷新不全的隐性问题）。", "suggestion": "构造任务接取/完成用例，核对 HUD 任务追踪实时刷新。"}]}, {"id": "testinfra", "name": "测试基建", "desc": "单元测试、门禁、CI（tests、tools 门禁脚本）。", "items": [{"title": "run_all 退出码不传播，CI 不可靠", "type": "隐性BUG", "status": "open", "placeholder": false, "source": "派单 fb36b027ba06（UI→测试基建）", "detail": "run_all.tscn 运行结束退出码不传播，CI 无法据此判定成败（门禁误报绿）。", "suggestion": "让 run_all 以 ✗ 数量决定退出码；CI 依退出码判定。"}, {"title": "gate_check.sh[2/4] 非白名单 ERROR 致门禁红", "type": "隐性BUG", "status": "open", "placeholder": false, "source": "派单 4ed0cb0d5d8d（UI→测试基建）", "detail": "引擎关闭噪声 + remove_child busy 产生非白名单 ERROR，导致 [2/4] 门禁误红。", "suggestion": "门禁 ERROR 白名单补充引擎关闭噪声；remove_child 改用 call_deferred/queue_free。"}, {"title": "确定性种子注入固化随机测试", "type": "优化建议", "status": "open", "placeholder": false, "source": "测试稳定性", "detail": "部分战斗测试曾因时间戳种子概率性失败（已修一处），仍有随机性隐患。", "suggestion": "测试内统一注入固定种子（get_core().rng.configure(SEED)）。"}]}]};
+const TYPE_COLOR = {"待办": "#60a5fa", "隐性BUG": "#f87171", "未实现": "#fbbf24", "占位": "#c084fc", "优化建议": "#34d399"};
+const STATUS_LABEL = {"open": "未开始/进行中", "blocked": "受阻", "done": "已完成"};
+const TYPE_ORDER = ["待办", "隐性BUG", "未实现", "占位", "优化建议"];
+
+document.getElementById('sub').textContent = '更新于 ' + (BACKLOG.updated||'') + ' · 共 ' +
+  BACKLOG.modules.reduce((a,m)=>a+m.items.length,0) + ' 项（已完成 ' +
+  BACKLOG.modules.reduce((a,m)=>a+m.items.filter(x=>x.status==='done').length,0) + '）';
+const byType = {};
+BACKLOG.modules.forEach(m=>m.items.forEach(it=>{byType[it.type]=(byType[it.type]||0)+1;}));
+document.getElementById('summary').innerHTML = TYPE_ORDER
+  .filter(t=>byType[t])
+  .map(t=>'<span class="chip" style="border-color:'+TYPE_COLOR[t]+'55;color:'+TYPE_COLOR[t]+'">'+t+' '+byType[t]+'</span>')
+  .join('');
+
+const active = new Set(TYPE_ORDER);
+const filtersEl = document.getElementById('filters');
+TYPE_ORDER.forEach(t=>{
+  const lab = document.createElement('label');
+  lab.innerHTML = '<input type="checkbox" checked data-t="'+t+'"> <span style="color:'+TYPE_COLOR[t]+'">'+t+'</span>';
+  lab.querySelector('input').addEventListener('change', e=>{
+    if(e.target.checked) active.add(t); else active.delete(t);
+    render(current);
+  });
+  filtersEl.appendChild(lab);
+});
+
+let current = BACKLOG.modules[0].id;
+const navEl = document.getElementById('nav');
+BACKLOG.modules.forEach(m=>{
+  const b = document.createElement('button');
+  b.textContent = m.name;
+  b.dataset.tab = m.id;
+  if(m.id===current) b.classList.add('active');
+  b.addEventListener('click', ()=>{
+    current = m.id;
+    [...navEl.children].forEach(c=>c.classList.toggle('active', c.dataset.tab===current));
+    render(current);
+  });
+  navEl.appendChild(b);
+});
+
+function plainOf(it){
+  // 与服务端 auto_plain 对齐的轻量合成（前端仅用于展示）
+  const t = it.type||'';
+  const whyDef = {'待办':'处理它能让对应系统更完善、少留隐患。','隐性BUG':'这类问题最阴险：表面不报错，但实际行为不对，越早修越省事。','未实现':'补上后这个功能才真正能用，否则只是空壳。','占位':'替换掉临时占位，界面/体验才完整、才像正式作品。','优化建议':'不阻塞流程，但做了能明显提升性能或手感。'};
+  const missDef = {'待办':'待排期开始。','隐性BUG':'还没合入修复补丁。','未实现':'真实逻辑未落地。','占位':'真实资源/真实逻辑未到位。','优化建议':'待排期实施。'};
+  let progress, bugs;
+  if(it.status==='done') progress='已完成 ✅（见本模块「已完成执行」）';
+  else if(it.status==='blocked') progress='受阻：当前卡在依赖/未拍板（来源：'+(it.source||'')+'）。';
+  else progress='尚未开始 / 进行中，还没真正落地。';
+  if(t==='隐性BUG') bugs='⚠ 这就是个隐性BUG：'+(it.detail||'表面正常但行为异常。');
+  else if(t==='占位') bugs='当前用占位实现（可能显示紫块/色块），不崩但非最终效果。';
+  else if(t==='未实现') bugs='功能已预留但未实现，调到会走空逻辑/降级。';
+  else bugs='暂无已知代码BUG，属待办/优化项。';
+  const p = it.plain||{};
+  return {
+    what: p.what || (it.detail||it.title||''),
+    why: p.why || (whyDef[t]||'完善项目的一部分。'),
+    progress: p.progress || progress,
+    missing: p.missing || (missDef[t]||'待明确。'),
+    plan: p.plan || (it.suggestion||'（待定，见建议/来源）'),
+    bugs: p.bugs || bugs
+  };
+}
+
+function render(id){
+  const m = BACKLOG.modules.find(x=>x.id===id);
+  const main = document.getElementById('main');
+  if(!m){ main.innerHTML='<div class="empty">无数据</div>'; return; }
+  let html = '<p class="moddesc">'+(m.desc||'')+'</p>';
+  const todo = m.items.filter(it=>it.status!=='done' && active.has(it.type));
+  const done = m.items.filter(it=>it.status==='done');
+  if(todo.length){
+    html += '<div class="grp-title">🟡 待解决 / 进行中（'+todo.length+'）</div>';
+    todo.forEach(it=>{ html += cardHtml(it, false); });
+  }
+  if(done.length){
+    html += '<div class="grp-title done">✅ 已完成执行（'+done.length+'）</div>';
+    done.forEach(it=>{ html += cardHtml(it, true); });
+  }
+  if(!todo.length && !done.length) html += '<div class="empty">当前模块无条目</div>';
+  main.innerHTML = html;
+}
+
+function cardHtml(it, isDone){
+  const col = TYPE_COLOR[it.type]||'#888';
+  const ph = it.placeholder ? ' <span class="pill">占位</span>' : '';
+  const st = '<span class="pill '+(it.status==='blocked'?'blocked':(it.status==='done'?'done':''))+'">'+(STATUS_LABEL[it.status]||it.status)+'</span>';
+  let h = '<div class="card'+(isDone?' done':'')+'"><div class="top">'
+    + '<span class="title">'+esc(isDone?'✅ ':'')+esc(it.title)+'</span>';
+  if(!isDone) h += '<span class="badge" style="color:'+col+';border-color:'+col+'55;background:'+col+'1a">'+esc(it.type)+'</span>';
+  h += st + ph + '</div>';
+  if(isDone){
+    h += '<div class="kv"><span class="k">解决方：</span>'+esc(it.resolvedBy||'（未署名）')+'</div>';
+    h += '<div class="kv"><span class="k">解决日期：</span>'+esc(it.resolvedAt||'（未记录）')+'</div>';
+    if(it.commit) h += '<div class="kv"><span class="k">提交：</span>'+esc(it.commit)+'</div>';
+    if(it.resolution) h += '<div class="sug">解决说明：'+esc(it.resolution)+'</div>';
+  } else {
+    h += '<div class="kv"><span class="k">来源：</span>'+esc(it.source||'')+'</div>';
+    const pl = plainOf(it);
+    h += '<div class="plain">'
+      + plRow('📌 是干嘛的', pl.what)
+      + plRow('💡 有什么用', pl.why)
+      + plRow('🚦 执行到哪步', pl.progress)
+      + plRow('🧩 还缺什么', pl.missing)
+      + plRow('🛠 以后怎么解决', pl.plan)
+      + plRow('🐞 当前BUG', pl.bugs)
+      + '</div>';
+  }
+  h += '</div>';
+  return h;
+}
+function plRow(k, v){ return '<div class="pl"><b>'+esc(k)+'</b><span>'+esc(v)+'</span></div>'; }
+function esc(s){ return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+render(current);
+</script>
+</body>
+</html>

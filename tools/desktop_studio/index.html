@@ -1863,10 +1863,49 @@ async function backlogLoad(){
   if(!d||!d.ok){ box.innerHTML='<div style="padding:20px;color:#9aa0b8">'+((d&&d.error)||'无数据')+'</div>'; return; }
   const TC={待办:'#60a5fa',隐性BUG:'#f87171',未实现:'#fbbf24',占位:'#c084fc',优化建议:'#34d399'};
   const SL={open:'未开始/进行中',blocked:'受阻',done:'已完成'};
+  const _WHY={'待办':'处理它能让对应系统更完善、少留隐患。','隐性BUG':'这类问题最阴险：表面不报错，但实际行为不对，越早修越省事。','未实现':'补上后这个功能才真正能用，否则只是空壳。','占位':'替换掉临时占位，界面/体验才完整、才像正式作品。','优化建议':'不阻塞流程，但做了能明显提升性能或手感。'};
+  const _MISS={'待办':'待排期开始。','隐性BUG':'还没合入修复补丁。','未实现':'真实逻辑未落地。','占位':'真实资源/真实逻辑未到位。','优化建议':'待排期实施。'};
+  function plainOf(it){
+    const t=it.type||''; let progress,bugs;
+    if(it.status==='done') progress='已完成 ✅（见本模块「已完成执行」）';
+    else if(it.status==='blocked') progress='受阻：当前卡在依赖/未拍板（来源：'+(it.source||'')+'）。';
+    else progress='尚未开始 / 进行中，还没真正落地。';
+    if(t==='隐性BUG') bugs='⚠ 这就是个隐性BUG：'+(it.detail||'表面正常但行为异常。');
+    else if(t==='占位') bugs='当前用占位实现（可能显示紫块/色块），不崩但非最终效果。';
+    else if(t==='未实现') bugs='功能已预留但未实现，调到会走空逻辑/降级。';
+    else bugs='暂无已知代码BUG，属待办/优化项。';
+    const p=it.plain||{};
+    return {what:p.what||(it.detail||it.title||''),why:p.why||(_WHY[t]||'完善项目的一部分。'),progress:p.progress||progress,missing:p.missing||(_MISS[t]||'待明确。'),plan:p.plan||(it.suggestion||'（待定，见建议/来源）'),bugs:p.bugs||bugs};
+  }
   let cur=d.modules[0].id;
+  function cardHtml(it,isDone){
+    const col=TC[it.type]||'#888';
+    const ph=it.placeholder?' <span class="bl-pill">占位</span>':'';
+    const st='<span class="bl-pill '+(it.status==='blocked'?'blocked':(it.status==='done'?'done':''))+'">'+(SL[it.status]||it.status)+'</span>';
+    let h='<div class="bl-card'+(isDone?' done':'')+'"><div class="bl-top"><span class="bl-title">'+blEsc((isDone?'✅ ':'')+it.title)+'</span>';
+    if(!isDone) h+='<span class="bl-badge" style="color:'+col+';border-color:'+col+'55;background:'+col+'1a">'+blEsc(it.type)+'</span>';
+    h+=st+ph+'</div>';
+    if(isDone){
+      h+='<div class="bl-kv"><span class="bl-k">解决方：</span>'+blEsc(it.resolvedBy||'（未署名）')+'</div>';
+      h+='<div class="bl-kv"><span class="bl-k">解决日期：</span>'+blEsc(it.resolvedAt||'（未记录）')+'</div>';
+      if(it.commit) h+='<div class="bl-kv"><span class="bl-k">提交：</span>'+blEsc(it.commit)+'</div>';
+      if(it.resolution) h+='<div class="bl-sug">解决说明：'+blEsc(it.resolution)+'</div>';
+    } else {
+      h+='<div class="bl-kv"><span class="bl-k">来源：</span>'+blEsc(it.source||'')+'</div>';
+      const pl=plainOf(it);
+      h+='<div class="bl-plain">'
+        +plRow('📌 是干嘛的',pl.what)+plRow('💡 有什么用',pl.why)+plRow('🚦 执行到哪步',pl.progress)
+        +plRow('🧩 还缺什么',pl.missing)+plRow('🛠 以后怎么解决',pl.plan)+plRow('🐞 当前BUG',pl.bugs)
+        +'</div>';
+    }
+    h+='</div>';
+    return h;
+  }
+  function plRow(k,v){return '<div class="bl-pl"><b>'+blEsc(k)+'</b><span>'+blEsc(v)+'</span></div>';}
   function render(){
     const m=d.modules.find(x=>x.id===cur);
     let h='<style>.bl-card{background:#15182a;border:1px solid #2a2f47;border-radius:10px;padding:12px 14px;margin-bottom:10px}'
+      +'.bl-card.done{background:#101b16;border-color:#1f3a2c}'
       +'.bl-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.bl-title{font-size:15px;font-weight:600}'
       +'.bl-badge{font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid;font-weight:600}'
       +'.bl-pill{font-size:11px;padding:2px 8px;border-radius:999px;background:#1b1f33;border:1px solid #2a2f47;color:#9aa0b8}'
@@ -1875,20 +1914,19 @@ async function backlogLoad(){
       +'.bl-sug{margin-top:6px;font-size:13px;background:#1b1f33;border-left:3px solid #7c9cff;padding:6px 10px;border-radius:4px}'
       +'.bl-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}.bl-chip{background:#15182a;border:1px solid #2a2f47;color:#e6e8f0;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:13px}'
       +'.bl-chip.active{background:#7c9cff22;border-color:#7c9cff;color:#fff}'
-      +'.bl-desc{color:#9aa0b8;font-size:13px;margin:0 0 12px}</style>';
+      +'.bl-desc{color:#9aa0b8;font-size:13px;margin:0 0 12px}'
+      +'.bl-grp{font-size:15px;font-weight:700;margin:16px 0 8px;padding-left:10px;border-left:4px solid #7c9cff}'
+      +'.bl-grp.done{color:#34d399;border-left-color:#34d399}'
+      +'.bl-plain{margin-top:8px;border-top:1px dashed #2a2f47;padding-top:6px}'
+      +'.bl-pl{font-size:13px;margin:4px 0;display:flex;gap:6px}'
+      +'.bl-pl b{color:#7c9cff;flex:0 0 96px;font-weight:600}</style>';
     h+='<div class="bl-chips">'+d.modules.map(m=>'<span class="bl-chip'+(m.id===cur?' active':'')+'" data-m="'+m.id+'">'+m.name+'</span>').join('')+'</div>';
     h+='<p class="bl-desc">'+(m.desc||'')+'</p>';
-    m.items.forEach(it=>{
-      const c=TC[it.type]||'#888';
-      const ph=it.placeholder?' <span class="bl-pill">占位</span>':'';
-      const st='<span class="bl-pill '+(it.status==='blocked'?'blocked':(it.status==='done'?'done':''))+'">'+(SL[it.status]||it.status)+'</span>';
-      h+='<div class="bl-card"><div class="bl-top"><span class="bl-title">'+blEsc(it.title)+'</span>'
-        +'<span class="bl-badge" style="color:'+c+';border-color:'+c+'55;background:'+c+'1a">'+blEsc(it.type)+'</span>'+st+ph+'</div>';
-      h+='<div class="bl-kv"><span class="bl-k">来源：</span>'+blEsc(it.source||'')+'</div>';
-      if(it.detail) h+='<div class="bl-kv"><span class="bl-k">说明：</span>'+blEsc(it.detail)+'</div>';
-      if(it.suggestion) h+='<div class="bl-sug">建议：'+blEsc(it.suggestion)+'</div>';
-      h+='</div>';
-    });
+    const todo=m.items.filter(it=>it.status!=='done');
+    const done=m.items.filter(it=>it.status==='done');
+    if(todo.length){ h+='<div class="bl-grp">🟡 待解决 / 进行中（'+todo.length+'）</div>'; todo.forEach(it=>h+=cardHtml(it,false)); }
+    if(done.length){ h+='<div class="bl-grp done">✅ 已完成执行（'+done.length+'）</div>'; done.forEach(it=>h+=cardHtml(it,true)); }
+    if(!todo.length&&!done.length) h+='<div class="bl-desc">当前模块无条目</div>';
     box.innerHTML=h;
     box.querySelectorAll('.bl-chip').forEach(ch=>ch.onclick=()=>{cur=ch.dataset.m;render();});
   }
