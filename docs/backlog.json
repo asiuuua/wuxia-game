@@ -231,29 +231,41 @@
         {
           "title": "消耗品增益未生效",
           "type": "未实现",
-          "status": "open",
+          "status": "done",
           "placeholder": false,
           "source": "inventory_service.gd:469（TODO Phase 扩展）",
           "detail": "物品的 buff_stat/buff_value 未在服用时应用到 PlayerState（如临时攻击/防御加成）。",
-          "suggestion": "在 consume 流程调用 PlayerState 增益接口，按 buff_stat/buff_value 落地。"
+          "suggestion": "在 consume 流程调用 PlayerState 增益接口，按 buff_stat/buff_value 落地。",
+          "resolvedBy": "背包",
+          "resolvedAt": "2026-09-02 17:38:43",
+          "commit": "756fbf1",
+          "resolution": "PlayerState 新增 next_battle_buffs/apply_next_battle_buff，inventory_service._apply_use_buff 落地 buff_stat/buff_value→下一场战斗临时加成，战斗结束由 GameManager 清除"
         },
         {
           "title": "异常状态清除未生效",
           "type": "未实现",
-          "status": "open",
+          "status": "done",
           "placeholder": false,
           "source": "inventory_service.gd:475（TODO Phase 扩展）",
           "detail": "cure_status 类物品未清除 PlayerState 上的中毒/眩晕等异常状态。",
-          "suggestion": "在 consume 流程接 PlayerState.clear_status(status_id)。"
+          "suggestion": "在 consume 流程接 PlayerState.clear_status(status_id)。",
+          "resolvedBy": "背包",
+          "resolvedAt": "2026-09-02 17:38:43",
+          "commit": "756fbf1",
+          "resolution": "PlayerState 新增 clear_status/has_status，inventory_service._apply_use_cure 落地 cure_status→清除中毒/眩晕等，未中状态不消耗"
         },
         {
           "title": "满包溢出已有 Toast，建议自动整理",
           "type": "优化建议",
-          "status": "open",
+          "status": "done",
           "placeholder": false,
           "source": "背包体验演进",
           "detail": "溢出已弹 Toast 提示，但无自动堆叠/整理。",
-          "suggestion": "增加「整理背包」自动堆叠同类物品，减少占用格。"
+          "suggestion": "增加「整理背包」自动堆叠同类物品，减少占用格。",
+          "resolvedBy": "背包",
+          "resolvedAt": "2026-09-02 17:38:43",
+          "commit": "756fbf1",
+          "resolution": "inventory_service 新增 organize() 自动堆叠同类/压实空槽/排序，锁定实例不参与合并"
         }
       ]
     },
