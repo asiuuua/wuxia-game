@@ -120,6 +120,7 @@
         <div class="dd-group-title">界面屏</div>
         <button class="dd-item" data-tab="login">登录界面</button>
         <button class="dd-item" data-tab="loading">预加载界面</button>
+        <button class="dd-item" data-tab="settings_screen">⚙️ 设置弹窗</button>
       </div>
       <div class="dd-group">
         <div class="dd-group-title">UI 子功能</div>
@@ -129,13 +130,9 @@
       </div>
     </div>
   </div>
-  <button data-tab="trash">回收站</button>
-  <button data-tab="settings">设置</button>
-  <button data-tab="log">操作日志</button>
-  <button data-tab="backlog">待办清单</button>
-  <button data-tab="startup">🤝 协同启动卡</button>
+  <button data-tab="sys">⚙️ 系统运维</button>
+  <button data-tab="coord">🤝 协同启动卡 / 待办清单</button>
   <button data-tab="exp">📚 经验库</button>
-  <button data-tab="gate">🔧 双闸门</button>
   <button data-tab="orchestrate">🧭 任务总控</button>
 </nav>
 <div class="banner">
@@ -549,54 +546,79 @@
     </div>
   </section>
 
-  <!-- TRASH -->
-  <section class="tab" id="tab-trash">
-    <div class="hint">保险模式：删除的东西先放到这里，到期（设置里的保留天数）才自动清空。可随时「恢复」或「彻底删除」。</div>
-    <div class="btns"><button class="act sec" onclick="trashLoad()">刷新</button>
-      <button class="act" onclick="trashCleanup()">清空过期项</button></div>
-    <table id="trashTable"><thead><tr><th>类型</th><th>名称</th><th>删除时间</th><th>操作</th></tr></thead>
-      <tbody id="trashBody"></tbody></table>
-    <div class="status" id="trashStat"></div>
-  </section>
-
-  <!-- SETTINGS -->
-  <section class="tab" id="tab-settings">
-    <div class="editor" style="max-width:560px">
-      <div class="hint">工程路径指向你的武侠游戏根目录（含 project.godot 的文件夹）。换电脑或挪盘后，点「浏览选择」或手动填入，再「应用并立即生效」即可，<b>无需重新打包</b>。</div>
-      <div class="row"><label>当前生效的工程</label><input id="s_detected" readonly value="识别中…" style="color:#888"></div>
-      <div class="row">
-        <label>工程根目录</label>
-        <input id="s_root" value="D:/武侠游戏" placeholder="例如 D:/武侠游戏 或 E:/我的游戏">
+  <!-- 系统运维 合并视图：操作日志 / 设置 / 回收站 / 双闸门 合并到一个页签，方便同屏查看。各子块元素 ID 保持不变，原加载函数 logLoad/setLoad/trashLoad/gateLoad 照常工作 -->
+  <section class="tab" id="tab-sys">
+    <div class="coord-sub">
+      <h3 style="margin:0 0 8px">📜 操作日志</h3>
+      <div class="btns"><button class="act sec" onclick="logLoad()">刷新</button></div>
+      <div id="logBox" style="margin-top:10px"></div>
+    </div>
+    <hr style="border:none;border-top:1px solid var(--line);margin:24px 0">
+    <div class="coord-sub">
+      <h3 style="margin:0 0 8px">⚙️ 设置</h3>
+      <div class="editor" style="max-width:560px">
+        <div class="hint">工程路径指向你的武侠游戏根目录（含 project.godot 的文件夹）。换电脑或挪盘后，点「浏览选择」或手动填入，再「应用并立即生效」即可，<b>无需重新打包</b>。</div>
+        <div class="row"><label>当前生效的工程</label><input id="s_detected" readonly value="识别中…" style="color:#888"></div>
+        <div class="row">
+          <label>工程根目录</label>
+          <input id="s_root" value="D:/武侠游戏" placeholder="例如 D:/武侠游戏 或 E:/我的游戏">
+        </div>
+        <div class="btns">
+          <button class="act sec" onclick="pickRoot()">浏览选择…</button>
+          <button class="act sec" onclick="checkRoot()">校验路径</button>
+          <button class="act" onclick="applyRoot()">应用并立即生效</button>
+        </div>
+        <div class="status" id="rootStat"></div>
+        <div class="row" style="margin-top:14px"><label>端口</label><input id="s_port" type="number" value="8765"></div>
+        <div class="row"><label>保留天数</label><input id="s_days" type="number" value="30"></div>
+        <div class="row"><label>保险模式</label>
+          <select id="s_safe"><option value="true">开（删除进回收站）</option><option value="false">关（直接删除）</option></select>
+        </div>
+        <div class="btns"><button class="act" onclick="saveSettings()">保存设置</button></div>
+        <div class="status" id="setStat"></div>
       </div>
-      <div class="btns">
-        <button class="act sec" onclick="pickRoot()">浏览选择…</button>
-        <button class="act sec" onclick="checkRoot()">校验路径</button>
-        <button class="act" onclick="applyRoot()">应用并立即生效</button>
+    </div>
+    <hr style="border:none;border-top:1px solid var(--line);margin:24px 0">
+    <div class="coord-sub">
+      <h3 style="margin:0 0 8px">🗑 回收站</h3>
+      <div class="hint">保险模式：删除的东西先放到这里，到期（设置里的保留天数）才自动清空。可随时「恢复」或「彻底删除」。</div>
+      <div class="btns"><button class="act sec" onclick="trashLoad()">刷新</button>
+        <button class="act" onclick="trashCleanup()">清空过期项</button></div>
+      <table id="trashTable"><thead><tr><th>类型</th><th>名称</th><th>删除时间</th><th>操作</th></tr></thead>
+        <tbody id="trashBody"></tbody></table>
+      <div class="status" id="trashStat"></div>
+    </div>
+    <hr style="border:none;border-top:1px solid var(--line);margin:24px 0">
+    <div class="coord-sub">
+      <h3 style="margin:0 0 8px">🔧 双闸门验证</h3>
+      <div class="layout">
+        <div class="editor" style="flex:1">
+          <div class="hint">双闸门门禁（平台化验证）：一键调起 Godot headless 跑 GATE1（零 SCRIPT/PARSE/COMPILE ERROR）+ GATE2（run_all 零 ✗），PM 不装 Godot 也能卡质量。非绿即阻断——红门禁=有人改崩，须立即修红，切勿为过门禁去动无关模块。</div>
+          <div class="row" style="margin:12px 0">
+            <button id="gateRunBtn" style="background:var(--accent);color:#fff;border:none;padding:8px 14px;border-radius:6px;cursor:pointer" onclick="gateRun()">▶ 运行双闸门验证</button>
+            <span id="gateStatus" class="status" style="margin-left:10px"></span>
+          </div>
+          <div id="gateView" style="margin-top:8px;max-height:62vh;overflow:auto;line-height:1.8"></div>
+        </div>
       </div>
-      <div class="status" id="rootStat"></div>
-      <div class="row" style="margin-top:14px"><label>端口</label><input id="s_port" type="number" value="8765"></div>
-      <div class="row"><label>保留天数</label><input id="s_days" type="number" value="30"></div>
-      <div class="row"><label>保险模式</label>
-        <select id="s_safe"><option value="true">开（删除进回收站）</option><option value="false">关（直接删除）</option></select>
-      </div>
-      <div class="btns"><button class="act" onclick="saveSettings()">保存设置</button></div>
-      <div class="status" id="setStat"></div>
     </div>
   </section>
 
-  <!-- LOG -->
-  <section class="tab" id="tab-log">
-    <div class="btns"><button class="act sec" onclick="logLoad()">刷新</button></div>
-    <div id="logBox" style="margin-top:10px"></div>
-  </section>
-  <section class="tab" id="tab-backlog">
-    <div id="backlogRoot" class="backlog-wrap">加载中…</div>
-  </section>
+  <!-- 已合并至 tab-sys（系统运维） -->
 
-  <!-- 协同启动卡（各 AI 窗口工作指令清单，数据来自 /api/startup_card） -->
-  <section class="tab" id="tab-startup">
-    <p class="muted" style="margin:0 0 12px">开新 AI 窗口时，从下面选对应窗口，点「📋 复制口令」整段复制，粘进窗口第一句话即可。内容随 <code>docs/AI协同启动卡.md</code> 同步。</p>
-    <div id="startupCardBody" class="startup-grid">加载中…</div>
+  <!-- 已合并至 tab-sys（系统运维） -->
+  <!-- 协同启动卡 + 待办清单 合并视图：两者不再拆分，方便同屏查看与复制。数据分别来自 /api/startup_card 与 /api/backlog -->
+  <section class="tab" id="tab-coord">
+    <div class="coord-sub">
+      <h3 style="margin:0 0 8px">🤝 协同启动卡</h3>
+      <p class="muted" style="margin:0 0 12px">开新 AI 窗口时，从下面选对应窗口，点「📋 复制口令」整段复制，粘进窗口第一句话即可。内容随 <code>docs/AI协同启动卡.md</code> 同步。</p>
+      <div id="startupCardBody" class="startup-grid">加载中…</div>
+    </div>
+    <hr style="border:none;border-top:1px solid var(--line);margin:24px 0">
+    <div class="coord-sub">
+      <h3 style="margin:0 0 8px">📋 待办清单</h3>
+      <div id="backlogRoot" class="backlog-wrap">加载中…</div>
+    </div>
   </section>
 </main>
 
@@ -709,18 +731,26 @@
     </div>
   </section>
 
-<section class="tab" id="tab-gate">
-  <div class="layout">
-    <div class="editor" style="flex:1">
-      <div class="hint">双闸门门禁（平台化验证）：一键调起 Godot headless 跑 GATE1（零 SCRIPT/PARSE/COMPILE ERROR）+ GATE2（run_all 零 ✗），PM 不装 Godot 也能卡质量。非绿即阻断——红门禁=有人改崩，须立即修红，切勿为过门禁去动无关模块。</div>
-      <div class="row" style="margin:12px 0">
-        <button id="gateRunBtn" style="background:var(--accent);color:#fff;border:none;padding:8px 14px;border-radius:6px;cursor:pointer" onclick="gateRun()">▶ 运行双闸门验证</button>
-        <span id="gateStatus" class="status" style="margin-left:10px"></span>
+  <!-- 设置弹窗布局（数值化编辑） -->
+  <section class="tab" id="tab-settings_screen">
+    <div class="editor" style="max-width:560px">
+      <div class="hint">设置弹窗面板几何（跟随 1920×1080 参考分辨率，运行时按当前视口自适应封顶）。改数字后点「保存布局」即可写入游戏，下次打开设置弹窗生效。</div>
+      <div class="row"><label>面板最大宽</label><input id="ss_pw" type="number" step="1" value="960"></div>
+      <div class="row"><label>面板最大高</label><input id="ss_ph" type="number" step="1" value="680"></div>
+      <div class="row"><label>左右留白比</label><input id="ss_mx" type="number" step="0.01" value="0.08"></div>
+      <div class="row"><label>上下留白比</label><input id="ss_my" type="number" step="0.01" value="0.10"></div>
+      <div class="row"><label>分类按钮最小宽</label><input id="ss_bw" type="number" step="1" value="160"></div>
+      <div class="row"><label>分类按钮最小高</label><input id="ss_bh" type="number" step="1" value="42"></div>
+      <div class="btns">
+        <button class="act" onclick="settingsScreenSave()">保存布局</button>
+        <button class="act sec" onclick="settingsScreenLoad()">刷新</button>
+        <button class="act sec" onclick="settingsScreenReset()">恢复默认</button>
       </div>
-      <div id="gateView" style="margin-top:8px;max-height:62vh;overflow:auto;line-height:1.8"></div>
+      <div class="status" id="settingsScreenStat"></div>
     </div>
-  </div>
-</section>
+  </section>
+
+  <!-- 已合并至 tab-sys（系统运维） -->
 
 <section class="tab" id="tab-orchestrate">
   <div class="layout">
@@ -857,9 +887,12 @@ document.querySelectorAll('#nav button').forEach(b=>b.onclick=(e)=>{
   if(b.dataset.tab==='uiart')uiArtLoad();
   if(b.dataset.tab==='uiskin')uiSkinLoad();
   if(b.dataset.tab==='hud')hudLoad();
+  if(b.dataset.tab==='settings_screen')settingsScreenLoad();
   if(b.dataset.tab==='exp')expLoad();
   if(b.dataset.tab==='gate')gateLoad();
   if(b.dataset.tab==='orchestrate')orcLoad();
+  if(b.dataset.tab==='coord'){backlogLoad();loadStartupCard();}
+  if(b.dataset.tab==='sys'){logLoad();setLoad();trashLoad();gateLoad();}
 });
 document.addEventListener('click',e=>{
   const wrap=document.querySelector('.nav-dropdown-wrap');
@@ -1673,6 +1706,40 @@ async function hudReset(){
   show('hudStat',(r2&&r2.msg)?r2.msg:'已恢复默认',!!(r2&&r2.ok));
 }
 hudInitDrag();
+
+// ---------- 设置弹窗布局（数值化编辑） ----------
+const SS_KEYS=['panel_max_width','panel_max_height','margin_x_ratio','margin_y_ratio','category_button_min_width','category_button_min_height'];
+const SS_DEFAULTS={panel_max_width:960,panel_max_height:680,margin_x_ratio:0.08,margin_y_ratio:0.10,category_button_min_width:160,category_button_min_height:42};
+async function settingsScreenLoad(){
+  try{
+    const d=await A('GET','/api/settings/layout');
+    if(!d){show('settingsScreenStat','加载失败',false);return;}
+    document.getElementById('ss_pw').value=d.panel_max_width??SS_DEFAULTS.panel_max_width;
+    document.getElementById('ss_ph').value=d.panel_max_height??SS_DEFAULTS.panel_max_height;
+    document.getElementById('ss_mx').value=d.margin_x_ratio??SS_DEFAULTS.margin_x_ratio;
+    document.getElementById('ss_my').value=d.margin_y_ratio??SS_DEFAULTS.margin_y_ratio;
+    document.getElementById('ss_bw').value=d.category_button_min_width??SS_DEFAULTS.category_button_min_width;
+    document.getElementById('ss_bh').value=d.category_button_min_height??SS_DEFAULTS.category_button_min_height;
+    show('settingsScreenStat','已加载设置弹窗布局',true);
+  }catch(e){show('settingsScreenStat','加载失败：'+e,false);}
+}
+async function settingsScreenSave(){
+  const r=await A('POST','/api/settings/layout',{
+    panel_max_width:parseFloat(document.getElementById('ss_pw').value)||0,
+    panel_max_height:parseFloat(document.getElementById('ss_ph').value)||0,
+    margin_x_ratio:parseFloat(document.getElementById('ss_mx').value)||0,
+    margin_y_ratio:parseFloat(document.getElementById('ss_my').value)||0,
+    category_button_min_width:parseFloat(document.getElementById('ss_bw').value)||0,
+    category_button_min_height:parseFloat(document.getElementById('ss_bh').value)||0,
+  });
+  show('settingsScreenStat',(r&&r.msg)?r.msg:(r&&r.ok?'已保存':'失败'),!!(r&&r.ok));
+}
+async function settingsScreenReset(){
+  if(!confirm('把设置弹窗布局恢复成默认？'))return;
+  const r=await A('POST','/api/settings/layout',SS_DEFAULTS);
+  show('settingsScreenStat',(r&&r.msg)?r.msg:'已恢复默认',!!(r&&r.ok));
+  settingsScreenLoad();
+}
 
 // ---------- 主菜单(登录)界面布局（自由拖拽可视化编辑） ----------
 const MM_ELS=['title_group','menu_container','bottom_left','bottom_right'];
