@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-signal_audit.py v4 — GDScript 信号连接 vs 处理器参数个数一致性扫描。
+signal_audit.py v5 — GDScript 信号连接 vs 处理器参数个数一致性扫描。
 
 为什么需要它：Godot 4.x 中，信号发射 N 个参数时，连接的处理器方法必须能"接住"
 这 N 个参数——否则运行时抛 "Method expected K argument(s), but called with N"。
@@ -10,6 +10,15 @@ signal_audit.py v4 — GDScript 信号连接 vs 处理器参数个数一致性�
 v4 修正 v3 的括号截断 bug：当 connect 实参内含 `.bind(i)` 时，旧正则 `[^)]*`
 在 `.bind(i)` 的 `)` 处就截断，导致 `.bind` 闭合括号丢失、bind 计数归零、误报。
 现改为：定位到 `connect(` 后用**括号配对**读到匹配的 `)`，再解析实参。
+
+v5 修正（2026-09-02，AI-架构）：同名信号跨类多签名冲突误报。
+Godot 允许不同类声明同名 `signal confirmed` 但参数不同（如 SaveNameDialog 的
+`confirmed(save_name: String)` 1 参 vs ConfirmDialog/MenuItem 的 `confirmed()` 0 参）。
+v4 把信号按全局名字建表（后者覆盖前者），`confirmed` 被记成最后声明的 1 参，
+于是对 ConfirmDialog/MenuItem 的 0 参 `confirmed` 连接误判 "1+bind 参 > 处理器 N 参" → 假 DEFINITE。
+v5 在扫描后检测同名信号的**多签名集合**：若某信号名存在 >1 种 argc，则标 `ambiguous`，
+对该信号的所有 connect 跳过 DEFINITE 判定（仅放松、不引入新误报；代价是可能漏报该信号的真实
+参数不匹配，但总比永久假红、无法接入门禁要好）。
 
 另修正：
 - 处理器签名优先在本文件内解析（消除同名虚方法跨文件碰撞，如 BaseScreen._refresh 覆盖 Hud._refresh）。
@@ -104,7 +113,7 @@ def resolve_handler(funcs_by_file, funcs_global, rel, handler):
 
 
 def main():
-    signals = {}
+    signals_set = {}        # name -> set(argc)：收集同名信号的所有签名
     funcs_by_file = {}
     funcs_global = {}
     connects = []
@@ -124,7 +133,9 @@ def main():
             if rel not in funcs_by_file:
                 funcs_by_file[rel] = {}
             for m in SIG_RE.finditer(src):
-                signals[m.group(1)] = parse_args(m.group(2))[0]
+                name = m.group(1)
+                argc = parse_args(m.group(2))[0]
+                signals_set.setdefault(name, set()).add(argc)
             for m in FUNC_RE.finditer(src):
                 sig = parse_args(m.group(2))
                 funcs_by_file[rel][m.group(1)] = sig
@@ -153,9 +164,16 @@ def main():
                 if h:
                     connects.append((rel, src[:m.start()].count("\n") + 1, sig, h, bc))
 
-    definite, unknown = [], []
+    # 同名信号跨类多签名冲突 -> ambiguous：全局表无法可靠确定 argc，跳过 DEFINITE 判定（只放松）
+    ambiguous = {name for name, argcs in signals_set.items() if len(argcs) > 1}
+    # 单签名信号：保留其唯一 argc 用于判定；ambiguous 信号不进入此表
+    signals = {name: next(iter(argcs)) for name, argcs in signals_set.items() if len(argcs) == 1}
+
+    definite, unknown, ambiguous_hits = [], [], []
     for (rel, ln, sig, handler, bind_count) in connects:
         if sig not in signals:
+            if sig in ambiguous:
+                ambiguous_hits.append((rel, ln, sig, handler))
             continue
         sargc = signals[sig]
         hsig, scope = resolve_handler(funcs_by_file, funcs_global, rel, handler)
@@ -172,9 +190,9 @@ def main():
             definite.append((rel, ln, sig, sargc, handler, htotal, bind_count, "实参过少", scope))
 
     print("=" * 82)
-    print("GDScript 信号/处理器参数对齐扫描 v4（括号配对 + 本文件解析）")
+    print("GDScript 信号/处理器参数对齐扫描 v5（括号配对 + 本文件解析 + ambiguous 跳过）")
     print(f"项目根: {ROOT}")
-    print(f"自定义信号: {len(signals)}  函数: {len(funcs_global)}  连接点: {len(connects)}")
+    print(f"自定义信号: {len(signals_set)}（其中 ambiguous 同名多签名: {len(ambiguous)}）  函数: {len(funcs_global)}  连接点: {len(connects)}")
     print("=" * 82)
 
     print(f"\n[DEFINITE] 实参个数超出处理器可接范围（运行时必崩）: {len(definite)}")
@@ -185,6 +203,10 @@ def main():
     print(f"\n[UNKNOWN] 处理器函数未在工程内找到（多为内联 Callable，跳过）: {len(unknown)}")
     for r in unknown[:40]:
         print(f"  {r[0]}:{r[1]}  信号 {r[2]}({r[3]}参) -> {r[4]}  ({r[5]})")
+
+    print(f"\n[AMBIGUOUS] 同名信号跨类多签名冲突，跳过参数对齐判定（不误报）: {len(ambiguous_hits)}")
+    for r in ambiguous_hits[:40]:
+        print(f"  {r[0]}:{r[1]}  信号 {r[2]} -> {r[3]}  (同名信号声明签名不一致，无法定位真实 argc)")
 
     print("\n" + "=" * 82)
     if definite:
