@@ -10,6 +10,11 @@
 | 结缘 Romance/Bond | [结缘.md](结缘.md) | 结缘窗口 | 服务层（多服务+门面）+ UI 层 |
 | UI 框架 | [UI.md](UI.md) | UI 窗口 | autoload 单例 + 组件 + 配置/主题 |
 | 存档 Save/Load | [存档.md](存档.md) | 未单独立窗（UI 表现归 UI 窗口） | 共享地基级 autoload 中枢 |
+| 战斗 Combat | [战斗.md](战斗.md) | 战斗窗口 | 服务层（CombatCore 纯逻辑 + CombatService 适配）+ 数据层 + 场景层 |
+| 商店 Shop | [商店.md](商店.md) | 商店窗口 | 服务层（无状态）+ 数据层 + UI 层 |
+| 锻造 Forge | [锻造.md](锻造.md) | 锻造窗口 | 服务层（无状态）+ 数据层 + UI 层 |
+| 炼药 Alchemy | [炼药.md](炼药.md) | 炼药窗口 | 服务层（无状态）+ 数据层 + UI 层 |
+| 门派 Sect | [门派.md](门派.md) | 门派窗口 | 服务层（SectService 有状态 + ISaveable）+ 数据层 + UI 层 |
 
 ## 配套能力
 - L1 依赖图（中期#2）：`GET /api/deps`（工作室任务总控 tab「🕸 依赖图」按钮），自动标注五层架构「向上依赖违例」。
