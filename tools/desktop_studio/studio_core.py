@@ -2331,3 +2331,17 @@ def ui_slot_file(key):
     if not p or not os.path.exists(p):
         return "", "该槽位暂无贴图"
     return p, ""
+
+
+def backlog_get():
+    """读取工程 docs/backlog.json（模块化待办清单），返回 dict；缺失/损坏时回退友好信息。"""
+    p = os.path.join(discover_project_root(), "docs", "backlog.json")
+    if not os.path.exists(p):
+        return {"ok": False, "error": "未找到 docs/backlog.json（请先用 tools/gen_backlog.py 生成）"}
+    try:
+        with open(p, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        data["ok"] = True
+        return data
+    except Exception as e:
+        return {"ok": False, "error": "backlog.json 解析失败：%s" % e}

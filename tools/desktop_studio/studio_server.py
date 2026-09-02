@@ -231,6 +231,20 @@ class Handler(BaseHTTPRequestHandler):
             return _send_json(self, core.trash_list())
         if path == "/api/log":
             return _send_json(self, core.read_log())
+        if path == "/api/startup_card":
+            # 只读返回本地 startup_card.json（无路径输入，已被 _origin_allowed 保护，安全）。
+            # 数据由 gen_startup_card.py 从 docs/AI协同启动卡.md 生成，作为「协同启动卡」标签页数据源。
+            fp = os.path.join(MODULE_DIR, "startup_card.json")
+            if not os.path.exists(fp):
+                return _send_json(self, {"error": "startup_card.json missing, 请先运行 gen_startup_card.py"}, 404)
+            try:
+                with open(fp, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+            except Exception as e:
+                return _send_json(self, {"error": "startup_card.json 解析失败: %s" % e}, 500)
+            return _send_json(self, data)
+        if path == "/api/backlog":
+            return _send_json(self, core.backlog_get())
         if len(parts) == 3 and parts[0] == "api" and parts[1] == "npc":
             n = core.npc_get(parts[2])
             return _send_json(self, n if n is not None else {}, 404 if n is None else 200)

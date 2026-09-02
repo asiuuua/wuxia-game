@@ -83,6 +83,8 @@
   <button data-tab="trash">回收站</button>
   <button data-tab="settings">设置</button>
   <button data-tab="log">操作日志</button>
+  <button data-tab="backlog">待办清单</button>
+  <button data-tab="startup">🤝 协同启动卡</button>
 </nav>
 <div class="banner">
   ⚠️ <b>改动生效说明：</b>本工具编辑的是项目的<b>源码数据目录</b>（如 <code>data/configs/ui/</code>）。
@@ -519,6 +521,15 @@
   <section class="tab" id="tab-log">
     <div class="btns"><button class="act sec" onclick="logLoad()">刷新</button></div>
     <div id="logBox" style="margin-top:10px"></div>
+  </section>
+  <section class="tab" id="tab-backlog">
+    <div id="backlogRoot" class="backlog-wrap">加载中…</div>
+  </section>
+
+  <!-- 协同启动卡（各 AI 窗口工作指令清单，数据来自 /api/startup_card） -->
+  <section class="tab" id="tab-startup">
+    <p class="muted" style="margin:0 0 12px">开新 AI 窗口时，从下面选对应窗口，点「📋 复制口令」整段复制，粘进窗口第一句话即可。内容随 <code>docs/AI协同启动卡.md</code> 同步。</p>
+    <div id="startupCardBody" class="startup-grid">加载中…</div>
   </section>
 </main>
 
@@ -1846,7 +1857,93 @@ async function blBgClear(){
 async function logLoad(){const l=await A('GET','/api/log');const box=document.getElementById('logBox');
   box.innerHTML=l.slice().reverse().map(x=>`<div class="logline"><b>${x.ts.replace('T',' ')}</b> ［${x.action}］ ${x.target} ${x.detail||''}</div>`).join('');}
 
-stat();npcLoad();loadingLoad();
+async function backlogLoad(){
+  const box=document.getElementById('backlogRoot'); if(!box) return;
+  let d; try{ d=await A('GET','/api/backlog'); }catch(e){ box.textContent='加载失败'; return; }
+  if(!d||!d.ok){ box.innerHTML='<div style="padding:20px;color:#9aa0b8">'+((d&&d.error)||'无数据')+'</div>'; return; }
+  const TC={待办:'#60a5fa',隐性BUG:'#f87171',未实现:'#fbbf24',占位:'#c084fc',优化建议:'#34d399'};
+  const SL={open:'未开始/进行中',blocked:'受阻',done:'已完成'};
+  let cur=d.modules[0].id;
+  function render(){
+    const m=d.modules.find(x=>x.id===cur);
+    let h='<style>.bl-card{background:#15182a;border:1px solid #2a2f47;border-radius:10px;padding:12px 14px;margin-bottom:10px}'
+      +'.bl-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.bl-title{font-size:15px;font-weight:600}'
+      +'.bl-badge{font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid;font-weight:600}'
+      +'.bl-pill{font-size:11px;padding:2px 8px;border-radius:999px;background:#1b1f33;border:1px solid #2a2f47;color:#9aa0b8}'
+      +'.bl-pill.blocked{color:#f87171;border-color:#f8717155}.bl-pill.done{color:#34d399;border-color:#34d39955}'
+      +'.bl-kv{margin-top:6px;font-size:13px;color:#c7cbe0}.bl-k{color:#9aa0b8}'
+      +'.bl-sug{margin-top:6px;font-size:13px;background:#1b1f33;border-left:3px solid #7c9cff;padding:6px 10px;border-radius:4px}'
+      +'.bl-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}.bl-chip{background:#15182a;border:1px solid #2a2f47;color:#e6e8f0;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:13px}'
+      +'.bl-chip.active{background:#7c9cff22;border-color:#7c9cff;color:#fff}'
+      +'.bl-desc{color:#9aa0b8;font-size:13px;margin:0 0 12px}</style>';
+    h+='<div class="bl-chips">'+d.modules.map(m=>'<span class="bl-chip'+(m.id===cur?' active':'')+'" data-m="'+m.id+'">'+m.name+'</span>').join('')+'</div>';
+    h+='<p class="bl-desc">'+(m.desc||'')+'</p>';
+    m.items.forEach(it=>{
+      const c=TC[it.type]||'#888';
+      const ph=it.placeholder?' <span class="bl-pill">占位</span>':'';
+      const st='<span class="bl-pill '+(it.status==='blocked'?'blocked':(it.status==='done'?'done':''))+'">'+(SL[it.status]||it.status)+'</span>';
+      h+='<div class="bl-card"><div class="bl-top"><span class="bl-title">'+blEsc(it.title)+'</span>'
+        +'<span class="bl-badge" style="color:'+c+';border-color:'+c+'55;background:'+c+'1a">'+blEsc(it.type)+'</span>'+st+ph+'</div>';
+      h+='<div class="bl-kv"><span class="bl-k">来源：</span>'+blEsc(it.source||'')+'</div>';
+      if(it.detail) h+='<div class="bl-kv"><span class="bl-k">说明：</span>'+blEsc(it.detail)+'</div>';
+      if(it.suggestion) h+='<div class="bl-sug">建议：'+blEsc(it.suggestion)+'</div>';
+      h+='</div>';
+    });
+    box.innerHTML=h;
+    box.querySelectorAll('.bl-chip').forEach(ch=>ch.onclick=()=>{cur=ch.dataset.m;render();});
+  }
+  render();
+}
+function blEsc(s){return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+
+// ---------- 协同启动卡（各 AI 窗口工作指令清单，数据来自 /api/startup_card） ----------
+function copyText(txt, btn){
+  const done=(ok)=>{ if(btn){ const o=btn.textContent; btn.textContent=ok?'已复制 ✓':'复制失败'; setTimeout(()=>btn.textContent=o,1500); } };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(()=>done(true)).catch(()=>done(fallbackCopy(txt)));
+  } else { done(fallbackCopy(txt)); }
+}
+function fallbackCopy(txt){
+  try{ const ta=document.createElement('textarea'); ta.value=txt; ta.style.position='fixed'; ta.style.opacity='0';
+       document.body.appendChild(ta); ta.select(); const ok=document.execCommand('copy'); document.body.removeChild(ta); return ok;
+  }catch(e){ return false; }
+}
+function copyFromTextarea(btn){
+  const card=btn.closest('.startup-card'); if(!card) return;
+  const ta=card.querySelector('.startup-src'); if(ta) copyText(ta.value, btn);
+}
+async function loadStartupCard(){
+  const root=document.getElementById('startupCardBody'); if(!root) return;
+  let data;
+  try{ data=await A('GET','/api/startup_card'); }catch(e){ root.innerHTML='<div class="status bad">加载失败：'+blEsc(e)+'</div>'; return; }
+  if(!data || data.error){ root.innerHTML='<div class="status bad">'+(data?blEsc(data.error):'无数据')+'</div>'; return; }
+  let html='';
+  (data.windows||[]).forEach(w=>{
+    const cmd=w.command||data.template||'';
+    html+='<div class="startup-card" style="background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px">';
+    html+='<div style="display:flex;align-items:center;justify-content:space-between;gap:10px">';
+    html+='<div style="font-size:16px;font-weight:700;color:var(--accent)">'+blEsc(w.name)+'</div>';
+    html+='<button class="act" style="white-space:nowrap" onclick="copyFromTextarea(this)">📋 复制口令</button>';
+    html+='</div>';
+    html+='<div class="muted" style="margin:6px 0">署名 <code>'+blEsc(w.signature)+'</code> · 主权 <code>'+blEsc(w.sovereignty)+'</code></div>';
+    html+='<div style="margin:4px 0">'+blEsc(w.duty)+'</div>';
+    if(w.pitfalls){ html+='<div style="margin-top:6px;color:var(--warn);font-size:13px">⚠ '+blEsc(w.pitfalls)+'</div>'; }
+    html+='<textarea class="startup-src" style="display:none">'+blEsc(cmd)+'</textarea>';
+    html+='</div>';
+  });
+  if(data.template){
+    html+='<div class="startup-card" style="background:var(--panel2);border:1px dashed var(--line);border-radius:10px;padding:14px 16px">';
+    html+='<div style="display:flex;align-items:center;justify-content:space-between;gap:10px">';
+    html+='<div style="font-size:15px;font-weight:700">通用模板（数据 / 音频 / 工作室等未单列窗口）</div>';
+    html+='<button class="act sec" style="white-space:nowrap" onclick="copyFromTextarea(this)">📋 复制模板</button>';
+    html+='</div>';
+    html+='<div class="muted" style="margin-top:6px">把里面的 &lt;窗口名&gt; 换成实际窗口名即可。</div>';
+    html+='<textarea class="startup-src" style="display:none">'+blEsc(data.template)+'</textarea>';
+    html+='</div>';
+  }
+  root.innerHTML=html;
+}
+stat();npcLoad();loadingLoad();backlogLoad();loadStartupCard();
 </script>
 </body>
 </html>
