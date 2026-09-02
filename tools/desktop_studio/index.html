@@ -116,6 +116,37 @@
   <h1>🗡 武侠游戏 · 内容工作室（桌面版）</h1>
   <span class="st" id="hstat">加载中…</span>
 </header>
+<!-- 操作日志：固定在左上角的小型可滑动列表（默认缩小，点标题展开/收起），独立于系统运维页签，全页签可见 -->
+<div id="opLogFloat" class="op-log-float collapsed">
+  <div class="olf-head" onclick="opLogToggle()">
+    <span class="olf-title">📜 操作日志</span>
+    <span class="olf-actions">
+      <button class="olf-btn" title="刷新" onclick="event.stopPropagation();logLoad()">↻</button>
+      <button class="olf-btn" id="olfToggle" title="展开/收起">▸</button>
+    </span>
+  </div>
+  <div class="olf-body" id="logBoxFloat"><div class="olf-empty">加载中…</div></div>
+</div>
+<style>
+.op-log-float{position:fixed;top:62px;left:12px;width:300px;max-height:46vh;z-index:60;
+  background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  box-shadow:0 8px 28px rgba(0,0,0,.5);overflow:hidden;display:flex;flex-direction:column;font-family:inherit}
+.op-log-float .olf-head{display:flex;align-items:center;justify-content:space-between;
+  padding:7px 10px;background:#15182a;border-bottom:1px solid var(--line);
+  font-size:13px;font-weight:700;color:var(--accent);cursor:pointer;user-select:none}
+.op-log-float .olf-title{flex:1}
+.op-log-float .olf-actions{display:flex;gap:6px}
+.op-log-float .olf-actions .olf-btn{background:#1c2138;border:1px solid #2a2f47;color:#cdd3e6;
+  border-radius:6px;padding:1px 7px;cursor:pointer;font-size:12px;line-height:1.4}
+.op-log-float .olf-actions .olf-btn:hover{background:#7c9cff22;border-color:#7c9cff}
+.op-log-float .olf-body{padding:8px 10px;overflow:auto;flex:1;font-size:12px;line-height:1.5}
+.op-log-float.collapsed .olf-body{display:none}
+.op-log-float.collapsed .olf-head{border-bottom:none}
+.op-log-float .olf-empty{color:var(--muted)}
+.op-log-float .logline{padding:4px 0;border-bottom:1px dashed #222842;color:#cdd3e6;word-break:break-word}
+.op-log-float .logline b{color:#9aa0b8;font-weight:600}
+.op-log-float .logline:last-child{border-bottom:none}
+</style>
 <nav id="nav">
   <button data-tab="npc" class="active">NPC 数据</button>
   <button data-tab="dialog">剧情对话</button>
@@ -569,14 +600,9 @@
     </div>
   </section>
 
-  <!-- 系统运维 合并视图：操作日志 / 设置 / 回收站 / 双闸门 合并到一个页签，方便同屏查看。各子块元素 ID 保持不变，原加载函数 logLoad/setLoad/trashLoad/gateLoad 照常工作 -->
+  <!-- 系统运维 合并视图：操作日志（已移为左上角固定浮窗 #opLogFloat）/ 设置 / 回收站 / 双闸门 合并到一个页签。各子块元素 ID 保持不变，原加载函数 setLoad/trashLoad/gateLoad 照常工作；logLoad 现渲染到浮窗 -->
   <section class="tab" id="tab-sys">
-    <div class="coord-sub">
-      <h3 style="margin:0 0 8px">📜 操作日志</h3>
-      <div class="btns"><button class="act sec" onclick="logLoad()">刷新</button></div>
-      <div id="logBox" style="margin-top:10px"></div>
-    </div>
-    <hr style="border:none;border-top:1px solid var(--line);margin:24px 0">
+    <hr style="border:none;border-top:1px solid var(--line);margin:0 0 24px">
     <div class="coord-sub">
       <h3 style="margin:0 0 8px">⚙️ 设置</h3>
       <div class="editor" style="max-width:560px">
@@ -2498,8 +2524,19 @@ async function blBgClear(){
 }
 
 // ---------- LOG ----------
-async function logLoad(){const l=await A('GET','/api/log');const box=document.getElementById('logBox');
-  box.innerHTML=l.slice().reverse().map(x=>`<div class="logline"><b>${x.ts.replace('T',' ')}</b> ［${x.action}］ ${x.target} ${x.detail||''}</div>`).join('');}
+async function logLoad(){const l=await A('GET','/api/log');
+  const html=(l||[]).slice().reverse().map(x=>`<div class="logline"><b>${x.ts.replace('T',' ')}</b> ［${x.action}］ ${x.target} ${x.detail||''}</div>`).join('');
+  const fb=document.getElementById('logBoxFloat'); if(fb) fb.innerHTML=html||'<div class="olf-empty">暂无操作记录</div>';
+  const lb=document.getElementById('logBox'); if(lb) lb.innerHTML=html;}
+function opLogToggle(){const el=document.getElementById('opLogFloat');if(!el)return;
+  el.classList.toggle('collapsed');
+  const t=document.getElementById('olfToggle');if(t)t.textContent=el.classList.contains('collapsed')?'▸':'▾';}
+let _opLogSig='';let _opLogTimer=null;
+async function opLogAutoRefresh(){let d;try{d=await A('GET','/api/log');}catch(e){return;}
+  if(!Array.isArray(d))return;const sig=JSON.stringify(d.map(x=>x.ts+x.action+x.target));
+  if(sig===_opLogSig)return;_opLogSig=sig;logLoad();}
+function _startOpLogAutoRefresh(){if(_opLogTimer)return;
+  _opLogTimer=setInterval(()=>{if(document.visibilityState!=='hidden')opLogAutoRefresh();},30000);}
 
 // ===== 待办清单自动刷新（2026-09-02 新增）：每 30 秒静默比对，数据有变化才重渲染，
 // 保留用户当前视图（按轻重缓急/按模块）与选中模块，避免状态标记滞后需手动刷新 =====
@@ -2961,7 +2998,7 @@ async function orcDeps(){
   v.innerHTML=h;
 }
 
-stat();npcLoad();loadingLoad();backlogLoad();loadStartupCard();uiSkinLoad();_startBacklogAutoRefresh();
+stat();npcLoad();loadingLoad();backlogLoad();loadStartupCard();uiSkinLoad();_startBacklogAutoRefresh();logLoad();_startOpLogAutoRefresh();
 </script>
 </body>
 </html>
