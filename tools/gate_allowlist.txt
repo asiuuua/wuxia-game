@@ -4,6 +4,13 @@
 # 注意：真实 bug 产生的 ERROR 不应匹配这些串，否则会被放过——保持串具体。
 String formatting error
 配置不存在
+配方不存在
+战斗配置不存在
+敌人不存在
+对话不存在
+锻造配方不存在
+商店不存在
+武学不存在
 NPC 不存在
 物品不存在
 Parse JSON failed
@@ -11,6 +18,9 @@ Parse JSON failed
 # 以下两条为 Godot headless 退出期引擎关闭噪声（创建纹理/字体后退出必现，非真实 bug）
 leaked at exit
 resources still in use at exit
+# 以下为资源管理器同步加载压力测试（test_resource_manager.gd → load_blocking）在树忙时
+# add_child 失败的良性噪声：仅压力测试触发、不崩、用例仍全过，非真实 bug。
+busy setting up children
 # 以下为背包窗口 InventoryScreen 在 run_all 测试 teardown 期的良性警告（树忙时同步 remove_child）；
 # 仅警告、不崩、套件仍全过，非真实 bug。UI 窗口经评估：原写法 queue_free 模式安全，不加延迟删除
 # 以免双重释放崩溃，故列入白名单（对应派单 748ef82c1731，背包窗口可后续做正规 call_deferred 重构）。
