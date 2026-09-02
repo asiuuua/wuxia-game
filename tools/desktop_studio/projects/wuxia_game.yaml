@@ -1,0 +1,102 @@
+# ============================================================================
+# 工程适配器 manifest · 武侠游戏实配（非模板，真实路径）
+# ----------------------------------------------------------------------------
+# 本文件由 manifest_template.yaml 复制填实而来。平台「切换版本」= 加载对应工程的
+# 本文件；Domain 逻辑不动，只换映射。
+# 所有路径均已核对真实存在于 D:/武侠游戏 工程内（见各 path 注释）。
+# 本质：平台是连接器，不复制工程数据；工程数据始终留在 git 仓库。
+# ============================================================================
+
+project_id: wuxia_game
+display_name: 墨影江湖（武侠 RPG 单机）
+data_root: D:/武侠游戏
+git_repo: D:/武侠游戏          # 元数据中心来源（本地直接读）
+
+# ── 启用哪些横向能力模块（Domain Module）──────────────────────────────────
+modules:
+  - ui_visual        # UI 视觉：登录/贴图/预加载/主菜单
+  - narrative        # 剧情创作：NPC/对话/欢庆
+  - combat           # 战斗关卡：战棋/技能/Demo
+  - asset            # 资产资源：立绘/纹理/回收站
+  - governance        # 系统治理：日志/待办/总控台
+
+# ── 各模块在本工程下的数据映射（适配层，路径均真实存在）─────────────────
+adapters:
+  narrative:
+    npc_path: data/configs/npcs/town_npcs.json          # 工程有效性标记文件
+    dlg_index: data/configs/npcs/dialogs/_index.json      # 对话索引
+    dlg_dir: data/configs/npcs/dialogs/shards            # 对话分片（demo_npc.json 等）
+  ui_visual:
+    login_bg: assets/ui/main_menu_bg.png                 # 主菜单/加载/读档三处共用大背景
+    login_bg_layout: data/configs/ui/login_bg_layout.json
+    main_menu: assets/ui/main_menu                       # title_logo / icon_* 等
+    btn_hover: assets/ui/main_menu_btn                   # 按钮悬停背景
+  combat:
+    grid_dir: data/configs/battles/grids                 # 战棋布局（preset_*.json 等）
+  asset:
+    icons: resources/icons                              # 立绘/头像按 id 丢 png
+  governance:
+    backlog: docs/backlog.json                          # 模块化待办清单（任务进度本地写好）
+
+# ── AI 可读上下文（新 AI 窗口 / 新人一眼读懂你想要的架构）─────────────────
+ai_context:
+  architecture_intent: |
+    等距 2.5D 武侠 RPG 单机；Godot 4.7.2 纯 GDScript；
+    架构铁律：autoload→core→data→services→scenes→resources，单向依赖，
+    跨模块只走 EventBus，数值全进 JSON，命名见名知意。
+  key_decisions:
+    - "战斗：回合制 + 自动；平台目标 Win + 安卓；世界：区域枢纽式独立场景 + 读条切换"
+    - "瓶颈才增量 GDExtension，绝不整体重写"
+    - "四底线：单向依赖 / 跨模块只走 EventBus / 数值全进 JSON / 命名见名知意"
+  conventions:
+    - "类注释用中文；commit 带 [模块] 前缀；窗口署名 git config user.name=AI-<窗>"
+    - "改接口→重跑 gen_contract.gd 更新 docs/契约总表.md"
+  common_pitfalls:
+    - "mouse_filter 枚举写反（MOUSE_FILTER_STOP=0/PASS=1/IGNORE=2 与直觉相反）会静默吞点击"
+    - "纹理改压缩后取像素要用 Image.load_png_from_buffer，别用 get_pixel()（压缩纹理刷屏 Can't get_pixel）"
+    - ".tscn 手写 Color() 必须写满 4 参，否则整份 Parse Error"
+    - "删函数须全工程 grep 残留；Invalid call Nonexistent function 'new' 真因是某脚本 Parse Error"
+  role_responsibilities:
+    battle: "战斗逻辑与战棋表现（services/combat），不碰 UI 贴图"
+    narrative: "NPC/对话数据（data/configs/npcs），不碰底层引擎"
+    ui: "只改 tscn 与贴图/布局（assets/ui, data/configs/ui），不碰游戏逻辑"
+    asset: "立绘导入/纹理压缩/回收站（tools/desktop_studio + resources）"
+    governance: "日志/待办/总控台/版本切换（docs + tools）"
+
+# ── 换皮不换药（reskin）：小白只换这几类，底层代码不动 ───────────────────
+reskin:
+  swappable:
+    - layer: 立绘/头像
+      path: resources/icons/
+      note: "按 id 丢 png 即生效，零代码改动"
+    - layer: 登录/主菜单大背景
+      path: assets/ui/main_menu_bg.png
+      note: "替换此图即换主菜单/加载/读档三处共用背景"
+    - layer: 主菜单按钮悬停背景
+      path: assets/ui/main_menu_btn/
+      note: "换按钮视觉"
+    - layer: 背景音乐/音效
+      path: resources/audio/
+      note: "改 ui_sfx.json 的 path 指向即换音，零代码"
+    - layer: 剧情/对话文本
+      path: data/configs/npcs/dialogs/shards/
+      note: "纯 JSON 替换，小白可改"
+  locked:
+    - "core/ services/ autoload/ 下的游戏逻辑（换皮绝不碰）"
+    - "EventBus 信号契约（见 docs/契约总表.md）"
+    - "studio_core.py 的适配器映射（换皮改 manifest 而非改代码）"
+
+# ── 知识复用（前人的踩坑与经验，跨项目可被检索/复用）─────────────────────
+knowledge:
+  refs:
+    - docs/多AI协同机制_SOP.md
+    - .workbuddy/memory/MEMORY.md
+    - docs/变更通告_*.md
+    - docs/契约总表.md
+  reusable_patterns:
+    - "静默拦截 BUG 用 lint_mouse_filter.py + 信号接缝测试双闸门守卫"
+    - "纹理压缩默认 mode=0，需显式改 mode=2 并 godot --headless --editor --quit 全量重导"
+    - "UI 装饰子节点误写 STOP 会静默吞点击 → GATE0 静态扫描 + GATE2 运行时断言兜底"
+  predecessor_mistakes:
+    - "误删 town.json 当死数据 → 实为战术底图几何依赖（查 change_log 秒定位）"
+    - "把纹理改压缩后暴露 latent bug（UIBackground 取像素）→ 诊断卡死先看日志刷屏量，别臆测硬件"

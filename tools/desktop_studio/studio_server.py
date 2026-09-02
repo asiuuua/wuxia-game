@@ -255,6 +255,24 @@ class Handler(BaseHTTPRequestHandler):
                 "total_domains": len(MODULE_REGISTRY),
                 "roles": list(ROLES.values()),
             })
+        if path == "/api/projects":
+            # Phase 2 工程适配器：列出所有可对接工程（版本切换下拉数据源）。
+            try:
+                from project_loader import list_projects
+                return _send_json(self, {"ok": True, "projects": list_projects()})
+            except Exception as e:
+                return _send_json(self, {"ok": False, "error": str(e)}, 500)
+        if len(parts) >= 4 and parts[0] == "api" and parts[1] == "project" and parts[2] == "manifest":
+            # Phase 2 连接器视图：返回某工程的模块/AI上下文/换皮清单/经验库（不搬工程数据）。
+            pid = parts[3]
+            try:
+                from project_loader import get_connector_info
+                info = get_connector_info(pid)
+            except Exception as e:
+                return _send_json(self, {"ok": False, "error": str(e)}, 500)
+            if info is None:
+                return _send_json(self, {"ok": False, "error": "未知工程 %s" % pid}, 404)
+            return _send_json(self, {"ok": True, **info})
         if len(parts) == 3 and parts[0] == "api" and parts[1] == "npc":
             n = core.npc_get(parts[2])
             return _send_json(self, n if n is not None else {}, 404 if n is None else 200)
