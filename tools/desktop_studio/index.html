@@ -910,10 +910,10 @@ document.querySelectorAll('#nav button').forEach(b=>b.onclick=(e)=>{
   if(b.dataset.tab==='settings_screen')settingsScreenLoad();
   if(b.dataset.tab==='saveload_screen')saveloadScreenLoad();
   if(b.dataset.tab==='exp')expLoad();
-  if(b.dataset.tab==='gate')gateLoad();
+  // 双闸门已并入「系统运维」页签，触发改为按钮手动（gateRun）；原 gate tab 分发不再需要
   if(b.dataset.tab==='orchestrate')orcLoad();
   if(b.dataset.tab==='coord'){backlogLoad();loadStartupCard();}
-  if(b.dataset.tab==='sys'){logLoad();setLoad();trashLoad();gateLoad();}
+  if(b.dataset.tab==='sys'){logLoad();setLoad();trashLoad();}
 });
 document.addEventListener('click',e=>{
   const wrap=document.querySelector('.nav-dropdown-wrap');
