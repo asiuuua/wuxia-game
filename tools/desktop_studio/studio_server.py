@@ -217,7 +217,7 @@ def _exp_enrich(knowledge, root):
     """
     refs_raw = knowledge.get("refs") or []
     refs = []
-    facets = {"roles": set(), "modules": set(), "bugs": set(), "tags": {}}
+    facets = {"roles": set(), "modules": set(), "bugs": set(), "tags": {}, "grades": set()}
 
     def _bump(t):
         t = t.strip()
@@ -252,10 +252,15 @@ def _exp_enrich(knowledge, root):
                         with open(target, "r", encoding="utf-8") as f:
                             body = f.read()
                         kw_line = ""
+                        grade = ""
                         for ln in body.splitlines():
                             if "检索关键词" in ln:
                                 kw_line = ln.split("检索关键词", 1)[1].lstrip("：:").strip()
-                                break
+                            elif "等级" in ln:
+                                mg = re.findall(r"E[1-4]", ln)
+                                if mg:
+                                    grade = ",".join(sorted(set(mg)))
+                        # 不 break：兼容位于「检索关键词」之后的「等级」行（文档体量小，全扫 header 即可）
                         for tk in re.split(r"[、,，\s]+", kw_line):
                             if tk:
                                 tags.append(tk)
@@ -276,6 +281,9 @@ def _exp_enrich(knowledge, root):
                     facets["modules"].add(m)
                 for b in bugs:
                     facets["bugs"].add(b)
+                for g in grade.split(","):
+                    if g:
+                        facets["grades"].add(g)
             # 归一化为相对工程根的路径（正向斜杠），保证 /api/experience/doc 能正确解析（含 glob 展开出的绝对路径）
             rpath = rel
             if root and os.path.isabs(rel):
@@ -284,7 +292,7 @@ def _exp_enrich(knowledge, root):
                 except Exception:
                     pass
             refs.append({"path": rpath, "title": title, "group": grp, "tags": tags,
-                         "roles": roles, "modules": mods, "bugs": bugs})
+                         "roles": roles, "modules": mods, "bugs": bugs, "grade": grade})
 
     patterns = []
     for t in knowledge.get("reusable_patterns") or []:
@@ -317,6 +325,7 @@ def _exp_enrich(knowledge, root):
         "roles": sorted(facets["roles"]),
         "modules": sorted(facets["modules"]),
         "bugs": sorted(facets["bugs"], key=str.lower),
+        "grades": sorted(facets["grades"]),
         "tags": sorted(facets["tags"].items(), key=lambda kv: (-kv[1], kv[0])),
     }
     return out

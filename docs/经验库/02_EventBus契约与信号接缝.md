@@ -1,6 +1,7 @@
 # 02 · EventBus 契约与信号接缝
 
 > 检索关键词：EventBus、信号、NOTIFY、CMD、接缝、跨模块通信、signal
+> 等级：E2
 
 ## 角色定位
 `EventBus`（`autoload`）是跨模块**唯一信号通道**，全工程 **100 个信号**；模块间严禁直接持有对方引用调用逻辑，一律走 EventBus。

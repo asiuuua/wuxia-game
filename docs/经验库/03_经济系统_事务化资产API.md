@@ -1,6 +1,7 @@
 # 03 · 经济系统：事务化资产 API（扣钱不发货 / 扣料丢产出 锁死）
 
 > 检索关键词：经济、背包、商店、锻造、炼药、事务、资产守恒、锁定、InventoryTransaction、try_consume、BUG-04
+> 等级：E2
 
 ## 真源
 `services/inventory/inventory_service.gd`（778 行）、`inventory_transaction.gd`（83 行）、`services/shop/shop_service.gd`（145 行）、`services/forge/forge_service.gd`（106 行）、`services/alchemy/alchemy_service.gd`（43 行）。

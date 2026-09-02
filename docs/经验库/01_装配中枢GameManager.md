@@ -1,6 +1,7 @@
 # 01 · 装配中枢 GameManager（依赖注入容器）
 
 > 检索关键词：GameManager、装配、DI、依赖注入、服务实例、场景切换、读档写档
+> 等级：E2
 
 ## 角色定位
 `GameManager`（`autoload`）是工程的**装配中枢 / DI 容器**：
