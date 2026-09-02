@@ -630,10 +630,10 @@
   <!-- 已合并至 tab-sys（系统运维） -->
 
   <!-- 已合并至 tab-sys（系统运维） -->
-  <!-- 协同启动卡 / 待办清单（2026-09-02 重构 v2）：固定左侧栏常驻显示，不再悬停滑出；
-       左栏第一行=协同清单（点窗口名即复制口令，口令固定显示在栏内预览区），下方=待办清单 -->
+  <!-- 协同启动卡 / 待办清单（2026-09-02 重构 v3）：左侧栏=协同提示词（左上角小块滑动列表），
+       右侧主区域=待办清单（大面积） -->
   <section class="tab" id="tab-coord">
-    <!-- 固定左侧栏：始终可见，含 协同清单(第一行) + 待办；协同提示词固定在栏内，无需滑出 -->
+    <!-- 左侧栏：协同纪律提示词 + 协同清单 + 协同提示词，固定在左上角小块区域 -->
     <div id="coordRail">
       <aside id="coordSidebar">
         <div class="rail-prompt" id="collabRules" style="border-color:#7c9cff">
@@ -646,25 +646,21 @@
           <div class="rp-head">📝 协同提示词（点上方窗口名复制）</div>
           <pre class="rp-body" id="startupPromptBody"></pre>
         </div>
-        <div class="rail-sep"></div>
-        <div class="rail-head">📋 待办清单</div>
-        <div id="blViewSwitch" class="bl-views"></div>
-        <div id="backlogRoot" class="backlog-wrap backlog-in-rail">加载中…</div>
-        <div class="rail-foot muted">内容随 docs/AI协同启动卡.md / docs/backlog.json 同步</div>
       </aside>
     </div>
     <!-- 右侧说明区 -->
     <div class="coord-main">
-      <h3 style="margin:0 0 8px">🤝 协同 / 待办</h3>
-      <p class="muted" style="margin:0 0 8px">左侧固定栏常驻：上方「协同清单」点窗口名即复制该 AI 窗口口令（口令同步显示在栏内预览区，无需滑出）；下方「待办清单」按轻重缓急排序。</p>
-      <p class="muted" style="margin:0 0 8px">优先级：🔴 <b style="color:#f87171">迫在眉睫</b> → 🔵 <b style="color:#60a5fa">中规中矩</b> → 🟡 <b style="color:#fbbf24">影响较小 / 未开始</b>（无重大隐患与 bug）。</p>
-      <p class="muted" style="margin:0 0 12px">💡 要系统化审查？点左侧「🔍 审计核查」复制专业审计口令（单模块 / 全盘 / 关联架构八维度审查），审计发现用 <code style="background:#1b1f33;padding:1px 5px;border-radius:3px">tools/audit_to_backlog.py</code> 自动归类到待办清单下方对应模块。</p>
+      <h3 style="margin:0 0 8px">📋 待办清单</h3>
+      <p class="muted" style="margin:0 0 8px">左侧固定栏为「协同提示词」；本区为待办清单，按轻重缓急排序：🔴 <b style="color:#f87171">迫在眉睫</b> → 🔵 <b style="color:#60a5fa">中规中矩</b> → 🟡 <b style="color:#fbbf24">影响较小 / 未开始</b>。</p>
+      <p class="muted" style="margin:0 0 12px">💡 要系统化审查？点左侧「🔍 审计核查」复制专业审计口令，审计发现用 <code style="background:#1b1f33;padding:1px 5px;border-radius:3px">tools/audit_to_backlog.py</code> 自动归类到下方对应模块。</p>
+      <div id="blViewSwitch" class="bl-views"></div>
+      <div id="backlogRoot" class="backlog-wrap">加载中…</div>
     </div>
     <style>
       #tab-coord{display:flex;min-height:62vh}
-      #coordRail{position:relative;flex:0 0 360px;width:360px;z-index:20}
-      #coordSidebar{position:absolute;inset:0;width:360px;overflow:auto;background:var(--panel);
-        border-right:1px solid var(--line);box-shadow:8px 0 24px rgba(0,0,0,.4);padding:16px 14px}
+      #coordRail{position:relative;flex:0 0 360px;width:360px;z-index:20;align-self:flex-start}
+      #coordSidebar{position:relative;width:360px;overflow:auto;background:var(--panel);
+        border:1px solid var(--line);border-radius:10px;box-shadow:8px 0 24px rgba(0,0,0,.4);padding:16px 14px;max-height:calc(100vh - 200px)}
       .coord-main{flex:1;min-width:0;padding:0 16px}
       .rail-head{font-size:15px;font-weight:700;color:var(--accent);margin-bottom:4px}
       .rail-head .muted{font-weight:400;font-size:12px}
@@ -2505,11 +2501,31 @@ async function blBgClear(){
 async function logLoad(){const l=await A('GET','/api/log');const box=document.getElementById('logBox');
   box.innerHTML=l.slice().reverse().map(x=>`<div class="logline"><b>${x.ts.replace('T',' ')}</b> ［${x.action}］ ${x.target} ${x.detail||''}</div>`).join('');}
 
+// ===== 待办清单自动刷新（2026-09-02 新增）：每 30 秒静默比对，数据有变化才重渲染，
+// 保留用户当前视图（按轻重缓急/按模块）与选中模块，避免状态标记滞后需手动刷新 =====
+let BL_VIEW='priority';
+let BL_CUR='';
+let _blSig='';
+let _blTimer=null;
+async function backlogAutoRefresh(){
+  let d; try{ d=await A('GET','/api/backlog'); }catch(e){ return; }
+  if(!d||!d.ok) return;
+  const sig=JSON.stringify(d.modules.map(m=>m.items.map(it=>it.title+'='+it.status).join('|')).join(';'));
+  if(sig===_blSig) return;   // 数据无变化，不打扰当前画面
+  _blSig=sig;
+  backlogLoad();             // 有变化才重渲染（保留 BL_VIEW/BL_CUR）
+}
+function _startBacklogAutoRefresh(){
+  if(_blTimer) return;
+  _blTimer=setInterval(()=>{ if(document.visibilityState!=='hidden') backlogAutoRefresh(); }, 30000);
+}
+
 async function backlogLoad(){
   const box=document.getElementById('backlogRoot'); if(!box) return;
   const sw=document.getElementById('blViewSwitch');
   let d; try{ d=await A('GET','/api/backlog'); }catch(e){ box.textContent='加载失败'; return; }
   if(!d||!d.ok){ box.innerHTML='<div style="padding:20px;color:#9aa0b8">'+((d&&d.error)||'无数据')+'</div>'; return; }
+  _blSig=JSON.stringify(d.modules.map(m=>m.items.map(it=>it.title+'='+it.status).join('|')).join(';'));
   const TC={待办:'#60a5fa',隐性BUG:'#f87171',未实现:'#fbbf24',占位:'#c084fc',优化建议:'#34d399'};
   const SL={open:'未开始/进行中',blocked:'受阻',done:'已完成'};
   const _WHY={'待办':'处理它能让对应系统更完善、少留隐患。','隐性BUG':'这类问题最阴险：表面不报错，但实际行为不对，越早修越省事。','未实现':'补上后这个功能才真正能用，否则只是空壳。','占位':'替换掉临时占位，界面/体验才完整、才像正式作品。','优化建议':'不阻塞流程，但做了能明显提升性能或手感。'};
@@ -2542,8 +2558,9 @@ async function backlogLoad(){
     }
     return 'yellow';                                                         // 占位/优化建议/已完成/已解决 → 影响小或无重大隐患
   }
-  let cur=d.modules[0].id;
-  let view='priority';
+  if(!BL_CUR) BL_CUR=d.modules[0].id;
+  let cur=BL_CUR;
+  let view=BL_VIEW;
   function cardHtml(it,isDone,prio,mName){
     const col=TC[it.type]||'#888';
     const ph=it.placeholder?' <span class="bl-pill">占位</span>':'';
@@ -2610,7 +2627,7 @@ async function backlogLoad(){
   }
   function render(){
     if(sw) sw.innerHTML='<span class="bl-chip'+(view==='priority'?' active':'')+'" data-v="priority">🔥 按轻重缓急</span><span class="bl-chip'+(view==='module'?' active':'')+'" data-v="module">🗂 按模块</span>';
-    if(sw) sw.querySelectorAll('.bl-chip').forEach(ch=>ch.onclick=()=>{view=ch.dataset.v;render();});
+    if(sw) sw.querySelectorAll('.bl-chip').forEach(ch=>ch.onclick=()=>{BL_VIEW=ch.dataset.v;view=BL_VIEW;render();});
     let h=styleBlock();
     if(view==='module'){
       const m=d.modules.find(x=>x.id===cur);
@@ -2622,7 +2639,7 @@ async function backlogLoad(){
       if(done.length){ h+='<div class="bl-grp done">✅ 已完成执行（'+done.length+'）</div>'; done.forEach(it=>h+=cardHtml(it,true,null,null)); }
       if(!todo.length&&!done.length) h+='<div class="bl-desc">当前模块无条目</div>';
       box.innerHTML=h;
-      box.querySelectorAll('.bl-chip[data-m]').forEach(ch=>ch.onclick=()=>{cur=ch.dataset.m;render();});
+      box.querySelectorAll('.bl-chip[data-m]').forEach(ch=>ch.onclick=()=>{BL_CUR=ch.dataset.m;cur=BL_CUR;render();});
     } else {
       // 按轻重缓急：跨模块汇总所有待办项，红→蓝→黄 排序展示
       const all=[];
@@ -2944,7 +2961,7 @@ async function orcDeps(){
   v.innerHTML=h;
 }
 
-stat();npcLoad();loadingLoad();backlogLoad();loadStartupCard();uiSkinLoad();
+stat();npcLoad();loadingLoad();backlogLoad();loadStartupCard();uiSkinLoad();_startBacklogAutoRefresh();
 </script>
 </body>
 </html>
