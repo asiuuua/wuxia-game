@@ -67,6 +67,63 @@ def _read_body(handler):
         return {}
 
 
+def _godot_exe():
+    """定位 Godot 可执行文件：优先 settings.godot_path，否则从托管二进制目录候选。"""
+    try:
+        s = core.load_settings()
+        p = (s.get("godot_path") or "").strip()
+        if p and os.path.exists(p):
+            return p
+    except Exception:
+        pass
+    base = r"C:/Users/Administrator/.workbuddy/binaries/godot"
+    for c in ("Godot_v4.7.2-stable_win64_console.exe", "Godot_v4.3-stable_win64_console.exe"):
+        fp = os.path.join(base, c)
+        if os.path.exists(fp):
+            return fp
+    return None
+
+
+def _run_gate():
+    """平台化双闸门：调起 Godot headless 跑 GATE1 + GATE2，解析绿/红。只读验证，不改工程。"""
+    import subprocess
+    import re
+    exe = _godot_exe()
+    if not exe:
+        return {"ok": False, "error": "未找到 Godot 可执行文件（请在设置里配置 godot_path，或确认托管二进制目录存在）"}
+    root = core.discover_project_root()
+    if not root:
+        return {"ok": False, "error": "未找到工程根目录"}
+    # GATE1：headless --quit 零 SCRIPT/PARSE/COMPILE ERROR
+    try:
+        out1 = subprocess.run([exe, "--headless", "--path", root, "--quit"],
+                              capture_output=True, text=True, encoding="utf-8",
+                              errors="replace", timeout=120).stdout
+    except Exception as e:
+        return {"ok": False, "error": "GATE1 执行失败: %s" % e}
+    g1_errs = [l for l in out1.splitlines()
+               if any(k in l for k in ("SCRIPT ERROR", "Parse Error", "Compile Error"))]
+    gate1 = {"ran": True, "errors": len(g1_errs), "green": len(g1_errs) == 0, "sample": g1_errs[:10]}
+    # GATE2：run_all.tscn 零 ✗ / 失败 0
+    try:
+        out2 = subprocess.run([exe, "--headless", "--path", root, "res://tests/unit/run_all.tscn"],
+                              capture_output=True, text=True, encoding="utf-8",
+                              errors="replace", timeout=300).stdout
+    except Exception as e:
+        return {"ok": False, "error": "GATE2 执行失败: %s" % e}
+    suites = failed = xfail = 0
+    for l in out2.splitlines():
+        if "套件：" in l and "通过" in l:
+            m = re.search(r"通过\s+(\d+)\s*·\s*失败\s+(\d+)", l)
+            if m:
+                suites, failed = int(m.group(1)), int(m.group(2))
+        xfail += l.count("✗")
+    gate2 = {"ran": True, "suites": suites, "failed": failed, "xfail": xfail,
+             "green": (failed == 0 and xfail == 0)}
+    return {"ok": True, "godot": exe, "gate1": gate1, "gate2": gate2,
+            "green": gate1["green"] and gate2["green"]}
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *args):
         pass
@@ -243,6 +300,8 @@ class Handler(BaseHTTPRequestHandler):
             except Exception as e:
                 return _send_json(self, {"error": "startup_card.json 解析失败: %s" % e}, 500)
             return _send_json(self, data)
+        if path == "/api/ui_skin":
+            return _send_json(self, core.ui_skin_get())
         if path == "/api/backlog":
             return _send_json(self, core.backlog_get())
         if path == "/api/modules":
@@ -308,6 +367,9 @@ class Handler(BaseHTTPRequestHandler):
             except Exception as e:
                 return _send_json(self, {"error": str(e)}, 500)
             return _send_json(self, {"ok": True, "path": rel, "text": text})
+        # ---- 双闸门验证（平台化：PM 不装 Godot 也能卡质量）----
+        if path == "/api/gate/run":
+            return _send_json(self, _run_gate())
         if len(parts) == 3 and parts[0] == "api" and parts[1] == "npc":
             n = core.npc_get(parts[2])
             return _send_json(self, n if n is not None else {}, 404 if n is None else 200)
@@ -521,6 +583,11 @@ class Handler(BaseHTTPRequestHandler):
             return _send_json(self, {"ok": ok, "msg": m})
         if path == "/api/login/bg_variant_remove":
             ok, m = core.login_bg_variant_remove(body.get("min_width", -1))
+            return _send_json(self, {"ok": ok, "msg": m})
+        if path == "/api/ui_skin":
+            kind = str(body.get("kind", ""))
+            d = body.get("data", {}) if isinstance(body.get("data"), dict) else {}
+            ok, m = core.ui_skin_save(kind, d)
             return _send_json(self, {"ok": ok, "msg": m})
         _send_json(self, {"error": "not found"}, 404)
 

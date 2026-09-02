@@ -35,7 +35,46 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_build_ui()
+	_apply_skin()
+	_apply_layout()
 	_play_show_anim()
+
+## 应用通用皮肤（来自 data/configs/ui/skin/theme.json）：重载玻璃面板配色 + 标题/内容文字色。
+## 按钮仍走各自 _apply_glass_button_style（有意不覆盖）；缺文件时 UISkin 回退默认，视觉不变。
+func _apply_skin() -> void:
+	var theme := UISkin.load_theme()
+	var panel := $Panel as Control
+	if panel != null:
+		panel.add_theme_stylebox_override("panel", UISkin.panel_stylebox(theme))
+	if _title_label != null:
+		_title_label.add_theme_color_override("font_color", theme.get("title_color", UISkin.DEFAULTS["title_color"]))
+	if _content_label != null:
+		_content_label.add_theme_color_override("font_color", theme.get("content_color", UISkin.DEFAULTS["content_color"]))
+
+## 应用确认框尺寸（来自 data/configs/ui/skin/confirm_dialog.layout.json）：
+## 调 $Panel 的中心锚点 offset，使弹窗主体变为指定宽高。缺文件回退 .tscn 默认 440x220。
+func _apply_layout() -> void:
+	var path := "res://data/configs/ui/skin/confirm_dialog.layout.json"
+	if not FileAccess.file_exists(path):
+		return
+	var f := FileAccess.open(path, FileAccess.READ)
+	if f == null:
+		return
+	var txt := f.get_as_text()
+	f.close()
+	var j := JSON.new()
+	if j.parse(txt) != OK:
+		return
+	var d: Dictionary = j.data
+	var w := float(d.get("panel_width", 440.0))
+	var h := float(d.get("panel_height", 220.0))
+	var panel := $Panel as Control
+	if panel == null:
+		return
+	panel.offset_left = -w * 0.5
+	panel.offset_top = -h * 0.5
+	panel.offset_right = w * 0.5
+	panel.offset_bottom = h * 0.5
 
 ## 入场中心缩放弹入（替代原「纯淡入占位」动画）：与 UIManager 的透明度淡入叠加，
 ## 让确认框从 92% 弹出到 100%，带轻微回弹。纯代码 Tween，无需美术资源。

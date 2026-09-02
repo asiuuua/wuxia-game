@@ -1298,6 +1298,66 @@ def main_menu_layout_update(d):
     return True, "已保存主菜单布局（游戏内下次启动生效）"
 
 
+# ============================ UI 皮肤定制（工作室「UI 皮肤定制」tab，UI 窗口主权） ============================
+# 只读写 data/configs/ui/skin/ 下的白名单文件，杜绝路径穿越；游戏侧零依赖、缺省回退。
+def _ui_skin_dir():
+    return os.path.join(discover_project_root(), "data", "configs", "ui", "skin")
+
+
+def _ui_skin_path(kind):
+    # 白名单：只允许这两个文件，杜绝路径穿越
+    allowed = {
+        "theme": os.path.join(_ui_skin_dir(), "theme.json"),
+        "confirm_dialog_layout": os.path.join(_ui_skin_dir(), "confirm_dialog.layout.json"),
+    }
+    return allowed.get(kind)
+
+
+def ui_skin_get():
+    """读取 UI 皮肤当前配置：theme.json + confirm_dialog.layout.json（缺文件回退内置默认）。"""
+    out = {}
+    for kind in ("theme", "confirm_dialog_layout"):
+        p = _ui_skin_path(kind)
+        if p and os.path.exists(p):
+            try:
+                with open(p, "r", encoding="utf-8") as f:
+                    out[kind] = json.load(f)
+            except Exception:
+                out[kind] = {}
+        else:
+            out[kind] = {}
+    out["_defaults"] = {
+        "theme": {"panel_bg": [0.071, 0.078, 0.11, 0.62], "panel_border": [1, 1, 1, 0.2],
+                  "title_color": [0.831, 0.686, 0.216, 1], "content_color": [0.941, 0.902, 0.82, 1],
+                  "accent": [0.55, 0.78, 0.45, 1]},
+        "confirm_dialog_layout": {"panel_width": 440, "panel_height": 220},
+    }
+    return out
+
+
+def ui_skin_save(kind, data):
+    """保存 UI 皮肤配置。kind 必须在白名单；data 必须为 dict。自动备份旧文件。
+    数值类（确认框尺寸）做合理裁剪，避免小白拉到离谱值。"""
+    if not isinstance(kind, str) or not isinstance(data, dict):
+        return False, "参数非法（kind 需字符串、data 需对象）"
+    p = _ui_skin_path(kind)
+    if p is None:
+        return False, "未知的皮肤类型（仅允许 theme / confirm_dialog_layout）"
+    if kind == "confirm_dialog_layout":
+        w = int(data.get("panel_width", 440))
+        h = int(data.get("panel_height", 220))
+        w = max(200, min(1600, w))
+        h = max(120, min(1200, h))
+        data = {"_doc": "确认框尺寸（工作室「UI 皮肤定制 → 确认框尺寸」滑块写入）。",
+                "panel_width": w, "panel_height": h}
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+    _backup(p)
+    with open(p, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    log_event("ui_skin", p, "保存 UI 皮肤：%s" % kind)
+    return True, "已保存 %s（游戏内下次启动生效）" % kind
+
+
 # ============================ 主菜单(登录)界面资源映射（工作室可上传替换） ============================
 def _main_menu_assets_path():
     return os.path.join(discover_project_root(), "data", "configs", "ui", "main_menu_assets.json")

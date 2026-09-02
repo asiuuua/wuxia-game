@@ -80,6 +80,7 @@
   <button data-tab="battle">战棋布局</button>
   <button data-tab="loading">预加载界面</button>
   <button data-tab="uiart">UI 贴图</button>
+  <button data-tab="uiskin">🎨 UI 皮肤定制</button>
   <button data-tab="trash">回收站</button>
   <button data-tab="settings">设置</button>
   <button data-tab="log">操作日志</button>
@@ -545,6 +546,60 @@
   </div>
 </section>
 
+<!-- ===================== UI 皮肤定制（小白零代码改 UI：按「改什么」分组） ===================== -->
+<style>
+.uiskin-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:16px;margin-top:10px}
+.uiskin-card{background:#16192b;border:1px solid #2a2f4a;border-radius:10px;padding:16px}
+.uiskin-card h3{margin:0 0 6px;font-size:16px;color:#e8ecff}
+.uiskin-card .row{display:flex;align-items:center;gap:10px;margin:9px 0;flex-wrap:wrap}
+.uiskin-card label{width:86px;color:#aab;font-size:13px;flex:0 0 86px}
+.uiskin-card input[type=range]{flex:1;min-width:160px}
+.uiskin-card input[type=color]{width:46px;height:30px;border:none;background:none;cursor:pointer;padding:0}
+.tag{font-size:11px;padding:1px 7px;border-radius:10px;margin-left:6px;vertical-align:middle}
+.tag.green{background:#1f3a2a;color:#7fe0a0}
+.ghost{background:transparent;border:1px solid #3a4066;color:#aab}
+.uiskin-card button{margin-right:8px}
+</style>
+<section class="tab" id="tab-uiskin">
+  <p class="muted" style="margin:0 0 10px">这里只改「数据」，<b>不动游戏代码</b>。改完点「应用」，游戏下次启动自动生效；随时可「复原默认」回到出厂值（零恐惧）。</p>
+  <div class="uiskin-grid">
+    <!-- 模块①：确认框尺寸 -->
+    <div class="uiskin-card">
+      <h3>① 确认框尺寸 <span class="tag green">零风险</span></h3>
+      <p class="muted" style="margin:6px 0;line-height:1.7">
+        📌 是干嘛的：调「确认/取消」弹窗的大小。<br>
+        💡 有啥用：小屏不挡背景、大屏更醒目。<br>
+        🛠 怎么改：拖滑块 → 点「应用」。
+      </p>
+      <div class="row"><label>宽度 <span id="cdWVal">440</span>px</label><input id="cdW" type="range" min="240" max="900" value="440" oninput="cdWVal.textContent=this.value"></div>
+      <div class="row"><label>高度 <span id="cdHVal">220</span>px</label><input id="cdH" type="range" min="140" max="700" value="220" oninput="cdHVal.textContent=this.value"></div>
+      <div class="row">
+        <button onclick="cdApply()">应用</button>
+        <button class="ghost" onclick="cdReset()">复原默认</button>
+        <span id="cdStatus" class="status"></span>
+      </div>
+    </div>
+    <!-- 模块②：主题配色 -->
+    <div class="uiskin-card">
+      <h3>② 主题配色 <span class="tag green">零风险</span></h3>
+      <p class="muted" style="margin:6px 0;line-height:1.7">
+        📌 是干嘛的：改弹窗面板与文字颜色。<br>
+        💡 有啥用：换风格、护眼、品牌色。<br>
+        🛠 怎么改：挑颜色 → 点「应用」。
+      </p>
+      <div class="row"><label>面板底色</label><input id="thPanel" type="color" value="#121420"></div>
+      <div class="row"><label>面板描边</label><input id="thBorder" type="color" value="#ffffff"></div>
+      <div class="row"><label>标题颜色</label><input id="thTitle" type="color" value="#d4af37"></div>
+      <div class="row"><label>内容颜色</label><input id="thContent" type="color" value="#f0e6d1"></div>
+      <div class="row">
+        <button onclick="thApply()">应用</button>
+        <button class="ghost" onclick="thReset()">复原默认</button>
+        <span id="thStatus" class="status"></span>
+      </div>
+    </div>
+  </div>
+</section>
+
 <script>
 const A = (m,p,b)=>fetch(p,{method:m,headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined}).then(r=>r.json());
 function show(id,msg,ok){const e=document.getElementById(id);e.textContent=msg;e.className='status '+(ok?'ok':'bad');}
@@ -552,6 +607,57 @@ async function stat(){
   const [s,v]=await Promise.all([A('GET','/api/settings'), A('GET','/api/tool_version')]);
   const ver='工具版本：'+(v.build_time||'?')+' · '+v.md5;
   document.getElementById('hstat').textContent='工程：'+s.project_root+' ｜ 保险模式：'+(s.safe_mode?'开':'关')+' ｜ 回收站保留 '+s.retention_days+' 天 ｜ '+ver;
+}
+
+// ===================== UI 皮肤定制（读 /api/ui_skin，写回同路由） =====================
+function _hexToRgbArr(hex){
+  hex=hex.replace('#','');
+  if(hex.length===3) hex=hex.split('').map(c=>c+c).join('');
+  const n=parseInt(hex,16);
+  return [((n>>16)&255)/255,((n>>8)&255)/255,(n&255)/255,1];
+}
+function _rgbArrToHex(a){
+  const c=v=>('0'+Math.round(Math.max(0,Math.min(1,v))*255).toString(16)).slice(-2);
+  return '#'+c(a[0])+c(a[1])+c(a[2]);
+}
+async function uiSkinLoad(){
+  let d;
+  try{ d=await A('GET','/api/ui_skin'); }catch(e){ return; }
+  if(d.confirm_dialog_layout){
+    const L=d.confirm_dialog_layout;
+    if(L.panel_width){cdW.value=L.panel_width;cdWVal.textContent=L.panel_width;}
+    if(L.panel_height){cdH.value=L.panel_height;cdHVal.textContent=L.panel_height;}
+  }
+  if(d.theme){
+    if(Array.isArray(d.theme.panel_bg)) thPanel.value=_rgbArrToHex(d.theme.panel_bg);
+    if(Array.isArray(d.theme.panel_border)) thBorder.value=_rgbArrToHex(d.theme.panel_border);
+    if(Array.isArray(d.theme.title_color)) thTitle.value=_rgbArrToHex(d.theme.title_color);
+    if(Array.isArray(d.theme.content_color)) thContent.value=_rgbArrToHex(d.theme.content_color);
+  }
+}
+async function cdApply(){
+  const data={panel_width:parseInt(cdW.value,10),panel_height:parseInt(cdH.value,10)};
+  const r=await A('POST','/api/ui_skin',{kind:'confirm_dialog_layout',data:data});
+  show('cdStatus',r.msg||(r.ok?'已保存':'失败'),r.ok);
+}
+async function cdReset(){
+  const r=await A('POST','/api/ui_skin',{kind:'confirm_dialog_layout',data:{panel_width:440,panel_height:220}});
+  if(r.ok){cdW.value=440;cdWVal.textContent=440;cdH.value=220;cdHVal.textContent=220;}
+  show('cdStatus',r.msg||(r.ok?'已复原':'失败'),r.ok);
+}
+async function thApply(){
+  const data={_doc:"UI 通用主题配色（工作室「UI 皮肤定制 → 主题配色」可改）。",
+    panel_bg:_hexToRgbArr(thPanel.value),panel_border:_hexToRgbArr(thBorder.value),
+    title_color:_hexToRgbArr(thTitle.value),content_color:_hexToRgbArr(thContent.value),
+    accent:[0.55,0.78,0.45,1]};
+  const r=await A('POST','/api/ui_skin',{kind:'theme',data:data});
+  show('thStatus',r.msg||(r.ok?'已保存':'失败'),r.ok);
+}
+async function thReset(){
+  const defs=(await A('GET','/api/ui_skin'))._defaults;
+  const r=await A('POST','/api/ui_skin',{kind:'theme',data:defs.theme});
+  if(r.ok){thPanel.value=_rgbArrToHex(defs.theme.panel_bg);thBorder.value=_rgbArrToHex(defs.theme.panel_border);thTitle.value=_rgbArrToHex(defs.theme.title_color);thContent.value=_rgbArrToHex(defs.theme.content_color);}
+  show('thStatus',r.msg||(r.ok?'已复原':'失败'),r.ok);
 }
 
 window._npcCache=[]; window._prevId=''; window._loaded=null; window._lastRename=null;
@@ -573,6 +679,7 @@ document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{
   if(b.dataset.tab==='battle'){blLoadList();dpLoad();}
   if(b.dataset.tab==='loading')loadingLoad();
   if(b.dataset.tab==='uiart')uiArtLoad();
+  if(b.dataset.tab==='uiskin')uiSkinLoad();
   if(b.dataset.tab==='exp')expLoad();
 });
 
@@ -2073,7 +2180,7 @@ function expInline(t){
   return h;
 }
 
-stat();npcLoad();loadingLoad();backlogLoad();loadStartupCard();
+stat();npcLoad();loadingLoad();backlogLoad();loadStartupCard();uiSkinLoad();
 </script>
 </body>
 </html>

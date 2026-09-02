@@ -1,0 +1,5 @@
+{
+  "_doc": "确认框尺寸（工作室「UI 皮肤定制 → 确认框尺寸」滑块写入）。panel_width / panel_height 为弹窗主体像素尺寸；缺文件时游戏回退默认 440x220。",
+  "panel_width": 440,
+  "panel_height": 220
+}
