@@ -50,7 +50,7 @@
           "detail": "登录界面 5 个主菜单按钮的悬停音效，此前为程序合成短音占位，已替换为下载的木质框按钮悬停音 menu_hover_box.ogg（Ogg Vorbis，0.11s）。",
           "suggestion": "——",
           "resolvedBy": "AI-UI",
-          "resolvedAt": "2026-09-02",
+          "resolvedAt": "2026-09-02 10:33:26",
           "commit": "63263e2",
           "resolution": "新增 menu_hover_box.ogg + 其 .import，ui_sfx.json 的 hover 改指向该文件；零代码改动。已验证 Godot 原生识别为 AudioStreamOggVorbis、运行时 load 成功、双闸门全绿。"
         }
@@ -315,6 +315,47 @@
           "source": "测试稳定性",
           "detail": "部分战斗测试曾因时间戳种子概率性失败（已修一处），仍有随机性隐患。",
           "suggestion": "测试内统一注入固定种子（get_core().rng.configure(SEED)）。"
+        }
+      ]
+    },
+    {
+      "id": "platform",
+      "name": "工作室平台（演进）",
+      "desc": "工作室开发平台自身的演进待办（解耦/版本切换/远程/知识复用/换皮模板）。属平台基建，非游戏工程业务。",
+      "items": [
+        {
+          "title": "远程访问（Phase 4）延后：紧迫度极低，需要时一步扩展",
+          "type": "待办",
+          "status": "open",
+          "placeholder": false,
+          "source": "用户决策 2026-09-02（平台本质再定位）",
+          "detail": "远程调度/公网访问当前完全用不到、离落地很远。架构已预留：绑定地址配置化 + 鉴权为前置条件，未来真要公网时按 Phase 4 一步扩展即可，不阻塞当前任何开发。",
+          "suggestion": "保持现状（本地 127.0.0.1）。待真正需要公网时，先做 Phase 3 鉴权再开 Phase 4 隧道/HTTPS；切忌无鉴权暴露公网。",
+          "plain": {
+            "what": "把工作室后台从「只能本机用」扩成「能在外面远程访问/调度」。",
+            "why": "你现在用不到，离这一步还很远，现在做只会拖累主线开发。",
+            "progress": "已决定延后：架构已经留好扩展口子，将来要用了一步就能加上。",
+            "missing": "尚未开始，也不需要现在开始。",
+            "plan": "将来真要远程时：先加账号鉴权，再用隧道/HTTPS 暴露，别裸奔上公网。",
+            "bugs": "暂无 BUG，属刻意延后的规划项。"
+          }
+        },
+        {
+          "title": "跨项目知识复用 + 换皮模板（连接器而非容器）",
+          "type": "优化建议",
+          "status": "open",
+          "placeholder": false,
+          "source": "用户决策 2026-09-02（平台本质再定位）",
+          "detail": "平台定位为连接器：只对接工程、不存工程数据。需支持①新 AI 一眼读懂各工程架构(ai_context) ②换皮不换药：小白只换图/乐/文(reskin) ③前人的踩坑与经验跨项目复用(knowledge)。manifest 模板已含这三段（tools/desktop_studio/projects/manifest_template.yaml）。",
+          "suggestion": "Phase 2 落地 manifest 时即带 ai_context/reskin/knowledge 三段；总控台(Phase 6)读取 knowledge.refs 渲染经验库。",
+          "plain": {
+            "what": "让平台不止管一个游戏，而是「换个项目一键对接」，且能复用前一个项目的架构经验和踩坑。",
+            "why": "你以后还有小程序等其他项目；换皮不换药的活儿让不懂开发的小白也能只换图/音乐/文本就出新作，大幅降成本。",
+            "progress": "理念与模板已定，待 Phase 2 把模板接进版本切换。",
+            "missing": "manifest 三段已设计，尚未被平台真正读取/渲染。",
+            "plan": "Phase 2 把 manifest 模板落地；Phase 6 总控台加「经验库」面板。",
+            "bugs": "暂无 BUG，属架构预留能力。"
+          }
         }
       ]
     }
