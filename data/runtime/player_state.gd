@@ -98,6 +98,7 @@ func gain_exp(amount: int) -> bool:
 		mp = max_mp
 		recalculate_stats()
 		EventBus.player_level_up.emit(level)
+	EventBus.player_exp_changed.emit(experience, exp_to_next)
 	return leveled
 
 ## 基础属性 + 装备加成 -> 战斗属性（规范 §1.4 重算流程的核心）

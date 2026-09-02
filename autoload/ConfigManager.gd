@@ -504,9 +504,9 @@ func _flush_config_errors() -> void:
 		for e in _config_errors:
 			f.store_line("- " + e)
 		f.close()
-	print("=== [Config] 配置校验发现 %d 处问题，详见: %s ===" % [_config_errors.size(), ProjectSettings.globalize_path(log_path)])
+	GameLogger.warn("Config", "配置校验发现 %d 处问题，详见: %s" % [_config_errors.size(), ProjectSettings.globalize_path(log_path)])
 	for e in _config_errors:
-		print("  [配置问题] " + e)
+		GameLogger.warn("Config", "[配置问题] " + e)
 
 # === 技能 ===
 func get_ability(id: String) -> Dictionary:
