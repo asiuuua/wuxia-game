@@ -7,7 +7,7 @@
   "pool_size": 4,
 
   "events": {
-    "hover":   { "path": "res://resources/audio/sfx/ui_hover.wav",   "volume_db": -10.0 },
+    "hover":   { "path": "res://resources/audio/sfx/menu_hover_box.ogg", "volume_db": -10.0 },
     "click":   { "path": "res://resources/audio/sfx/ui_click.wav",   "volume_db": -8.0 },
     "confirm": { "path": "res://resources/audio/sfx/ui_confirm.wav", "volume_db": -6.0 },
     "cancel":  { "path": "res://resources/audio/sfx/ui_cancel.wav",  "volume_db": -8.0 },
