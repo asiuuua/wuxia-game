@@ -140,7 +140,14 @@ func load_game(slot: int) -> void:
 
 ## 开战：记录待打战斗并切换到战斗场景
 ## 战术战棋战斗（配置 tactical=true）路由到 TacticalBattleScene，其余走经典 BattleScene（旧战斗零影响）
+## 设计拍版（2026-09-02）：HUD 为城镇常驻 UI，战斗中绝不出现——
+## 战斗使用独立的战斗 UI（BattleScene / TacticalBattleScene 自带），与 HUD 互斥。
+## 故所有开战入口都先卸载 HUD，确保战斗中不会残留 HUD 面板（视觉重叠风险），
+## 不依赖"离开城镇"这个时机（旧链路在 TownScene._exit_tree 才卸载，任何非经城镇的
+## 开战路径都可能让 HUD 残留）。
 func start_battle(battle_id: String) -> void:
+	# 进入战斗即卸载常驻 HUD（策略显式收口，与战斗 UI 互斥）
+	UIManager.unmount_hud()
 	# 工业化扩容 P6：切场景前集中回收温存/冷资源（CG/语音/立绘/战斗实体池统一释放口）
 	ResourceManager.reclaim_all()
 	pending_battle_id = battle_id
