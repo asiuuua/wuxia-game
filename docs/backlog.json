@@ -35,11 +35,15 @@
         {
           "title": "弹窗/列表的确认框缩放动画为占位",
           "type": "占位",
-          "status": "open",
+          "status": "done",
           "placeholder": true,
           "source": "scenes/ui/components/confirm_dialog/ConfirmDialog.gd:6",
           "detail": "确认对话框动画用淡入淡出占位，真实缩放动画待美术资源。",
-          "suggestion": "拿到美术资源后在 _show/_hide 接入 Tween 缩放。"
+          "suggestion": "拿到美术资源后在 _show/_hide 接入 Tween 缩放。",
+          "resolvedBy": "AI-UI",
+          "resolvedAt": "2026-09-02 11:59:54",
+          "commit": "72c3cf8",
+          "resolution": "用代码 Tween(TRANS_BACK, 0.18s) 给确认框叠加中心缩放弹入，替代原纯淡入占位动画；无需美术资源。已通过 GATE1 零错误；GATE2 唯一失败为其他窗口未提交的 preset_12x12 网格改动，与本次无关。"
         },
         {
           "title": "主菜单悬停音效替换为真实木质按钮音",
