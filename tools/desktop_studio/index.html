@@ -630,39 +630,38 @@
   <!-- 已合并至 tab-sys（系统运维） -->
 
   <!-- 已合并至 tab-sys（系统运维） -->
-  <!-- 协同启动卡 / 待办清单（2026-09-02 重构）：待办清单优先展示；协同口令收进左侧隐藏栏，鼠标靠左边缘自动滑出、点选即复制 -->
+  <!-- 协同启动卡 / 待办清单（2026-09-02 重构 v2）：固定左侧栏常驻显示，不再悬停滑出；
+       左栏第一行=协同清单（点窗口名即复制口令，口令固定显示在栏内预览区），下方=待办清单 -->
   <section class="tab" id="tab-coord">
-    <!-- 左侧隐藏栏：鼠标移到左边缘自动滑出；点窗口名即复制对应 AI 窗口口令 -->
+    <!-- 固定左侧栏：始终可见，含 协同清单(第一行) + 待办；协同提示词固定在栏内，无需滑出 -->
     <div id="coordRail">
-      <div class="rail-edge" title="鼠标移到这里 → 展开「协同启动卡」">‹</div>
       <aside id="coordSidebar">
-        <div class="rail-head">🤝 协同启动卡<span class="muted">（点窗口名即复制口令）</span></div>
+        <div class="rail-head">🤝 协同清单<span class="muted">（点窗口名即复制口令）</span></div>
         <div class="rail-list" id="startupCardList">加载中…</div>
-        <div class="rail-foot muted">内容随 docs/AI协同启动卡.md 同步</div>
+        <div class="rail-prompt" id="startupPrompt" style="display:none">
+          <div class="rp-head">📝 协同提示词（点上方窗口名复制）</div>
+          <pre class="rp-body" id="startupPromptBody"></pre>
+        </div>
+        <div class="rail-sep"></div>
+        <div class="rail-head">📋 待办清单</div>
+        <div id="blViewSwitch" class="bl-views"></div>
+        <div id="backlogRoot" class="backlog-wrap backlog-in-rail">加载中…</div>
+        <div class="rail-foot muted">内容随 docs/AI协同启动卡.md / docs/backlog.json 同步</div>
       </aside>
     </div>
-    <!-- 主内容：待办清单 优先展示 -->
+    <!-- 右侧说明区 -->
     <div class="coord-main">
-      <h3 style="margin:0 0 8px">📋 待办清单</h3>
-      <p class="muted" style="margin:0 0 8px">按轻重缓急排序：🔴 <b style="color:#f87171">迫在眉睫</b> → 🔵 <b style="color:#60a5fa">中规中矩</b> → 🟡 <b style="color:#fbbf24">影响较小 / 未开始</b>（无重大隐患与 bug）。鼠标移到本页左边缘可滑出「协同启动卡」一键复制各 AI 窗口口令。</p>
-      <p class="muted" style="margin:0 0 12px">💡 要系统化审查？把鼠标靠到左边缘 → 点「🔍 审计核查」复制专业审计口令（单模块 / 全盘 / 关联架构八维度审查），审计发现用 <code style="background:#1b1f33;padding:1px 5px;border-radius:3px">tools/audit_to_backlog.py</code> 自动归类到本清单下方对应模块。</p>
-      <div id="blViewSwitch" class="bl-views"></div>
-      <div id="backlogRoot" class="backlog-wrap">加载中…</div>
+      <h3 style="margin:0 0 8px">🤝 协同 / 待办</h3>
+      <p class="muted" style="margin:0 0 8px">左侧固定栏常驻：上方「协同清单」点窗口名即复制该 AI 窗口口令（口令同步显示在栏内预览区，无需滑出）；下方「待办清单」按轻重缓急排序。</p>
+      <p class="muted" style="margin:0 0 8px">优先级：🔴 <b style="color:#f87171">迫在眉睫</b> → 🔵 <b style="color:#60a5fa">中规中矩</b> → 🟡 <b style="color:#fbbf24">影响较小 / 未开始</b>（无重大隐患与 bug）。</p>
+      <p class="muted" style="margin:0 0 12px">💡 要系统化审查？点左侧「🔍 审计核查」复制专业审计口令（单模块 / 全盘 / 关联架构八维度审查），审计发现用 <code style="background:#1b1f33;padding:1px 5px;border-radius:3px">tools/audit_to_backlog.py</code> 自动归类到待办清单下方对应模块。</p>
     </div>
     <style>
-      #tab-coord{position:relative;min-height:62vh}
-      .coord-main{padding-left:26px}
-      #coordRail{position:absolute;left:0;top:0;bottom:0;width:16px;z-index:30}
-      #coordRail .rail-edge{position:absolute;left:0;top:0;bottom:0;width:16px;cursor:ew-resize;
-        background:linear-gradient(90deg, rgba(124,156,255,.20), rgba(124,156,255,0));
-        display:flex;align-items:center;justify-content:center;color:#7c9cff;font-size:18px;
-        border-radius:0 6px 6px 0;transition:background .2s}
-      #coordRail:hover .rail-edge{background:linear-gradient(90deg, rgba(124,156,255,.38), rgba(124,156,255,0))}
-      #coordSidebar{position:absolute;left:0;top:0;bottom:0;width:300px;transform:translateX(-100%);
-        transition:transform .22s ease;background:var(--panel);border-right:1px solid var(--line);
-        box-shadow:8px 0 24px rgba(0,0,0,.4);overflow:auto;padding:16px 14px}
-      #coordRail.open{width:300px}
-      #coordRail.open #coordSidebar{transform:translateX(0)}
+      #tab-coord{display:flex;min-height:62vh}
+      #coordRail{position:relative;flex:0 0 360px;width:360px;z-index:20}
+      #coordSidebar{position:absolute;inset:0;width:360px;overflow:auto;background:var(--panel);
+        border-right:1px solid var(--line);box-shadow:8px 0 24px rgba(0,0,0,.4);padding:16px 14px}
+      .coord-main{flex:1;min-width:0;padding:0 16px}
       .rail-head{font-size:15px;font-weight:700;color:var(--accent);margin-bottom:4px}
       .rail-head .muted{font-weight:400;font-size:12px}
       .rail-list{margin-top:10px;display:flex;flex-direction:column;gap:6px}
@@ -675,6 +674,11 @@
       .rail-copy{flex:0 0 auto}
       .rail-foot{margin-top:10px;font-size:11px}
       .rail-err{color:var(--bad);font-size:13px}
+      .rail-sep{height:1px;background:var(--line);margin:14px 0}
+      .rail-prompt{margin-top:10px;background:#10131f;border:1px solid var(--line);border-radius:8px;padding:10px}
+      .rp-head{font-size:12px;color:var(--muted);margin-bottom:6px}
+      .rp-body{margin:0;white-space:pre-wrap;word-break:break-word;font-size:12px;line-height:1.5;color:#cdd3e6;max-height:200px;overflow:auto}
+      .backlog-in-rail{margin-top:8px}
       .bl-views{display:flex;gap:6px;margin-bottom:12px}
       .bl-chip{background:#15182a;border:1px solid #2a2f47;color:#e6e8f0;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:13px}
       .bl-chip.active{background:#7c9cff22;border-color:#7c9cff;color:#fff}
@@ -2639,10 +2643,8 @@ function blEsc(s){return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>
 let STARTUP_DATA=null;
 let _coordRailInit=false;
 function _initCoordRail(){
+  // 2026-09-02 v2：左栏固定常驻，不再悬停滑出，无需 mouseenter/leave 切换
   if(_coordRailInit) return; _coordRailInit=true;
-  const r=document.getElementById('coordRail'); if(!r) return;
-  r.addEventListener('mouseenter',()=>r.classList.add('open'));
-  r.addEventListener('mouseleave',()=>r.classList.remove('open'));
 }
 function copyText(txt, btn){
   const done=(ok)=>{ if(btn){ const o=btn.textContent; btn.textContent=ok?'已复制 ✓':'复制失败'; setTimeout(()=>btn.textContent=o,1500); } };
@@ -2680,6 +2682,9 @@ async function loadStartupCard(){
       const txt = r.dataset.tpl ? (STARTUP_DATA.template||'') : ((STARTUP_DATA.windows[+r.dataset.i].command)||STARTUP_DATA.template||'');
       copyText(txt, r.querySelector('.rail-copy'));
       r.classList.add('copied'); setTimeout(()=>r.classList.remove('copied'),1200);
+      // 协同提示词固定显示在栏内预览区（无需滑出）
+      const pv=document.getElementById('startupPrompt'), pb=document.getElementById('startupPromptBody');
+      if(pv&&pb){ pb.textContent=txt; pv.style.display='block'; }
     };
   });
 }
