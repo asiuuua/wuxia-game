@@ -141,11 +141,15 @@
         {
           "title": "列表刷新子节点 + 悬停动效令牌解析结果池化",
           "type": "优化建议",
-          "status": "open",
+          "status": "done",
           "placeholder": false,
           "source": "派单 fdfcce7396ed（审计→UI）",
           "detail": "列表频繁重建子节点、悬停动效每次重新解析令牌，存在可观测的性能浪费。",
-          "suggestion": "对象池复用列表项；令牌解析结果缓存复用。"
+          "suggestion": "对象池复用列表项；令牌解析结果缓存复用。",
+          "resolvedBy": "AI-UI",
+          "resolvedAt": "2026-09-02",
+          "commit": "ff00d90",
+          "resolution": "UIFeedback 令牌解析结果缓存(静态token→trans/ease+实例级预设/时长/缩放) + quest_track_panel 条目Label对象池(回收复用替代全量free重建); 新增 test_ui_feedback_cache.gd 3项 + test_quest_track_pool_reuses_labels 回归; GATE2 60套件0失败"
         },
         {
           "title": "战斗开始残留 debug print 输出",
