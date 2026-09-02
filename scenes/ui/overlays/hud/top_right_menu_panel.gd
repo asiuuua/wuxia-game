@@ -19,9 +19,9 @@ func _ready() -> void:
 	if Engine.is_editor_hint():
 		return
 	_hook_buttons()
-	# 拖拽初始化：默认右上角（屏幕宽-面板宽-边距，12）；可拖拽、落点持久化
+	# 拖拽初始化：默认右上角；优先取 hud_layout.json（工作室可改），否则回退视口相对默认
 	var vp := _screen_size()
-	_init_drag("top_right_menu", Vector2(maxf(12.0, vp.x - 220.0), 12.0))
+	_init_drag("top_right_menu", UILayout.hud_default_pos("top_right_menu", Vector2(maxf(12.0, vp.x - 220.0), 12.0), vp))
 	if is_instance_valid(EventBus):
 		EventBus.bond_relationship_changed.connect(_refresh_badge)
 	_refresh_badge()

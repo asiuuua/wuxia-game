@@ -1298,6 +1298,82 @@ def main_menu_layout_update(d):
     return True, "已保存主菜单布局（游戏内下次启动生效）"
 
 
+# ============================ HUD 布局（工作室「UI 模块 → HUD 布局」可视化编辑） ============================
+# 四面板默认位置（参考分辨率 1920x1080 下的绝对坐标）。游戏侧按当前视口等比缩放后应用；
+# 玩家在游戏内拖拽后落点存 user://ui/hud_positions.json（个人偏好），优先于本默认值。
+def _hud_layout_path():
+    return os.path.join(discover_project_root(), "data", "configs", "ui", "hud_layout.json")
+
+
+# 四面板默认位置（与游戏各面板既有硬编码默认一致，保证「恢复默认」= 当前行为）
+_HUD_LAYOUT_DEFAULT = {
+    "panels": {
+        "status_card":    {"x": 12.0,   "y": 12.0},
+        "quest_track":    {"x": 12.0,   "y": 362.0},
+        "top_right_menu": {"x": 1700.0, "y": 12.0},
+        "skill_bar":      {"x": 782.0,  "y": 980.0},
+    }
+}
+
+_HUD_PANEL_KEYS = ("status_card", "quest_track", "top_right_menu", "skill_bar")
+_HUD_REF_W = 1920.0
+_HUD_REF_H = 1080.0
+
+
+def _is_num(v):
+    # 排除 bool（bool 是 int 子类），只接受真正的数字
+    return isinstance(v, (int, float)) and not isinstance(v, bool)
+
+
+def hud_layout_get():
+    """读取 HUD 四面板默认位置（与默认合并，缺字段补默认）。"""
+    p = _hud_layout_path()
+    data = {"panels": {k: dict(v) for k, v in _HUD_LAYOUT_DEFAULT["panels"].items()}}
+    if os.path.exists(p):
+        try:
+            with open(p, "r", encoding="utf-8") as f:
+                parsed = json.load(f)
+            if isinstance(parsed, dict) and isinstance(parsed.get("panels"), dict):
+                for k in _HUD_PANEL_KEYS:
+                    spec = parsed["panels"].get(k)
+                    if isinstance(spec, dict):
+                        cur = data["panels"][k]
+                        if _is_num(spec.get("x")):
+                            cur["x"] = float(spec["x"])
+                        if _is_num(spec.get("y")):
+                            cur["y"] = float(spec["y"])
+        except Exception:
+            pass
+    data["_doc"] = "HUD 四面板默认位置（工作室「UI 模块 → HUD 布局」拖拽编辑写入）。坐标为参考分辨率 1920x1080 下的屏幕绝对坐标；游戏运行时按当前视口等比缩放（保证任意分辨率下布局比例一致）。玩家在游戏内拖拽后会以 user://ui/hud_positions.json 个人偏好覆盖此处设定；点「恢复默认」即回到此处数值。"
+    data["reference_width"] = _HUD_REF_W
+    data["reference_height"] = _HUD_REF_H
+    return data
+
+
+def hud_layout_update(d):
+    """写入 HUD 布局（自动备份旧文件）。d 形如 {"panels": {"status_card": {"x":..,"y":..}, ...}}。"""
+    p = _hud_layout_path()
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+    _backup(p)
+    data = {"panels": {}}
+    for k in _HUD_PANEL_KEYS:
+        spec = dict(_HUD_LAYOUT_DEFAULT["panels"].get(k, {"x": 0.0, "y": 0.0}))
+        incoming = (d.get("panels", {}) or {}).get(k, {})
+        if isinstance(incoming, dict):
+            if _is_num(incoming.get("x")):
+                spec["x"] = max(0.0, min(_HUD_REF_W, float(incoming["x"])))
+            if _is_num(incoming.get("y")):
+                spec["y"] = max(0.0, min(_HUD_REF_H, float(incoming["y"])))
+        data["panels"][k] = spec
+    data["_doc"] = "HUD 四面板默认位置（工作室「UI 模块 → HUD 布局」拖拽编辑写入）。坐标为参考分辨率 1920x1080 下的屏幕绝对坐标；游戏运行时按当前视口等比缩放。玩家拖拽偏好存 user://ui/hud_positions.json，优先于此默认。"
+    data["reference_width"] = _HUD_REF_W
+    data["reference_height"] = _HUD_REF_H
+    with open(p, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    log_event("hud_layout", p, "更新 HUD 布局")
+    return True, "已保存 HUD 布局（游戏内下次启动生效）"
+
+
 # ============================ UI 皮肤定制（工作室「UI 皮肤定制」tab，UI 窗口主权） ============================
 # 只读写 data/configs/ui/skin/ 下的白名单文件，杜绝路径穿越；游戏侧零依赖、缺省回退。
 def _ui_skin_dir():

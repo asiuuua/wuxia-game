@@ -25,12 +25,12 @@ func _ready() -> void:
 	if Engine.is_editor_hint():
 		return
 	_collect_slots()
-	# 拖拽初始化：默认底部居中（屏幕宽/2 - 面板宽/2，屏幕高 - 面板高 - 边距）；可拖拽、落点持久化
+	# 拖拽初始化：默认底部居中；优先取 hud_layout.json（工作室可改），否则回退视口相对默认
 	var vp := _screen_size()
 	var panel_w := get_combined_minimum_size().x
 	var panel_h := get_combined_minimum_size().y
 	var default_pos := Vector2(maxf(12.0, vp.x * 0.5 - panel_w * 0.5), maxf(12.0, vp.y - panel_h - 16.0))
-	_init_drag("skill_bar", default_pos)
+	_init_drag("skill_bar", UILayout.hud_default_pos("skill_bar", default_pos, vp))
 	if is_instance_valid(EventBus):
 		EventBus.combat_skill_equipped.connect(_on_skill_equipped)
 		EventBus.notify_skill_bar_changed.connect(_refresh_full)

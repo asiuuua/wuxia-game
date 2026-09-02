@@ -125,6 +125,7 @@
         <div class="dd-group-title">UI 子功能</div>
         <button class="dd-item" data-tab="uiart">UI 贴图</button>
         <button class="dd-item" data-tab="uiskin">🎨 UI 皮肤定制</button>
+        <button class="dd-item" data-tab="hud">📐 HUD 布局</button>
       </div>
     </div>
   </div>
@@ -686,6 +687,28 @@
   </div>
 </section>
 
+  <section class="tab" id="tab-hud">
+    <div class="editor" style="max-width:960px">
+      <div class="hint">HUD 四面板默认位置可视化编辑：直接拖动下面画布里的 4 个面板到任意位置，点「保存布局」即写入游戏（下次启动生效）。坐标为「参考分辨率 1920×1080」下的绝对像素；游戏运行时按当前视口等比缩放，保证任意分辨率下布局比例一致。玩家在游戏内拖拽后会以个人偏好覆盖此处设定（「恢复默认」即回到这里）。</div>
+      <div class="cat-ui">
+        <b>本页功能分类：</b>
+        <span><span class="cat lay">布局</span> 调整状态卡 / 任务追踪 / 右上菜单 / 技能栏 的默认位置</span>
+      </div>
+      <div id="hudCanvas" style="position:relative;border:1px solid #444;border-radius:8px;overflow:hidden;background:#0c0e16;width:100%;aspect-ratio:16/9">
+        <div class="hud-el" data-el="status_card" style="position:absolute;width:170px;height:120px;background:rgba(90,176,230,.18);border:1px solid #5ab0e6;border-radius:8px;color:#cfe6ff;font:13px sans-serif;display:flex;align-items:center;justify-content:center;cursor:move;user-select:none">状态卡</div>
+        <div class="hud-el" data-el="quest_track" style="position:absolute;width:150px;height:80px;background:rgba(90,176,230,.18);border:1px solid #5ab0e6;border-radius:8px;color:#cfe6ff;font:13px sans-serif;display:flex;align-items:center;justify-content:center;cursor:move;user-select:none">任务追踪</div>
+        <div class="hud-el" data-el="top_right_menu" style="position:absolute;width:150px;height:36px;background:rgba(230,179,90,.18);border:1px solid #e6b35a;border-radius:8px;color:#ffe6c0;font:13px sans-serif;display:flex;align-items:center;justify-content:center;cursor:move;user-select:none">右上菜单</div>
+        <div class="hud-el" data-el="skill_bar" style="position:absolute;width:300px;height:48px;background:rgba(120,200,120,.18);border:1px solid #7ac87a;border-radius:8px;color:#d6ffd6;font:13px sans-serif;display:flex;align-items:center;justify-content:center;cursor:move;user-select:none">技能栏</div>
+      </div>
+      <div class="hint">拖动说明：每个面板色块都可拖动到任意位置；保存后游戏内下次进 HUD 即按此默认摆放（玩家仍可继续在游戏里拖）。</div>
+      <div class="btns" style="margin-top:10px">
+        <button class="act" onclick="hudSave()">保存布局</button>
+        <button class="act sec" onclick="hudReset()">恢复默认</button>
+        <span id="hudStat" class="status"></span>
+      </div>
+    </div>
+  </section>
+
 <section class="tab" id="tab-gate">
   <div class="layout">
     <div class="editor" style="flex:1">
@@ -831,6 +854,7 @@ document.querySelectorAll('#nav button').forEach(b=>b.onclick=(e)=>{
   if(b.dataset.tab==='loading')loadingLoad();
   if(b.dataset.tab==='uiart')uiArtLoad();
   if(b.dataset.tab==='uiskin')uiSkinLoad();
+  if(b.dataset.tab==='hud')hudLoad();
   if(b.dataset.tab==='exp')expLoad();
   if(b.dataset.tab==='gate')gateLoad();
   if(b.dataset.tab==='orchestrate')orcLoad();
@@ -1581,6 +1605,72 @@ async function loadingReset(){
   show('loadingStat',(r&&r.msg)?r.msg:'已恢复默认',!!(r&&r.ok));
 }
 loadingInitDrag();
+
+// ---------- HUD 布局（四面板默认位置可视化编辑，参考分辨率 1920x1080） ----------
+const HUD_KEYS=['status_card','quest_track','top_right_menu','skill_bar'];
+const HUD_LABEL={status_card:'状态卡',quest_track:'任务追踪',top_right_menu:'右上菜单',skill_bar:'技能栏'};
+const HUD_W=1920, HUD_H=1080;
+window._hudLayout=null;
+async function hudLoad(){
+  try{
+    const d=await A('GET','/api/hud/layout');
+    const ps=(d&&d.panels)||{};
+    const L={};HUD_KEYS.forEach(k=>{L[k]=Object.assign({x:0,y:0},ps[k]||{});});
+    window._hudLayout=L;
+  }catch(e){ window._hudLayout={status_card:{x:12,y:12},quest_track:{x:12,y:362},top_right_menu:{x:1700,y:12},skill_bar:{x:782,y:980}}; }
+  hudRender();
+}
+function hudRender(){
+  const L=window._hudLayout;if(!L)return;
+  const wrap=document.getElementById('hudCanvas');
+  const cw=wrap.clientWidth||960, ch=wrap.clientHeight||540;
+  const sx=cw/HUD_W, sy=ch/HUD_H;
+  wrap.querySelectorAll('.hud-el').forEach(el=>{
+    const k=el.dataset.el,s=L[k]||{x:0,y:0};
+    el.style.left=((s.x||0)*sx)+'px';
+    el.style.top=((s.y||0)*sy)+'px';
+  });
+}
+function hudInitDrag(){
+  const wrap=document.getElementById('hudCanvas');
+  wrap.querySelectorAll('.hud-el').forEach(el=>{
+    el.addEventListener('pointerdown',e=>{
+      e.preventDefault();
+      const k=el.dataset.el,r=wrap.getBoundingClientRect();
+      if(!r.width||!r.height)return;
+      const sx0=e.clientX,sy0=e.clientY,s0=Object.assign({},window._hudLayout[k]||{x:0,y:0});
+      const clampW=v=>Math.max(0,Math.min(HUD_W,v));
+      const clampH=v=>Math.max(0,Math.min(HUD_H,v));
+      const move=ev=>{
+        const s=window._hudLayout[k]=window._hudLayout[k]||{x:0,y:0};
+        s.x=Math.round(clampW(s0.x+(ev.clientX-sx0)/r.width*HUD_W));
+        s.y=Math.round(clampH(s0.y+(ev.clientY-sy0)/r.height*HUD_H));
+        hudRender();
+      };
+      const up=()=>{el.removeEventListener('pointermove',move);el.removeEventListener('pointerup',up);el.removeEventListener('pointercancel',up);
+        show('hudStat','已拖动【'+(HUD_LABEL[k]||k)+'】，记得点「保存布局」',true);};
+      el.addEventListener('pointermove',move);el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up);
+      try{el.setPointerCapture(e.pointerId);}catch(_){}
+    });
+  });
+}
+async function hudSave(){
+  const L=window._hudLayout;if(!L){show('hudStat','布局尚未加载',false);return;}
+  const panels={};HUD_KEYS.forEach(k=>{const s=L[k]||{};panels[k]={x:Math.round(s.x||0),y:Math.round(s.y||0)};});
+  const r=await A('POST','/api/hud/layout',{panels});
+  show('hudStat',(r&&r.msg)?r.msg:(r&&r.ok?'已保存':'失败'),!!(r&&r.ok));
+}
+async function hudReset(){
+  if(!confirm('把 HUD 四面板恢复成默认位置（参考分辨率 1920×1080）？'))return;
+  const r=await A('GET','/api/hud/layout');
+  const ps=(r&&r.panels)||{};
+  const L={};HUD_KEYS.forEach(k=>{L[k]=Object.assign({x:0,y:0},ps[k]||{});});
+  window._hudLayout=L;hudRender();
+  const panels={};HUD_KEYS.forEach(k=>{const s=L[k]||{};panels[k]={x:Math.round(s.x||0),y:Math.round(s.y||0)};});
+  const r2=await A('POST','/api/hud/layout',{panels});
+  show('hudStat',(r2&&r2.msg)?r2.msg:'已恢复默认',!!(r2&&r2.ok));
+}
+hudInitDrag();
 
 // ---------- 主菜单(登录)界面布局（自由拖拽可视化编辑） ----------
 const MM_ELS=['title_group','menu_container','bottom_left','bottom_right'];

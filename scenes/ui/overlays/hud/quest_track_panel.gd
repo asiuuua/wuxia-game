@@ -54,7 +54,8 @@ func _ready() -> void:
 	mouse_default_cursor_shape = Control.CURSOR_MOVE   # 悬停显示「可移动」光标，提示可拖动
 	_make_drag_surface()                    # 静态结构已在 QuestTrackPanel.tscn，这里只统一输入靶
 	_sync_root_size()                       # 关键：先给根真实尺寸，拖拽热区才存在
-	_load_position()                        # 取存档位置（无存档/非法走默认）
+	# 取存档位置（无存档/非法回退 hud_layout.json 默认，再不行回退 DEFAULT_POS）
+	_load_position(UILayout.hud_default_pos("quest_track", DEFAULT_POS, _screen_size()))
 	if is_instance_valid(EventBus):
 		EventBus.notify_quest_track_changed.connect(_refresh)
 		EventBus.quest_objective_updated.connect(_refresh)
@@ -127,8 +128,8 @@ func _screen_size() -> Vector2:
 	return Vector2(1920, 1080)   # 无 viewport（构建期/测试）时假设 1080p
 
 # === 位置持久化（user://，运行时可写，不污染项目资源）===
-func _load_position() -> void:
-	var pos := DEFAULT_POS
+func _load_position(default_pos: Vector2 = DEFAULT_POS) -> void:
+	var pos := default_pos
 	var d := _read_json()
 	if d.has(POS_KEY) and d[POS_KEY] is Dictionary:
 		var kv: Dictionary = d[POS_KEY]

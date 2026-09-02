@@ -138,6 +138,29 @@ UI 模块 ⬇️
 
 ---
 
+### 2.5 HUD 布局（战斗/地图常驻四面板）
+
+**能改什么**：HUD 四块常驻面板的**默认摆放位置**——状态卡（左上）、任务追踪（状态卡下方）、右上菜单（姻缘/菜单）、快捷技能栏（底部）。
+
+| 面板 | 分类 | 默认位置（参考分辨率 1920×1080） | 改完哪生效 |
+|---|---|---|---|
+| 状态卡 | <span style="background:#2a1a35;color:#c98be6;padding:2px 8px;border-radius:10px;font-size:12px">布局</span> | 左上角 (12, 12) | `data/configs/ui/hud_layout.json` |
+| 任务追踪 | <span style="background:#2a1a35;color:#c98be6;padding:2px 8px;border-radius:10px;font-size:12px">布局</span> | 状态卡正下方 (12, 362) | `data/configs/ui/hud_layout.json` |
+| 右上菜单 | <span style="background:#2a1a35;color:#c98be6;padding:2px 8px;border-radius:10px;font-size:12px">布局</span> | 右上角 (1700, 12) | `data/configs/ui/hud_layout.json` |
+| 技能栏 | <span style="background:#2a1a35;color:#c98be6;padding:2px 8px;border-radius:10px;font-size:12px">布局</span> | 底部居中 (782, 980) | `data/configs/ui/hud_layout.json` |
+
+**小白步骤**：
+1. 点顶部「UI 模块 → HUD 布局」。
+2. 在 16:9 画布里拖动 4 个面板色块到想要的位置。
+3. 点「保存布局」→ 写入工程，游戏下次进 HUD 即按此默认摆放。
+
+**注意**：
+- 坐标是「参考分辨率 1920×1080」下的绝对像素；游戏运行时按当前视口**等比缩放**，所以 4K / 带鱼屏上比例一致（右上角仍是右上角）。
+- 这是**出厂默认值**，不是强制锁定：玩家在游戏里仍可继续拖动任意面板，落点会存到个人存档（`user://ui/hud_positions.json`）覆盖此处设定；点工作室「恢复默认」即回到本页数值。
+- 文件缺失 / 写坏 → 游戏自动回退各面板既有默认位置，零破坏。
+
+---
+
 ## 三、5 分钟快速上手路径
 
 如果你是第一次用，建议按这个顺序玩一遍：
@@ -147,6 +170,7 @@ UI 模块 ⬇️
 3. **改弹窗颜色**：UI 模块 → UI 皮肤定制 → 主题配色 → 挑颜色 → 应用。
 4. **关特效省电**：UI 皮肤定制 → 视觉特效 → 关掉飘叶/小船 → 应用。
 5. **给加载界面换个布局**：UI 模块 → 预加载界面 → 拖动进度条 → 保存布局。
+6. **重新摆 HUD 四面板**：UI 模块 → HUD 布局 → 拖动面板 → 保存布局。
 
 全部改完，进 Godot 编辑器按 F6 运行，即可实时看到效果。
 
@@ -167,6 +191,7 @@ UI 模块 ⬇️
 | UI 皮肤定制 → 确认框尺寸 | `data/configs/ui/skin/confirm_dialog.layout.json` | `ConfirmDialog.gd` | 点「复原默认」 |
 | UI 皮肤定制 → 主题配色 | `data/configs/ui/skin/theme.json` | `UISkin`（通用装载器） | 点「复原默认」 |
 | UI 皮肤定制 → 视觉特效 | `data/configs/ui/skin/main_menu.vfx.json` | `UIVFX`（通用装载器） | 点「复原默认」 |
+| HUD 布局 | `data/configs/ui/hud_layout.json` | `core/ui_layout.gd`（通用装载器）+ 四面板 `_init_drag` | 点「恢复默认」 |
 
 ---
 

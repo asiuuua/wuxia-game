@@ -40,8 +40,9 @@ func _ready() -> void:
 	if Engine.is_editor_hint():
 		return
 	_setup_bars()
-	# 拖拽初始化（状态卡默认左上角 12,12；可拖拽、落点持久化）
-	_init_drag("status_card", Vector2(12.0, 12.0))
+	# 拖拽初始化：默认位置优先取 data/configs/ui/hud_layout.json（工作室可改），
+	# 文件缺失/非法则回退既有硬编码默认（12,12），保证行为不变。
+	_init_drag("status_card", UILayout.hud_default_pos("status_card", Vector2(12.0, 12.0), _screen_size()))
 	if is_instance_valid(EventBus):
 		EventBus.player_hp_changed.connect(_refresh)
 		EventBus.player_mp_changed.connect(_refresh)
