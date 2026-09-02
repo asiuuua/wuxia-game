@@ -261,7 +261,7 @@
         {
           "title": "休息/睡觉未驱动天数推进（隐性BUG）",
           "type": "隐性BUG",
-          "status": "blocked",
+          "status": "done",
           "placeholder": false,
           "source": "派单 178267684159（结缘→背包，背包窗越权跳过，待重派）",
           "detail": "游戏内「休息/睡觉」动作未驱动天气时间服务推进天数，导致姻缘子嗣孕期不流逝；表面无报错。romance_service.advance_days 已就绪，仅缺「休息/睡觉」动作补一道 advance_day 驱动。",
@@ -273,16 +273,24 @@
             "missing": "在「休息/睡觉」的逻辑里，少了一行触发天数推进（advance_day）的调用。",
             "plan": "派给对应窗口，在休息/睡觉时补一句 advance_day()，孕期就能正常流逝了。",
             "bugs": "⚠ 这就是个隐性BUG：你点了休息/睡觉，界面一切正常、也不报错，但天数就是不增加，导致后续依赖天数的玩法全部静止。"
-          }
+          },
+          "resolvedBy": "结缘窗口",
+          "resolvedAt": "2026-09-02 16:55:46",
+          "commit": "948d146",
+          "resolution": "已闭环：生产驱动 TownScene._do_rest()->WeatherTimeService.advance_day(30) 已提交，经 world_day_advanced->GameManager->romance.advance_days 扇入孕期；双闸门 GATE1零错/GATE2 57套件0失败。派单 178267684159 已 close。"
         },
         {
           "title": "子嗣孕期流逝依赖天数推进",
           "type": "未实现",
-          "status": "blocked",
+          "status": "done",
           "placeholder": false,
           "source": "bond 链路（依赖上一项）",
           "detail": "子嗣孕期推进依赖天数流逝，上一项未修则孕期静止。",
-          "suggestion": "随上一项天数推进修复后自动打通。"
+          "suggestion": "随上一项天数推进修复后自动打通。",
+          "resolvedBy": "结缘窗口",
+          "resolvedAt": "2026-09-02 16:55:46",
+          "commit": "948d146",
+          "resolution": "随上一项天数推进修复自动打通：advance_days 随 world_day_advanced 驱动，孕期满300天分娩（test_intimacy_birth/celebration 覆盖）。"
         },
         {
           "title": "婚礼演出场景缺手动 playtest",
