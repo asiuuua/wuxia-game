@@ -87,6 +87,7 @@
   <button data-tab="backlog">待办清单</button>
   <button data-tab="startup">🤝 协同启动卡</button>
   <button data-tab="exp">📚 经验库</button>
+  <button data-tab="gate">🔧 双闸门</button>
 </nav>
 <div class="banner">
   ⚠️ <b>改动生效说明：</b>本工具编辑的是项目的<b>源码数据目录</b>（如 <code>data/configs/ui/</code>）。
@@ -600,6 +601,19 @@
   </div>
 </section>
 
+<section class="tab" id="tab-gate">
+  <div class="layout">
+    <div class="editor" style="flex:1">
+      <div class="hint">双闸门门禁（平台化验证）：一键调起 Godot headless 跑 GATE1（零 SCRIPT/PARSE/COMPILE ERROR）+ GATE2（run_all 零 ✗），PM 不装 Godot 也能卡质量。非绿即阻断——红门禁=有人改崩，须立即修红，切勿为过门禁去动无关模块。</div>
+      <div class="row" style="margin:12px 0">
+        <button id="gateRunBtn" style="background:var(--accent);color:#fff;border:none;padding:8px 14px;border-radius:6px;cursor:pointer" onclick="gateRun()">▶ 运行双闸门验证</button>
+        <span id="gateStatus" class="status" style="margin-left:10px"></span>
+      </div>
+      <div id="gateView" style="margin-top:8px;max-height:62vh;overflow:auto;line-height:1.8"></div>
+    </div>
+  </div>
+</section>
+
 <script>
 const A = (m,p,b)=>fetch(p,{method:m,headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined}).then(r=>r.json());
 function show(id,msg,ok){const e=document.getElementById(id);e.textContent=msg;e.className='status '+(ok?'ok':'bad');}
@@ -681,6 +695,7 @@ document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{
   if(b.dataset.tab==='uiart')uiArtLoad();
   if(b.dataset.tab==='uiskin')uiSkinLoad();
   if(b.dataset.tab==='exp')expLoad();
+  if(b.dataset.tab==='gate')gateLoad();
 });
 
 // ===================== UI 贴图（贴图直写 .tscn；位置/大小交给 Godot 拖拽） =====================
@@ -2179,6 +2194,32 @@ function expInline(t){
   h=h.replace(/`(.+?)`/g,'<code>$1</code>');
   return h;
 }
+
+// ===================== 双闸门平台化验证（PM 不装 Godot 也能卡质量） =====================
+let _gateAuto=false;
+async function gateRun(){
+  const btn=document.getElementById('gateRunBtn'), st=document.getElementById('gateStatus'), v=document.getElementById('gateView');
+  btn.disabled=true; st.textContent='验证中（调起 Godot headless，约 10~40 秒）…'; st.className='status';
+  v.innerHTML='<div class="status">正在运行 GATE1 + GATE2，请稍候…</div>';
+  let data;
+  try{ data=await A('GET','/api/gate/run'); }
+  catch(e){ btn.disabled=false; st.textContent='请求失败'; st.className='status bad'; v.innerHTML='<div class="status bad">'+blEsc(e)+'</div>'; return; }
+  btn.disabled=false;
+  if(!data || !data.ok){ st.textContent='无法运行'; st.className='status bad'; v.innerHTML='<div class="status bad">'+(data?blEsc(data.error):'无数据')+'</div>'; return; }
+  const g1=data.gate1, g2=data.gate2, ok=data.green;
+  st.textContent= ok?'✅ 双闸门全绿（可提交）':'🔴 红门禁（禁止提交）';
+  st.className='status '+(ok?'ok':'bad');
+  let h='<div style="margin:8px 0">';
+  h+='<div>Godot：<code>'+blEsc(data.godot)+'</code></div>';
+  h+='<div style="margin-top:6px">GATE1（headless 零错误）： <span class="status '+(g1.green?'ok':'bad')+'">'+(g1.green?'绿':'红')+'</span> · ERROR 数 '+g1.errors+(g1.sample&&g1.sample.length?'<pre style="white-space:pre-wrap;max-height:160px;overflow:auto;margin:4px 0">'+blEsc(g1.sample.join("\n"))+'</pre>':'')+'</div>';
+  h+='<div style="margin-top:6px">GATE2（run_all 零 ✗）： <span class="status '+(g2.green?'ok':'bad')+'">'+(g2.green?'绿':'红')+'</span> · 套件通过 '+g2.suites+' · 失败 '+g2.failed+' · ✗ '+g2.xfail+'</div>';
+  h+='</div>';
+  h+= ok
+    ? '<div class="status ok" style="margin-top:8px">✅ 门禁全绿，可窗口署名提交并推 Gitee。</div>'
+    : '<div class="status bad" style="margin-top:8px">⛔ 红门禁：存在报错/失败/✗，须立即修红再提交；切勿为过门禁去动无关模块（那才是真绕远路）。</div>';
+  v.innerHTML=h;
+}
+async function gateLoad(){ if(!_gateAuto){ _gateAuto=true; gateRun(); } }
 
 stat();npcLoad();loadingLoad();backlogLoad();loadStartupCard();uiSkinLoad();
 </script>
