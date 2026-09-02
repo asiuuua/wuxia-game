@@ -43,9 +43,11 @@ var town_player_spawn_pos: Vector2 = Vector2.ZERO
 ## 触发 Godot "Parent node is busy adding/removing children" 内部死锁/卡死。
 ## 2026-09-02 实测：主菜单点击「继续游戏」后 freeze 根因即此。
 func _deferred_change_scene(path: String) -> void:
+	# 延迟一帧，等 UI 关闭 / queue_free 完成后再切场景，
+	# 避免 Godot 内部 "Parent node is busy adding/removing children" 死锁/卡死。
 	await get_tree().process_frame
 	if is_instance_valid(get_tree()):
-		_deferred_change_scene(path)
+		get_tree().change_scene_to_file(path)
 
 func _ready() -> void:
 	player_state = PlayerState.new()
