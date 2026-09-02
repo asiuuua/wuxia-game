@@ -17,10 +17,17 @@
          display:flex;align-items:center;justify-content:space-between}
   header h1{font-size:17px;margin:0;color:var(--accent)}
   header .st{color:var(--muted);font-size:12px}
-  nav{display:flex;gap:4px;background:var(--panel);padding:0 12px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  nav{display:flex;gap:4px;background:var(--panel);padding:0 12px;border-bottom:1px solid var(--line);flex-wrap:wrap;align-items:center}
   nav button{background:transparent;border:none;color:var(--muted);padding:10px 16px;
-             cursor:pointer;font-size:14px;border-bottom:2px solid transparent}
+             cursor:pointer;font-size:14px;border-bottom:2px solid transparent;display:inline-flex;align-items:center;gap:4px}
   nav button.active{color:var(--txt);border-bottom-color:var(--accent)}
+  .nav-group{display:flex;gap:4px;align-items:center;padding:2px 6px;margin:0 4px;
+             border-left:2px solid var(--line);border-right:2px solid var(--line);border-radius:6px}
+  .nav-group .ng-label{color:var(--muted);font-size:11px;padding:0 6px;white-space:nowrap;user-select:none}
+  .ui-group{background:rgba(90,176,230,0.06);border-color:var(--accent2)}
+  .ui-group .ng-label{color:var(--accent2);font-weight:600}
+  nav button .ui-tag{font-size:10px;padding:1px 5px;border-radius:8px;background:var(--chip);color:var(--accent2);border:1px solid var(--line);line-height:1.2}
+  .ui-group button .ui-tag{background:rgba(90,176,230,0.15);color:var(--accent2);border-color:rgba(90,176,230,0.3)}
   main{padding:16px 20px;max-width:1100px;margin:0 auto}
   .tab{display:none}
   .tab.active{display:block}
@@ -91,11 +98,14 @@
   <button data-tab="npc" class="active">NPC 数据</button>
   <button data-tab="dialog">剧情对话</button>
   <button data-tab="cel">欢庆模块</button>
-  <button data-tab="login">登录界面</button>
   <button data-tab="battle">战棋布局</button>
-  <button data-tab="loading">预加载界面</button>
-  <button data-tab="uiart">UI 贴图</button>
-  <button data-tab="uiskin">🎨 UI 皮肤定制</button>
+  <div class="nav-group ui-group" title="UI 模块：登录/预加载界面、贴图、皮肤配色与特效">
+    <span class="ng-label">UI 模块</span>
+    <button data-tab="login">登录界面 <span class="ui-tag">界面</span></button>
+    <button data-tab="loading">预加载界面 <span class="ui-tag">界面</span></button>
+    <button data-tab="uiart">UI 贴图 <span class="ui-tag">贴图</span></button>
+    <button data-tab="uiskin">🎨 UI 皮肤定制 <span class="ui-tag">皮肤</span></button>
+  </div>
   <button data-tab="trash">回收站</button>
   <button data-tab="settings">设置</button>
   <button data-tab="log">操作日志</button>
