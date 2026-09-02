@@ -3,7 +3,8 @@
 # 通用确认弹窗（代码构建 Control，无 .tscn/无 class_name；经 UIManager.show_popup("ConfirmDialog") 实例化）
 # 职责：标题 + 内容 + 确定/取消按钮；遮罩拦截点击；0.2s 淡入、0.2s 淡出关闭
 #       键盘 ui_accept=确认 / ui_cancel=取消；确定回调可选
-# 设计稿 §6 实现（动画用淡入淡出占位，真实缩放动画待美术资源）
+# 设计稿 §6：入场透明度淡入由 UIManager.open_screen 统一处理；本脚本额外叠加
+#       中心缩放弹入（Tween，0.18s TRANS_BACK），替代原「纯淡入占位」动画。
 
 @warning_ignore("shadowed_global_identifier")
 
@@ -34,6 +35,20 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_build_ui()
+	_play_show_anim()
+
+## 入场中心缩放弹入（替代原「纯淡入占位」动画）：与 UIManager 的透明度淡入叠加，
+## 让确认框从 92% 弹出到 100%，带轻微回弹。纯代码 Tween，无需美术资源。
+## 绑定到 $Panel 的生命周期，弹窗被关闭时 Tween 随节点一并释放，不会悬空。
+func _play_show_anim() -> void:
+	await get_tree().process_frame  # 等首帧布局完成以取到正确 size，再定中心轴
+	var panel := $Panel as Control
+	if panel == null:
+		return
+	panel.pivot_offset = panel.size * 0.5
+	panel.scale = Vector2(0.92, 0.92)
+	var tw := panel.create_tween()
+	tw.tween_property(panel, "scale", Vector2.ONE, 0.18).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
 
 func _build_ui() -> void:
 	# 静态结构（Dim / Panel / VBox / 标题 / 内容 / 按钮行）已迁入 ConfirmDialog.tscn；
