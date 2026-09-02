@@ -32,6 +32,14 @@
   .dd-item{display:block;width:100%;text-align:left;background:transparent;border:none;color:var(--txt);padding:8px 14px;cursor:pointer;font-size:13px}
   .dd-item:hover{background:var(--panel2)}
   .dd-item.active{background:rgba(90,176,230,.12);color:var(--accent2);border-left:3px solid var(--accent2)}
+  .dd-group-title.risk-green{color:#5fd38a}
+  .dd-group-title.risk-blue{color:#5ab0e6}
+  .dd-group-title.risk-orange{color:#e6a05a}
+  .dd-soon{opacity:.5;cursor:not-allowed;font-style:italic}
+  .guide3{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent2);border-radius:8px;padding:10px 14px;margin:8px 0;font-size:13px;line-height:1.7}
+  .guide3 .g-title{font-weight:700;margin-bottom:4px;color:var(--accent2)}
+  .stepflow{position:sticky;bottom:0;background:var(--panel);border-top:1px solid var(--line);padding:10px 16px;font-size:13px;color:var(--txt);box-shadow:0 -4px 16px rgba(0,0,0,.25);display:none;z-index:50}
+  .stepflow b{color:var(--accent2)}
   main{padding:16px 20px;max-width:1100px;margin:0 auto}
   .tab{display:none}
   .tab.active{display:block}
@@ -117,17 +125,31 @@
     <button class="nav-root" data-uiroot="ui">UI 模块 <span class="caret">⬇️</span></button>
     <div class="nav-dropdown" id="uiMenu">
       <div class="dd-group">
-        <div class="dd-group-title">界面屏</div>
-        <button class="dd-item" data-tab="login">登录界面</button>
-        <button class="dd-item" data-tab="loading">预加载界面</button>
+        <div class="dd-group-title">🎯 屏选择器（选要改哪个界面）</div>
+        <button class="dd-item dd-soon" disabled>主菜单（即将上线）</button>
         <button class="dd-item" data-tab="settings_screen">⚙️ 设置弹窗</button>
         <button class="dd-item" data-tab="saveload_screen">📁 读档弹窗</button>
+        <button class="dd-item dd-soon" disabled>确认框（即将上线）</button>
+        <button class="dd-item" data-tab="hud">📐 HUD 布局</button>
       </div>
       <div class="dd-group">
-        <div class="dd-group-title">UI 子功能</div>
-        <button class="dd-item" data-tab="uiart">UI 贴图</button>
-        <button class="dd-item" data-tab="uiskin">🎨 UI 皮肤定制</button>
-        <button class="dd-item" data-tab="hud">📐 HUD 布局</button>
+        <div class="dd-group-title risk-green">🟢 换皮替换 · 零风险</div>
+        <button class="dd-item" data-tab="uiart">图标/贴图替换</button>
+        <button class="dd-item" data-tab="login">背景图替换</button>
+        <button class="dd-item dd-soon" disabled>音乐音效（即将上线）</button>
+      </div>
+      <div class="dd-group">
+        <div class="dd-group-title risk-blue">🔵 布局尺寸 · 低风险</div>
+        <button class="dd-item" data-tab="settings_screen">弹窗尺寸/位置</button>
+        <button class="dd-item" data-tab="saveload_screen">读档卡片尺寸</button>
+        <button class="dd-item" data-tab="hud">HUD 大小/位置</button>
+        <button class="dd-item" data-tab="uiskin">🎨 主题配色</button>
+      </div>
+      <div class="dd-group">
+        <div class="dd-group-title risk-orange">🟠 视觉特效 · 需护栏</div>
+        <button class="dd-item dd-soon" disabled>流动烟雾·水面（即将上线）</button>
+        <button class="dd-item dd-soon" disabled>视频层（即将上线）</button>
+        <button class="dd-item dd-soon" disabled>骨骼动画（即将上线）</button>
       </div>
     </div>
   </div>
@@ -608,18 +630,50 @@
   <!-- 已合并至 tab-sys（系统运维） -->
 
   <!-- 已合并至 tab-sys（系统运维） -->
-  <!-- 协同启动卡 + 待办清单 合并视图：两者不再拆分，方便同屏查看与复制。数据分别来自 /api/startup_card 与 /api/backlog -->
+  <!-- 协同启动卡 / 待办清单（2026-09-02 重构）：待办清单优先展示；协同口令收进左侧隐藏栏，鼠标靠左边缘自动滑出、点选即复制 -->
   <section class="tab" id="tab-coord">
-    <div class="coord-sub">
-      <h3 style="margin:0 0 8px">🤝 协同启动卡</h3>
-      <p class="muted" style="margin:0 0 12px">开新 AI 窗口时，从下面选对应窗口，点「📋 复制口令」整段复制，粘进窗口第一句话即可。内容随 <code>docs/AI协同启动卡.md</code> 同步。</p>
-      <div id="startupCardBody" class="startup-grid">加载中…</div>
+    <!-- 左侧隐藏栏：鼠标移到左边缘自动滑出；点窗口名即复制对应 AI 窗口口令 -->
+    <div id="coordRail">
+      <div class="rail-edge" title="鼠标移到这里 → 展开「协同启动卡」">‹</div>
+      <aside id="coordSidebar">
+        <div class="rail-head">🤝 协同启动卡<span class="muted">（点窗口名即复制口令）</span></div>
+        <div class="rail-list" id="startupCardList">加载中…</div>
+        <div class="rail-foot muted">内容随 docs/AI协同启动卡.md 同步</div>
+      </aside>
     </div>
-    <hr style="border:none;border-top:1px solid var(--line);margin:24px 0">
-    <div class="coord-sub">
+    <!-- 主内容：待办清单 优先展示 -->
+    <div class="coord-main">
       <h3 style="margin:0 0 8px">📋 待办清单</h3>
+      <p class="muted" style="margin:0 0 12px">每个模块当前「待解决 / 进行中」与「已完成执行」一目了然；鼠标移到本页左边缘可滑出「协同启动卡」一键复制各 AI 窗口口令。</p>
       <div id="backlogRoot" class="backlog-wrap">加载中…</div>
     </div>
+    <style>
+      #tab-coord{position:relative;min-height:62vh}
+      .coord-main{padding-left:26px}
+      #coordRail{position:absolute;left:0;top:0;bottom:0;width:16px;z-index:30}
+      #coordRail .rail-edge{position:absolute;left:0;top:0;bottom:0;width:16px;cursor:ew-resize;
+        background:linear-gradient(90deg, rgba(124,156,255,.20), rgba(124,156,255,0));
+        display:flex;align-items:center;justify-content:center;color:#7c9cff;font-size:18px;
+        border-radius:0 6px 6px 0;transition:background .2s}
+      #coordRail:hover .rail-edge{background:linear-gradient(90deg, rgba(124,156,255,.38), rgba(124,156,255,0))}
+      #coordSidebar{position:absolute;left:0;top:0;bottom:0;width:300px;transform:translateX(-100%);
+        transition:transform .22s ease;background:var(--panel);border-right:1px solid var(--line);
+        box-shadow:8px 0 24px rgba(0,0,0,.4);overflow:auto;padding:16px 14px}
+      #coordRail.open{width:300px}
+      #coordRail.open #coordSidebar{transform:translateX(0)}
+      .rail-head{font-size:15px;font-weight:700;color:var(--accent);margin-bottom:4px}
+      .rail-head .muted{font-weight:400;font-size:12px}
+      .rail-list{margin-top:10px;display:flex;flex-direction:column;gap:6px}
+      .rail-row{display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:var(--panel2);
+        border:1px solid var(--line);color:var(--txt);padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13px}
+      .rail-row:hover{background:#1c2138;border-color:#7c9cff}
+      .rail-row.copied{border-color:#34d399;background:#101b16}
+      .rail-name{font-weight:600;flex:0 0 auto}
+      .rail-sig{color:var(--muted);font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .rail-copy{flex:0 0 auto}
+      .rail-foot{margin-top:10px;font-size:11px}
+      .rail-err{color:var(--bad);font-size:13px}
+    </style>
   </section>
 </main>
 
@@ -893,6 +947,7 @@ document.querySelectorAll('#nav button').forEach(b=>b.onclick=(e)=>{
   const uiRoot=document.querySelector('[data-uiroot="ui"]');
   if(uiRoot && b.closest('#uiMenu')) uiRoot.classList.add('active');
   document.getElementById('tab-'+b.dataset.tab).classList.add('active');
+  uiModuleGuide(b.dataset.tab);
   closeUiMenu();
   if(b.dataset.tab==='npc')npcLoad();
   if(b.dataset.tab==='dialog')dlgLoad();
@@ -912,9 +967,57 @@ document.querySelectorAll('#nav button').forEach(b=>b.onclick=(e)=>{
   if(b.dataset.tab==='exp')expLoad();
   // 双闸门已并入「系统运维」页签，触发改为按钮手动（gateRun）；原 gate tab 分发不再需要
   if(b.dataset.tab==='orchestrate')orcLoad();
-  if(b.dataset.tab==='coord'){backlogLoad();loadStartupCard();}
+  if(b.dataset.tab==='coord'){backlogLoad();loadStartupCard();_initCoordRail();}
   if(b.dataset.tab==='sys'){logLoad();setLoad();trashLoad();}
 });
+
+// ========== UI 模块统一引导：每模块「小白引导三行」+ 全局「统一三步流」 ==========
+// 仅前端、不改游戏；未建模块在导航里标「即将上线」，此处只覆盖已落地模块。
+const UI_GUIDE = {
+  login:        {t:'登录界面', w:'改登录页的背景图与水墨氛围。', u:'让进游戏第一眼更有武侠味。', h:'选「背景图替换」→ 上传 png → 点保存即生效。'},
+  loading:      {t:'预加载界面', w:'改读条界面的背景与文案。', u:'加载等待时更有代入感。', h:'同「背景图替换」入口 → 上传 → 保存。'},
+  settings_screen:{t:'设置弹窗', w:'改设置弹窗面板的大小与位置。', u:'按钮/文字不再被挡、更顺手。', h:'UI 模块→设置弹窗 → 拖数值/点保存。'},
+  saveload_screen:{t:'读档弹窗', w:'改读档卡片列的宽度与单卡大小。', u:'存档列表更宽松、好看。', h:'UI 模块→读档弹窗 → 拖数值/点保存。'},
+  uiart:        {t:'UI 贴图', w:'换图标、按钮图等界面贴图。', u:'界面风格随美术资产更新。', h:'UI 模块→UI 贴图 → 上传 png → 保存。'},
+  uiskin:       {t:'UI 皮肤定制', w:'改主题配色（颜色 token）。', u:'整体色调一键统一。', h:'UI 模块→UI 皮肤定制 → 选色/滑块 → 保存。'},
+  hud:          {t:'HUD 布局', w:'改四块常驻面板的位置与大小。', u:'打斗/探索时信息更顺眼。', h:'UI 模块→HUD 布局 → 拖面板/拖角缩放 → 保存。'},
+};
+const UI_TABS = Object.keys(UI_GUIDE);
+let _stepflowEl = null;
+function ensureStepFlow(){
+  if(_stepflowEl) return _stepflowEl;
+  _stepflowEl = document.createElement('div');
+  _stepflowEl.className = 'stepflow';
+  _stepflowEl.innerHTML = '<b>统一三步流：</b> ① 选目标（哪个界面/元素） → ② 改参数/传图（滑块·上传） → ③ 预览并应用 ｜ 每个模块右下角都有「复原默认」一键回出厂值，零恐惧。';
+  const main = document.querySelector('main');
+  if(main) main.appendChild(_stepflowEl);
+  return _stepflowEl;
+}
+function uiModuleGuide(tab){
+  const isUI = UI_TABS.indexOf(tab) >= 0;
+  const sf = ensureStepFlow();
+  sf.style.display = isUI ? 'block' : 'none';
+  // 先清掉所有 UI 模块里可能残留的引导块，避免重复
+  UI_TABS.forEach(k=>{
+    const sec = document.getElementById('tab-'+k);
+    if(!sec) return;
+    const old = sec.querySelector('.guide3');
+    if(old) old.remove();
+  });
+  if(!isUI) return;
+  const sec = document.getElementById('tab-'+tab);
+  if(!sec) return;
+  const g = UI_GUIDE[tab];
+  const d = document.createElement('div');
+  d.className = 'guide3';
+  d.innerHTML = '<div class="g-title">🧭 '+g.t+' · 小白引导</div>'+
+    '<div><b>这是干嘛的：</b>'+g.w+'</div>'+
+    '<div><b>改了有啥用：</b>'+g.u+'</div>'+
+    '<div><b>怎么改：</b>'+g.h+'</div>';
+  sec.insertBefore(d, sec.firstChild);
+}
+uiModuleGuide('npc'); // 初始非 UI 模块，确保底栏隐藏、状态一致
+
 document.addEventListener('click',e=>{
   const wrap=document.querySelector('.nav-dropdown-wrap');
   if(wrap && !wrap.contains(e.target)) closeUiMenu();
@@ -2471,6 +2574,15 @@ async function backlogLoad(){
 function blEsc(s){return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
 
 // ---------- 协同启动卡（各 AI 窗口工作指令清单，数据来自 /api/startup_card） ----------
+// 2026-09-02 重构：渲染为左侧隐藏栏里的点选列表，点窗口名即复制对应口令（见 tab-coord 结构）。
+let STARTUP_DATA=null;
+let _coordRailInit=false;
+function _initCoordRail(){
+  if(_coordRailInit) return; _coordRailInit=true;
+  const r=document.getElementById('coordRail'); if(!r) return;
+  r.addEventListener('mouseenter',()=>r.classList.add('open'));
+  r.addEventListener('mouseleave',()=>r.classList.remove('open'));
+}
 function copyText(txt, btn){
   const done=(ok)=>{ if(btn){ const o=btn.textContent; btn.textContent=ok?'已复制 ✓':'复制失败'; setTimeout(()=>btn.textContent=o,1500); } };
   if(navigator.clipboard && navigator.clipboard.writeText){
@@ -2482,40 +2594,33 @@ function fallbackCopy(txt){
        document.body.appendChild(ta); ta.select(); const ok=document.execCommand('copy'); document.body.removeChild(ta); return ok;
   }catch(e){ return false; }
 }
-function copyFromTextarea(btn){
-  const card=btn.closest('.startup-card'); if(!card) return;
-  const ta=card.querySelector('.startup-src'); if(ta) copyText(ta.value, btn);
-}
 async function loadStartupCard(){
-  const root=document.getElementById('startupCardBody'); if(!root) return;
+  const list=document.getElementById('startupCardList'); if(!list) return;
   let data;
-  try{ data=await A('GET','/api/startup_card'); }catch(e){ root.innerHTML='<div class="status bad">加载失败：'+blEsc(e)+'</div>'; return; }
-  if(!data || data.error){ root.innerHTML='<div class="status bad">'+(data?blEsc(data.error):'无数据')+'</div>'; return; }
-  let html='';
-  (data.windows||[]).forEach(w=>{
-    const cmd=w.command||data.template||'';
-    html+='<div class="startup-card" style="background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px">';
-    html+='<div style="display:flex;align-items:center;justify-content:space-between;gap:10px">';
-    html+='<div style="font-size:16px;font-weight:700;color:var(--accent)">'+blEsc(w.name)+'</div>';
-    html+='<button class="act" style="white-space:nowrap" onclick="copyFromTextarea(this)">📋 复制口令</button>';
-    html+='</div>';
-    html+='<div class="muted" style="margin:6px 0">署名 <code>'+blEsc(w.signature)+'</code> · 主权 <code>'+blEsc(w.sovereignty)+'</code></div>';
-    html+='<div style="margin:4px 0">'+blEsc(w.duty)+'</div>';
-    if(w.pitfalls){ html+='<div style="margin-top:6px;color:var(--warn);font-size:13px">⚠ '+blEsc(w.pitfalls)+'</div>'; }
-    html+='<textarea class="startup-src" style="display:none">'+blEsc(cmd)+'</textarea>';
-    html+='</div>';
+  try{ data=await A('GET','/api/startup_card'); }catch(e){ list.innerHTML='<div class="rail-err">加载失败：'+blEsc(e)+'</div>'; return; }
+  if(!data || data.error){ list.innerHTML='<div class="rail-err">'+(data?blEsc(data.error):'无数据')+'</div>'; return; }
+  STARTUP_DATA=data;
+  let h='';
+  (data.windows||[]).forEach((w,i)=>{
+    h+='<button type="button" class="rail-row" data-i="'+i+'" title="点选复制「'+blEsc(w.name)+'」口令">'
+      +'<span class="rail-name">'+blEsc(w.name)+'</span>'
+      +'<span class="rail-sig">'+blEsc(w.signature)+'</span>'
+      +'<span class="rail-copy">📋</span></button>';
   });
   if(data.template){
-    html+='<div class="startup-card" style="background:var(--panel2);border:1px dashed var(--line);border-radius:10px;padding:14px 16px">';
-    html+='<div style="display:flex;align-items:center;justify-content:space-between;gap:10px">';
-    html+='<div style="font-size:15px;font-weight:700">通用模板（数据 / 音频 / 工作室等未单列窗口）</div>';
-    html+='<button class="act sec" style="white-space:nowrap" onclick="copyFromTextarea(this)">📋 复制模板</button>';
-    html+='</div>';
-    html+='<div class="muted" style="margin-top:6px">把里面的 &lt;窗口名&gt; 换成实际窗口名即可。</div>';
-    html+='<textarea class="startup-src" style="display:none">'+blEsc(data.template)+'</textarea>';
-    html+='</div>';
+    h+='<button type="button" class="rail-row tpl" data-tpl="1" title="点选复制通用模板">'
+      +'<span class="rail-name">通用模板</span>'
+      +'<span class="rail-sig">未单列窗口</span>'
+      +'<span class="rail-copy">📋</span></button>';
   }
-  root.innerHTML=html;
+  list.innerHTML=h;
+  list.querySelectorAll('.rail-row').forEach(r=>{
+    r.onclick=()=>{
+      const txt = r.dataset.tpl ? (STARTUP_DATA.template||'') : ((STARTUP_DATA.windows[+r.dataset.i].command)||STARTUP_DATA.template||'');
+      copyText(txt, r.querySelector('.rail-copy'));
+      r.classList.add('copied'); setTimeout(()=>r.classList.remove('copied'),1200);
+    };
+  });
 }
 // ===================== 经验库（增强检索：标签云 + 角色/模块/BUG 分面过滤） =====================
 let EXP_ITEMS=[], EXP_FACETS={roles:[],modules:[],bugs:[],tags:[],grades:[]};
