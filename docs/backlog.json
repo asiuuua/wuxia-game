@@ -30,11 +30,15 @@
         {
           "title": "缺图标统一占位图（品红棋盘）待替换真实图标",
           "type": "占位",
-          "status": "open",
+          "status": "done",
           "placeholder": true,
           "source": "scenes/ui/icon_registry.gd",
           "detail": "UIManager.get_icon 缺图时返回 PlaceholderTexture2D（品红棋盘），保证不崩但界面显占位紫块。",
-          "suggestion": "按图标 id 把真实 png 丢进 resources/icons/{skills,enemies,items,...} 即自动生效，无需改代码。"
+          "suggestion": "按图标 id 把真实 png 丢进 resources/icons/{skills,enemies,items,...} 即自动生效，无需改代码。",
+          "resolvedBy": "AI-UI",
+          "resolvedAt": "2026-09-02 16:53:15",
+          "commit": "05142f8",
+          "resolution": "用 tools/gen_icons.py 按数据配置 id+中文名批量生成 113 张带分类配色圆角汉字徽标（青/金/赤/碧/靛/紫），覆盖 skills(11)/items(64)/enemies(8)/npc(9)/menu(12)/status(10)。IconRegistry 纯文件驱动零改动，已存在 bandit_001 真图保留。主菜单 12 项在 menu_config.json 补 icon_id，GameMenuScreen 据此显示图标。新增 test_icons_real 断言不再回退 PlaceholderTexture2D。GATE1 零错误、GATE2 57 套件 0 失败 0✗。这些为过渡占位，美术按 id 同名覆盖即替换。"
         },
         {
           "title": "弹窗/列表的确认框缩放动画为占位",
