@@ -36,6 +36,6 @@ func test_studio_preview_uses_preset_layout() -> void:
 	cs.start_combat("tactical_studio_preview")
 	var grid: BattleGrid = cs.get_grid()
 	expect(grid != null, "工作室后台预览战棋（layout 引用 preset_12x12）应成功构建网格")
-	expect(grid.width == 11 and grid.height == 5, "应复用 preset_12x12 几何 11x5，实际 %dx%d" % [grid.width, grid.height])
+	expect(grid.width == 12 and grid.height == 12, "应复用 preset_12x12 几何 12x12，实际 %dx%d" % [grid.width, grid.height])
 	expect(grid.occupant_at(Vector2i(1, 4)) == "player", "玩家应按 battle.deployment 部署 (1,4)")
 	expect(grid.occupant_at(Vector2i(8, 4)) == "bandit_001", "敌人应按 battle.deployment 部署 (8,4)")

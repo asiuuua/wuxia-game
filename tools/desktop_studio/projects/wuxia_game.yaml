@@ -89,14 +89,21 @@ reskin:
 # ── 知识复用（前人的踩坑与经验，跨项目可被检索/复用）─────────────────────
 knowledge:
   refs:
+    - docs/项目经验白皮书.md        # 大厂级工程梳理 + 评价方案 + 复盘调优总源（新 AI/新人优先读）
     - docs/多AI协同机制_SOP.md
     - .workbuddy/memory/MEMORY.md
     - docs/变更通告_*.md
     - docs/契约总表.md
   reusable_patterns:
+    - "装配中枢：GameManager 持有服务实例 + 统一场景/存档入口（任何 Godot 项目可照搬）"
+    - "EventBus NOTIFY/CMD 信号语义分层：跨模块解耦标准范式（100 信号严格分离）"
+    - "事务化资产 API：InventoryTransaction 预检→执行→回滚，防经济 P0（扣钱不发货/扣料丢产出）"
+    - "延迟一帧切换：场景切换统一 GameManager._deferred_change_scene（await process_frame），防同帧 queue_free 死锁"
+    - "双闸门门禁：GATE1 headless 零错误 + GATE2 run_all 零 ✗，红即阻断"
     - "静默拦截 BUG 用 lint_mouse_filter.py + 信号接缝测试双闸门守卫"
     - "纹理压缩默认 mode=0，需显式改 mode=2 并 godot --headless --editor --quit 全量重导"
     - "UI 装饰子节点误写 STOP 会静默吞点击 → GATE0 静态扫描 + GATE2 运行时断言兜底"
   predecessor_mistakes:
     - "误删 town.json 当死数据 → 实为战术底图几何依赖（查 change_log 秒定位）"
     - "把纹理改压缩后暴露 latent bug（UIBackground 取像素）→ 诊断卡死先看日志刷屏量，别臆测硬件"
+    - "主菜单 freeze：queue_free 与 change_scene_to_file 同帧竞争 → Godot 内部死锁，统一走 _deferred_change_scene"

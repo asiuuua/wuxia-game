@@ -33,6 +33,7 @@
 - Python http.server + 单页 SPA；PyInstaller 打包 exe；安全红线（127.0.0.1 绑定、_is_valid_id 白名单、ZIP 校验、Origin 防护、security_selftest 15 断言）。
 - **更新交付 SOP**：清旧进程 → --clean 重打包 → 同步全部副本(6处+) → curl 验证 md5。
 - tscn_assets.py：UI 贴图直写 .tscn（不写 uid、不预生成 .import）。
+- **平台本质再定位（2026-09-02 用户拍板）**：平台=**连接器而非容器**，只对接工程、不持有工程数据；三大复用能力 = ai_context(新AI秒懂架构) + reskin(换皮零成本) + knowledge(经验复用)。二维解耦：横向 Domain Module × 纵向 Project Adapter(manifest.yaml)。远程访问(Phase 4)**已决策延后**（紧迫度极低）。本地化应用：端口自动顺延(8765被占试+20)，用户免调端口。
 
 ## 当前 open 派单
 - 战斗→town 掉血崩；结缘→背包 休息未推进天数；背包→结缘 propose 聘礼跳过锁定。

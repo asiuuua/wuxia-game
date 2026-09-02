@@ -84,14 +84,35 @@ G="C:/Users/Administrator/.workbuddy/binaries/godot/Godot_v4.7.2-stable_win64_co
 git add -A && git commit -m "[窗名] 简述"
 ```
 
-> 项目 `docs/` 含完整架构/GDD/变更通告/接管日志/契约总表（约 80 个 md），按需 Read 对应文档；本 skill 的 `references/` 是提炼后的高频知识。
+> 项目 `docs/` 含完整架构/GDD/变更通告/接管日志/契约总表/**项目经验白皮书**（约 80+ 个 md），按需 Read 对应文档；本 skill 的 `references/` 是提炼后的高频知识。
+
+---
+
+## 十、卡住很久的 BUG 根因与避免（速查，详见 `docs/项目经验白皮书.md` 第五章）
+
+- **mouse_filter 反直觉（静默吞输入）**：`STOP=0`(拦截) / `PASS=1` / `IGNORE=2`(穿透)。装饰子节点要点击穿透**必写 `2`，绝不可写 `0`**（会盖住按钮、吞 `mouse_entered`/`button_up`，无报错）。四层防线：lint_mouse_filter.py(GATE0) + test_ui_mouse_filter.gd(GATE2) + pre-commit 钩子 + 启动卡口令。
+- **场景切换同帧死锁（freeze）**：UI `queue_free` 与 `change_scene_to_file` 同帧 → `Parent node is busy adding/removing children`。**所有切场景走 `GameManager._deferred_change_scene`**（await process_frame）。
+- **经济漏洞（售卖锁定物）**：商店售卖方须校验 `is_locked` / `is_quest_item`；资产增删走 `InventoryTransaction` 事务（预检→执行→回滚）。
+- **关系双写脏档**：跨子系统共享数据坚持**单一真源 + 门面聚合**（relationship_service 无状态不存档），禁双写。
+- **纹理压缩取像素**：压缩纹理禁 `get_pixel()`；取像素用 `Image.load_png_from_buffer(FileAccess.get_buffer(...))` 解码源 PNG。
+- **误删 data 依赖**：删 `data/**.json` 前先 `change_log.py query --keyword <文件名>` + `git log` 确认非依赖（town.json 误删教训）。
+
+## 十一、可复用模式与平台连接器（详见白皮书第七、八章）
+
+- **装配中枢**：`GameManager` 持有服务实例 + 统一场景/存档入口（任何 Godot 项目可照搬）。
+- **EventBus NOTIFY/CMD**：信号语义分层，跨模块解耦标准范式。
+- **事务化资产 API**：`InventoryTransaction` 防经济 P0，含经济系统项目复用。
+- **延迟一帧切换 / 单一真源 / 静默接缝测试**：见白皮书第七章流程表。
+- **平台连接器三段（跨项目复用 + 换皮零成本）**：`tools/desktop_studio/projects/<项目>.yaml` 的 `ai_context`(architecture_intent/key_decisions/conventions/common_pitfalls/role_responsibilities) + `reskin`(swappable/locked) + `knowledge`(refs/reusable_patterns/predecessor_mistakes)。新项目一键对接即继承前项目经验；换皮仅换资源、底层不变，小白可改。
+- **项目经验白皮书**：`docs/项目经验白皮书.md` 是本工程「大厂级梳理 + 评价方案 + 复盘调优」总源，**新 AI / 新人优先读**。
 
 ---
 
 ## 给后续 AI 的上手检查单
 
-1. 动手前先读 `references/architecture.md` 与 `references/collab.md`，确认改动落在正确主权边界。
+1. 动手前先读 `docs/项目经验白皮书.md`（总览+评价+复盘）+ `references/architecture.md` + `references/collab.md`，确认改动落在正确主权边界。
 2. 改完代码**必须串行跑双闸门**（GATE1 + GATE2），全绿才算完。
 3. 碰冻结文件先写《变更通告》打招呼；跨窗改动只派单不直改。
-4. 提交用精确 `git add`（或 `git add -A` 当工作树仅项目正当改动）；信息带 `[窗名]` 前缀。
+4. 提交遵循 `change-tracking` skill：精确 `git add`（禁 `-A` 除非确认工作树仅项目正当改动）；信息带 `[窗名]` 前缀；提交前 `change_log.py add` 留痕。
 5. 遗留待办见 `references/pending_work.md`，认领后到 `tools/handoff.py` 登记状态。
+6. 跨项目/换皮需求：读 `tools/desktop_studio/projects/<项目>.yaml` 的 ai_context/reskin/knowledge 三段，按连接器范式对接。
