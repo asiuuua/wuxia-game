@@ -636,6 +636,10 @@
     <!-- 固定左侧栏：始终可见，含 协同清单(第一行) + 待办；协同提示词固定在栏内，无需滑出 -->
     <div id="coordRail">
       <aside id="coordSidebar">
+        <div class="rail-prompt" id="collabRules" style="border-color:#7c9cff">
+          <div class="rp-head">⚠️ 协同纪律提示词（切窗口必发 · 点此复制发给新 AI）<button type="button" class="rp-copy" id="collabRulesCopy">📋 复制</button></div>
+          <pre class="rp-body" id="collabRulesBody"></pre>
+        </div>
         <div class="rail-head">🤝 协同清单<span class="muted">（点窗口名即复制口令）</span></div>
         <div class="rail-list" id="startupCardList">加载中…</div>
         <div class="rail-prompt" id="startupPrompt" style="display:none">
@@ -678,6 +682,8 @@
       .rail-prompt{margin-top:10px;background:#10131f;border:1px solid var(--line);border-radius:8px;padding:10px}
       .rp-head{font-size:12px;color:var(--muted);margin-bottom:6px}
       .rp-body{margin:0;white-space:pre-wrap;word-break:break-word;font-size:12px;line-height:1.5;color:#cdd3e6;max-height:200px;overflow:auto}
+      .rp-copy{margin-left:6px;background:#1c2138;border:1px solid #2a2f47;color:#cdd3e6;border-radius:6px;padding:2px 8px;cursor:pointer;font-size:11px}
+      .rp-copy:hover{background:#7c9cff22;border-color:#7c9cff}
       .backlog-in-rail{margin-top:8px}
       .bl-views{display:flex;gap:6px;margin-bottom:12px}
       .bl-chip{background:#15182a;border:1px solid #2a2f47;color:#e6e8f0;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:13px}
@@ -2663,6 +2669,10 @@ async function loadStartupCard(){
   try{ data=await A('GET','/api/startup_card'); }catch(e){ list.innerHTML='<div class="rail-err">加载失败：'+blEsc(e)+'</div>'; return; }
   if(!data || data.error){ list.innerHTML='<div class="rail-err">'+(data?blEsc(data.error):'无数据')+'</div>'; return; }
   STARTUP_DATA=data;
+  const crb=document.getElementById('collabRulesBody'), crbBox=document.getElementById('collabRules');
+  if(crb&&crbBox){ if(data.collab_prompt){ crb.textContent=data.collab_prompt; crbBox.style.display='block'; } else { crbBox.style.display='none'; } }
+  const crbBtn=document.getElementById('collabRulesCopy');
+  if(crbBtn) crbBtn.onclick=()=>copyText(document.getElementById('collabRulesBody').textContent, crbBtn);
   let h='';
   (data.windows||[]).forEach((w,i)=>{
     h+='<button type="button" class="rail-row" data-i="'+i+'" title="点选复制「'+blEsc(w.name)+'」口令">'

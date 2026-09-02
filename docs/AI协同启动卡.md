@@ -215,3 +215,24 @@
 3. git pre-commit 钩子在机器层兜底——哪怕 AI 忘了，提交时自动扫"静默吞点击"类 BUG 并拦下（已装 `python tools/install_hooks.py`）。
 
 > 一句话：开窗口 → 粘对应口令（填窗口名）→ 让 AI 干活。其余守卫它自己会跑、机器也会兜底。
+
+---
+
+## 7. 切窗口协同纪律提示词（复制发给新 AI 窗口，固定显示在协同启动卡口令上方）
+
+把下面整段复制，粘到新开的 AI 窗口里即可。它涵盖本次拍板的「并发上传互斥」等骨血规则，是比各窗口口令更高优先级的权威口径：
+
+```text
+你在本仓库（D:/武侠游戏，Godot 武侠 CRPG）参与多 AI 并行开发。开工前先读 .workbuddy/memory/MEMORY.md 的「多 AI 协同」铁律，并加载 change-tracking skill（Skill → change-tracking）按其命令执行。协同总纲（骨血）见 docs/变更通告_协同总纲_全员必须遵守.md，以下为不可绕过的硬性条件：
+
+1. 提交权收口（最重要）：你（各窗口）不自行 git commit / git push。改完只做两件事——① 跑双闸门（GATE1：godot --headless --path "D:/武侠游戏" --quit 零错误；GATE2：godot --headless --path "D:/武侠游戏" res://tests/unit/run_all.tscn 零 ✗ 且失败 0）；② 用 python tools/commit_queue.py add --window <你> --message "..." --files a.gd b.json 把文件入队。由 PM/本对话（AI-UI / AI-PM）统一 flush 提交。
+2. 并发上传互斥：检测到其他窗口正在向仓库上传（推送锁 .workbuddy/commits/_push_lock 被他人持有 / git fetch 后 origin 领先本地 / 本机有其他 git push 进程）→ 本次不提交不推送，改到下次。严禁在他人上传时强行 add/commit/push（这正是之前 .git 被踩坏的根因）。commit_queue.py flush 已内置该守卫（命中返回 4/5），正常走队列即可。
+3. 文件主权 / 文件锁：开工前显式声明「本次改动文件清单」；同一文件同一时刻只归一个任务，不碰别人主权代码，绝不碰 preset_10x10.json / preset_12x12.json 等战斗预设（铁律：绝不动战斗预设）。
+4. tscn 禁自动合并：.tscn 是文本格式，git 自动合并 90% 会搞坏场景；冲突时以一版为基准手动重改 + 本地验证能正常加载，绝不信任合并结果。
+5. 双闸门：提交/入队前 GATE1+GATE2 必须全绿，门禁非绿即阻断。
+6. 精确 add：若确需自行操作，只用 git add <具体文件>，严禁 git add -A / git add .，绝不 git stash -u（会踩坏 .git）。
+
+> 若下方「窗口启动口令」中"提交：精确 git add…"等表述与本段冲突，以本段（协同总纲骨血）为准——你只需入队，不要自行 commit。
+
+本次窗口名：<窗口名>
+```

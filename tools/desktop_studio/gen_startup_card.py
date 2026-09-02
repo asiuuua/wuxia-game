@@ -43,6 +43,7 @@ def parse(doc_text: str):
     order = []             # 保持表格顺序
     pitfalls = {}          # name -> text
     template = ""
+    collab_prompt = ""     # §7 切窗口协同纪律提示词（骨血，复制发给新 AI）
     fences = {}            # heading -> code block text
 
     # ---- 第一遍：抓表格(§1) + 代码块(§2/§3) ----
@@ -97,6 +98,9 @@ def parse(doc_text: str):
         return re.sub(r"\s+", "", s)  # 去掉空格，使 "PM / 集成" 与 "PM/集成" 对齐
 
     for h, code in fences.items():
+        if h and h.startswith("## 7."):
+            collab_prompt = code
+            continue
         if h and h.startswith("## 3."):
             template = code
             continue
@@ -133,6 +137,7 @@ def parse(doc_text: str):
         "source": "docs/AI协同启动卡.md",
         "windows": [windows[w] for w in order],
         "template": template,
+        "collab_prompt": collab_prompt,
     }
 
 
@@ -141,6 +146,14 @@ def main():
         raise SystemExit("找不到文档: %s" % DOC)
     text = open(DOC, encoding="utf-8").read()
     data = parse(text)
+    # 保留已有 collab_prompt（若本次文档未含 §7 但旧 json 有，不丢失）
+    if not data.get("collab_prompt") and os.path.exists(OUT):
+        try:
+            old = json.load(open(OUT, encoding="utf-8"))
+            if old.get("collab_prompt"):
+                data["collab_prompt"] = old["collab_prompt"]
+        except Exception:
+            pass
     # 更新时间
     import datetime
     data["updated"] = datetime.date.today().isoformat()
