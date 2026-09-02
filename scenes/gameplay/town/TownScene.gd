@@ -329,6 +329,9 @@ func _open_dialog(npc_id: String) -> void:
 # GameManager 扇入 romance_service.advance_days 驱动孕期/分娩，并广播事件刷新面板/天气。
 func _do_rest() -> void:
 	if UIManager.is_any_screen_open():
+		# BUG-10/11 同类根因：界面屏栈打开时输入被静默吞。此处给出可见反馈而非静默 return，
+		# 根治由 UI 窗口在 UIManager 统一处理遮挡输入（见派单 handoff）。
+		EventBus.notification_show.emit("当前界面打开中，请先关闭界面再休息")
 		return
 	GameManager.weather_time_service.advance_day(REST_DAYS)
 	EventBus.notification_show.emit("你沉沉睡去，恍惚间过去了 %d 天" % REST_DAYS)
