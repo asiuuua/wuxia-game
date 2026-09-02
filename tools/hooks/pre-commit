@@ -2,10 +2,13 @@
 # .git/hooks/pre-commit —— 多 AI 协同「机器级硬约束」
 #
 # 作用：提交时自动扫描，拦下两类「静默」BUG（不报错、GATE1 抓不到、靠 @warning_ignore 掩盖）：
-#   【GATE0a】按钮下可见装饰子节点 mouse_filter 仍为 STOP(0) —— 静默吞点击
-#   【GATE0b】EventBus 信号契约漂移 —— 新增「无生产方(emit=0)」死信号，或引用未声明信号
-#             （基线 tools/audit_signal_baseline.json 容纳已知遗留 17 个，仅拦「新增」项，
+#   【GATE0a】按钮下可见装饰子节点 mouse_filter 仍为 STOP(0) —— 静默吞点击   （拦截）
+#   【GATE0b】EventBus 信号契约漂移 —— 新增「无生产方(emit=0)」死信号，或引用未声明信号（拦截）
+#             （基线 tools/audit_signal_baseline.json 容纳已知遗留项，仅拦「新增」项，
 #              不拦「已发射暂未订阅」的良性广播，避免误伤正常增量开发）
+#   【GATE0c】信号参数校验 ambiguous 跳过项 —— 同名信号跨类多签名冲突导致这些 connect 未被参数
+#             个数校验覆盖，提交时【仅打印警告清单、绝不拦截】（非阻塞；exit 0）；避免将来写错
+#             参数却因 ambiguous 被跳过而没被发现。详见 tools/gate0c_ambiguous_warn.py。
 #
 # 安装：python tools/install_hooks.py   （首次克隆或换机器跑一次即可）
 #
@@ -73,6 +76,29 @@ else
       exit 1
     fi
     echo "✓ EventBus 信号契约门禁通过（无新增无生产方死信号、无未声明引用）。"
+  fi
+fi
+
+# ===== GATE0c：信号参数校验 ambiguous 跳过项（非阻塞·仅警告）=====
+# 复用 STAGED_GD：信号审计只扫 .gd，故仅当本次暂存 .gd 才跑（全工程扫描）。
+# 性质：【非阻塞】—— 无论清单非空还是脚本异常，都 exit 0，绝不拦提交。
+if [ -z "$STAGED_GD" ]; then
+  echo "[pre-commit] 本次未改动 .gd，跳过信号参数校验(ambiguous)提示。"
+else
+  WARN_TOOL="$REPO/tools/gate0c_ambiguous_warn.py"
+  if [ ! -f "$WARN_TOOL" ]; then
+    echo "[pre-commit] ⚠ GATE0c 脚本缺失（$WARN_TOOL），跳过（非阻塞）。"
+  else
+    echo "[pre-commit] 运行信号参数校验(ambiguous)提示门禁（非阻塞）…"
+    set +e
+    "$PY" "$WARN_TOOL"
+    RC=$?
+    set -e
+    # 非阻塞兜底：即便脚本意外返回非 0，也绝不 exit 1 拦死提交
+    if [ "$RC" -ne 0 ]; then
+      echo "[pre-commit] ⚠ GATE0c 返回非 0（$RC），但本门禁非阻塞，提交照常进行。"
+    fi
+    echo "✓ 信号参数校验(ambiguous)提示门禁完成（仅警告，不拦截）。"
   fi
 fi
 

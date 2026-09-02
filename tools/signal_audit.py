@@ -33,13 +33,20 @@ v5 在扫描后检测同名信号的**多签名集合**：若某信号名存在 
 
 内置 Godot 信号（pressed/mouse_entered...）不在本工程 signal 定义中，跳过不查。
 
-用法：python tools/signal_audit.py [project_root]
-退出码：0=无非 DEFINITE 隐患；2=有 DEFINITE（可接入 CI/门禁）。
+用法：python tools/signal_audit.py [project_root] [--json]
+退出码：默认路径 0=无非 DEFINITE 隐患；2=有 DEFINITE（可接入 CI/门禁）。
+       --json 模式：始终 exit 0，输出 {definite,unknown,ambiguous,ambiguous_names,counts}
+       的 JSON（供 GATE0c 非阻塞提示门禁消费，不阻断提交）。
 """
+import json
 import os
 import re
 import sys
 
+# --json：结构化输出模式（供 GATE0c 非阻塞提示门禁消费），永远 exit 0；不影响默认人类可读路径
+JSON_MODE = "--json" in sys.argv
+if JSON_MODE:
+    sys.argv = [a for a in sys.argv if a != "--json"]
 ROOT = sys.argv[1] if len(sys.argv) > 1 else os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SKIP_DIRS = {".godot", ".git"}
 
@@ -188,6 +195,32 @@ def main():
             definite.append((rel, ln, sig, sargc, handler, htotal, bind_count, "实参过多", scope))
         elif received < hmin:
             definite.append((rel, ln, sig, sargc, handler, htotal, bind_count, "实参过少", scope))
+
+    # ===== --json 模式：结构化输出，供 GATE0c 非阻塞提示门禁消费（永远 exit 0）=====
+    if JSON_MODE:
+        report = {
+            "definite": [
+                [r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7], r[8]] for r in definite
+            ],
+            "unknown": [
+                [r[0], r[1], r[2], r[3], r[4], r[5]] for r in unknown
+            ],
+            "ambiguous": [
+                [r[0], r[1], r[2], r[3]] for r in ambiguous_hits
+            ],
+            "ambiguous_names": sorted(ambiguous),
+            "counts": {
+                "custom_signals": len(signals_set),
+                "ambiguous_names": len(ambiguous),
+                "functions": len(funcs_global),
+                "connects": len(connects),
+                "definite": len(definite),
+                "unknown": len(unknown),
+                "ambiguous_hits": len(ambiguous_hits),
+            },
+        }
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+        sys.exit(0)
 
     print("=" * 82)
     print("GDScript 信号/处理器参数对齐扫描 v5（括号配对 + 本文件解析 + ambiguous 跳过）")
