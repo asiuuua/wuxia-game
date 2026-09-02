@@ -32,6 +32,7 @@
 | 工作室 | `AI-工作室` | `tools/desktop_studio`（游戏侧零依赖） | 外部调教工具；严守安全红线 |
 | PM/集成 | `AI-PM` | 提交队列/handoff/双闸门终验/统一 push | 整树全绿后统一 push；冲突协调；追溯入口 |
 | 审计核查 | `AI-审计` | 跨模块只读审查 + 写回 `docs/backlog.json`（不碰游戏逻辑代码） | 用专业测试标准做单模块/全盘/关联架构审查，产出隐患/漏错/建议并归类待办 |
+| 架构 | `AI-架构` | `docs/架构方案*`、`docs/契约总表.md`、`docs/全角色工程手册*`、`tools/desktop_studio/scan_deps.py`、`projects/wuxia_game.yaml` 的 `ai_context` | 五层架构铁律 / 单向依赖 / 依赖图审查 / 共享地基变更 / 架构演进 |
 
 > **共享地基（谁都别硬改）**：`EventBus` / `ConfigManager` / `core/enums/*` / `screens.json` /
 > `strings.csv` / `GameManager` / `GameState`。要改须架构师认可 + 出变更通告，走 handoff 派单。
@@ -160,6 +161,26 @@
 本次窗口名：审计核查
 ```
 
+### 🏛 架构窗口
+```
+你在本仓库（D:/武侠游戏，Godot 武侠 CRPG）工作，属于多 AI 协同的「架构」窗口。请严格遵守协同纪律：
+
+1. 先读 .workbuddy/memory/MEMORY.md 的「多 AI 协同」铁律（留痕 / 调前先查 / 提交节奏 / 门禁非绿即阻断）。
+2. 改文件 / 提交 / 修 BUG 前，加载 change-tracking skill 按其命令执行。
+3. 改前：change_log.py query --module <架构文档/依赖图相关路径>（或 --keyword <文件名>）确认不是别人刚改崩的回归。
+4. 改完：change_log.py add 登记；架构改动触及共享地基 / 全局分层，必须额外 change_log.py notice 出变更通告（见下方专属规则）。
+5. 提交前：双闸门全绿——GATE1（godot --headless --path "D:/武侠游戏" --quit 零错误）、GATE2（godot --headless --path "D:/武侠游戏" res://tests/unit/run_all.tscn 零 ✗ 且失败 0）。
+6. 提交：精确 git add <文件>（禁 -A），message 带 [架构] 前缀，署名 git config user.name "AI-架构" user.email "ai-架构@local"。
+7. 本窗口专属（架构铁律）：
+   - 五层架构：autoload → core → data → services → scenes → resources，依赖只允许「向下」；绝不允许上层反向依赖更基础的层（向上依赖违例 = 违反架构铁律）。
+   - 动共享地基（EventBus / ConfigManager / core/enums/* / screens.json / strings.csv / GameManager / GameState）→ 必须先 handoff 派单 + change_log.py notice 出变更通告，并经 PM/架构师认可。
+   - 改完跑 tools/desktop_studio/scan_deps.py 扫一遍，确认无「向上依赖违例」；新 AI 窗口要秒懂架构，同步更新 projects/wuxia_game.yaml 的 ai_context 与 docs/契约总表.md。
+   - 跨模块通信只走 EventBus（信号契约见 tests/unit/test_eventbus.gd 的 SEAMS 表）；数值全进 JSON、不硬编码；命名见名知意。
+   - 架构决策须对齐 docs/全角色工程手册与平台优化蓝图.md 与 docs/契约总表.md，不私下另立一套。
+
+本次窗口名：架构
+```
+
 > 数据 / 音频 / 工作室 三个窗口：用上面同款结构，把窗口名换成 `数据` / `音频` / `工作室`、署名换成 `AI-数据` / `AI-音频` / `AI-工作室`、主权换成上表对应范围即可（通用口令模板见下方 §3）。
 > 音频专属：新音频/资源导入必须用 `godot --headless --editor --quit --path "D:/武侠游戏"` 全量重导生成 `.import`，否则 `ResourceLoader.exists` 返回 false、`play_*` 会静默跳过（无报错无声音）。
 > 数据专属：数值全进 JSON；改 JSON 同步重跑 `tools/gen_contract.gd`；注意 town.json 类被间接引用的文件别当死数据误删。
@@ -195,6 +216,7 @@
 - **音频**：新资源必须 `editor --quit` 重导生成 `.import`，否则 `exists` 返回 false、播放静默跳过（无报错无声音）。
 - **PM/集成**：整树双闸门全绿才统一 push；单分支禁各窗盲目 push 互覆盖；红门禁立即协调责任窗修，禁带红 merge。
 - **审计核查**：只读审查、不得越权改他窗主权；归类只写 docs/backlog.json（平台数据，非游戏逻辑）；要改游戏代码须 handoff 派单 + 双闸门全绿。
+- **架构**：五层架构依赖只允许向下，scan_deps.py 扫出「向上依赖违例」= 违反架构铁律，必须修；动共享地基（EventBus/ConfigManager/core 等）须先 handoff + 出变更通告、经架构师/PM 认可；跨模块通信只走 EventBus，数值全进 JSON 不硬编码；架构决策对齐 docs/契约总表.md 与 docs/全角色工程手册与平台优化蓝图.md，不另立一套。
 
 ---
 
