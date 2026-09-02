@@ -22,6 +22,18 @@ UI 模块  [登录界面]  [预加载界面]  [UI 贴图]  [UI 皮肤定制]
 
 > 💡 所有改动都只写 **数据文件**（JSON / 图片），游戏代码只读不写，所以不会把程序改坏。
 
+### 分类颜色与标注含义
+
+进入每个 UI 子模块后，你还会看到带色小标签，代表该功能属于哪一类：
+
+| 标签 | 含义 | 在哪些 tab 出现 |
+|---|---|---|
+| <span style="background:#1f3a2a;color:#7fe0a0;padding:2px 8px;border-radius:10px;font-size:12px">背景</span> | 改背景图、多分辨率变体、暗化/粒子/边色 | 登录界面 |
+| <span style="background:#3a2f1a;color:#e6b35a;padding:2px 8px;border-radius:10px;font-size:12px">文案</span> | 改按钮文字、版本号等多语言文字 | 登录界面 |
+| <span style="background:#1a2a3a;color:#5ab0e6;padding:2px 8px;border-radius:10px;font-size:12px">资源</span> | 换 Logo/图标/按钮底图/配色 | 登录界面、UI 贴图、UI 皮肤定制 |
+| <span style="background:#2a1a35;color:#c98be6;padding:2px 8px;border-radius:10px;font-size:12px">布局</span> | 拖拽/数值调整界面元素位置 | 登录界面、预加载界面、UI 皮肤定制 |
+| <span style="background:#3a1a1a;color:#e66b6b;padding:2px 8px;border-radius:10px;font-size:12px">特效</span> | 粒子/动画类视觉效果 | UI 皮肤定制 |
+
 ---
 
 ## 二、四大子模块详细说明
@@ -30,16 +42,16 @@ UI 模块  [登录界面]  [预加载界面]  [UI 贴图]  [UI 皮肤定制]
 
 **能改什么**：
 
-| 功能区 | 作用 | 改完哪生效 |
-|---|---|---|
-| 大背景图 | 替换主菜单/加载/读档共用的背景 | `assets/ui/main_menu_bg.png` |
-| 多分辨率变体 | 给 1080p / 2K / 4K 屏各准备一张背景 | `assets/ui/main_menu_bg_*.png` |
-| 背景布局 | 暗化强度、自动取边色、是否开落叶粒子 | `data/configs/ui/login_bg_layout.json` |
-| 按钮文字对照表 | 改「继续游戏」「设置」等按钮文案（简/繁/英） | 多语言字符串表 |
-| 版本文字 | 改右下角版本号 | 项目版本号 |
-| 主菜单资源替换 | 换 Logo、副标题、悬停笔触、5 个菱形图标 | `data/configs/ui/main_menu_assets.json` |
-| 各按钮背景图 | 给每个主菜单按钮单独换背景 | `data/configs/ui/login_button_bg.json` |
-| 主菜单布局 | 拖拽标题组、菜单区、版本文字、右下角栏 | `data/configs/ui/main_menu_layout.json` |
+| 功能区 | 分类 | 作用 | 改完哪生效 |
+|---|---|---|---|
+| 大背景图 | <span style="background:#1f3a2a;color:#7fe0a0;padding:2px 8px;border-radius:10px;font-size:12px">背景</span> | 替换主菜单/加载/读档共用的背景 | `assets/ui/main_menu_bg.png` |
+| 多分辨率变体 | <span style="background:#1f3a2a;color:#7fe0a0;padding:2px 8px;border-radius:10px;font-size:12px">背景</span> | 给 1080p / 2K / 4K 屏各准备一张背景 | `assets/ui/main_menu_bg_*.png` |
+| 背景布局 | <span style="background:#1f3a2a;color:#7fe0a0;padding:2px 8px;border-radius:10px;font-size:12px">背景</span> | 暗化强度、自动取边色、是否开落叶粒子 | `data/configs/ui/login_bg_layout.json` |
+| 按钮文字对照表 | <span style="background:#3a2f1a;color:#e6b35a;padding:2px 8px;border-radius:10px;font-size:12px">文案</span> | 改「继续游戏」「设置」等按钮文案（简/繁/英） | 多语言字符串表 |
+| 版本文字 | <span style="background:#3a2f1a;color:#e6b35a;padding:2px 8px;border-radius:10px;font-size:12px">文案</span> | 改右下角版本号 | 项目版本号 |
+| 主菜单资源替换 | <span style="background:#1a2a3a;color:#5ab0e6;padding:2px 8px;border-radius:10px;font-size:12px">资源</span> | 换 Logo、副标题、悬停笔触、5 个菱形图标 | `data/configs/ui/main_menu_assets.json` |
+| 各按钮背景图 | <span style="background:#1a2a3a;color:#5ab0e6;padding:2px 8px;border-radius:10px;font-size:12px">资源</span> | 给每个主菜单按钮单独换背景 | `data/configs/ui/login_button_bg.json` |
+| 主菜单布局 | <span style="background:#2a1a35;color:#c98be6;padding:2px 8px;border-radius:10px;font-size:12px">布局</span> | 拖拽标题组、菜单区、版本文字、右下角栏 | `data/configs/ui/main_menu_layout.json` |
 
 **小白步骤**：
 1. 点顶部「登录界面」。
@@ -59,12 +71,12 @@ UI 模块  [登录界面]  [预加载界面]  [UI 贴图]  [UI 皮肤定制]
 
 **能改什么**：
 
-| 元素 | 作用 | 改完哪生效 |
-|---|---|---|
-| 进度条 | 加载进度条的位置、宽度、高度 | `data/configs/ui/loading_layout.json` |
-| 进度百分比文字 | 0% 的位置 | `data/configs/ui/loading_layout.json` |
-| 随机提示文字 | "正在整理行囊…" 的位置 | `data/configs/ui/loading_layout.json` |
-| 版本号文字 | 右下角版本号的位置 | `data/configs/ui/loading_layout.json` |
+| 元素 | 分类 | 作用 | 改完哪生效 |
+|---|---|---|---|
+| 进度条 | <span style="background:#2a1a35;color:#c98be6;padding:2px 8px;border-radius:10px;font-size:12px">布局</span> | 加载进度条的位置、宽度、高度 | `data/configs/ui/loading_layout.json` |
+| 进度百分比文字 | <span style="background:#2a1a35;color:#c98be6;padding:2px 8px;border-radius:10px;font-size:12px">布局</span> | 0% 的位置 | `data/configs/ui/loading_layout.json` |
+| 随机提示文字 | <span style="background:#2a1a35;color:#c98be6;padding:2px 8px;border-radius:10px;font-size:12px">布局</span> | "正在整理行囊…" 的位置 | `data/configs/ui/loading_layout.json` |
+| 版本号文字 | <span style="background:#2a1a35;color:#c98be6;padding:2px 8px;border-radius:10px;font-size:12px">布局</span> | 右下角版本号的位置 | `data/configs/ui/loading_layout.json` |
 
 **小白步骤**：
 1. 点顶部「预加载界面」。
@@ -82,11 +94,11 @@ UI 模块  [登录界面]  [预加载界面]  [UI 贴图]  [UI 皮肤定制]
 
 **能改什么**：
 
-| 能力 | 作用 | 改完哪生效 |
-|---|---|---|
-| 扫描界面 | 列出所有 UI 场景（背包、MainMenu、技能…） | — |
-| 加背景图槽位 | 给某个界面加一张背景图 | 直接写进对应 `.tscn` |
-| 替换已有贴图 | 上传新图覆盖旧槽位 | 对应 `.tscn` + `assets/` |
+| 能力 | 分类 | 作用 | 改完哪生效 |
+|---|---|---|---|
+| 扫描界面 | — | 列出所有 UI 场景（背包、MainMenu、技能…） | — |
+| 加背景图槽位 | <span style="background:#1a2a3a;color:#5ab0e6;padding:2px 8px;border-radius:10px;font-size:12px">贴图</span> | 给某个界面加一张背景图 | 直接写进对应 `.tscn` |
+| 替换已有贴图 | <span style="background:#1a2a3a;color:#5ab0e6;padding:2px 8px;border-radius:10px;font-size:12px">贴图</span> | 上传新图覆盖旧槽位 | 对应 `.tscn` + `assets/` |
 
 **小白步骤**：
 1. 点顶部「UI 贴图」。
@@ -106,11 +118,11 @@ UI 模块  [登录界面]  [预加载界面]  [UI 贴图]  [UI 皮肤定制]
 
 **能改什么**：
 
-| 卡片 | 作用 | 改完哪生效 |
-|---|---|---|
-| ① 确认框尺寸 | 调「确认/取消」弹窗的宽高 | `data/configs/ui/skin/confirm_dialog.layout.json` |
-| ② 主题配色 | 调面板底色、描边、标题颜色、正文颜色 | `data/configs/ui/skin/theme.json` |
-| ③ 视觉特效 | 主菜单水墨背景：飘叶/流云/水面/小船 | `data/configs/ui/skin/main_menu.vfx.json` |
+| 卡片 | 分类 | 作用 | 改完哪生效 |
+|---|---|---|---|
+| ① 确认框尺寸 | <span style="background:#2a1a35;color:#c98be6;padding:2px 8px;border-radius:10px;font-size:12px">布局</span> | 调「确认/取消」弹窗的宽高 | `data/configs/ui/skin/confirm_dialog.layout.json` |
+| ② 主题配色 | <span style="background:#1a2a3a;color:#5ab0e6;padding:2px 8px;border-radius:10px;font-size:12px">配色</span> | 调面板底色、描边、标题颜色、正文颜色 | `data/configs/ui/skin/theme.json` |
+| ③ 视觉特效 | <span style="background:#3a1a1a;color:#e66b6b;padding:2px 8px;border-radius:10px;font-size:12px">特效</span> | 主菜单水墨背景：飘叶/流云/水面/小船 | `data/configs/ui/skin/main_menu.vfx.json` |
 
 **小白步骤**：
 1. 点顶部「UI 皮肤定制」。

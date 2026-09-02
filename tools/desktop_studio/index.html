@@ -87,6 +87,15 @@
   .refmeta{margin-bottom:10px;display:flex;gap:5px;flex-wrap:wrap}
   .mini{display:inline-block;padding:1px 7px;border-radius:9px;font-size:11px;
     background:var(--chip);color:var(--accent2);border:1px solid var(--line)}
+  .cat{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;margin-left:8px;
+       background:var(--chip);color:#c98be6;border:1px solid #6b4d7a;vertical-align:middle}
+  .cat.bg{color:#7fe0a0;border-color:#2f5a42;background:#1f3a2a}
+  .cat.txt{color:#e6b35a;border-color:#6b5326;background:#3a2f1a}
+  .cat.res{color:#5ab0e6;border-color:#2a4d66;background:#1a2a3a}
+  .cat.lay{color:#c98be6;border-color:#5a3a6b;background:#2a1a35}
+  .cat.vfx{color:#e66b6b;border-color:#6b2f2f;background:#3a1a1a}
+  .cat-ui{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0;padding:10px 12px;background:var(--panel2);border:1px dashed var(--line);border-radius:8px;font-size:12px}
+  .cat-ui b{color:var(--accent);font-weight:600}
 </style>
 </head>
 <body>
@@ -244,8 +253,15 @@
   <section class="tab" id="tab-login">
     <div class="editor" style="max-width:900px">
       <div class="hint">零代码修改登录界面：换大背景图、改按钮文字、查看版本号。改完下次进游戏即生效（大背景图由主菜单 / 加载 / 读档三处共用）。</div>
+      <div class="cat-ui">
+        <b>本页功能分类：</b>
+        <span><span class="cat bg">背景</span> 改背景图、多分辨率、暗化/粒子</span>
+        <span><span class="cat txt">文案</span> 改按钮文字、版本号</span>
+        <span><span class="cat res">资源</span> 换 Logo/图标/按钮底图</span>
+        <span><span class="cat lay">布局</span> 拖拽摆放界面元素</span>
+      </div>
 
-      <h3>🖼 大背景图</h3>
+      <h3>🖼 大背景图 <span class="cat bg">背景</span></h3>
       <div class="row"><img id="loginBgImg" src="" style="max-width:440px;border:1px solid #555;border-radius:8px;display:none"></div>
       <div class="row"><input type="file" id="loginBgFile" accept="image/*"></div>
       <div class="btns"><button class="act" onclick="loginBgReplace()">替换大背景图</button><span id="loginBgStat" class="status"></span></div>
@@ -259,7 +275,7 @@
       </div>
 
       <div class="refbox">
-        <h4>📐 多分辨率变体（按屏幕自动挑图，任务 #47）</h4>
+        <h4>📐 多分辨率变体（按屏幕自动挑图，任务 #47） <span class="cat bg">背景</span></h4>
         <div class="hint">可为同一张背景准备几档不同分辨率：游戏启动时按<b>窗口宽度</b>自动挑最合适的一档——
         4K 屏吃 4K 图不糊，1080p 屏也不必白扛一张 4K 图的内存。没配变体就继续用主图，零影响。</div>
         <table style="width:100%;border-collapse:collapse;font-size:13px">
@@ -280,7 +296,7 @@
         <div id="variantStat" class="status"></div>
       </div>
 
-      <h3>🎛 背景布局（实时预览）</h3>
+      <h3>🎛 背景布局（实时预览） <span class="cat bg">背景</span></h3>
       <div class="hint">选一种布局，下方会按你<b>当前背景图</b>实时预览在 4 种设备比例下的效果。满意后点「保存布局」，游戏里任意窗口比例都会自动适配（无黑边）。这正是大厂做法：背景铺满裁切 + 菜单落在安全区，一套界面通吃 PC / 带鱼屏 / iPad / 手机。</div>
 
       <div id="loginLayoutPresets" class="row" style="flex-wrap:wrap;gap:8px"></div>
@@ -297,7 +313,7 @@
       <div id="loginDevicePreview" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px"></div>
       <div class="btns" style="margin-top:10px"><button class="act" onclick="loginLayoutSave()">保存布局</button><span id="loginLayoutStat" class="status"></span></div>
 
-      <h3>🔤 按钮文字对照表</h3>
+      <h3>🔤 按钮文字对照表 <span class="cat txt">文案</span></h3>
       <table style="width:100%;border-collapse:collapse" id="loginTextTbl">
         <thead><tr style="text-align:left">
           <th style="padding:4px;border-bottom:1px solid #444">按钮</th>
@@ -311,16 +327,16 @@
       </table>
       <div class="btns"><button class="act" onclick="loginTextsSave()">保存文案</button><span id="loginTextStat" class="status"></span></div>
 
-      <h3>🏷 版本文字</h3>
+      <h3>🏷 版本文字 <span class="cat txt">文案</span></h3>
       <div class="row"><label>当前版本号</label><input id="loginVer" readonly></div>
       <div class="hint" id="loginVerNote"></div>
 
-      <h3>🎨 主菜单资源替换（标题 Logo / 副标题 / 悬停笔触 / 5 图标）</h3>
+      <h3>🎨 主菜单资源替换（标题 Logo / 副标题 / 悬停笔触 / 5 图标） <span class="cat res">资源</span></h3>
       <div class="hint">零代码替换主菜单的视觉资源：大标题「墨影江湖」、副标题、按钮悬停时的水墨笔触底板、5 个菜单菱形图标。上传新图后自动写入 <code>data/configs/ui/main_menu_assets.json</code>，游戏下次启动即生效。建议上传透明底 PNG。</div>
       <div id="mmAssetsList" style="display:flex;flex-direction:column;gap:10px"></div>
       <div id="mmAssetsStat" class="status"></div>
 
-      <h3>🎴 各按钮背景图（高级）</h3>
+      <h3>🎴 各按钮背景图（高级） <span class="cat res">资源</span></h3>
       <div class="hint">给每个主菜单按钮单独换背景图。游戏代码现在已读取此映射（data/configs/ui/login_button_bg.json），上传图片后下次进主菜单即生效；图会铺满按钮并以「cover」方式裁切，外加一层轻压暗保证文字可读。
       <b>注意：</b>按钮是 280×44 的横条，请上传<b>横版</b>图，竖图会被裁得只剩中间一小条。</div>
       <div class="btns" style="margin:6px 0"><button class="act sec" onclick="btnBgScanFix()">🔧 体检：修复扩展名错配</button>
@@ -328,7 +344,7 @@
       <div id="loginBtnBgList"></div>
       <div id="btnBgFixStat" class="status"></div>
 
-      <h3>🧭 主菜单布局（自由拖拽）</h3>
+      <h3>🧭 主菜单布局（自由拖拽） <span class="cat lay">布局</span></h3>
       <div class="hint">零代码摆放主菜单四大块：标题组（Logo+副标题）、菜单按钮区（5 项）、左下角版本文字、右下角按钮栏。在下面 1280×720 模拟视口里直接拖动每块到想要的位置/大小，点「保存布局」即写入游戏（下次进主菜单生效）。坐标为窗口比例归一化，任意屏幕自动适配。</div>
       <div id="mmCanvasWrap" style="position:relative;border:1px solid #444;border-radius:8px;overflow:hidden;background:#0c0e16;width:100%;max-width:720px;aspect-ratio:16/9">
         <img id="mmBg" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.5" src="">
@@ -471,6 +487,10 @@
           <b>位置 / 大小 / 层级一律回 Godot 编辑器拖拽</b>，本工具一个坐标都不会改。<br>
           传图后打开 Godot，新图会自动导入；若没刷新，点菜单 <b>场景 → 重新加载场景</b> 或重启编辑器。
         </div>
+        <div class="cat-ui">
+          <b>本页功能分类：</b>
+          <span><span class="cat res">贴图</span> 给指定界面添加/替换背景图槽位</span>
+        </div>
         <div class="row">
           <label>搜索界面</label>
           <input id="uaSearch" placeholder="输入名称筛选，如 背包 / MainMenu" oninput="uaRenderList()">
@@ -490,6 +510,10 @@
   <section class="tab" id="tab-loading">
     <div class="editor" style="max-width:920px">
       <div class="hint">预加载（加载）界面可视化编辑：直接拖动下面画布里的 4 个元素到任意位置，点「保存布局」即写入游戏（下次启动生效）。坐标为窗口比例归一化，PC / 带鱼屏 / 手机都自动适配。</div>
+      <div class="cat-ui">
+        <b>本页功能分类：</b>
+        <span><span class="cat lay">布局</span> 调整进度条、提示文字、版本号位置</span>
+      </div>
       <div id="loadingCanvasWrap" style="position:relative;border:1px solid #444;border-radius:8px;overflow:hidden;background:#0c0e16;width:100%;aspect-ratio:16/9">
         <img id="loadingBg" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.5" src="">
         <div class="load-el" data-el="progress_bar" style="position:absolute;min-width:40%;height:10px;background:#e6b35a;border-radius:4px;cursor:move"></div>
@@ -595,7 +619,7 @@
   <div class="uiskin-grid">
     <!-- 模块①：确认框尺寸 -->
     <div class="uiskin-card">
-      <h3>① 确认框尺寸 <span class="tag green">零风险</span></h3>
+      <h3>① 确认框尺寸 <span class="cat lay">布局</span> <span class="tag green">零风险</span></h3>
       <p class="muted" style="margin:6px 0;line-height:1.7">
         📌 是干嘛的：调「确认/取消」弹窗的大小。<br>
         💡 有啥用：小屏不挡背景、大屏更醒目。<br>
@@ -611,7 +635,7 @@
     </div>
     <!-- 模块②：主题配色 -->
     <div class="uiskin-card">
-      <h3>② 主题配色 <span class="tag green">零风险</span></h3>
+      <h3>② 主题配色 <span class="cat res">配色</span> <span class="tag green">零风险</span></h3>
       <p class="muted" style="margin:6px 0;line-height:1.7">
         📌 是干嘛的：改弹窗面板与文字颜色。<br>
         💡 有啥用：换风格、护眼、品牌色。<br>
@@ -629,7 +653,7 @@
     </div>
     <!-- 模块③：视觉特效 -->
     <div class="uiskin-card">
-      <h3>③ 视觉特效 <span class="tag green">需护栏</span></h3>
+      <h3>③ 视觉特效 <span class="cat vfx">特效</span> <span class="tag green">需护栏</span></h3>
       <p class="muted" style="margin:6px 0;line-height:1.7">
         📌 是干嘛的：主菜单水墨背景的飘叶/流云/水面/小船动态。<br>
         💡 有啥用：调氛围、控性能（卡就关特效）。<br>
