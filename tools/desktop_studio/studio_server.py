@@ -516,8 +516,21 @@ def main():
                     print("[警告] --root 指定目录无效：%s" % m)
             break
     s = core.load_settings()
-    port = int(s.get("port", 8765))
-    server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    base_port = int(s.get("port", 8765))
+    # 端口自动顺延：8765 被占就试 8766..8765+20，用户永远不需要手动调端口。
+    server = None
+    last_err = None
+    for cand in range(base_port, base_port + 21):
+        try:
+            server = ThreadingHTTPServer(("127.0.0.1", cand), Handler)
+            port = cand
+            break
+        except OSError as e:
+            last_err = e
+            continue
+    if server is None:
+        print("[错误] 无法在 %d~%d 绑定本地端口（可能被其他工作室进程占用）：%s" % (base_port, base_port + 20, last_err))
+        return
     url = "http://127.0.0.1:%d/" % port
     print("内容工作室 桌面版已启动: %s" % url)
     print("按 Ctrl+C 关闭")

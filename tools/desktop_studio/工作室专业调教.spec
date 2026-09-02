@@ -5,10 +5,12 @@ a = Analysis(
     ['studio_server.py'],
     pathex=[],
     binaries=[],
-    datas=[('index.html', '.'), ('startup_card.json', '.')],
+    datas=[('index.html', '.'), ('startup_card.json', '.'), ('projects', 'projects')],
     # tscn_assets 在 studio_core 的 try 块内导入，静态分析可能漏掉，显式声明。
     # 缺失会导致打包后的 exe 打开「UI 贴图」标签页报「贴图库加载失败」。
-    hiddenimports=['tscn_assets'],
+    # yaml：project_loader 在工程适配器(Phase 2)中按需 import yaml 读 manifest；
+    #   静态分析漏掉，必须显式声明，否则 exe 运行连接器端点时报 ModuleNotFoundError。
+    hiddenimports=['tscn_assets', 'yaml'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
