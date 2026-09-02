@@ -156,3 +156,21 @@
 ### ⚠ 已知冗余（待清理）
 - `tools/check_mouse_filter.py` 是另一个 AI 窗口写的**重复扫描器**（与 `lint_mouse_filter.py` 同目的、同背景、实现略不同）。
 - 已选 `lint_mouse_filter.py` 为唯一真源（已接 GATE0 + pre-commit 钩子 + SOP）。`check_mouse_filter.py` 暂未提交、未接线，**待其责任窗口确认后删除或合并**，避免两个扫描器让后续 AI 困惑。
+
+### 第 4 层钩子的已知隐患与缓解（诚实清单，用户问"会不会有隐患/假性BUG"）
+机器守卫不是万能，已知风险与对策如下（均已落地下文对策）：
+
+| 隐患 | 严重度 | 对策（已做/待做） |
+|---|---|---|
+| **范围太窄→假性安全感**：只拦 `mouse_filter=0` 按钮装饰子节点；全屏 STOP 遮挡、`z_index`、`gui_input` 重写等其它静默输入 BUG 不拦 | 高 | 已在 `docs/跨模块BUG修复机制.md` 写明"钩子≠通用 UI 安全网"；其它类靠 GATE2 `test_ui_mouse_filter.gd` + 人工拾取模拟器兜底。**禁止把"钩子绿"当"界面无输入 BUG"** |
+| **钩子不在 git→换机/新克隆静默消失** | 高 | `install_hooks.py` 已装；**换机/新克隆后必须再跑一次**（写进启动卡 + 本 SOP §10）。沙箱/CI 同理 |
+| **install_hooks 覆盖已有钩子** | 中 | ✅ 已修：装前先备份为 `pre-commit.bak`，不再静默删 |
+| **`--no-verify` 绕过全废** | 中 | 红线禁止常规使用；提供白名单逃生口（见下）替代"整体绕过" |
+| **假性 BUG（误报）** | 低 | default 层只拦"显式 `=0` 装饰子节点"，误报仅发生在"确有意的 STOP"；✅ 已加白名单 `tools/lint_mouse_filter.allow` 精准豁免单文件，**不必 `--no-verify`** |
+| **Python 路径硬写→变动后静默失效** | 中 | 钩子有 fallback（`python3`/`python`），再无则**跳过放行**（失败开放）；后果是守卫静默消失。生产机请确保 managed python 或系统 python 在 |
+| **只扫本次暂存文件（commit 级盲区）** | 低 | 历史违规下次动到该文件才暴露；定期跑 `lint_mouse_filter.py --tier strict` 全量审计补盲 |
+| **rebase/amend 会重跑钩子** | 低 | 历史已合规，正常无碍；若 rebase 遇阻，先用白名单/修复，勿一律 `--no-verify` |
+
+**白名单逃生口用法**（替代 `--no-verify`，守住整体守卫）：
+- 确有一处**有意的** `mouse_filter=0`（如按钮内嵌可点子图标），把该 `.tscn` 路径加入 `tools/lint_mouse_filter.allow`（支持相对路径/绝对路径/纯文件名，`#` 注释）。
+- 加白名单 = 承认该文件"暂不修的静默拦截风险"，只应在确属有意时使用；普通手误请用 `mouse_filter = 2`(IGNORE) 真正修复。

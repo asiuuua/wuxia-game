@@ -1,0 +1,15 @@
+# lint_mouse_filter 白名单（精准豁免，勿滥用）
+#
+# 用途：当某个 .tscn 里确有一处"按钮装饰子节点写成 mouse_filter = 0(STOP)"
+#       是**有意为之**（例如按钮内嵌的可点击子图标需自己吃点击），不属于静默
+#       吞点击 BUG 时，把该文件路径加进本文件，使 pre-commit 钩子对该文件豁免，
+#       而不必用 `git commit --no-verify` 整体绕过守卫。
+#
+# 写法：每行一个路径，支持 相对于仓库根的路径 / 绝对路径 / 纯文件名 三种匹配。
+#       # 开头为注释，空行忽略。
+# 例：
+#   scenes/ui/screens/main_menu/MainMenu.tscn
+#   WuxiaMenuButton.tscn
+#
+# ⚠ 警告：加入本白名单 = 承认该文件"可能存在静默拦截风险且暂不修"。
+#   只应在确属有意的 STOP 时使用；普通手误请用 mouse_filter = 2(IGNORE) 真正修复。

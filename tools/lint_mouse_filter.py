@@ -83,6 +83,31 @@ def _is_decor(typ):
     return any(t in typ for t in DECOR_TYPES)
 
 
+def _load_allowlist():
+    """读取 tools/lint_mouse_filter.allow：每行一个相对/绝对路径或文件名，
+    # 开头为注释。命中则对该文件豁免（用于确有意的 mouse_filter=STOP 场景，
+    避免被迫 --no-verify 整体绕过守卫）。"""
+    p = os.path.join(REPO, "tools", "lint_mouse_filter.allow")
+    out = set()
+    if not os.path.isfile(p):
+        return out
+    with open(p, encoding="utf-8") as f:
+        for line in f:
+            s = line.strip()
+            if not s or s.startswith("#"):
+                continue
+            out.add(os.path.normpath(s))
+    return out
+
+
+def _suppressed(fp, allow):
+    if not allow:
+        return False
+    rel = os.path.normpath(os.path.relpath(fp, REPO))
+    base = os.path.basename(fp)
+    return rel in allow or base in allow
+
+
 def scan_file(path, tier):
     nodes = _parse(path)
     by_path = {n["full"]: n for n in nodes}
@@ -134,7 +159,16 @@ def main():
                 if fn.endswith(".tscn"):
                     findings += scan_file(os.path.join(dp, fn), a.tier)
 
+    # 白名单豁免（确有意的 STOP，避免被迫 --no-verify）
+    allow = _load_allowlist()
+    suppressed = [x for x in findings if _suppressed(x[0], allow)]
+    findings = [x for x in findings if not _suppressed(x[0], allow)]
+
     if not a.quiet:
+        if suppressed:
+            print("ℹ 白名单豁免 %d 处（见 tools/lint_mouse_filter.allow）：" % len(suppressed))
+            for fp, ln, btn, child, ct in suppressed:
+                print("  (豁免) %s:%d  %s/%s" % (os.path.relpath(fp, REPO), ln, btn, child))
         if findings:
             print("⚠ 发现 %d 处『按钮下可见装饰子节点仍为 STOP(会静默吞点击)』：" % len(findings))
             for fp, ln, btn, child, ct in findings:
