@@ -90,6 +90,17 @@ reskin:
 knowledge:
   refs:
     - docs/项目经验白皮书.md        # 大厂级工程梳理 + 评价方案 + 复盘调优总源（新 AI/新人优先读）
+    - docs/经验库/00_架构铁律与分层.md
+    - docs/经验库/01_装配中枢GameManager.md
+    - docs/经验库/02_EventBus契约与信号接缝.md
+    - docs/经验库/03_经济系统_事务化资产API.md
+    - docs/经验库/04_结缘系统_单一真源与回城编排.md
+    - docs/经验库/05_战斗系统_逻辑内核与视图接缝.md
+    - docs/经验库/06_卡住BUG根因与避免速查.md
+    - docs/经验库/07_双闸门门禁.md
+    - docs/经验库/08_静默接缝BUG四层防线.md
+    - docs/经验库/09_可复用模式清单.md
+    - docs/经验库/10_平台连接器三段_ai_context_reskin_knowledge.md
     - docs/多AI协同机制_SOP.md
     - .workbuddy/memory/MEMORY.md
     - docs/变更通告_*.md

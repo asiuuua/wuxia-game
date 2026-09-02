@@ -85,6 +85,7 @@
   <button data-tab="log">操作日志</button>
   <button data-tab="backlog">待办清单</button>
   <button data-tab="startup">🤝 协同启动卡</button>
+  <button data-tab="exp">📚 经验库</button>
 </nav>
 <div class="banner">
   ⚠️ <b>改动生效说明：</b>本工具编辑的是项目的<b>源码数据目录</b>（如 <code>data/configs/ui/</code>）。
@@ -533,6 +534,17 @@
   </section>
 </main>
 
+<section class="tab" id="tab-exp">
+  <div class="layout">
+    <div class="list" id="expList"></div>
+    <div class="editor">
+      <div class="hint">经验库：从工程 manifest 的 <code>knowledge.refs</code> 检索拆分的子文档。点左侧条目看全文；顶部搜索框可过滤标题/路径。子文档含「检索关键词」便于跨项目复用经验、让新 AI 秒懂架构。</div>
+      <div class="row" style="margin:10px 0"><input id="expSearch" placeholder="搜索标题 / 关键词…" oninput="expFilter()"></div>
+      <div id="expView" style="margin-top:8px;max-height:62vh;overflow:auto;line-height:1.7"></div>
+    </div>
+  </div>
+</section>
+
 <script>
 const A = (m,p,b)=>fetch(p,{method:m,headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined}).then(r=>r.json());
 function show(id,msg,ok){const e=document.getElementById(id);e.textContent=msg;e.className='status '+(ok?'ok':'bad');}
@@ -561,6 +573,7 @@ document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{
   if(b.dataset.tab==='battle'){blLoadList();dpLoad();}
   if(b.dataset.tab==='loading')loadingLoad();
   if(b.dataset.tab==='uiart')uiArtLoad();
+  if(b.dataset.tab==='exp')expLoad();
 });
 
 // ===================== UI 贴图（贴图直写 .tscn；位置/大小交给 Godot 拖拽） =====================
@@ -1995,6 +2008,71 @@ async function loadStartupCard(){
   }
   root.innerHTML=html;
 }
+// ===================== 经验库（读取 manifest knowledge.refs，检索拆分子文档） =====================
+let EXP_ITEMS=[];
+async function expLoad(){
+  const r=await A('GET','/api/experience');
+  const box=document.getElementById('expList');
+  if(!r || !r.ok){ box.innerHTML='<div class="item">加载失败：'+(r&&r.error||'未知')+'</div>'; return; }
+  const k=r.knowledge||{};
+  EXP_ITEMS=[];
+  (k.refs||[]).forEach(p=>EXP_ITEMS.push({type:'文档', path:p, title:expTitle(p)}));
+  (k.reusable_patterns||[]).forEach(t=>EXP_ITEMS.push({type:'可复用', path:'', title:t}));
+  (k.predecessor_mistakes||[]).forEach(t=>EXP_ITEMS.push({type:'踩坑', path:'', title:t}));
+  expRender();
+}
+function expTitle(p){ const m=String(p).split('/'); return m[m.length-1].replace(/\.md$/,'')||p; }
+function expRender(){
+  const q=(document.getElementById('expSearch').value||'').toLowerCase();
+  const box=document.getElementById('expList');
+  const list=EXP_ITEMS.filter(it=>!q || it.title.toLowerCase().includes(q) || it.path.toLowerCase().includes(q));
+  window._expFiltered=list;
+  box.innerHTML=list.map((it,i)=>'<div class="item" data-i="'+i+'" onclick="expOpen('+i+')">['+it.type+'] '+blEsc(it.title)+'</div>').join('') || '<div class="item">无匹配</div>';
+}
+function expFilter(){ expRender(); }
+async function expOpen(i){
+  const list=window._expFiltered||EXP_ITEMS;
+  const it=list[i]; if(!it) return;
+  const view=document.getElementById('expView');
+  if(it.type==='文档' && it.path){
+    const r=await A('GET','/api/experience/doc?path='+encodeURIComponent(it.path));
+    if(r && r.ok){ view.innerHTML=expMd(r.text); }
+    else { view.innerHTML='<div class="status bad">读取失败：'+(r&&r.error||'未知')+'</div>'; }
+  } else {
+    view.innerHTML='<div class="refbox">'+blEsc(it.title)+'</div>';
+  }
+}
+// 轻量 markdown → 安全 HTML（先转义，再处理 # 标题 / **粗体** / `代码` / - 列表 / 引用 / 表格行）
+function expMd(src){
+  const lines=String(src).replace(/\r\n/g,'\n').split('\n');
+  let html=''; let inList=false; let para=[];
+  const flushP=()=>{ if(para.length){ html+='<p>'+expInline(para.join(' '))+'</p>'; para=[]; } };
+  const flushL=()=>{ if(inList){ html+='</ul>'; inList=false; } };
+  for(const ln of lines){
+    const s=ln.trim();
+    if(s===''){ flushP(); flushL(); continue; }
+    let m;
+    if(m=s.match(/^######\s+(.*)/)){ flushP(); flushL(); html+='<h6>'+expInline(m[1])+'</h6>'; }
+    else if(m=s.match(/^#####\s+(.*)/)){ flushP(); flushL(); html+='<h5>'+expInline(m[1])+'</h5>'; }
+    else if(m=s.match(/^####\s+(.*)/)){ flushP(); flushL(); html+='<h4>'+expInline(m[1])+'</h4>'; }
+    else if(m=s.match(/^###\s+(.*)/)){ flushP(); flushL(); html+='<h3>'+expInline(m[1])+'</h3>'; }
+    else if(m=s.match(/^##\s+(.*)/)){ flushP(); flushL(); html+='<h2>'+expInline(m[1])+'</h2>'; }
+    else if(m=s.match(/^#\s+(.*)/)){ flushP(); flushL(); html+='<h1>'+expInline(m[1])+'</h1>'; }
+    else if(m=s.match(/^[-*]\s+(.*)/)){ flushP(); if(!inList){ html+='<ul>'; inList=true; } html+='<li>'+expInline(m[1])+'</li>'; }
+    else if(m=s.match(/^>\s+(.*)/)){ flushP(); flushL(); html+='<blockquote>'+expInline(m[1])+'</blockquote>'; }
+    else if(m=s.match(/^\|(.+)\|$/)){ flushP(); flushL(); html+='<div class="refbox">'+blEsc(s)+'</div>'; }
+    else { para.push(s); }
+  }
+  flushP(); flushL();
+  return html;
+}
+function expInline(t){
+  let h=blEsc(t);
+  h=h.replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');
+  h=h.replace(/`(.+?)`/g,'<code>$1</code>');
+  return h;
+}
+
 stat();npcLoad();loadingLoad();backlogLoad();loadStartupCard();
 </script>
 </body>

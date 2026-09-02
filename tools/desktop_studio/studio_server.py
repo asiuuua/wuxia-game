@@ -273,6 +273,41 @@ class Handler(BaseHTTPRequestHandler):
             if info is None:
                 return _send_json(self, {"ok": False, "error": "未知工程 %s" % pid}, 404)
             return _send_json(self, {"ok": True, **info})
+        # ---- 经验库面板（Phase 6 落地）：读取 manifest 的 knowledge 段，并安全返回子文档全文 ----
+        if path == "/api/experience":
+            qs = urllib.parse.parse_qs(self.path.split("?", 1)[1] if "?" in self.path else {})
+            pid = (qs.get("pid") or ["wuxia_game"])[0]
+            try:
+                from project_loader import get_connector_info
+                info = get_connector_info(pid)
+            except Exception as e:
+                return _send_json(self, {"ok": False, "error": str(e)}, 500)
+            if info is None:
+                return _send_json(self, {"ok": False, "error": "未知工程 %s" % pid}, 404)
+            return _send_json(self, {"ok": True, "pid": pid, "knowledge": info.get("knowledge", {})})
+        if len(parts) >= 3 and parts[0] == "api" and parts[1] == "experience" and parts[2] == "doc":
+            qs = urllib.parse.parse_qs(self.path.split("?", 1)[1] if "?" in self.path else {})
+            rel = (qs.get("path") or [""])[0]
+            if not rel:
+                return _send_json(self, {"error": "missing path"}, 400)
+            root = core.discover_project_root()
+            if not root:
+                return _send_json(self, {"error": "no project root"}, 404)
+            # 安全：解析并限制在工程根内，仅允许 .md/.txt（防穿越 / 任意文件读取）
+            target = os.path.realpath(os.path.join(root, rel))
+            root_real = os.path.realpath(root)
+            if target != root_real and not target.startswith(root_real + os.sep):
+                return _send_json(self, {"error": "forbidden path"}, 403)
+            if not (target.endswith(".md") or target.endswith(".txt")):
+                return _send_json(self, {"error": "only md/txt allowed"}, 403)
+            if not os.path.exists(target):
+                return _send_json(self, {"error": "not found"}, 404)
+            try:
+                with open(target, "r", encoding="utf-8") as f:
+                    text = f.read()
+            except Exception as e:
+                return _send_json(self, {"error": str(e)}, 500)
+            return _send_json(self, {"ok": True, "path": rel, "text": text})
         if len(parts) == 3 and parts[0] == "api" and parts[1] == "npc":
             n = core.npc_get(parts[2])
             return _send_json(self, n if n is not None else {}, 404 if n is None else 200)
