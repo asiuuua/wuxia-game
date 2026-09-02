@@ -132,11 +132,15 @@
         {
           "title": "响应式锚点覆盖其余弹窗/列表",
           "type": "待办",
-          "status": "open",
+          "status": "done",
           "placeholder": false,
           "source": "派单 23a9d0b92b83（审计→UI）",
           "detail": "当前仅部分界面做了响应式锚点，其余弹窗/列表在不同分辨率下可能错位。",
-          "suggestion": "逐个界面补齐 anchor 响应式，优先高频弹窗（确认框/背包/结缘）。"
+          "suggestion": "逐个界面补齐 anchor 响应式，优先高频弹窗（确认框/背包/结缘）。",
+          "resolvedBy": "AI-UI",
+          "resolvedAt": "2026-09-02 19:35:26",
+          "commit": "370f062",
+          "resolution": "完成所有弹窗响应式锚点覆盖：ui_center_utils 新增 clamp_panel_size/fit_panel_to_viewport(大屏保尺寸/小屏内缩/240下限/headless空安全)；popup_base 新增 enable_responsive(size_changed 重排+tree_exiting 断连)；ConfirmDialog/MapScreen/SaveNameDialog 接入；11 个 PopupBase 派生屏 _ready 接 enable_responsive；test_responsive_anchor 新增3项接线回归(共7项全过)。GATE1零错;GATE2 60套件0失败"
         },
         {
           "title": "列表刷新子节点 + 悬停动效令牌解析结果池化",
@@ -465,20 +469,26 @@
         {
           "title": "run_all 退出码不传播，CI 不可靠",
           "type": "隐性BUG",
-          "status": "open",
+          "status": "done",
           "placeholder": false,
           "source": "派单 fb36b027ba06（UI→测试基建）",
           "detail": "run_all.tscn 运行结束退出码不传播，CI 无法据此判定成败（门禁误报绿）。",
-          "suggestion": "让 run_all 以 ✗ 数量决定退出码；CI 依退出码判定。"
+          "suggestion": "让 run_all 以 ✗ 数量决定退出码；CI 依退出码判定。",
+          "resolvedBy": "测试窗口",
+          "resolvedAt": "2026-09-02 19:29:30",
+          "resolution": "核验收尾：代码早已闭环。run_all.gd:42 现码 get_tree().quit(1 if suite_fail>0 else 0)，commit 9a87890(UI模块8/29)固化退出码传播，战斗窗曾实测失败态=1/通过态=0 均正确传播；handoff 卡 fb36b027ba06 已 closed。零代码改动，仅同步 backlog 状态。派单协议层已闭环。"
         },
         {
           "title": "gate_check.sh[2/4] 非白名单 ERROR 致门禁红",
           "type": "隐性BUG",
-          "status": "open",
+          "status": "done",
           "placeholder": false,
           "source": "派单 4ed0cb0d5d8d（UI→测试基建）",
           "detail": "引擎关闭噪声 + remove_child busy 产生非白名单 ERROR，导致 [2/4] 门禁误红。",
-          "suggestion": "门禁 ERROR 白名单补充引擎关闭噪声；remove_child 改用 call_deferred/queue_free。"
+          "suggestion": "门禁 ERROR 白名单补充引擎关闭噪声；remove_child 改用 call_deferred/queue_free。",
+          "resolvedBy": "测试窗口",
+          "resolvedAt": "2026-09-02 19:29:35",
+          "resolution": "核验收尾：代码早已闭环。gate_allowlist.txt 已补8条'XX不存在'+'busy setting up children'，commit 4dcbd86 修复，当时全量门禁4/4通过；handoff 卡 4ed0cb0d5d8d 已 done。当前[2/4]另红为 popup_base headless 空安全/GameManager 加载参数，属他窗WIP已另派单(9526b65a3386)，与本案无关。零代码改动，仅同步 backlog 状态。派单协议层已闭环。"
         },
         {
           "title": "确定性种子注入固化随机测试",
