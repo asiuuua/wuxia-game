@@ -151,7 +151,7 @@
 
 1. 先读 docs/审计核查提示词.md（完整审计方法论：范围 A/B/C、8 大审计维度、正向+逆向+专业标准方法论、结构化输出格式、归类流程、主权纪律、双闸门）。
 2. 审计是只读审查 + 写回待办清单，不是写功能。按用户指定范围（单模块 / 全盘 / 关联架构）执行。
-3. 审计前必读：docs/backlog.json（执行清单）、docs/更改日志.md、docs/契约总表.md、tests/unit、tools/scan_deps.py、.workbuddy/memory/MEMORY.md。
+3. 审计前必读：docs/backlog.json（执行清单）、docs/更改日志.md、docs/契约总表.md、tests/unit、tools/desktop_studio/scan_deps.py、.workbuddy/memory/MEMORY.md。
 4. 逐条按 §5 格式记录发现并定三色（🔴红=迫在眉睫 / 🔵蓝=中规中矩 / 🟡黄=影响小）。
 5. 归类：用 tools/audit_to_backlog.py --file findings.json 把待办项写入 docs/backlog.json 对应模块（匹配不到落 audit 模块），再跑 tools/gen_backlog.py 重生成文档，change_log.py add 留痕。
 6. 主权铁律：只做只读审查 + 写回 docs/backlog.json 平台数据；要改游戏代码须 handoff 派单给对应窗口（不得越权），改完双闸门全绿才提交。

@@ -146,6 +146,33 @@
           "source": "派单 fdfcce7396ed（审计→UI）",
           "detail": "列表频繁重建子节点、悬停动效每次重新解析令牌，存在可观测的性能浪费。",
           "suggestion": "对象池复用列表项；令牌解析结果缓存复用。"
+        },
+        {
+          "title": "战斗开始残留 debug print 输出",
+          "type": "优化建议",
+          "status": "open",
+          "placeholder": false,
+          "source": "services/combat/combat_service.gd:93",
+          "detail": "combat_service.gd 战斗开始时 print(\"[Combat] 战斗开始...\") 残留调试输出，运行时向控制台刷噪声，属代码垃圾/坏味道；应改用 core/utils/game_logger.gd 或移除。",
+          "suggestion": "将 print 改为 GameLogger 调用或删除；若需战斗开始日志，统一走 game_logger 通道。"
+        },
+        {
+          "title": "部分纹理 compress/mode=0 未做 GPU 压缩",
+          "type": "优化建议",
+          "status": "open",
+          "placeholder": false,
+          "source": "resources/icons/status/zhuoshao.png.import:18（compress/mode=0）；批量见 resources/icons/*、enemies/*、menu/* 多处",
+          "detail": "大量图标/状态/敌人/菜单纹理 .import 中 compress/mode=0（Lossless，未 GPU 压缩），移动端/显存敏感；项目纹理压缩铁律要求 mode=2（Compress/VRAM）。",
+          "suggestion": "跑 tools/desktop_studio/compress_textures.py 批量将 compress/mode=0→2（GPU 压缩），降显存与加载开销；压缩前先备份 .import 或用 git 可回退。"
+        },
+        {
+          "title": "ConfigManager 配置校验错误走 print 而非 game_logger",
+          "type": "优化建议",
+          "status": "open",
+          "placeholder": false,
+          "source": "autoload/ConfigManager.gd:507,509",
+          "detail": "ConfigManager 配置校验发现问题时用 print 输出，与项目统一日志通道 core/utils/game_logger.gd 不一致，日志分散、难检索。",
+          "suggestion": "将配置校验错误输出改为 GameLogger.error/warn，统一日志通道。"
         }
       ]
     },
