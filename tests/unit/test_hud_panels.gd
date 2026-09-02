@@ -184,3 +184,61 @@ func test_quest_track_refreshes_on_signal() -> void:
 		EventBus.notify_quest_track_changed.disconnect(p._refresh)
 	p.free()
 	qs.reset()
+
+## 全生命周期自验：用真实 QuestService API（accept/turn_in/reset）+ 真实进度信号
+## 核对 HUD 任务追踪实时刷新是否完整（接取→出现、进度→数字更新、交付→消失、重置→清空）。
+## 直接覆盖「刷新不全」这一隐性隐患：既有 test_quest_track_refreshes_on_signal 只测了手动注入/擦除 + emit，
+## 从未走真实的 accept/turn_in/reset 发射链，也未验进度数字的实时刷新。
+func test_quest_track_full_lifecycle_refresh() -> void:
+	var qs = GameManager.quest_service
+	if qs == null:
+		expect(false, "GameManager.quest_service 未初始化")
+		return
+	if not ConfigManager.has_quest("q_bandit_001") or not ConfigManager.has_quest("demo_quest"):
+		expect(false, "测试依赖的 quest 配置（q_bandit_001 / demo_quest）缺失")
+		return
+	qs.reset()
+	var p := QuestTrackPanelScene.instantiate()
+	p._ready()   # 首次 _refresh → 空列表
+	expect(_qt_shows(p, "（暂无追踪任务）"), "重置后 HUD 应显示空态文案")
+
+	# 1) 接取 → 信号发射 → 面板实时出现该任务（验证 accept 的 emit 链路，非手动注入）
+	qs.accept("q_bandit_001")
+	expect(_qt_shows(p, "清剿山贼"), "accept 后 HUD 应实时显示「清剿山贼」")
+	qs.accept("demo_quest")
+	expect(_qt_shows(p, "失踪的玉佩"), "再 accept 后 HUD 应实时显示「失踪的玉佩」（2 条都在）")
+
+	# 2) 目标进度推进（真实 quest_objective_updated）→ 面板数字刷新为 1/1、目标描述在列
+	var st: QuestState = qs.active_quests.get("q_bandit_001", null)
+	expect(st != null, "q_bandit_001 应处于 active")
+	if st != null:
+		st.objectives_progress["defeat"] = 1
+		st.objectives_completed["defeat"] = true
+		EventBus.quest_objective_updated.emit("q_bandit_001", "defeat", 1)
+		expect(_qt_shows(p, "1/1"), "目标进度推进后 HUD 应刷新显示 1/1")
+		expect(_qt_shows(p, "击败山贼"), "HUD 应显示目标描述「击败山贼」")
+
+	# 3) 交付（真实 turn_in，状态置 COMPLETED）→ 信号发射 → 该任务从追踪消失，另一条仍在
+	st.status = QuestEnums.QuestStatus.COMPLETED
+	qs.turn_in("q_bandit_001")
+	expect(not _qt_shows(p, "清剿山贼"), "turn_in 后 HUD 不应再显示「清剿山贼」")
+	expect(_qt_shows(p, "失踪的玉佩"), "turn_in 后另一条任务仍应在追踪中")
+
+	# 4) 重置 → 清空回到空态
+	qs.reset()
+	expect(_qt_shows(p, "（暂无追踪任务）"), "reset 后 HUD 应回到空态")
+
+	# 清理：先断开订阅再释放，避免已释放节点仍挂在 EventBus 上
+	if EventBus.notify_quest_track_changed.is_connected(p._refresh):
+		EventBus.notify_quest_track_changed.disconnect(p._refresh)
+	if EventBus.quest_objective_updated.is_connected(p._refresh):
+		EventBus.quest_objective_updated.disconnect(p._refresh)
+	p.free()
+	qs.reset()
+
+# 辅助：面板条目中是否出现含 key 文本的标签（标题 / 目标行 / 空态文案）
+func _qt_shows(p: Control, key: String) -> bool:
+	for c in p._entries.get_children():
+		if c is Label and c.text.contains(key):
+			return true
+	return false

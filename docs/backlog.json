@@ -332,10 +332,10 @@
         {
           "title": "notify_quest_track_changed 刷新待核验",
           "type": "隐性BUG",
-          "status": "open",
+          "status": "resolved",
           "placeholder": false,
-          "source": "派单 08ec940f5674（UI→任务窗，仍 open）",
-          "detail": "EventBus 已新增 notify_quest_track_changed 且 HUD 任务追踪已订阅，但派单仍标记 open，需核验任务追踪刷新是否完整（可能存在刷新不全的隐性问题）。",
+          "source": "派单 08ec940f5674（UI→任务窗，已闭环）",
+          "detail": "EventBus 已新增 notify_quest_track_changed 且 HUD 任务追踪已订阅，accept/turn_in/reset 三处 emit 已落地。经全生命周期自验（新增 test_quest_track_full_lifecycle_refresh：真实 accept→出现、quest_objective_updated→数字刷新 1/1、turn_in→消失、reset→清空）确认刷新完整，无「刷新不全」隐性问题。派单协议层已闭环。",
           "suggestion": "构造任务接取/完成用例，核对 HUD 任务追踪实时刷新。"
         }
       ]
