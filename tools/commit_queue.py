@@ -32,6 +32,8 @@ QUEUE_DIR = os.path.join(REPO, ".workbuddy", "commits")
 PENDING = "pending_{}.jsonl"
 DONE = "done_{}.jsonl"
 TZ8 = timezone(timedelta(hours=8))
+PUSH_LOCK = os.path.join(QUEUE_DIR, "_push_lock")  # 并发上传互斥锁（不进版本库，见 .gitignore）
+PUSH_LOCK_TTL = timedelta(minutes=30)  # 锁超过 30 分钟视为失效，防卡死
 
 # 文件名非法字符（Windows）：保留 < > : " / \ | ? * 及控制符
 ILLEGAL = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
@@ -65,6 +67,72 @@ def git_state_clean() -> bool:
     if os.path.isdir(os.path.join(g, "rebase-merge")) or os.path.isdir(os.path.join(g, "rebase-apply")):
         return False
     return True
+
+
+# ---------------------------------------------------------------------------
+# 并发上传互斥（硬性条件 2026-09-02：检测到他人上传则本次跳过，等下次）
+# 用每次 flush 运行的唯一 session id 标识锁持有者，避免两个 PM flush 互判"自己人"漏拦。
+# ---------------------------------------------------------------------------
+def _read_push_lock():
+    if not os.path.exists(PUSH_LOCK):
+        return None
+    try:
+        with open(PUSH_LOCK, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {"session": "unknown", "window": "unknown", "ts": "1970-01-01T00:00:00+08:00"}
+
+
+def other_pusher_active(my_session: str):
+    """若检测到其他窗口/Agent 正在向仓库上传(push/commit)，返回其信息；否则 None。"""
+    data = _read_push_lock()
+    if not data:
+        return None
+    try:
+        ts = datetime.fromisoformat(data.get("ts", "1970-01-01T00:00:00+08:00"))
+        if datetime.now(TZ8) - ts > PUSH_LOCK_TTL:
+            return None  # 过期锁视为失效，避免卡死正常提交
+    except Exception:
+        return None
+    if data.get("session") == my_session:
+        return None  # 自己持有的锁不算
+    return data
+
+
+def acquire_push_lock(my_session: str, window: str):
+    os.makedirs(QUEUE_DIR, exist_ok=True)
+    with open(PUSH_LOCK, "w", encoding="utf-8") as f:
+        json.dump({"session": my_session, "window": window, "ts": now_iso()}, f, ensure_ascii=False)
+
+
+def release_push_lock(my_session: str):
+    try:
+        if os.path.exists(PUSH_LOCK):
+            # 只删自己的锁，避免误删并发新锁
+            try:
+                cur = json.load(open(PUSH_LOCK, encoding="utf-8"))
+            except Exception:
+                cur = {}
+            if cur.get("session") == my_session:
+                os.remove(PUSH_LOCK)
+    except Exception:
+        pass
+
+
+def remote_ahead(branch: str = "master") -> bool:
+    """git fetch 后，若 origin/<branch> 领先本地，说明有人已先推送 -> True。
+    拉取失败或无法判断时返回 False（不误杀，正常放行）。"""
+    fr = git("fetch", "origin", branch, "--quiet")
+    if fr.returncode != 0:
+        return False
+    local = git("rev-parse", branch)
+    remote = git("rev-parse", "origin/" + branch)
+    if local.returncode != 0 or remote.returncode != 0:
+        return False
+    if local.stdout.strip() == remote.stdout.strip():
+        return False
+    mb = git("merge-base", "--is-ancestor", branch, "origin/" + branch)
+    return mb.returncode == 0
 
 
 def git_changed_files():
@@ -136,61 +204,78 @@ def cmd_add(args):
 def cmd_flush(args):
     ensure_dir()
     dry = args.dry_run
+    my_session = uuid.uuid4().hex[:12]
     if not git_state_clean():
         print("[flush] 跳过：git 处于 MERGE/REBASE/CHERRY-PICK 状态，不安全")
         return 2
-    changed = git_changed_files()
-    pending_files = sorted(
-        f for f in os.listdir(QUEUE_DIR)
-        if f.startswith("pending_") and f.endswith(".jsonl")
-    )
-    committed = skipped = errors = 0
-    for pf in pending_files:
-        window = pf[len("pending_"):-len(".jsonl")]
-        did = done_ids(window)
-        for ln in load_lines(os.path.join(QUEUE_DIR, pf)):
-            try:
-                rec = json.loads(ln)
-            except Exception:
-                continue
-            rid = rec.get("id")
-            if rid in did:
-                continue
-            files = rec.get("files", [])
-            real = [f for f in files if f in changed]
-            if dry:
-                tag = "将提交" if real else "无改动(将跳过)"
-                print(f"[dry-run] {rid} 窗口={window} {tag} ({len(real)}/{len(files)} 文件)")
-                for f in real:
-                    print(f"      {f}")
-                committed += 1 if real else 0
-                continue
-            if not real:
-                print(f"[skip] {rid} 窗口={window}: 所列文件均无改动，标记 no-op")
-                mark_done(window, rec, "no-op")
-                skipped += 1
-                continue
-            ar = subprocess.run(
-                ["git", "-c", "core.quotepath=false", "add", *real],
-                cwd=REPO, capture_output=True, text=True,
-            )
-            if ar.returncode != 0:
-                print(f"[ERROR] {rid} git add 失败: {ar.stderr.strip()}")
-                errors += 1
-                continue
-            cr = git("commit", "-m", rec["message"])
-            if cr.returncode != 0:
-                print(f"[ERROR] {rid} commit 失败: {cr.stderr.strip()}")
-                errors += 1
-                continue
-            first = cr.stdout.strip().splitlines()[0] if cr.stdout.strip() else ""
-            mark_done(window, rec, "committed")
-            committed += 1
-            print(f"[commit] {rid} 窗口={window} -> {first}")
-    if dry:
-        print(f"=== dry-run 完成: 将提交 {committed} 条 ===")
-    else:
-        print(f"=== flush 完成: 提交 {committed}, 跳过(无改动) {skipped}, 错误 {errors} ===")
+    # === 并发上传互斥（硬性条件 2026-09-02）===
+    if not dry:
+        blocker = other_pusher_active(my_session)
+        if blocker is not None:
+            print(f"[flush] 跳过：检测到其他窗口正在向仓库上传 "
+                  f"({blocker.get('window')} @ {blocker.get('ts')})，本次不提交，改到下次 flush。")
+            return 4
+        if remote_ahead("master"):
+            print(f"[flush] 跳过：远端 origin/master 领先本地（有人已先推送），"
+                  f"请先 pull/rebase，本次不提交，改到下次。")
+            return 5
+        acquire_push_lock(my_session, "PM")
+    try:
+        changed = git_changed_files()
+        pending_files = sorted(
+            f for f in os.listdir(QUEUE_DIR)
+            if f.startswith("pending_") and f.endswith(".jsonl")
+        )
+        committed = skipped = errors = 0
+        for pf in pending_files:
+            window = pf[len("pending_"):-len(".jsonl")]
+            did = done_ids(window)
+            for ln in load_lines(os.path.join(QUEUE_DIR, pf)):
+                try:
+                    rec = json.loads(ln)
+                except Exception:
+                    continue
+                rid = rec.get("id")
+                if rid in did:
+                    continue
+                files = rec.get("files", [])
+                real = [f for f in files if f in changed]
+                if dry:
+                    tag = "将提交" if real else "无改动(将跳过)"
+                    print(f"[dry-run] {rid} 窗口={window} {tag} ({len(real)}/{len(files)} 文件)")
+                    for f in real:
+                        print(f"      {f}")
+                    committed += 1 if real else 0
+                    continue
+                if not real:
+                    print(f"[skip] {rid} 窗口={window}: 所列文件均无改动，标记 no-op")
+                    mark_done(window, rec, "no-op")
+                    skipped += 1
+                    continue
+                ar = subprocess.run(
+                    ["git", "-c", "core.quotepath=false", "add", *real],
+                    cwd=REPO, capture_output=True, text=True,
+                )
+                if ar.returncode != 0:
+                    print(f"[ERROR] {rid} git add 失败: {ar.stderr.strip()}")
+                    errors += 1
+                    continue
+                cr = git("commit", "-m", rec["message"])
+                if cr.returncode != 0:
+                    print(f"[ERROR] {rid} commit 失败: {cr.stderr.strip()}")
+                    errors += 1
+                    continue
+                first = cr.stdout.strip().splitlines()[0] if cr.stdout.strip() else ""
+                mark_done(window, rec, "committed")
+                committed += 1
+                print(f"[commit] {rid} 窗口={window} -> {first}")
+        if dry:
+            print(f"=== dry-run 完成: 将提交 {committed} 条 ===")
+        else:
+            print(f"=== flush 完成: 提交 {committed}, 跳过(无改动) {skipped}, 错误 {errors} ===")
+    finally:
+        if not dry:
+            release_push_lock(my_session)
     return 0 if errors == 0 else 3
 
 
