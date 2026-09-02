@@ -21,13 +21,17 @@
   nav button{background:transparent;border:none;color:var(--muted);padding:10px 16px;
              cursor:pointer;font-size:14px;border-bottom:2px solid transparent;display:inline-flex;align-items:center;gap:4px}
   nav button.active{color:var(--txt);border-bottom-color:var(--accent)}
-  .nav-group{display:flex;gap:4px;align-items:center;padding:2px 6px;margin:0 4px;
-             border-left:2px solid var(--line);border-right:2px solid var(--line);border-radius:6px}
-  .nav-group .ng-label{color:var(--muted);font-size:11px;padding:0 6px;white-space:nowrap;user-select:none}
-  .ui-group{background:rgba(90,176,230,0.06);border-color:var(--accent2)}
-  .ui-group .ng-label{color:var(--accent2);font-weight:600}
-  nav button .ui-tag{font-size:10px;padding:1px 5px;border-radius:8px;background:var(--chip);color:var(--accent2);border:1px solid var(--line);line-height:1.2}
-  .ui-group button .ui-tag{background:rgba(90,176,230,0.15);color:var(--accent2);border-color:rgba(90,176,230,0.3)}
+  .nav-dropdown-wrap{position:relative;display:inline-flex;align-items:center}
+  .nav-root .caret{font-size:10px;transition:transform .15s;display:inline-block;margin-left:4px}
+  .nav-root.open .caret{transform:rotate(180deg)}
+  .nav-dropdown{position:absolute;top:calc(100% + 6px);left:0;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.35);display:none;min-width:180px;z-index:100;padding:6px 0}
+  .nav-dropdown.open{display:block}
+  .dd-group{padding:4px 0;border-bottom:1px solid var(--line)}
+  .dd-group:last-child{border-bottom:none}
+  .dd-group-title{color:var(--muted);font-size:11px;padding:4px 14px;text-transform:uppercase;letter-spacing:.5px}
+  .dd-item{display:block;width:100%;text-align:left;background:transparent;border:none;color:var(--txt);padding:8px 14px;cursor:pointer;font-size:13px}
+  .dd-item:hover{background:var(--panel2)}
+  .dd-item.active{background:rgba(90,176,230,.12);color:var(--accent2);border-left:3px solid var(--accent2)}
   main{padding:16px 20px;max-width:1100px;margin:0 auto}
   .tab{display:none}
   .tab.active{display:block}
@@ -80,6 +84,7 @@
     background:var(--panel);color:var(--txt);cursor:pointer;line-height:1.6;transition:.12s;user-select:none}
   .exp-facets .fchip:hover{border-color:var(--accent2);color:var(--accent2)}
   .exp-facets .fchip.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .muted{color:var(--muted);opacity:.85}
   .exp-facets .fclear{margin-left:6px;padding:2px 10px;border:1px solid var(--bad);border-radius:12px;
     background:transparent;color:var(--bad);cursor:pointer;font-size:12px}
   .exp-toggle{color:var(--muted);font-size:12px;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;cursor:pointer}
@@ -108,12 +113,20 @@
   <button data-tab="dialog">剧情对话</button>
   <button data-tab="cel">欢庆模块</button>
   <button data-tab="battle">战棋布局</button>
-  <div class="nav-group ui-group" title="UI 模块：登录/预加载界面、贴图、皮肤配色与特效">
-    <span class="ng-label">UI 模块</span>
-    <button data-tab="login">登录界面 <span class="ui-tag">界面</span></button>
-    <button data-tab="loading">预加载界面 <span class="ui-tag">界面</span></button>
-    <button data-tab="uiart">UI 贴图 <span class="ui-tag">贴图</span></button>
-    <button data-tab="uiskin">🎨 UI 皮肤定制 <span class="ui-tag">皮肤</span></button>
+  <div class="nav-dropdown-wrap">
+    <button class="nav-root" data-uiroot="ui">UI 模块 <span class="caret">⬇️</span></button>
+    <div class="nav-dropdown" id="uiMenu">
+      <div class="dd-group">
+        <div class="dd-group-title">界面屏</div>
+        <button class="dd-item" data-tab="login">登录界面</button>
+        <button class="dd-item" data-tab="loading">预加载界面</button>
+      </div>
+      <div class="dd-group">
+        <div class="dd-group-title">UI 子功能</div>
+        <button class="dd-item" data-tab="uiart">UI 贴图</button>
+        <button class="dd-item" data-tab="uiskin">🎨 UI 皮肤定制</button>
+      </div>
+    </div>
   </div>
   <button data-tab="trash">回收站</button>
   <button data-tab="settings">设置</button>
@@ -122,6 +135,7 @@
   <button data-tab="startup">🤝 协同启动卡</button>
   <button data-tab="exp">📚 经验库</button>
   <button data-tab="gate">🔧 双闸门</button>
+  <button data-tab="orchestrate">🧭 任务总控</button>
 </nav>
 <div class="banner">
   ⚠️ <b>改动生效说明：</b>本工具编辑的是项目的<b>源码数据目录</b>（如 <code>data/configs/ui/</code>）。
@@ -685,6 +699,19 @@
   </div>
 </section>
 
+<section class="tab" id="tab-orchestrate">
+  <div class="layout">
+    <div class="editor" style="flex:1">
+      <div class="hint">🧭 任务总控（L3 · 任务驱动）：只说「要做什么」，系统自动识别模块/角色并载回相关经验（知识路由），一键跑双闸门门禁、一键登记变更。人不再挑 Prompt——角色 Prompt 降级为「可被总控调用的能力模块」。</div>
+      <div class="row" style="margin:10px 0">
+        <input id="orcTask" placeholder="例如：增加中毒状态 / 修复背包拖拽错位 / 婚礼后回城天数不推进" style="flex:1">
+        <button id="orcRunBtn" style="background:var(--accent);color:#fff;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;margin-left:8px" onclick="orcRun()">🔍 分析任务</button>
+      </div>
+      <div id="orcView" style="margin-top:8px;max-height:64vh;overflow:auto;line-height:1.8"></div>
+    </div>
+  </div>
+</section>
+
 <script>
 const A = (m,p,b)=>fetch(p,{method:m,headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined}).then(r=>r.json());
 function show(id,msg,ok){const e=document.getElementById(id);e.textContent=msg;e.className='status '+(ok?'ok':'bad');}
@@ -771,11 +798,27 @@ async function thReset(){
 window._npcCache=[]; window._prevId=''; window._loaded=null; window._lastRename=null;
 
 // tabs
-document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{
+function toggleUiMenu(force){
+  const root=document.querySelector('[data-uiroot="ui"]');
+  const menu=document.getElementById('uiMenu');
+  if(!root||!menu) return;
+  const open=force===undefined?!root.classList.contains('open'):!!force;
+  root.classList.toggle('open',open);
+  menu.classList.toggle('open',open);
+}
+function closeUiMenu(){ toggleUiMenu(false); }
+
+document.querySelectorAll('#nav button').forEach(b=>b.onclick=(e)=>{
+  if(b.dataset.uiroot){ toggleUiMenu(); e.stopPropagation(); return; }
+  if(!b.dataset.tab) return;
   document.querySelectorAll('#nav button').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.dd-item').forEach(x=>x.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
   b.classList.add('active');
+  const uiRoot=document.querySelector('[data-uiroot="ui"]');
+  if(uiRoot && b.closest('#uiMenu')) uiRoot.classList.add('active');
   document.getElementById('tab-'+b.dataset.tab).classList.add('active');
+  closeUiMenu();
   if(b.dataset.tab==='npc')npcLoad();
   if(b.dataset.tab==='dialog')dlgLoad();
   if(b.dataset.tab==='cel')celLoad();
@@ -790,6 +833,11 @@ document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{
   if(b.dataset.tab==='uiskin')uiSkinLoad();
   if(b.dataset.tab==='exp')expLoad();
   if(b.dataset.tab==='gate')gateLoad();
+  if(b.dataset.tab==='orchestrate')orcLoad();
+});
+document.addEventListener('click',e=>{
+  const wrap=document.querySelector('.nav-dropdown-wrap');
+  if(wrap && !wrap.contains(e.target)) closeUiMenu();
 });
 
 // ===================== UI 贴图（贴图直写 .tscn；位置/大小交给 Godot 拖拽） =====================
@@ -2361,6 +2409,69 @@ async function gateRun(){
   v.innerHTML=h;
 }
 async function gateLoad(){ if(!_gateAuto){ _gateAuto=true; gateRun(); } }
+
+// ===================== L3 任务总控（任务驱动：知识路由 + 双闸门 + 变更闭环） =====================
+let _orcAuto=false, _orcRelated=[];
+async function orcRun(){
+  const task=document.getElementById('orcTask').value.trim();
+  const v=document.getElementById('orcView');
+  if(!task){ v.innerHTML='<div class="status bad">请先填写任务描述</div>'; return; }
+  v.innerHTML='<div class="status">正在做知识路由（匹配经验库分面）…</div>';
+  let d;
+  try{ d=await A('GET','/api/orchestrate?task='+encodeURIComponent(task)); }
+  catch(e){ v.innerHTML='<div class="status bad">请求失败：'+blEsc(e)+'</div>'; return; }
+  if(!d || !d.ok){ v.innerHTML='<div class="status bad">'+(d?blEsc(d.error):'无数据')+'</div>'; return; }
+  _orcRelated=d.related||[];
+  let h='<div style="margin:6px 0">';
+  h+='<div><b>识别角色：</b>'+(d.matched_roles.length?d.matched_roles.map(r=>'<span class="fchip">'+blEsc(r)+'</span>').join(' '):'<span class="muted">（未命中，任务词可更具体）</span>')+'</div>';
+  h+='<div style="margin-top:4px"><b>识别模块：</b>'+(d.matched_modules.length?d.matched_modules.map(m=>'<span class="fchip">'+blEsc(m)+'</span>').join(' '):'<span class="muted">（未命中）</span>')+'</div>';
+  if(d.matched_bugs.length) h+='<div style="margin-top:4px"><b>命中 BUG：</b>'+d.matched_bugs.map(b=>'<span class="fchip bad">'+blEsc(b)+'</span>').join(' ')+'</div>';
+  h+='</div>';
+  h+='<div style="margin:10px 0 4px"><b>相关经验（'+_orcRelated.length+' 篇，点开可读全文）：</b></div>';
+  h+='<div id="orcList">'+(_orcRelated.map((r,i)=>'<div class="item" onclick="orcOpen('+i+')">📄 '+blEsc(r.title)+(r.roles&&r.roles.length?' <span class="mini">'+r.roles.join('/')+'</span>':'')+(r.modules&&r.modules.length?' <span class="mini">'+r.modules.join('/')+'</span>':'')+'</div>').join('')||'<div class="item">无匹配</div>')+'</div>';
+  h+='<div class="row" style="margin-top:14px;border-top:1px solid var(--line);padding-top:10px">';
+  h+='<button onclick="orcGate()" style="background:var(--accent);color:#fff;border:none;padding:8px 14px;border-radius:6px;cursor:pointer">🔧 跑双闸门门禁</button>';
+  h+='<button onclick="orcShowChangelog()" style="margin-left:8px;border:1px solid var(--line);background:transparent;color:var(--txt);padding:8px 14px;border-radius:6px;cursor:pointer">📝 登记变更</button>';
+  h+='</div><div id="orcGateView" style="margin-top:8px"></div>';
+  h+='<div id="orcClView" style="margin-top:8px;display:none">'+_orcChangelogForm()+'</div>';
+  v.innerHTML=h;
+}
+async function orcOpen(i){
+  const r=_orcRelated[i]; if(!r) return;
+  const v=document.getElementById('orcView');
+  const d=await A('GET','/api/experience/doc?path='+encodeURIComponent(r.path));
+  if(d && d.ok){ v.innerHTML='<div class="refbox" style="margin-bottom:8px"><b>'+blEsc(r.title)+'</b> '+(r.roles||[]).map(x=>'<span class="mini">'+blEsc(x)+'</span>').join(' ')+(r.bugs||[]).map(x=>'<span class="mini bad">'+blEsc(x)+'</span>').join(' ')+'</div>'+expMd(d.text); }
+  else { v.innerHTML='<div class="status bad">读取失败：'+(d&&d.error||'未知')+'</div>'; }
+}
+async function orcGate(){
+  const btn=document.getElementById('orcGateView'); btn.innerHTML='<div class="status">调起 Godot headless 验证中…</div>';
+  const d=await A('GET','/api/gate/run');
+  if(!d||!d.ok){ btn.innerHTML='<div class="status bad">无法运行：'+(d&&d.error||'')+'</div>'; return; }
+  const ok=d.green;
+  btn.innerHTML='<div class="status '+(ok?'ok':'bad')+'">'+(ok?'✅ 双闸门全绿（可提交）':'🔴 红门禁（禁止提交）：GATE1 错误 '+d.gate1.errors+' / GATE2 失败 '+d.gate2.failed+' / ✗ '+d.gate2.xfail)+'</div>';
+}
+function _orcChangelogForm(){
+  return '<div style="margin-top:8px"><div class="row" style="margin:6px 0"><input id="orcClModule" placeholder="模块（必填，如 CombatScene）" style="flex:1"></div>'
+    +'<div class="row" style="margin:6px 0"><input id="orcClScope" placeholder="改动范围（如 scenes/gameplay/battle）" style="flex:1"></div>'
+    +'<div class="row" style="margin:6px 0"><input id="orcClWhat" placeholder="改了什么（必填）" style="flex:1"></div>'
+    +'<div class="row" style="margin:6px 0"><input id="orcClImpact" placeholder="影响/风险" style="flex:1"></div>'
+    +'<div class="row" style="margin:6px 0"><input id="orcClRef" placeholder="关联（BUG-xx / 派单 / commit）" style="flex:1"></div>'
+    +'<div class="row" style="margin:6px 0"><input id="orcClCommit" placeholder="commit（可选，提交后补）" style="flex:1"></div>'
+    +'<button onclick="orcChangelog()" style="background:var(--accent);color:#fff;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;margin-top:4px">✅ 登记到更改日志</button>'
+    +' <span id="orcClMsg" class="status" style="margin-left:8px"></span></div>';
+}
+function orcShowChangelog(){ const e=document.getElementById('orcClView'); e.style.display = e.style.display==='none'?'block':'none'; }
+async function orcChangelog(){
+  const module=document.getElementById('orcClModule').value.trim();
+  const what=document.getElementById('orcClWhat').value.trim();
+  if(!module||!what){ show('orcClMsg','module 与 what 必填',false); return; }
+  const d=await A('POST','/api/changelog',{module,scope:document.getElementById('orcClScope').value.trim(),
+    what,impact:document.getElementById('orcClImpact').value.trim(),ref:document.getElementById('orcClRef').value.trim(),
+    commit:document.getElementById('orcClCommit').value.trim()});
+  if(d&&d.ok){ show('orcClMsg','✅ 已登记',true); }
+  else { show('orcClMsg','失败：'+(d&&d.error||''),false); }
+}
+async function orcLoad(){ if(!_orcAuto){ _orcAuto=true; } }
 
 stat();npcLoad();loadingLoad();backlogLoad();loadStartupCard();uiSkinLoad();
 </script>

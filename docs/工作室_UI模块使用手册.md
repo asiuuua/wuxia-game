@@ -7,18 +7,19 @@
 
 ## 一、UI 模块在工作室里长什么样
 
-打开桌面版工作室，顶部导航栏里有一个蓝色高亮的分组：
+打开桌面版工作室，顶部导航栏里有一个 **「UI 模块 ⬇️」** 按钮。点它，会展开一个下拉菜单：
 
 ```
-UI 模块  [登录界面]  [预加载界面]  [UI 贴图]  [UI 皮肤定制]
+UI 模块 ⬇️
+  ├─ 界面屏
+  │   ├ 登录界面      ← 改登录/主菜单的图、字、布局、背景变体
+  │   └ 预加载界面    ← 改加载界面的进度条、提示文字、版本号位置
+  └─ UI 子功能
+      ├ UI 贴图       ← 给具体界面（背包、技能、商店等）换背景图
+      └ UI 皮肤定制   ← 改全局弹窗配色、确认框大小、主菜单水墨特效
 ```
 
-| 标签 | 标签颜色含义 | 一句话说明 |
-|---|---|---|
-| 登录界面 <span style="background:#3a4066;color:#5ab0e6;padding:2px 6px;border-radius:8px;font-size:12px">界面</span> | 蓝色 | 改登录/主菜单的图、字、布局、背景变体 |
-| 预加载界面 <span style="background:#3a4066;color:#5ab0e6;padding:2px 6px;border-radius:8px;font-size:12px">界面</span> | 蓝色 | 改加载界面的进度条、提示文字、版本号位置 |
-| UI 贴图 <span style="background:#3a4066;color:#5ab0e6;padding:2px 6px;border-radius:8px;font-size:12px">贴图</span> | 蓝色 | 给具体界面（背包、技能、商店等）换背景图 |
-| UI 皮肤定制 <span style="background:#3a4066;color:#5ab0e6;padding:2px 6px;border-radius:8px;font-size:12px">皮肤</span> | 蓝色 | 改全局弹窗配色、确认框大小、主菜单水墨特效 |
+这样归类的好处是：先按「属于哪个模块」找到入口，再进页面看功能色标，两步都不会迷路。
 
 > 💡 所有改动都只写 **数据文件**（JSON / 图片），游戏代码只读不写，所以不会把程序改坏。
 
