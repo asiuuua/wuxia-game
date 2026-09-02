@@ -25,7 +25,17 @@ import os
 import sys
 import argparse
 
-REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+def _to_win(p: str) -> str:
+    # Git Bash 等环境会把 /d/xxx 形式路径传给 Windows Python，后者不认盘符前缀；
+    # 归一化为 Windows 风格（D:/xxx）。pre-commit 钩子传来的 --files 路径、REPO 均可能
+    # 是 /d/... 形式，若不转换则 os.path.isfile 全返回 False → 钩子静默跳过扫描（守卫失效）。
+    if len(p) > 2 and p[0] == "/" and p[2] == "/":
+        return p[1].upper() + ":/" + p[3:]
+    return p
+
+
+REPO = os.path.normpath(os.path.dirname(os.path.dirname(os.path.abspath(_to_win(__file__)))))
 SCENES_DIR = os.path.join(REPO, "scenes")
 
 # 视为"可点击"的节点类型（按钮类）
@@ -159,6 +169,7 @@ def main():
     if a.files is not None:
         # 仅扫描显式传入的文件（路径需存在；已删除的文件跳过）
         for fp in a.files:
+            fp = _to_win(fp)
             if fp.endswith(".tscn") and os.path.isfile(fp):
                 findings += scan_file(fp, a.tier)
     else:
