@@ -438,11 +438,14 @@
         {
           "title": "确定性种子注入固化随机测试",
           "type": "优化建议",
-          "status": "open",
+          "status": "done",
           "placeholder": false,
           "source": "测试稳定性",
           "detail": "部分战斗测试曾因时间戳种子概率性失败（已修一处），仍有随机性隐患。",
-          "suggestion": "测试内统一注入固定种子（get_core().rng.configure(SEED)）。"
+          "suggestion": "测试内统一注入固定种子（get_core().rng.configure(SEED)）。",
+          "resolvedBy": "AI-战斗",
+          "resolvedAt": "2026-09-02",
+          "resolution": "战斗窗核实：随机隐患已系统性解决——①唯一真flaky的 test_elite_battle_shows_status_mechanics 已由commit a8ae77f(战斗窗切片B收口，UI模块替其收口，派单e769b689077d)用 rng.configure(20260829) 固定；②其余战斗测试(test_combat_smoke归零+固定seed、test_battle_roster/test_party/test_battle_status_content/test_enemy_target_party 均归零 dodge/crit、test_tactical_loop 归零+注释约定) 要么固定种子要么断言不依赖随机；③test_swarm/test_battle_turn_order 断言纯结构性(数量/唯一性/速度序)与RNG无关。战斗窗实测连跑run_all 2遍共114套件次、0失败无flaky。零代码改动，判定已解决。"
         }
       ]
     },
