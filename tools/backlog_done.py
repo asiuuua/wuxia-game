@@ -11,7 +11,8 @@
 匹配规则：
   --module 为模块 id（见 backlog.json 的 modules[].id）；
   --title 为条目标题的子串（同模块内唯一匹配），精确优先、模糊次之。
-匹配成功后写入：status=done, resolvedBy, resolvedAt(今天), commit, resolution(=note)。
+匹配成功后写入：status=done, resolvedBy, resolvedAt(完整时间戳 YYYY-MM-DD HH:MM:SS), commit, resolution(=note)。
+--commit 缺省时自动取当前 git HEAD 短哈希（并提示应补真实修复提交），保证「已完成执行」始终带可追溯的日志定位。
 随后自动重跑 gen_backlog.py 重新生成 docs/待办清单.md 与 docs/backlog_dashboard.html。
 纯标准库。
 """
@@ -95,7 +96,16 @@ def main():
 
     it["status"] = "done"
     it["resolvedBy"] = by
-    it["resolvedAt"] = datetime.date.today().isoformat()
+    it["resolvedAt"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    if not commit:
+        # 未指定则尽量取当前 HEAD，但仍提醒补真实修复提交
+        try:
+            commit = subprocess.check_output(
+                ["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, stderr=subprocess.DEVNULL
+            ).decode().strip()
+            print("⚠ 未指定 --commit，已默认取当前 HEAD（%s）。若该修复尚未独立提交，请补 --commit <真实修复哈希> 以利追溯。" % commit)
+        except Exception:
+            commit = ""
     if commit:
         it["commit"] = commit
     if note:
@@ -104,7 +114,12 @@ def main():
     with open(JSON_PATH, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
         f.write("\n")
-    print("已标记完成：[%s] %s  → resolvedBy=%s commit=%s" % (mod["id"], it["title"], by, commit))
+    print("已标记完成：[%s] %s  → resolvedBy=%s 时间=%s commit=%s"
+          % (mod["id"], it["title"], by, it["resolvedAt"], commit))
+    if commit:
+        print("   追溯改动：git show %s" % commit)
+        print("   一键复原：git revert %s   （出问题回退用）" % commit)
+        print("   变更日志：docs/更改日志.md 中搜 %s" % commit)
 
     # 重新生成看板
     rc = subprocess.call([sys.executable, GEN])

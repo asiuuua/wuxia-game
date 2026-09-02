@@ -1886,9 +1886,18 @@ async function backlogLoad(){
     if(!isDone) h+='<span class="bl-badge" style="color:'+col+';border-color:'+col+'55;background:'+col+'1a">'+blEsc(it.type)+'</span>';
     h+=st+ph+'</div>';
     if(isDone){
-      h+='<div class="bl-kv"><span class="bl-k">解决方：</span>'+blEsc(it.resolvedBy||'（未署名）')+'</div>';
-      h+='<div class="bl-kv"><span class="bl-k">解决日期：</span>'+blEsc(it.resolvedAt||'（未记录）')+'</div>';
-      if(it.commit) h+='<div class="bl-kv"><span class="bl-k">提交：</span>'+blEsc(it.commit)+'</div>';
+      const dt=(it.resolvedAt||'').split(' ');
+      const d=dt[0]||'（未记录）'; const t=dt[1]||'（未记录）';
+      h+='<div class="bl-kv"><span class="bl-k">完成人：</span>'+blEsc(it.resolvedBy||'（未署名）')+'</div>';
+      h+='<div class="bl-kv"><span class="bl-k">完成日期：</span>'+blEsc(d)+'</div>';
+      h+='<div class="bl-kv"><span class="bl-k">完成时间：</span>'+blEsc(t)+'</div>';
+      if(it.commit){
+        h+='<div class="bl-kv"><span class="bl-k">日志定位：</span>commit '+blEsc(it.commit)+'</div>';
+        h+='<div class="bl-trace"><div class="bl-trace-h">🔗 追溯 / 复原指引</div>'
+          +'<code>git show '+blEsc(it.commit)+'</code><span class="bl-trace-note">看具体改了什么</span>'
+          +'<code>git revert '+blEsc(it.commit)+'</code><span class="bl-trace-note">一键回退（出问题用）</span>'
+          +'<div class="bl-trace-log">变更日志：docs/更改日志.md 中搜 '+blEsc(it.commit)+'</div></div>';
+      }
       if(it.resolution) h+='<div class="bl-sug">解决说明：'+blEsc(it.resolution)+'</div>';
     } else {
       h+='<div class="bl-kv"><span class="bl-k">来源：</span>'+blEsc(it.source||'')+'</div>';
@@ -1912,6 +1921,11 @@ async function backlogLoad(){
       +'.bl-pill.blocked{color:#f87171;border-color:#f8717155}.bl-pill.done{color:#34d399;border-color:#34d39955}'
       +'.bl-kv{margin-top:6px;font-size:13px;color:#c7cbe0}.bl-k{color:#9aa0b8}'
       +'.bl-sug{margin-top:6px;font-size:13px;background:#1b1f33;border-left:3px solid #7c9cff;padding:6px 10px;border-radius:4px}'
+      +'.bl-trace{margin-top:8px;background:#0e1714;border:1px solid #1f3a2c;border-radius:8px;padding:8px 10px;font-size:12px}'
+      +'.bl-trace-h{color:#34d399;font-weight:700;margin-bottom:4px}'
+      +'.bl-trace code{display:inline-block;background:#101b16;border:1px solid #2a2f47;border-radius:4px;padding:2px 6px;margin:2px 8px 2px 0;font-family:ui-monospace,Consolas,monospace;color:#9fe6c4}'
+      +'.bl-trace-note{color:#9aa0b8;font-size:11px}'
+      +'.bl-trace-log{margin-top:4px;color:#9aa0b8;font-size:11px}'
       +'.bl-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}.bl-chip{background:#15182a;border:1px solid #2a2f47;color:#e6e8f0;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:13px}'
       +'.bl-chip.active{background:#7c9cff22;border-color:#7c9cff;color:#fff}'
       +'.bl-desc{color:#9aa0b8;font-size:13px;margin:0 0 12px}'

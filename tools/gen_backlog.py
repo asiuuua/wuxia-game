@@ -165,13 +165,29 @@ def _item_md(it):
     return "\n".join(L)
 
 
+def _split_dt(s):
+    """resolvedAt 可能是 'YYYY-MM-DD' 或 'YYYY-MM-DD HH:MM:SS'，拆成 (日期, 时间)。"""
+    if not s:
+        return "（未记录）", "（未记录）"
+    if " " in s:
+        d, t = s.split(" ", 1)
+        return d, t
+    return s, "（未记录）"
+
+
 def _done_md(it):
     L = []
     L.append("- ✅ **%s**" % it["title"])
-    L.append("  - 解决方：%s" % it.get("resolvedBy", "（未署名）"))
-    L.append("  - 解决日期：%s" % it.get("resolvedAt", "（未记录）"))
-    if it.get("commit"):
-        L.append("  - 提交：%s" % it["commit"])
+    L.append("  - 完成人（解决方）：%s" % it.get("resolvedBy", "（未署名）"))
+    d, t = _split_dt(it.get("resolvedAt"))
+    L.append("  - 完成日期：%s" % d)
+    L.append("  - 完成时间：%s" % t)
+    c = it.get("commit", "")
+    if c:
+        L.append("  - 日志定位：commit `%s`" % c)
+        L.append("    - 追溯改动：`git show %s`（看具体改了什么）" % c)
+        L.append("    - 一键复原：`git revert %s`（出问题回退用）" % c)
+        L.append("    - 变更日志：`docs/更改日志.md` 中搜 `%s`" % c)
     if it.get("resolution"):
         L.append("  - 解决说明：%s" % it["resolution"])
     return "\n".join(L)
@@ -222,6 +238,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   .plain .pl{font-size:13px;margin:4px 0;display:flex;gap:6px}
   .plain .pl b{color:var(--accent);flex:0 0 96px;font-weight:600}
   .plain .pl span{color:var(--txt)}
+  .trace{margin-top:8px;background:#0e1714;border:1px solid #1f3a2c;border-radius:8px;padding:8px 10px;font-size:12px}
+  .trace-h{color:#34d399;font-weight:700;margin-bottom:4px}
+  .trace code{display:inline-block;background:#101b16;border:1px solid #2a2f47;border-radius:4px;padding:2px 6px;margin:2px 8px 2px 0;font-family:ui-monospace,Consolas,monospace;color:#9fe6c4}
+  .trace-note{color:var(--muted);font-size:11px}
+  .trace-log{margin-top:4px;color:var(--muted);font-size:11px}
   .empty{color:var(--muted);padding:30px;text-align:center}
 </style>
 </head>
@@ -332,9 +353,18 @@ function cardHtml(it, isDone){
   if(!isDone) h += '<span class="badge" style="color:'+col+';border-color:'+col+'55;background:'+col+'1a">'+esc(it.type)+'</span>';
   h += st + ph + '</div>';
   if(isDone){
-    h += '<div class="kv"><span class="k">解决方：</span>'+esc(it.resolvedBy||'（未署名）')+'</div>';
-    h += '<div class="kv"><span class="k">解决日期：</span>'+esc(it.resolvedAt||'（未记录）')+'</div>';
-    if(it.commit) h += '<div class="kv"><span class="k">提交：</span>'+esc(it.commit)+'</div>';
+    const dt=(it.resolvedAt||'').split(' ');
+    const d=dt[0]||'（未记录）'; const t=dt[1]||'（未记录）';
+    h += '<div class="kv"><span class="k">完成人：</span>'+esc(it.resolvedBy||'（未署名）')+'</div>';
+    h += '<div class="kv"><span class="k">完成日期：</span>'+esc(d)+'</div>';
+    h += '<div class="kv"><span class="k">完成时间：</span>'+esc(t)+'</div>';
+    if(it.commit){
+      h += '<div class="kv"><span class="k">日志定位：</span>commit '+esc(it.commit)+'</div>';
+      h += '<div class="trace"><div class="trace-h">🔗 追溯 / 复原指引</div>'
+        + '<code>git show '+esc(it.commit)+'</code><span class="trace-note">看具体改了什么</span>'
+        + '<code>git revert '+esc(it.commit)+'</code><span class="trace-note">一键回退（出问题用）</span>'
+        + '<div class="trace-log">变更日志：docs/更改日志.md 中搜 '+esc(it.commit)+'</div></div>';
+    }
     if(it.resolution) h += '<div class="sug">解决说明：'+esc(it.resolution)+'</div>';
   } else {
     h += '<div class="kv"><span class="k">来源：</span>'+esc(it.source||'')+'</div>';
