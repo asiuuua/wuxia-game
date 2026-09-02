@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/qianggong.png-05dae12bb0630549cc80efce7b873c8
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

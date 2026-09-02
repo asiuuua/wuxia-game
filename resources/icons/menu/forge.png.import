@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/forge.png-0ed64d3e33d6d4de8f4fa126b4f452cc.ct
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

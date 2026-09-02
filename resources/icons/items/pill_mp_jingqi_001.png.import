@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/pill_mp_jingqi_001.png-8d22b0d2a2de1149d43b3a
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

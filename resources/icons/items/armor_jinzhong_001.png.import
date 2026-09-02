@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/armor_jinzhong_001.png-87110f44e55e21c5e929a2
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

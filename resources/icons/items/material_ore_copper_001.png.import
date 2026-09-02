@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/material_ore_copper_001.png-a73558915429d27c6
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

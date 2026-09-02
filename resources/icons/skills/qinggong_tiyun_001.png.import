@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/qinggong_tiyun_001.png-374d90e7934f9b0c72b28d
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

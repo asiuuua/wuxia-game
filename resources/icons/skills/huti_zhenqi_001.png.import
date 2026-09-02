@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/huti_zhenqi_001.png-e555502df9f20c7a8737149a9
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

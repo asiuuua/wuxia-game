@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/sword_hanjian_001.png-b783815ebe01ef6a923f7bf
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

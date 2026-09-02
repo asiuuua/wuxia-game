@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/jixing.png-c415a13ec4ebba63f83340258c346133.c
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

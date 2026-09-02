@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/weapon_blade_steel_001.png-1b8af21fd3d1910d7e
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

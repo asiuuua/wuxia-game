@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/acc_ring_001.png-4bf1780c1186d66094a1ad8508a7
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

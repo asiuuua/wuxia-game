@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/demo_npc.png-dd26b5df5b970bcc95184650d401e59e
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

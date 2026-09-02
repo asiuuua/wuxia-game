@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/xinfa_ningshen_001.png-7497f0b42c504041365c20
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/weapon_chui_liuxing_001.png-add445d9136fabbd9
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

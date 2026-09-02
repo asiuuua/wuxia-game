@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/weapon_huan_shuang_001.png-922d14951c43cf2c0c
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

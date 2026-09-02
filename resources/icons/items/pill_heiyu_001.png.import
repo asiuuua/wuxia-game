@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/pill_heiyu_001.png-785c0c17db00135f469b4f3274
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

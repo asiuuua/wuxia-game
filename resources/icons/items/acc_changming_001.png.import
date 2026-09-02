@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/acc_changming_001.png-63e831c4c5562e18de59574
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

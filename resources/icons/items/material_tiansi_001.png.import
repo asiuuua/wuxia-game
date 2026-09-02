@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/material_tiansi_001.png-c54c33a8cafc5bab7c9cc
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

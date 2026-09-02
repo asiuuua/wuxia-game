@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/material_guducao_001.png-34b2f3e9a81d0040b06c
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

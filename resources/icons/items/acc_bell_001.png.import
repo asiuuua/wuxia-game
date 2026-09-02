@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/acc_bell_001.png-090c58e44181fd41fa4e443cc761
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

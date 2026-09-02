@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/npc_sect_elder.png-3a026015e4d28751d7c409f8cc
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/npc_merchant.png-0595a44b052e33f5e26c8cf530a5
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

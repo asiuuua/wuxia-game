@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/bandit_scout_001.png-ef8bf732ab1be302c67bf8a6
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

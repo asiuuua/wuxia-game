@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/material_xuantie_001.png-9e1aa7757333f87fce67
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

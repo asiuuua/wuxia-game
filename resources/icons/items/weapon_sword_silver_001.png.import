@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/weapon_sword_silver_001.png-3e2e7f7a8bf78d85a
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

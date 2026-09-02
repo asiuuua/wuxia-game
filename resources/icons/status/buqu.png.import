@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/buqu.png-36eeb69b28e8dc777f251133b5be3b2b.cte
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

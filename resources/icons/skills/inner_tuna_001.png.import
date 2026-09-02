@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/inner_tuna_001.png-b7404e51402fe77a5b86ba2a4a
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

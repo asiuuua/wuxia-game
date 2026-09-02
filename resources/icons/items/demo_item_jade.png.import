@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/demo_item_jade.png-f2cf4b170d584a9479eb288630
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

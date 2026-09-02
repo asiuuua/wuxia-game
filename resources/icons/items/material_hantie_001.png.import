@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/material_hantie_001.png-a2a577354cb5f9a4bbc05
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

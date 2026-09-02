@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/pill_heal_jinchan_001.png-b0f505f43707495a09e
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/pill_wubao_001.png-4e635587ccdb98aefd64c8163f
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

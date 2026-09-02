@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/armor_silk_001.png-8ffa08bc81d362b2bca57cceba
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

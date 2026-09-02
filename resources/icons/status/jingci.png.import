@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/jingci.png-65f650cd5b295e36f3852a580243f338.c
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

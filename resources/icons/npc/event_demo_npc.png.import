@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/event_demo_npc.png-09c0601a7e3d70efac251992a1
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

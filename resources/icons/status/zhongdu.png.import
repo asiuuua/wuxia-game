@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/zhongdu.png-cc2b6bf5613377ca2595308d0f2e3f47.
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

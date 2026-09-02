@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/buqu_yizhi_001.png-f90f85ff631acc0ffb64862d3a
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

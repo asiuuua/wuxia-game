@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/material_herb_001.png-6a229d9a946988c4a5a7f0f
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
