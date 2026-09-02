@@ -7,6 +7,10 @@ class_name Bootstrap
 
 const BOOTSTRAP_VERSION := "1.0.0"
 
+# 图标解析引擎（scenes/ui 层，UI 窗口主权）。本组合根在运行时经 EventBus 把它注入 UIManager，
+# 以依赖反转消除"基础层 UIManager 静态依赖 scenes/ui"的唯一真实架构违例（2026-09-02 治理）。
+const IconRegistry = preload("res://scenes/ui/icon_registry.gd")
+
 var _init_sequence: Array[Dictionary] = []
 var _current_step: int = 0
 var _is_bootstrapping: bool = false
@@ -17,6 +21,9 @@ func _ready() -> void:
 	GameLogger.setup()
 	# 先让场景树稳定一帧，确保 UIManager 的层级已就绪
 	await get_tree().process_frame
+	# 架构治理（2026-09-02）：UIManager 已 _ready 并连好 EventBus，此刻把图标解析器
+	# 经 EventBus 注入（依赖反转），此后 UIManager.get_icon 取真实图标而非占位兜底。
+	EventBus.icon_provider_registered.emit(Callable(IconRegistry, "get_icon"), Callable(IconRegistry, "has_icon"))
 	# 打开加载界面（覆盖层），进度由 bootstrap 信号驱动
 	UIManager.open_screen("LoadingScreen", UIManager.Layer.FULLSCREEN)
 	# 再等一帧，确保 LoadingScreen._ready 已连接 bootstrap 信号

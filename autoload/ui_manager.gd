@@ -28,8 +28,15 @@ enum Layer {
 
 const SCREENS_FILE := "res://data/configs/ui/screens.json"
 const UIPalette = preload("res://core/constants/ui_theme.gd")
+
 # 图标解析引擎（美术接入预留接口）：任何图标只经此取，禁在代码里写死 load(png)
-const IconRegistry = preload("res://scenes/ui/icon_registry.gd")
+# 2026-09-02 架构治理：IconRegistry 位于 scenes/ui 层（UI 窗口主权），基础层 UIManager
+# 不得静态 preload 它（否则构成"基础层反向依赖上层"的唯一真实架构违例）。
+# 改为依赖反转：UI 层在运行时经 EventBus.icon_provider_registered 把解析器注入本单例，
+# 此处只持有 Callable 槽位 + 本地占位兜底，绝不引用 scenes/ui 文件。
+var _icon_provider: Callable = Callable()        # IconRegistry.get_icon
+var _icon_has_provider: Callable = Callable()    # IconRegistry.has_icon
+var _icon_placeholder_cache: Texture2D = null    # 解析器未注入前的兜底占位（永不返回 null）
 
 var _layers: Dictionary = {}         # int(layer) -> CanvasLayer
 var _screen_paths: Dictionary = {}   # 界面名 -> 脚本路径（或 {path, cache} 对象）
@@ -48,6 +55,8 @@ func _ready() -> void:
 	EventBus.inventory_add_overflow.connect(_on_inventory_add_overflow)
 	EventBus.ui_action_requested.connect(_on_ui_action_requested)
 	EventBus.popup_close_requested.connect(_on_popup_close_requested)
+	# 架构治理：接收 UI 层经 EventBus 注入的图标解析器（依赖反转，消除基础层→上层违例）
+	EventBus.icon_provider_registered.connect(_on_icon_provider_registered)
 
 func _init_layers() -> void:
 	for layer_value in Layer.values():
@@ -95,12 +104,32 @@ func unmount_hud() -> void:
 
 ## 取图标纹理（美术接入预留接口）。id 形如 "skills/fire_sword"（不含扩展名）。
 ## 找不到返回占位图，绝不返回 null。其它窗口统一经此取图标，禁写死 load(png)。
+## 解析器由 UI 层经 EventBus 注入（_icon_provider）；未注入前回退本地占位，保证非 null。
 func get_icon(icon_id: String) -> Texture2D:
-	return IconRegistry.get_icon(icon_id)
+	if _icon_provider.is_valid():
+		return _icon_provider.call(icon_id) as Texture2D
+	return _icon_placeholder()
 
 ## 是否存在某图标文件（供 UI 判断是否绘制图标框）
 func has_icon(icon_id: String) -> bool:
-	return IconRegistry.has_icon(icon_id)
+	if _icon_has_provider.is_valid():
+		return bool(_icon_has_provider.call(icon_id))
+	return false
+
+## UI 层经 EventBus 注入图标解析器（依赖反转）
+func _on_icon_provider_registered(get_fn: Callable, has_fn: Callable) -> void:
+	if get_fn.is_valid():
+		_icon_provider = get_fn
+	if has_fn.is_valid():
+		_icon_has_provider = has_fn
+
+## 兜底占位图（解析器未注入时，保证 get_icon 永不返回 null，避免运行期 .texture=null 崩溃）
+func _icon_placeholder() -> Texture2D:
+	if _icon_placeholder_cache == null:
+		var ph := PlaceholderTexture2D.new()
+		ph.size = Vector2(64, 64)
+		_icon_placeholder_cache = ph
+	return _icon_placeholder_cache
 
 ## 安全区边距（安卓刘海/挖孔/圆角）：返回 Vector4(left, top, right, bottom)，单位像素。
 ## 桌面平台与无挖孔设备返回全 0，无副作用。

@@ -39,6 +39,9 @@ func test_result_is_cached() -> void:
 
 func test_uimanager_delegates_get_icon() -> void:
 	# 其它窗口统一走 UIManager.get_icon，验证委托有效且安全
+	# 2026-09-02 架构治理：UIManager 不再静态依赖 IconRegistry，解析器由 UI 层经 EventBus 注入。
+	# 此处模拟组合根 Bootstrap 的注入（直接调注入回调，不 emit 信号，避免污染单例/触发其它订阅方）。
+	UIManager._on_icon_provider_registered(Callable(IconRegistry, "get_icon"), Callable(IconRegistry, "has_icon"))
 	var tex := UIManager.get_icon("status/also_missing")
 	expect(tex != null, "UIManager.get_icon 缺图标也应返回非 null 占位图")
 	expect(UIManager.has_icon("_sample/sample_heart"), "UIManager.has_icon 应正确委托")

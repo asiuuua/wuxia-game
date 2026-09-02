@@ -179,6 +179,14 @@ signal ui_action_requested(action_id: String)                  # 菜单/按钮�
 @warning_ignore("unused_signal")
 signal popup_close_requested(popup: Control)                   # 弹窗关闭请求：PopupBase.request_close 发出，UIManager 统一收口（隐藏缓存/销毁），弹窗自身不销毁自己
 
+# === 图标解析（架构治理 · 依赖反转：UI 层经 EventBus 注入解析器到 UIManager） ===
+# 背景：IconRegistry 位于 scenes/ui 层（UI 窗口主权），基础层 autoload/ui_manager.gd 不得静态
+# 依赖它（否则构成"基础层反向依赖上层"的唯一真实架构违例）。故改为：UI 层在运行时把
+# IconRegistry.get_icon / has_icon 两个 Callable 经本信号注入 UIManager，UIManager 仅持槽位。
+# 谁产生谁 emit（组合根 Bootstrap._ready 在 UIManager 就绪后 emit），UIManager 接收，零静态耦合。
+@warning_ignore("unused_signal")
+signal icon_provider_registered(get_fn: Callable, has_fn: Callable)   # UI 层注入图标解析器（get_icon / has_icon）
+
 # === 世界环境（阶段A 基础设施） ===
 @warning_ignore("unused_signal")
 signal world_day_advanced(day: int)
