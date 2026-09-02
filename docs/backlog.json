@@ -150,11 +150,15 @@
         {
           "title": "战斗开始残留 debug print 输出",
           "type": "优化建议",
-          "status": "open",
+          "status": "done",
           "placeholder": false,
           "source": "services/combat/combat_service.gd:93",
           "detail": "combat_service.gd 战斗开始时 print(\"[Combat] 战斗开始...\") 残留调试输出，运行时向控制台刷噪声，属代码垃圾/坏味道；应改用 core/utils/game_logger.gd 或移除。",
-          "suggestion": "将 print 改为 GameLogger 调用或删除；若需战斗开始日志，统一走 game_logger 通道。"
+          "suggestion": "将 print 改为 GameLogger 调用或删除；若需战斗开始日志，统一走 game_logger 通道。",
+          "resolvedBy": "AI-战斗",
+          "resolvedAt": "2026-09-02",
+          "commit": "3afaa5d",
+          "resolution": "combat_service.gd:93 战斗开始 print 改走 GameLogger.info(\"Combat\", ...) 统一日志通道，内容保真(仍含战斗id/敌人数/模式)。双闸门全绿(GATE1零错; GATE2 57套件失败0)。"
         },
         {
           "title": "部分纹理 compress/mode=0 未做 GPU 压缩",
