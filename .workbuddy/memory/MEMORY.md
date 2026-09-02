@@ -36,9 +36,13 @@
 - 共享地基（冻结，只增不改）：EventBus.gd / ConfigManager.gd / core/enums/*_enums.gd / screens.json / strings.csv。改须写《变更通告》「共享地基增量」并打招呼。
 - UI 窗口：`scenes/ui/**` + `data/configs/ui/**` + `core/constants/ui_theme.gd` + `resources/themes/**` + `autoload/ui_manager.gd`。战斗/背包/结缘窗口各有主权，跨窗只派单不直改。
 
-## 多 AI 协同
-- git 提交权收口 UI 模块：精确 `git add <文件>`（禁 `-A`），提交 `[窗名]` 前缀。
+## 多 AI 协同（变更纪律 · 2026-09-02 立，必记）
+- **总文档**：`docs/多AI协同机制_SOP.md`；**skill**：`change-tracking`（每次改/提交/修 BUG 自动遵守）。
+- **铁律 1 留痕**：任何文件修改提交前 `python tools/change_log.py add --commit <sha> --module <顶层模块> --scope <含子路径> --what "..." --impact "..." --ref "..."`；共享地基/跨主权/大改动额外 `change_log.py notice` 生成 `docs/变更通告_YYYY-MM-DD_主题.md`。`docs/更改日志.md` 已从 git 历史回填（191 行），立即可查。
+- **铁律 2 调前先查**：接到任何 BUG，**先** `change_log.py query --module <模块>`（或 `--keyword <文件名>`）+ `git log -- <文件>` + `handoff.py dashboard`，确认不是别人刚改的回归再深入。命中则在 changelog「关联」注「回归自 `<commit>`」并 handoff issue 给责任窗口。禁"不查日志直接改"（真实教训：误删 town.json 当死数据，查日志秒定位其为战术底图几何依赖）。
+- **铁律 3 提交/push**：双闸门通过才 commit（禁`-A`、带`[模块]`前缀、窗口署名 `git config user.name "AI-<窗>"`）；无 BUG 的改动**必须 commit**留痕；push 由 PM/集成窗口整树双闸门全绿后统一推（单分支禁各窗盲目 push 互覆盖）。
 - 提交队列 `tools/commit_queue.py` + 隐患传递板 `tools/handoff.py`（open→claimed→done→followup→closed；/ 被 sanitize 成 _）。
+- `change_log.py` 纯标准库（本机托管 Python：`C:/Users/Administrator/.workbuddy/binaries/python/versions/3.13.12/python.exe`），命令 `add/notice/query/backfill`；`query --module` 匹配模块列与范围列，`--keyword` 匹配任意列。
 
 ## UI / B 路线（全量 .tscn 化已收官 2026-08-31）
 - 方向：上层编排架构不变；**仅叶子构造从 `script.new()`+`_build()` 改 `.tscn` 实例化**。screens.json 21 项全 .tscn；动态列表（背包/技能栏/商店行等）仍代码 instantiate 模板 .tscn（设计预期）。
