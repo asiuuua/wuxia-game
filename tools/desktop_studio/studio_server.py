@@ -591,6 +591,17 @@ class Handler(BaseHTTPRequestHandler):
                 return _send_json(self, {"ok": True, **_orc_match(task)})
             except Exception as e:
                 return _send_json(self, {"ok": False, "error": str(e)}, 500)
+        # ---- L1 自动依赖图（平台化：PM 不翻代码也能看架构耦合/向上依赖违例）----
+        if path == "/api/deps":
+            try:
+                import scan_deps as _sd
+                root = core.discover_project_root()
+                if not root:
+                    return _send_json(self, {"ok": False, "error": "no project root"}, 404)
+                rep = _sd.scan(root)
+                return _send_json(self, {"ok": True, **rep})
+            except Exception as e:
+                return _send_json(self, {"ok": False, "error": str(e)}, 500)
         if len(parts) == 3 and parts[0] == "api" and parts[1] == "npc":
             n = core.npc_get(parts[2])
             return _send_json(self, n if n is not None else {}, 404 if n is None else 200)

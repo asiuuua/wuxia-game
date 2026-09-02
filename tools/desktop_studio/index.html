@@ -729,8 +729,10 @@
       <div class="row" style="margin:10px 0">
         <input id="orcTask" placeholder="例如：增加中毒状态 / 修复背包拖拽错位 / 婚礼后回城天数不推进" style="flex:1">
         <button id="orcRunBtn" style="background:var(--accent);color:#fff;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;margin-left:8px" onclick="orcRun()">🔍 分析任务</button>
+        <button id="orcDepsBtn" style="margin-left:8px;border:1px solid var(--line);background:transparent;color:var(--txt);padding:8px 14px;border-radius:6px;cursor:pointer" onclick="orcDeps()">🕸 依赖图</button>
       </div>
       <div id="orcView" style="margin-top:8px;max-height:64vh;overflow:auto;line-height:1.8"></div>
+      <div id="orcDepsView" style="margin-top:10px;border-top:1px solid var(--line);padding-top:10px"></div>
     </div>
   </div>
 </section>
@@ -2573,6 +2575,40 @@ async function orcChangelog(){
   else { show('orcClMsg','失败：'+(d&&d.error||''),false); }
 }
 async function orcLoad(){ if(!_orcAuto){ _orcAuto=true; } }
+// L1 自动依赖图：扫描五层架构依赖，标注「向上依赖违例」（违反架构铁律）
+async function orcDeps(){
+  const v=document.getElementById('orcDepsView');
+  v.innerHTML='<div class="status">扫描 .gd 依赖图（五层架构）中…</div>';
+  let d;
+  try{ d=await A('GET','/api/deps'); }
+  catch(e){ v.innerHTML='<div class="status bad">请求失败：'+blEsc(e)+'</div>'; return; }
+  if(!d||!d.ok){ v.innerHTML='<div class="status bad">'+(d?blEsc(d.error):'无数据')+'</div>'; return; }
+  const s=d.summary||{};
+  let h='<div class="hint">🕸 依赖图（L1 · 结构认知）：扫描工程内全部 .gd，按五层架构（core < data < services < autoload < scenes < resources/tests/tools）标注「向上依赖违例」。架构铁律：只允许上层依赖更基础的层。</div>';
+  // 摘要
+  h+='<div style="margin:8px 0;display:flex;flex-wrap:wrap;gap:8px">';
+  h+='<span class="fchip">.gd 文件 '+ (s.gd_files||0) +'</span>';
+  h+='<span class="fchip">依赖边 '+ (s.edges||0) +'（解析 '+(s.resolved_edges||0)+'/未解析 '+(s.unresolved_refs||0)+'）</span>';
+  h+='<span class="fchip '+( (s.upward_violations||0)?'bad':'ok')+'">向上依赖违例 '+(s.upward_violations||0)+'</span>';
+  h+='</div>';
+  // 各层分布
+  if(s.layers){ h+='<div style="margin:4px 0"><b>各层文件分布：</b>'+Object.keys(s.layers).map(k=>'<span class="mini">'+blEsc(k)+' '+s.layers[k]+'</span>').join(' ')+'</div>'; }
+  // 违例清单
+  const vs=d.violations||[];
+  h+='<div style="margin:10px 0 4px"><b>⚠ 向上依赖违例（'+vs.length+' 条，须走 EventBus/解耦修复）：</b></div>';
+  if(vs.length){
+    h+='<div>'+vs.map(v=>'<div class="item" style="border-left:3px solid var(--bad, #c44)">'+blEsc(v.from_layer)+' → '+blEsc(v.to_layer)+' ｜ '+blEsc(v.from)+' <span class="mini">'+blEsc(v.kind)+'</span> ⇒ '+blEsc(v.to)+'</div>').join('')+'</div>';
+  } else {
+    h+='<div class="status ok">✅ 无向上依赖违例（架构健康）</div>';
+  }
+  // 未解析引用（点到为止，最多 30）
+  const ur=d.unresolved_refs||[];
+  if(ur.length){
+    h+='<details style="margin-top:10px"><summary class="mini">未解析引用 '+(ur.length)+' 条（缺文件/拼写，非层违例，点开）</summary>';
+    h+='<div style="margin-top:6px">'+(ur.slice(0,30).map(u=>'<div class="mini">'+blEsc(u)+'</div>').join(''))+(ur.length>30?'<div class="mini">…仅显示前 30</div>':'')+'</div></details>';
+  }
+  v.innerHTML=h;
+}
 
 stat();npcLoad();loadingLoad();backlogLoad();loadStartupCard();uiSkinLoad();
 </script>
