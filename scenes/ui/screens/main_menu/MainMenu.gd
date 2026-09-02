@@ -185,6 +185,8 @@ func _add_image_background(parent: Control, _vw: float, _vh: float) -> void:
 
 
 func _add_procedural_background(parent: Control, vw: float, vh: float) -> void:
+	# Phase2 放权：特效参数来自 data/configs/ui/skin/main_menu.vfx.json（UIVFX 装载，缺文件回退默认，视觉不变）。
+	var vfx := UIVFX.load_vfx("main_menu")
 	var bg: ColorRect = ColorRect.new()
 	bg.color = UIPalette.BG_DARK
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -198,54 +200,63 @@ func _add_procedural_background(parent: Control, vw: float, vh: float) -> void:
 	mountains.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	parent.add_child(mountains)
 
-	var cloud: ColorRect = ColorRect.new()
-	cloud.color = UIPalette.ART_CLOUD
-	cloud.position = Vector2(-vw * 0.3, 70)
-	cloud.custom_minimum_size = Vector2(vw, 150)
-	cloud.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	parent.add_child(cloud)
-	var cloud_tween := create_tween()
-	cloud_tween.set_loops()
-	cloud_tween.tween_property(cloud, "position:x", vw * 0.3, 30.0)
+	if vfx.get("enabled_cloud", true):
+		var cloud: ColorRect = ColorRect.new()
+		cloud.color = UIPalette.ART_CLOUD
+		cloud.position = Vector2(-vw * 0.3, 70)
+		cloud.custom_minimum_size = Vector2(vw, 150)
+		cloud.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		parent.add_child(cloud)
+		var cloud_tween := create_tween()
+		cloud_tween.set_loops()
+		cloud_tween.tween_property(cloud, "position:x", vw * 0.3, float(vfx.get("cloud_speed", 30.0)))
 
-	var water: ColorRect = ColorRect.new()
-	water.color = UIPalette.ART_WATER
-	water.position = Vector2(0, vh - 200)
-	water.custom_minimum_size = Vector2(vw, 200)
-	water.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	parent.add_child(water)
-	var water_tween := create_tween()
-	water_tween.set_loops()
-	water_tween.tween_property(water, "modulate:a", 0.6, 2.5)
-	water_tween.tween_property(water, "modulate:a", 1.0, 2.5)
+	if vfx.get("enabled_water", true):
+		var water: ColorRect = ColorRect.new()
+		water.color = UIPalette.ART_WATER
+		water.position = Vector2(0, vh - 200)
+		water.custom_minimum_size = Vector2(vw, 200)
+		water.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		parent.add_child(water)
+		var water_tween := create_tween()
+		water_tween.set_loops()
+		var wa_min: float = vfx.get("water_min_alpha", 0.6)
+		var wa_max: float = vfx.get("water_max_alpha", 1.0)
+		var wp: float = vfx.get("water_period", 2.5)
+		water_tween.tween_property(water, "modulate:a", wa_min, wp)
+		water_tween.tween_property(water, "modulate:a", wa_max, wp)
 
-	var boat: ColorRect = ColorRect.new()
-	boat.color = UIPalette.GOLD_DARK
-	boat.position = Vector2(120, vh - 180)
-	boat.custom_minimum_size = Vector2(40, 14)
-	boat.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	parent.add_child(boat)
-	var boat_tween := create_tween()
-	boat_tween.set_loops()
-	boat_tween.tween_property(boat, "position:x", vw - 160, 20.0)
+	if vfx.get("enabled_boat", true):
+		var boat: ColorRect = ColorRect.new()
+		boat.color = UIPalette.GOLD_DARK
+		boat.position = Vector2(120, vh - 180)
+		boat.custom_minimum_size = Vector2(40, 14)
+		boat.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		parent.add_child(boat)
+		var boat_tween := create_tween()
+		boat_tween.set_loops()
+		boat_tween.tween_property(boat, "position:x", vw - 160, float(vfx.get("boat_speed", 20.0)))
 
-	parent.add_child(_build_leaves(vw, vh))
+	if vfx.get("enabled_leaves", true):
+		parent.add_child(_build_leaves(vw, vh, vfx))
 
 
-func _build_leaves(vw: float, _vh: float) -> CPUParticles2D:
+func _build_leaves(vw: float, _vh: float, vfx: Dictionary) -> CPUParticles2D:
+	# Phase2 放权：飘叶粒子参数来自 main_menu.vfx.json（UIVFX 装载，缺省回退原写死值）。
 	var leaves := CPUParticles2D.new()
 	leaves.emitting = true
-	leaves.amount = 24
-	leaves.lifetime = 9.0
-	leaves.gravity = Vector2(0, 26)
-	leaves.initial_velocity_min = 18.0
-	leaves.initial_velocity_max = 55.0
+	leaves.amount = int(vfx.get("leaves_amount", 24))
+	leaves.lifetime = float(vfx.get("leaves_lifetime", 9.0))
+	leaves.gravity = Vector2(0, float(vfx.get("leaves_gravity_y", 26.0)))
+	leaves.initial_velocity_min = float(vfx.get("leaves_vel_min", 18.0))
+	leaves.initial_velocity_max = float(vfx.get("leaves_vel_max", 55.0))
 	leaves.direction = Vector2(0.15, 1.0)
 	leaves.spread = 18.0
 	leaves.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
 	leaves.emission_rect_extents = Vector2(vw / 2.0, 24.0)
 	leaves.position = Vector2(vw / 2.0, -24.0)
-	leaves.scale = Vector2(1.6, 1.6)
+	var ls: float = float(vfx.get("leaves_scale", 1.6))
+	leaves.scale = Vector2(ls, ls)
 	leaves.texture = _make_leaf_texture()
 	return leaves
 

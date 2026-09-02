@@ -598,6 +598,24 @@
         <span id="thStatus" class="status"></span>
       </div>
     </div>
+    <!-- 模块③：视觉特效 -->
+    <div class="uiskin-card">
+      <h3>③ 视觉特效 <span class="tag green">需护栏</span></h3>
+      <p class="muted" style="margin:6px 0;line-height:1.7">
+        📌 是干嘛的：主菜单水墨背景的飘叶/流云/水面/小船动态。<br>
+        💡 有啥用：调氛围、控性能（卡就关特效）。<br>
+        🛠 怎么改：开关 + 速度滑块 → 应用。
+      </p>
+      <div class="row"><label>飘叶</label><input type="checkbox" id="vxLeaves" checked><input id="vxLeavesN" type="range" min="0" max="120" value="24" style="flex:1" oninput="vxLeavesNV.textContent=this.value"><span id="vxLeavesNV" class="muted">24</span></div>
+      <div class="row"><label>流云</label><input type="checkbox" id="vxCloud" checked><input id="vxCloudS" type="range" min="5" max="80" value="30" style="flex:1"><span class="muted">速度</span></div>
+      <div class="row"><label>水面</label><input type="checkbox" id="vxWater" checked><input id="vxWaterP" type="range" min="1" max="8" step="0.5" value="2.5" style="flex:1"><span class="muted">波动</span></div>
+      <div class="row"><label>小船</label><input type="checkbox" id="vxBoat" checked><input id="vxBoatS" type="range" min="5" max="80" value="20" style="flex:1"><span class="muted">速度</span></div>
+      <div class="row">
+        <button onclick="vfxApply()">应用</button>
+        <button class="ghost" onclick="vfxReset()">复原默认</button>
+        <span id="vfxStatus" class="status"></span>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -648,6 +666,29 @@ async function uiSkinLoad(){
     if(Array.isArray(d.theme.title_color)) thTitle.value=_rgbArrToHex(d.theme.title_color);
     if(Array.isArray(d.theme.content_color)) thContent.value=_rgbArrToHex(d.theme.content_color);
   }
+  if(d.main_menu_vfx){
+    const V=d.main_menu_vfx;
+    vxLeaves.checked=!!V.enabled_leaves; vxLeavesN.value=V.leaves_amount||0; vxLeavesNV.textContent=V.leaves_amount||0;
+    vxCloud.checked=!!V.enabled_cloud; vxCloudS.value=V.cloud_speed||30;
+    vxWater.checked=!!V.enabled_water; vxWaterP.value=V.water_period||2.5;
+    vxBoat.checked=!!V.enabled_boat; vxBoatS.value=V.boat_speed||20;
+  }
+}
+async function vfxApply(){
+  const data={
+    enabled_leaves:vxLeaves.checked, leaves_amount:parseInt(vxLeavesN.value,10),
+    enabled_cloud:vxCloud.checked, cloud_speed:parseFloat(vxCloudS.value),
+    enabled_water:vxWater.checked, water_period:parseFloat(vxWaterP.value),
+    enabled_boat:vxBoat.checked, boat_speed:parseFloat(vxBoatS.value)
+  };
+  const r=await A('POST','/api/ui_skin',{kind:'main_menu_vfx',data:data});
+  show('vfxStatus',r.msg||(r.ok?'已保存':'失败'),r.ok);
+}
+async function vfxReset(){
+  const defs=(await A('GET','/api/ui_skin'))._defaults.main_menu_vfx;
+  const r=await A('POST','/api/ui_skin',{kind:'main_menu_vfx',data:defs});
+  if(r.ok){ vxLeaves.checked=!!defs.enabled_leaves; vxLeavesN.value=defs.leaves_amount; vxLeavesNV.textContent=defs.leaves_amount; vxCloud.checked=!!defs.enabled_cloud; vxCloudS.value=defs.cloud_speed; vxWater.checked=!!defs.enabled_water; vxWaterP.value=defs.water_period; vxBoat.checked=!!defs.enabled_boat; vxBoatS.value=defs.boat_speed; }
+  show('vfxStatus',r.msg||(r.ok?'已复原':'失败'),r.ok);
 }
 async function cdApply(){
   const data={panel_width:parseInt(cdW.value,10),panel_height:parseInt(cdH.value,10)};

@@ -1,0 +1,18 @@
+{
+  "_doc": "主菜单（程序化水墨背景）视觉特效参数（工作室「UI 皮肤定制 → 视觉特效」面板可改）。小白只改这份数据，游戏侧只读不崩。enabled_* 控制该特效是否出现；其余为补间时长(秒)/粒子数量等旋钮。改完游戏下次启动自动生效。",
+  "enabled_cloud": true,
+  "cloud_speed": 30.0,
+  "enabled_water": true,
+  "water_min_alpha": 0.6,
+  "water_max_alpha": 1.0,
+  "water_period": 2.5,
+  "enabled_boat": true,
+  "boat_speed": 20.0,
+  "enabled_leaves": true,
+  "leaves_amount": 24,
+  "leaves_lifetime": 9.0,
+  "leaves_gravity_y": 26.0,
+  "leaves_vel_min": 18.0,
+  "leaves_vel_max": 55.0,
+  "leaves_scale": 1.6
+}

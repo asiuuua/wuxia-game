@@ -1305,18 +1305,19 @@ def _ui_skin_dir():
 
 
 def _ui_skin_path(kind):
-    # 白名单：只允许这两个文件，杜绝路径穿越
+    # 白名单：只允许这几个文件，杜绝路径穿越
     allowed = {
         "theme": os.path.join(_ui_skin_dir(), "theme.json"),
         "confirm_dialog_layout": os.path.join(_ui_skin_dir(), "confirm_dialog.layout.json"),
+        "main_menu_vfx": os.path.join(_ui_skin_dir(), "main_menu.vfx.json"),
     }
     return allowed.get(kind)
 
 
 def ui_skin_get():
-    """读取 UI 皮肤当前配置：theme.json + confirm_dialog.layout.json（缺文件回退内置默认）。"""
+    """读取 UI 皮肤当前配置：theme.json + confirm_dialog.layout.json + main_menu.vfx.json（缺文件回退内置默认）。"""
     out = {}
-    for kind in ("theme", "confirm_dialog_layout"):
+    for kind in ("theme", "confirm_dialog_layout", "main_menu_vfx"):
         p = _ui_skin_path(kind)
         if p and os.path.exists(p):
             try:
@@ -1331,6 +1332,11 @@ def ui_skin_get():
                   "title_color": [0.831, 0.686, 0.216, 1], "content_color": [0.941, 0.902, 0.82, 1],
                   "accent": [0.55, 0.78, 0.45, 1]},
         "confirm_dialog_layout": {"panel_width": 440, "panel_height": 220},
+        "main_menu_vfx": {"enabled_cloud": True, "cloud_speed": 30.0, "enabled_water": True,
+                          "water_min_alpha": 0.6, "water_max_alpha": 1.0, "water_period": 2.5,
+                          "enabled_boat": True, "boat_speed": 20.0, "enabled_leaves": True,
+                          "leaves_amount": 24, "leaves_lifetime": 9.0, "leaves_gravity_y": 26.0,
+                          "leaves_vel_min": 18.0, "leaves_vel_max": 55.0, "leaves_scale": 1.6},
     }
     return out
 
@@ -1350,6 +1356,26 @@ def ui_skin_save(kind, data):
         h = max(120, min(1200, h))
         data = {"_doc": "确认框尺寸（工作室「UI 皮肤定制 → 确认框尺寸」滑块写入）。",
                 "panel_width": w, "panel_height": h}
+    if kind == "main_menu_vfx":
+        # 裁剪到合理区间，避免小白把粒子/速度拉到离谱值拖垮性能
+        d = {}
+        d["enabled_cloud"] = bool(data.get("enabled_cloud", True))
+        d["cloud_speed"] = max(2.0, min(120.0, float(data.get("cloud_speed", 30.0))))
+        d["enabled_water"] = bool(data.get("enabled_water", True))
+        d["water_min_alpha"] = max(0.0, min(1.0, float(data.get("water_min_alpha", 0.6))))
+        d["water_max_alpha"] = max(0.0, min(1.0, float(data.get("water_max_alpha", 1.0))))
+        d["water_period"] = max(0.5, min(10.0, float(data.get("water_period", 2.5))))
+        d["enabled_boat"] = bool(data.get("enabled_boat", True))
+        d["boat_speed"] = max(2.0, min(120.0, float(data.get("boat_speed", 20.0))))
+        d["enabled_leaves"] = bool(data.get("enabled_leaves", True))
+        d["leaves_amount"] = int(max(0, min(200, int(data.get("leaves_amount", 24)))))
+        d["leaves_lifetime"] = max(1.0, min(30.0, float(data.get("leaves_lifetime", 9.0))))
+        d["leaves_gravity_y"] = max(0.0, min(200.0, float(data.get("leaves_gravity_y", 26.0))))
+        d["leaves_vel_min"] = max(0.0, min(200.0, float(data.get("leaves_vel_min", 18.0))))
+        d["leaves_vel_max"] = max(0.0, min(300.0, float(data.get("leaves_vel_max", 55.0))))
+        d["leaves_scale"] = max(0.2, min(5.0, float(data.get("leaves_scale", 1.6))))
+        d["_doc"] = "主菜单（程序化水墨背景）视觉特效参数（工作室「UI 皮肤定制 → 视觉特效」面板可改）。"
+        data = d
     os.makedirs(os.path.dirname(p), exist_ok=True)
     _backup(p)
     with open(p, "w", encoding="utf-8") as f:
