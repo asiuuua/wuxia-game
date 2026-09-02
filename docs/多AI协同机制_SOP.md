@@ -45,8 +45,9 @@
 
 | 闸门 | 命令 | 判绿 |
 |---|---|---|
+| GATE0 | `python tools/lint_mouse_filter.py --tier default` | 0 高危发现（专抓「按钮装饰子节点误写 mouse_filter=STOP 静默吞点击」这类**无报错** BUG；细节见 `docs/跨模块BUG修复机制.md` §6） |
 | GATE1 | `godot --headless --path "D:/武侠游戏" --quit` | rc=0 且 **0** SCRIPT/PARSE/COMPILE ERROR |
-| GATE2 | `godot --headless --path "D:/武侠游戏" res://tests/unit/run_all.tscn` | rc=0 且 **0 ✗** 且「套件：失败 0」 |
+| GATE2 | `godot --headless --path "D:/武侠游戏" res://tests/unit/run_all.tscn` | rc=0 且 **0 ✗** 且「套件：失败 0」（含 `test_ui_mouse_filter.gd` 静默拦截运行时断言） |
 
 - 改了某服务 → 跑对应单测套件；改了 UI → 跑 `tests/ui/*` smoke；改了契约 → 重跑 `gen_contract.gd` + **全量** GATE2。
 - 工具改动 → `python -m py_compile tools/*.py`；工作室工具 → `security_selftest.py`（15 断言）。

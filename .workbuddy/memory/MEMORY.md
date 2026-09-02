@@ -14,6 +14,8 @@
 - 解析外部配置用 `JSON.new()` + `json.parse(txt) != OK`，别用 `JSON.parse_string()`（失败刷屏）。
 - 删函数须全工程 grep 残留；`Invalid call Nonexistent function 'new'` 真因是某脚本 Parse Error。
 - Control 绝对定位坑：anchor 四值归零且 offset_left==offset_right → 宽度恒 0；要绝对定位就四个 offset 全写死。
+- **mouse_filter 枚举写反是高频静默吞输入坑**：`MOUSE_FILTER_STOP=0` / `MOUSE_FILTER_PASS=1` / `MOUSE_FILTER_IGNORE=2`（与直觉相反）。凡要把装饰子节点设成「点击穿透」，必须写 `2`(IGNORE) 或 `Control.MOUSE_FILTER_IGNORE`，**绝不可写 `0`**（那是 STOP=拦截，会让子节点盖住按钮本体、吞掉 mouse_entered/button_up，表现为「点不了/鼠标卡住/无报错」）。诊断此类静默拦截用无头 mouse-pick 模拟器（递归比各控件中心点的 topmost STOP 控件），逻辑单测抓不到。
+- **自动守卫已落地（2026-09-02）**：`tools/lint_mouse_filter.py`(GATE0 静态扫描，提交前跑，零误报) + `tests/unit/test_ui_mouse_filter.gd`(GATE2 运行时断言，加载全部界面遍历节点树)，把「装饰子节点误写 STOP」这类静默拦截回归变成 ✗ 拦在合并前；`visible=false` 节点自动排除避免误报。
 - **B 路线迁移回归**：界面从 `X.new()` 迁 .tscn 后，单测仍用 `X.new()` 构造会静默丢属性 → 测试改 `preload(x.tscn).instantiate()`；`instantiate()` 返回 Node 致类型推断失效需显式类型。
 
 ## Godot 本机验证铁律（必记）
@@ -41,6 +43,7 @@
 - **铁律 1 留痕**：任何文件修改提交前 `python tools/change_log.py add --commit <sha> --module <顶层模块> --scope <含子路径> --what "..." --impact "..." --ref "..."`；共享地基/跨主权/大改动额外 `change_log.py notice` 生成 `docs/变更通告_YYYY-MM-DD_主题.md`。`docs/更改日志.md` 已从 git 历史回填（191 行），立即可查。
 - **铁律 2 调前先查**：接到任何 BUG，**先** `change_log.py query --module <模块>`（或 `--keyword <文件名>`）+ `git log -- <文件>` + `handoff.py dashboard`，确认不是别人刚改的回归再深入。命中则在 changelog「关联」注「回归自 `<commit>`」并 handoff issue 给责任窗口。禁"不查日志直接改"（真实教训：误删 town.json 当死数据，查日志秒定位其为战术底图几何依赖）。
 - **铁律 3 提交/push**：双闸门通过才 commit（禁`-A`、带`[模块]`前缀、窗口署名 `git config user.name "AI-<窗>"`）；无 BUG 的改动**必须 commit**留痕；push 由 PM/集成窗口整树双闸门全绿后统一推（单分支禁各窗盲目 push 互覆盖）。
+- **铁律 4 门禁非绿即阻断**：GATE1/GATE2 一旦非绿（有 SCRIPT/PARSE/COMPILE ERROR 或 ✗），**立即修、禁止带红门禁继续开发或合并**；红门禁是「别人刚改崩」的最强信号，优先级高于任何新功能。本次教训：`BattleScene.gd _on_auto_pressed` 缩进错（`eid` 在 for 外）早已解析失败致 GATE2 红，却长期没人管。
 - 提交队列 `tools/commit_queue.py` + 隐患传递板 `tools/handoff.py`（open→claimed→done→followup→closed；/ 被 sanitize 成 _）。
 - `change_log.py` 纯标准库（本机托管 Python：`C:/Users/Administrator/.workbuddy/binaries/python/versions/3.13.12/python.exe`），命令 `add/notice/query/backfill`；`query --module` 匹配模块列与范围列，`--keyword` 匹配任意列。
 
