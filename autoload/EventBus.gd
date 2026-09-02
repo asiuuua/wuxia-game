@@ -21,8 +21,6 @@ signal inventory_weight_changed(current: float, max_weight: float)
 signal inventory_add_overflow(item_id: String, lost_count: int)   # 入包溢出：UI 据此提示"背包已满，损失X"
 @warning_ignore("unused_signal")
 signal item_used(item_id: String, effect: Dictionary)             # 使用消耗品生效：effect = {hp, mp}
-@warning_ignore("unused_signal")
-signal item_used_in_battle(item_id: String, effect: Dictionary)   # 战斗用药请求：背包不直接改 PlayerState，由战斗场景经战斗状态(护盾/溢出/HUD)结算（P1-3 修复）
 
 # === 战斗模块 ===
 @warning_ignore("unused_signal")

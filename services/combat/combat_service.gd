@@ -148,37 +148,12 @@ func player_rest() -> Array[CombatEvent]:
 	return _core.player_rest()
 
 ## 玩家战斗内使用物品（消耗品）：作用于战斗内玩家快照，finalize 时随 hp/mp 回写 PlayerState
-## 注意：不可直接调 InventoryService.use_item（那会结算到 PlayerState，战斗面板不会刷新，
-## 且结算回写时快照会覆盖掉 PlayerState 上的恢复量——吃过药等于白吃）
+## 注意：战斗中禁止用药（产品决策 2026-09-02）。增益请战斗前在背包提前服用。
+## 本方法保留壳以兼容调用方，但一律拒绝，不扣物品、不结算。
 func player_use_item(instance_id: String) -> Dictionary:
 	if _state == null or not _state.is_active:
 		return { "ok": false, "reason": "NOT_IN_COMBAT", "item_id": "" }
-	var inv: InventoryService = GameManager.inventory_service
-	var inst: ItemInstance = inv.get_instance_by_id(instance_id)
-	if inst == null:
-		return { "ok": false, "reason": "NOT_FOUND", "item_id": "" }
-	var item_id: String = inst.item_id
-	var data: Dictionary = ConfigManager.get_item(item_id)
-	var is_consumable: bool = (not data.is_empty()) and (data.get("type", "") == "pill" \
-			or (int(data.get("flags", 0)) & ItemEnums.ItemFlag.CONSUMABLE) != 0)
-	if not is_consumable:
-		return { "ok": false, "reason": "NOT_CONSUMABLE", "item_id": item_id }
-	if not inv.consume_instance(instance_id):
-		return { "ok": false, "reason": "CONSUME_FAILED", "item_id": item_id }
-	var healed: int = 0
-	var restored: int = 0
-	var heal_hp: int = int(data.get("heal_hp", 0))
-	var heal_mp: int = int(data.get("heal_mp", 0))
-	if heal_hp > 0:
-		healed = mini(heal_hp, _state.player.max_hp - _state.player.hp)
-		_state.player.hp = mini(_state.player.max_hp, _state.player.hp + heal_hp)
-	if heal_mp > 0:
-		restored = mini(heal_mp, _state.player.max_mp - _state.player.mp)
-		_state.player.mp = mini(_state.player.max_mp, _state.player.mp + heal_mp)
-	var effect := { "hp": healed, "mp": restored }
-	_state.append_log("李十五 服下 %s：气血 +%d，内力 +%d" % [data.get("name", item_id), healed, restored])
-	EventBus.item_used.emit(item_id, effect)
-	return { "ok": true, "reason": "SUCCESS", "item_id": item_id, "effect": effect }
+	return { "ok": false, "reason": "NOT_ALLOWED_IN_BATTLE", "item_id": "" }
 
 ## 敌人回合（门面：委托内核，逐事件写日志）
 func run_enemy_turns() -> void:

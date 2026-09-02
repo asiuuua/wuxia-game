@@ -19,8 +19,6 @@ var _order_bar: HBoxContainer = null
 var _actions_container: HBoxContainer = null
 var _auto_button: Button = null
 var _speed_button: Button = null
-var _item_menu: PopupMenu = null
-var _item_instance_ids: Array[String] = []
 var _log_label: Label = null
 var _result_panel: Panel = null
 var _result_label: Label = null
@@ -85,10 +83,6 @@ func _build_ui() -> void:
 	skip_btn.text = "跳过"
 	skip_btn.pressed.connect(_on_skip_pressed)
 	vb.add_child(skip_btn)
-	# 用药菜单
-	_item_menu = PopupMenu.new()
-	_item_menu.id_pressed.connect(_on_item_menu_index)
-	add_child(_item_menu)
 	_log_label = Label.new()
 	_log_label.custom_minimum_size = Vector2(0, 120)
 	vb.add_child(_log_label)
@@ -138,64 +132,9 @@ func _build_action_buttons() -> void:
 		b.icon = UIManager.get_icon("skills/" + ability_id)
 		b.pressed.connect(_on_action_pressed.bind(i))
 		_actions_container.add_child(b)
-	var item_btn := Button.new()
-	item_btn.text = "物品"
-	item_btn.pressed.connect(_on_item_pressed)
-	_actions_container.add_child(item_btn)
 
 ## 打开用药菜单：扫描背包消耗品，按实例列出
-func _on_item_pressed() -> void:
-	if _over or _state == null or _busy:
-		return
-	_item_menu.clear()
-	_item_instance_ids.clear()
-	var inv: InventoryService = GameManager.inventory_service
-	if inv != null:
-		for bag in [inv.main_slots, inv.material_slots]:
-			for inst in bag:
-				if inst == null:
-					continue
-				var data: Dictionary = ConfigManager.get_item(inst.item_id)
-				if data.is_empty():
-					continue
-				var is_consumable: bool = data.get("type", "") == "pill" \
-						or (int(data.get("flags", 0)) & ItemEnums.ItemFlag.CONSUMABLE) != 0
-				if not is_consumable:
-					continue
-				_item_menu.add_item("%s x%d（气血+%d 内力+%d）" % [
-					data.get("name", inst.item_id), inst.count,
-					int(data.get("heal_hp", 0)), int(data.get("heal_mp", 0))])
-				_item_instance_ids.append(inst.instance_id)
-	if _item_instance_ids.is_empty():
-		_item_menu.add_item("没有可用药品")
-		_item_instance_ids.append("")
-	_item_menu.popup_centered(Vector2i(380, 220))
 
-func _on_item_menu_index(index: int) -> void:
-	if _over or _state == null or _busy or index >= _item_instance_ids.size():
-		return
-	var iid: String = _item_instance_ids[index]
-	if iid == "":
-		return
-	_busy = true
-	var events: Array[CombatEvent] = GameManager.combat_service.use_item_events(iid)
-	if events.is_empty():
-		GameLogger.warn("Battle", "用药无效或失败")
-		_busy = false
-		return
-	await _director.play_events(events)
-	if _battle_dead():
-		return
-	if not GameManager.combat_service.is_over():
-		await _director.play_events(GameManager.combat_service.enemy_phase_events())
-		if _battle_dead():
-			return
-	_refresh()
-	_refresh_order()
-	_busy = false
-	if GameManager.combat_service.is_over():
-		GameManager.combat_service.finalize()
-		_show_result()
 
 func _refresh() -> void:
 	if _state == null:

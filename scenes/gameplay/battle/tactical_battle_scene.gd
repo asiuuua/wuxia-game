@@ -65,8 +65,6 @@ var _result_panel: Panel
 var _result_label: Label
 var _return_btn: Button
 var _hint: Label
-var _item_menu: PopupMenu
-var _item_instance_ids: Array[String] = []
 
 func _ready() -> void:
 	GameManager.combat_service.start_combat(GameManager.pending_battle_id)
@@ -258,44 +256,7 @@ func _target_valid(target_id: String) -> bool:
 		return false
 	return GameManager.combat_service.is_target_in_range("player", target_id, aid)
 
-func _on_item_pressed() -> void:
-	if _busy or _phase != Phase.PLAYER:
-		return
-	_item_menu.clear()
-	_item_instance_ids.clear()
-	var inv: InventoryService = GameManager.inventory_service
-	if inv != null:
-		for bag in [inv.main_slots, inv.material_slots]:
-			for inst in bag:
-				if inst == null:
-					continue
-				var data: Dictionary = ConfigManager.get_item(inst.item_id)
-				if data.is_empty():
-					continue
-				var is_consumable: bool = data.get("type", "") == "pill" \
-						or (int(data.get("flags", 0)) & ItemEnums.ItemFlag.CONSUMABLE) != 0
-				if not is_consumable:
-					continue
-				_item_menu.add_item("%s x%d" % [data.get("name", inst.item_id), inst.count])
-				_item_instance_ids.append(inst.instance_id)
-	if _item_instance_ids.is_empty():
-		_item_menu.add_item("没有可用药品")
-		_item_instance_ids.append("")
-	_item_menu.popup_centered(Vector2i(360, 220))
 
-func _on_item_menu_index(index: int) -> void:
-	if _busy or _phase != Phase.PLAYER or index >= _item_instance_ids.size():
-		return
-	var iid: String = _item_instance_ids[index]
-	if iid == "":
-		return
-	_busy = true
-	var evs: Array[CombatEvent] = GameManager.combat_service.use_item_events(iid)
-	await _play_events(evs)
-	if _aborted:
-		return
-	_busy = false
-	_after_player_action()
 
 func _on_end_turn_pressed() -> void:
 	if _busy or _phase != Phase.PLAYER:
@@ -724,10 +685,6 @@ func _build_hud() -> void:
 	_return_btn.pressed.connect(_on_return_pressed)
 	_result_panel.add_child(_return_btn)
 
-	# 用药菜单
-	_item_menu = PopupMenu.new()
-	_item_menu.id_pressed.connect(_on_item_menu_index)
-	hud.add_child(_item_menu)
 
 func _build_action_buttons(bar: HBoxContainer) -> void:
 	var basic := Button.new()
@@ -751,11 +708,6 @@ func _build_action_buttons(bar: HBoxContainer) -> void:
 		b.pressed.connect(_on_skill_pressed.bind(i, aid))
 		bar.add_child(b)
 
-	var item_btn := Button.new()
-	item_btn.text = "物品"
-	item_btn.custom_minimum_size = Vector2(64, 40)
-	item_btn.pressed.connect(_on_item_pressed)
-	bar.add_child(item_btn)
 
 	var end_btn := Button.new()
 	end_btn.text = "结束回合"

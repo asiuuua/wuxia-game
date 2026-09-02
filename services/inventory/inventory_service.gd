@@ -442,14 +442,10 @@ func _apply_use_heal(inst: ItemInstance, data: Dictionary, context: String) -> D
 	var heal_mp: int = int(data.get("heal_mp", 0))
 	if heal_hp <= 0 and heal_mp <= 0:
 		return { "ok": false, "reason": "NO_EFFECT", "item_id": item_id }
-	var effect := { "hp": heal_hp, "mp": heal_mp }
 	if context == "battle":
-		# 战斗用药：不直接改 PlayerState（避免背包耦合战斗状态/护盾/溢出/HUD），
-		# 派发战斗用药请求，由战斗场景经战斗状态结算（P1-3 修复：原 context 仅用于日志，town/battle 同一直改）
-		consume_instance(inst.instance_id)
-		EventBus.item_used_in_battle.emit(item_id, effect)
-		GameLogger.info("Inventory", "战斗用药 %s 已派发战斗结算(不直接改PlayerState) hp+%d mp+%d" % [item_id, heal_hp, heal_mp])
-		return { "ok": true, "reason": "BATTLE_PENDING", "item_id": item_id, "effect": effect }
+		# 战斗中禁止用药（产品决策 2026-09-02）：不扣物品、不结算，明确拒绝。
+		# 增益请战斗前在背包提前服用；战斗中不再开放用药入口。
+		return { "ok": false, "reason": "NOT_ALLOWED_IN_BATTLE", "item_id": item_id }
 	consume_instance(inst.instance_id)
 	var ps: PlayerState = GameManager.player_state
 	var healed: int = 0
@@ -517,10 +513,9 @@ func _apply_use_exp(inst: ItemInstance, data: Dictionary, context: String) -> Di
 		return { "ok": false, "reason": "NO_EFFECT", "item_id": item_id }
 	var effect := { "exp": gain }
 	if context == "battle":
-		consume_instance(inst.instance_id)
-		EventBus.item_used_in_battle.emit(item_id, effect)
-		GameLogger.info("Inventory", "战斗用药 %s(经验) 已派发战斗结算" % item_id)
-		return { "ok": true, "reason": "BATTLE_PENDING", "item_id": item_id, "effect": effect }
+		# 战斗中禁止用药（产品决策 2026-09-02）：不扣物品、不结算，明确拒绝。
+		# 增益请战斗前在背包提前服用；战斗中不再开放用药入口。
+		return { "ok": false, "reason": "NOT_ALLOWED_IN_BATTLE", "item_id": item_id, "effect": effect }
 	consume_instance(inst.instance_id)
 	var ps: PlayerState = GameManager.player_state
 	if ps != null and ps.has_method("gain_exp"):
