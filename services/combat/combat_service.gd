@@ -90,7 +90,7 @@ func start_combat(battle_id: String) -> void:
 	if bool(battle.get("tactical", false)):
 		_build_grid(grid_cfg, battle)
 	EventBus.combat_started.emit(battle_id)
-	print("[Combat] 战斗开始: %s，敌人 %d，模式 %s" % [battle_id, state.enemies.size(), "ATB" if state.turn_mode == CombatEnums.TurnMode.ATB else "顺序"])
+	GameLogger.info("Combat", "战斗开始: %s，敌人 %d，模式 %s" % [battle_id, state.enemies.size(), "ATB" if state.turn_mode == CombatEnums.TurnMode.ATB else "顺序"])
 
 ## 构建玩家方友军：战斗配置 allies（数据模板复用 enemies.json，可带战斗属性）与玩家 companion_ids（存档同伴）
 ## 全部以 is_player=true 加入 player_party，与主角同属"玩家方"——胜负判定、敌人 AI 集火、回合序列都含它们。
