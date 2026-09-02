@@ -126,6 +126,47 @@ def _run_gate():
             "green": gate1["green"] and gate2["green"]}
 
 
+def _orc_match(task):
+    """任务驱动知识路由（L3 总控核心）：按任务词匹配经验库分面，返回识别的模块/角色/相关经验。
+
+    解决「知识鲸鱼」——不把全库塞给 AI，只注入与任务相关的 E 级经验。
+    复用 _exp_enrich 的 facets（角色/模块/BUG 分面 + 每篇 tags）。
+    """
+    import re
+    from project_loader import get_connector_info
+    root = core.discover_project_root()
+    kn = _exp_enrich(get_connector_info("wuxia_game").get("knowledge", {}), root)
+    q = (task or "").lower()
+    # 任务细粒度分词：英文/数字词 + 中文 bi-gram（兼容整词与子串，解决中文整串不匹配）
+    en = re.findall(r"[a-z0-9_]+", q)
+    han = re.sub(r"[a-z0-9_]+", " ", q)
+    grams = set(en)
+    for i in range(len(han) - 1):
+        g = han[i:i+2].strip()
+        if g:
+            grams.add(g)
+    related = []
+    m_roles, m_mods, m_bugs = set(), set(), set()
+    for r in kn.get("refs", []):
+        if r.get("group") == "notice":
+            continue
+        hay = " ".join([r.get("title", "")] + r.get("tags", []) + r.get("roles", [])
+                        + r.get("modules", []) + r.get("bugs", [])).lower()
+        if any(g and g in hay for g in grams):
+            related.append(r)
+            m_roles.update(r.get("roles", []))
+            m_mods.update(r.get("modules", []))
+            m_bugs.update(r.get("bugs", []))
+    if not related:  # 任务词太泛/无命中，回退全部核心知识（避免空结果）
+        related = [r for r in kn.get("refs", []) if r.get("group") != "notice"]
+    return {"task": task,
+            "matched_roles": sorted(m_roles),
+            "matched_modules": sorted(m_mods),
+            "matched_bugs": sorted(m_bugs),
+            "related": related,
+            "facets": kn.get("facets", {})}
+
+
 # ── 经验库增强检索：服务端实时富化 knowledge.refs ──────────────────────────────
 # 解析每篇子文档的「检索关键词」行 → 标签云；扫描正文（标题+前 4000 字）→ 角色/模块/BUG 分面。
 # 词表集中维护、与文档解耦：新文档只要含这些词即自动归入对应分面，零 schema 改动、零文档改动。
@@ -529,6 +570,16 @@ class Handler(BaseHTTPRequestHandler):
         # ---- 双闸门验证（平台化：PM 不装 Godot 也能卡质量）----
         if path == "/api/gate/run":
             return _send_json(self, _run_gate())
+        # ---- L3 任务总控：知识路由（任务 → 自动识别模块/角色/相关经验）----
+        if path == "/api/orchestrate":
+            qs = urllib.parse.parse_qs(self.path.split("?", 1)[1] if "?" in self.path else {})
+            task = (qs.get("task") or [""])[0]
+            if not task.strip():
+                return _send_json(self, {"error": "missing task"}, 400)
+            try:
+                return _send_json(self, {"ok": True, **_orc_match(task)})
+            except Exception as e:
+                return _send_json(self, {"ok": False, "error": str(e)}, 500)
         if len(parts) == 3 and parts[0] == "api" and parts[1] == "npc":
             n = core.npc_get(parts[2])
             return _send_json(self, n if n is not None else {}, 404 if n is None else 200)
@@ -551,6 +602,24 @@ class Handler(BaseHTTPRequestHandler):
                     s[k] = body[k]
             core.save_settings(s)
             return _send_json(self, {"ok": True, "settings": s})
+        # ---- L3 任务总控：变更记录闭环（登记到 docs/更改日志.md，复用 change_log.add_row）----
+        if path == "/api/changelog":
+            try:
+                import sys as _sys
+                _tools = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                if _tools not in _sys.path:
+                    _sys.path.insert(0, _tools)
+                import change_log as _cl
+                b = body or {}
+                module = (b.get("module") or "").strip()
+                what = (b.get("what") or "").strip()
+                if not module or not what:
+                    return _send_json(self, {"ok": False, "error": "module 与 what 必填"}, 400)
+                _cl.add_row(b.get("commit", ""), module, b.get("scope", ""),
+                            what, b.get("impact", ""), b.get("ref", ""))
+                return _send_json(self, {"ok": True, "msg": "已登记到 docs/更改日志.md"})
+            except Exception as e:
+                return _send_json(self, {"ok": False, "error": str(e)}, 500)
         if path == "/api/project_root/set":
             ok, m = core.set_project_root(body.get("root", ""))
             return _send_json(self, {"ok": ok, "msg": m,
