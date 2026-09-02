@@ -117,14 +117,22 @@ def main():
     ap = argparse.ArgumentParser(description="静默拦截 mouse_filter 静态扫描")
     ap.add_argument("--tier", choices=["default", "strict"], default="default")
     ap.add_argument("--root", default=SCENES_DIR)
+    ap.add_argument("--files", nargs="*", default=None,
+                    help="只扫描指定文件（pre-commit 钩子用：仅查本次暂存的 .tscn）")
     ap.add_argument("--quiet", action="store_true")
     a = ap.parse_args()
 
     findings = []
-    for dp, _, files in os.walk(a.root):
-        for fn in files:
-            if fn.endswith(".tscn"):
-                findings += scan_file(os.path.join(dp, fn), a.tier)
+    if a.files is not None:
+        # 仅扫描显式传入的文件（路径需存在；已删除的文件跳过）
+        for fp in a.files:
+            if fp.endswith(".tscn") and os.path.isfile(fp):
+                findings += scan_file(fp, a.tier)
+    else:
+        for dp, _, files in os.walk(a.root):
+            for fn in files:
+                if fn.endswith(".tscn"):
+                    findings += scan_file(os.path.join(dp, fn), a.tier)
 
     if not a.quiet:
         if findings:

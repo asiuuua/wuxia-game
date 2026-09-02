@@ -1,0 +1,56 @@
+#!/bin/sh
+# .git/hooks/pre-commit —— 多 AI 协同「机器级硬约束」
+#
+# 作用：提交时自动扫描本次暂存的 .tscn，若发现
+#   【按钮下可见装饰子节点 mouse_filter 仍为 STOP(0)】
+# 这类"静默吞点击"BUG（不报错、GATE1 抓不到），直接拦下提交，
+# 强迫 AI/人在合并前修复 —— 不靠记忆、不靠自觉。
+#
+# 安装：python tools/install_hooks.py   （首次克隆或换机器跑一次即可）
+#
+# 想临时绕过：git commit --no-verify  （仅应急，禁止常规使用）
+set -e
+
+REPO=$(git rev-parse --show-toplevel)
+PY="C:/Users/Administrator/.workbuddy/binaries/python/versions/3.13.12/python.exe"
+if [ ! -x "$PY" ]; then
+  PY="$(command -v python3 || command -v python || true)"
+fi
+if [ -z "$PY" ]; then
+  echo "[pre-commit] 未找到 Python，跳过静默拦截扫描（请安装 Python 或装好 managed runtime）"
+  exit 0
+fi
+
+# 仅取本次暂存的 .tscn（新增/复制/修改/重命名，排除已删除）
+STAGED=$(git diff --cached --name-only --diff-filter=ACMR -- '*.tscn' || true)
+if [ -z "$STAGED" ]; then
+  # 本次没动 .tscn，无需扫描；仍提醒留痕纪律
+  echo "[pre-commit] 本次未改动 .tscn，跳过静默拦截扫描。"
+  echo "[pre-commit] 提醒：改完记得 change_log.py add 登记；合并前双闸门 GATE1+GATE2 须全绿。"
+  exit 0
+fi
+
+# 转绝对路径
+FILES=""
+for f in $STAGED; do
+  FILES="$FILES \"$REPO/$f\""
+done
+
+echo "[pre-commit] 扫描本次暂存的 $(echo "$STAGED" | wc -l | tr -d ' ') 个 .tscn …"
+set +e
+eval "$PY" "\"$REPO/tools/lint_mouse_filter.py\"" --tier default --files $FILES
+RC=$?
+set -e
+
+if [ "$RC" -ne 0 ]; then
+  echo ""
+  echo "❌ pre-commit 拦截：发现『静默吞点击』高危写法（mouse_filter=STOP 的按钮装饰子节点）。"
+  echo "   这是会『不报错却让按钮点不动/鼠标卡住』的 BUG，请改为 mouse_filter = 2（IGNORE 点击穿透）。"
+  echo "   修复后重新 git add 该文件并再次提交。"
+  echo "   （确认是误报且需应急绕过：git commit --no-verify —— 但禁止常规使用）"
+  exit 1
+fi
+
+echo "✓ 静默拦截扫描通过。"
+echo "[pre-commit] 提醒：改完记得 change_log.py add 登记；合并前双闸门 GATE1+GATE2 须全绿。"
+exit 0

@@ -122,3 +122,37 @@
 2. 读 `docs/契约总表.md` + `docs/多AI协同机制_SOP.md` + `MEMORY.md`（主权边界）。
 3. 装 change-tracking skill（自动遵守本 SOP）。
 4. 首次改动前先 `change_log.py query --module <你的模块>` 熟悉近期上下文。
+5. **开窗口第一句**：把 `docs/AI协同启动卡.md` 里的「启动口令」复制粘贴给 AI（见 §11）。
+
+---
+
+## 11. 执行保障：怎么让 AI 真的遵守（四层 Enforcement）
+
+光写文档不够——必须让"遵守"成为**默认行为**而非"靠自觉"。本项目用四层叠加，越往下越不依赖 AI 意志力：
+
+### 第 1 层 · 项目记忆自动注入（最强软约束，已生效）
+- 每次 AI 开会话，`MEMORY.md` 的「多 AI 协同」铁律**自动注入上下文**（系统级）。AI 看不到"我没学过规矩"的借口。
+- 铁律 1 留痕 / 铁律 2 调前先查 / 铁律 3 提交节奏 / 铁律 4 门禁非绿即阻断，均在 MEMORY.md。
+
+### 第 2 层 · change-tracking skill（任务级触发，已生效）
+- 凡"改文件 / 提交 / 修 BUG"任务，AI **应加载** `change-tracking` skill（描述已写明触发条件）。
+- skill 给的是**可执行命令**：`change_log.py add/query/notice`、`handoff.py dashboard`、双闸门跑法。不是空话。
+
+### 第 3 层 · 用户启动口令（人肉点火，关键缺口已补）
+- **这是让第 1/2 层真正生效的开关**：用户每次开新窗口，复制 `docs/AI协同启动卡.md` 的口令粘进去。
+- 口令干两件事：① 命令 AI 读 MEMORY + 加载 skill；② **指定本窗口名**（决定 `git` 署名 → 追溯归谁）。
+- 没有这步，AI 可能"没被提示"就开工 → 漏登记。口令是给用户的最低成本操作。
+
+### 第 4 层 · git pre-commit 钩子（机器级硬约束，已生效，最重要）
+- **不靠 AI 想不想**——提交时机器自动扫 `mouse_filter=STOP` 的按钮装饰子节点（静默吞点击 BUG），违规则**直接拦下提交**。
+- 钩子：`tools/hooks/pre-commit`（安装：`python tools/install_hooks.py`）。
+- 配套：`tools/lint_mouse_filter.py`（GATE0 扫描器，已加 `--files` 模式只查本次提交文件）。
+- 应急绕过：`git commit --no-verify`（**仅应急，禁止常规使用**——绕过即放弃机器守卫）。
+
+### 四层怎么配合（给用户的白话）
+> 你开窗口 → 粘启动口令（第 3 层，点火）→ AI 读记忆+加载 skill（第 1/2 层，知道规矩）→ 干活、登记、跑门禁 → 提交时钩子兜底（第 4 层，忘了也被机器拦）。
+> 哪怕第 1/2/3 层全失效，第 4 层仍能把"静默吞点击"这类最阴的 BUG 挡在仓库外。
+
+### ⚠ 已知冗余（待清理）
+- `tools/check_mouse_filter.py` 是另一个 AI 窗口写的**重复扫描器**（与 `lint_mouse_filter.py` 同目的、同背景、实现略不同）。
+- 已选 `lint_mouse_filter.py` 为唯一真源（已接 GATE0 + pre-commit 钩子 + SOP）。`check_mouse_filter.py` 暂未提交、未接线，**待其责任窗口确认后删除或合并**，避免两个扫描器让后续 AI 困惑。

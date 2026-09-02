@@ -46,6 +46,8 @@
 - **铁律 4 门禁非绿即阻断**：GATE1/GATE2 一旦非绿（有 SCRIPT/PARSE/COMPILE ERROR 或 ✗），**立即修、禁止带红门禁继续开发或合并**；红门禁是「别人刚改崩」的最强信号，优先级高于任何新功能。本次教训：`BattleScene.gd _on_auto_pressed` 缩进错（`eid` 在 for 外）早已解析失败致 GATE2 红，却长期没人管。
 - 提交队列 `tools/commit_queue.py` + 隐患传递板 `tools/handoff.py`（open→claimed→done→followup→closed；/ 被 sanitize 成 _）。
 - `change_log.py` 纯标准库（本机托管 Python：`C:/Users/Administrator/.workbuddy/binaries/python/versions/3.13.12/python.exe`），命令 `add/notice/query/backfill`；`query --module` 匹配模块列与范围列，`--keyword` 匹配任意列。
+- **机器级硬约束（执行保障，2026-09-02 立，必记）**：光靠记忆/skill 不够，已加 **git pre-commit 钩子**——提交时自动扫 `mouse_filter=STOP` 的按钮装饰子节点（静默吞点击 BUG），违规则**拦下提交**。钩子=`tools/hooks/pre-commit`，安装=`python tools/install_hooks.py`（已装）；扫描器=`tools/lint_mouse_filter.py`(GATE0，已加 `--files` 只查本次提交文件)。应急绕过=`git commit --no-verify`（仅应急，禁常规）。四层 Enforcement：① 本记忆自动注入 ② change-tracking skill 任务级触发 ③ 用户开窗口粘`docs/AI协同启动卡.md`口令(指定窗口名=署名) ④ pre-commit 机器兜底。
+- **⚠ 重复工具待清**：`tools/check_mouse_filter.py` 是另一 AI 窗口写的重复扫描器（与 `lint_mouse_filter.py` 同目的/同背景/实现略异）。已定 `lint_mouse_filter.py` 为唯一真源（接 GATE0+钩子+SOP）；`check_mouse_filter.py` 暂未提交未接线，**待责任窗口确认后删除/合并**，勿让两扫描器并存迷惑后续 AI。
 
 ## UI / B 路线（全量 .tscn 化已收官 2026-08-31）
 - 方向：上层编排架构不变；**仅叶子构造从 `script.new()`+`_build()` 改 `.tscn` 实例化**。screens.json 21 项全 .tscn；动态列表（背包/技能栏/商店行等）仍代码 instantiate 模板 .tscn（设计预期）。
