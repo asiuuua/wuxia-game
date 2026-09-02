@@ -65,6 +65,21 @@
   .pill.dlg{color:#c98be6}
   .logline{font-family:Consolas,monospace;font-size:12px;padding:3px 0;border-bottom:1px solid var(--line);color:var(--muted)}
   .logline b{color:var(--txt)}
+  /* 经验库增强检索：标签云 + 角色/模块/BUG 分面 */
+  .exp-facets{margin:6px 0 10px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--panel2)}
+  .exp-facets .frow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:4px 0}
+  .exp-facets .flabel{color:var(--muted);font-size:12px;flex:0 0 38px;font-weight:600}
+  .exp-facets .fchip{display:inline-block;padding:2px 9px;border:1px solid var(--line);border-radius:12px;
+    background:var(--panel);color:var(--txt);cursor:pointer;line-height:1.6;transition:.12s;user-select:none}
+  .exp-facets .fchip:hover{border-color:var(--accent2);color:var(--accent2)}
+  .exp-facets .fchip.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .exp-facets .fclear{margin-left:6px;padding:2px 10px;border:1px solid var(--bad);border-radius:12px;
+    background:transparent;color:var(--bad);cursor:pointer;font-size:12px}
+  .exp-toggle{color:var(--muted);font-size:12px;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;cursor:pointer}
+  .list .item .imeta{margin-top:3px;display:flex;gap:4px;flex-wrap:wrap}
+  .refmeta{margin-bottom:10px;display:flex;gap:5px;flex-wrap:wrap}
+  .mini{display:inline-block;padding:1px 7px;border-radius:9px;font-size:11px;
+    background:var(--chip);color:var(--accent2);border:1px solid var(--line)}
 </style>
 </head>
 <body>
@@ -540,9 +555,13 @@
   <div class="layout">
     <div class="list" id="expList"></div>
     <div class="editor">
-      <div class="hint">经验库：从工程 manifest 的 <code>knowledge.refs</code> 检索拆分的子文档。点左侧条目看全文；顶部搜索框可过滤标题/路径。子文档含「检索关键词」便于跨项目复用经验、让新 AI 秒懂架构。</div>
-      <div class="row" style="margin:10px 0"><input id="expSearch" placeholder="搜索标题 / 关键词…" oninput="expFilter()"></div>
-      <div id="expView" style="margin-top:8px;max-height:62vh;overflow:auto;line-height:1.7"></div>
+      <div class="hint">经验库（增强检索）：读取工程 manifest 的 <code>knowledge.refs</code>，并实时解析每篇子文档的「检索关键词」生成<b>标签云</b>，按 <b>角色 / 模块 / BUG 号</b> 分面过滤。点左侧条目看全文；搜索框匹配标题 / 关键词 / BUG 号。例如新 AI 问「点不了」直接命中 mouse_filter 铁律。</div>
+      <div class="row" style="margin:10px 0 4px;display:flex;gap:8px;align-items:center">
+        <input id="expSearch" style="flex:1" placeholder="搜索标题 / 关键词 / BUG 号…" oninput="expFilter()">
+        <label class="exp-toggle"><input type="checkbox" id="expNotice" onchange="expFilter()"> 显示变更通告 (<span id="expNoticeN">0</span>)</label>
+      </div>
+      <div id="expFacets" class="exp-facets"></div>
+      <div id="expView" style="margin-top:8px;max-height:56vh;overflow:auto;line-height:1.7"></div>
     </div>
   </div>
 </section>
@@ -2171,38 +2190,85 @@ async function loadStartupCard(){
   }
   root.innerHTML=html;
 }
-// ===================== 经验库（读取 manifest knowledge.refs，检索拆分子文档） =====================
-let EXP_ITEMS=[];
+// ===================== 经验库（增强检索：标签云 + 角色/模块/BUG 分面过滤） =====================
+let EXP_ITEMS=[], EXP_FACETS={roles:[],modules:[],bugs:[],tags:[]};
+let EXP_ACTIVE={roles:new Set(),modules:new Set(),bugs:new Set(),tags:new Set()};
+let EXP_TAG_MAX=1, EXP_TAG_MIN=1, EXP_TAG_CNT={};
 async function expLoad(){
   const r=await A('GET','/api/experience');
   const box=document.getElementById('expList');
   if(!r || !r.ok){ box.innerHTML='<div class="item">加载失败：'+(r&&r.error||'未知')+'</div>'; return; }
   const k=r.knowledge||{};
   EXP_ITEMS=[];
-  (k.refs||[]).forEach(p=>EXP_ITEMS.push({type:'文档', path:p, title:expTitle(p)}));
-  (k.reusable_patterns||[]).forEach(t=>EXP_ITEMS.push({type:'可复用', path:'', title:t}));
-  (k.predecessor_mistakes||[]).forEach(t=>EXP_ITEMS.push({type:'踩坑', path:'', title:t}));
+  (k.refs||[]).forEach(x=>EXP_ITEMS.push({type:'文档', path:x.path, title:x.title, group:x.group||'core', tags:x.tags||[], roles:x.roles||[], modules:x.modules||[], bugs:x.bugs||[]}));
+  (k.patterns||[]).forEach(x=>EXP_ITEMS.push({type:'可复用', path:'', title:x.text, group:'core', tags:[], roles:x.roles||[], modules:x.modules||[], bugs:x.bugs||[]}));
+  (k.mistakes||[]).forEach(x=>EXP_ITEMS.push({type:'踩坑', path:'', title:x.text, group:'core', tags:[], roles:x.roles||[], modules:x.modules||[], bugs:x.bugs||[]}));
+  EXP_FACETS=k.facets||{roles:[],modules:[],bugs:[],tags:[]};
+  EXP_TAG_CNT={}; (EXP_FACETS.tags||[]).forEach(([t,c])=>{ EXP_TAG_CNT[t]=c; });
+  const cs=EXP_FACETS.tags.map(([,c])=>c); EXP_TAG_MAX=Math.max(1,...cs); EXP_TAG_MIN=Math.min(...cs,1);
+  const nnEl=document.getElementById('expNoticeN'); if(nnEl) nnEl.textContent=EXP_ITEMS.filter(i=>i.group==='notice').length;
+  EXP_ACTIVE={roles:new Set(),modules:new Set(),bugs:new Set(),tags:new Set()};
+  const cb=document.getElementById('expNotice'); if(cb) cb.checked=false;
+  expRenderFacets();
   expRender();
 }
 function expTitle(p){ const m=String(p).split('/'); return m[m.length-1].replace(/\.md$/,'')||p; }
-function expRender(){
+// 标签云 + 分面按钮（点击切换激活；组内 OR、组间 AND）
+function expChip(label, grp){
+  const a=EXP_ACTIVE[grp].has(label)?' active':'';
+  let style='';
+  if(grp==='tags'){ const c=EXP_TAG_CNT[label]||1; const fs=12+Math.round(((c-EXP_TAG_MIN)/Math.max(1,EXP_TAG_MAX-EXP_TAG_MIN))*10); style=' style="font-size:'+fs+'px"'; }
+  return '<span class="fchip'+a+'" data-grp="'+grp+'" data-label="'+blEsc(label)+'" onclick="expToggleFacet(this)"'+style+'>'+blEsc(label)+'</span>';
+}
+function expRenderFacets(){
+  const box=document.getElementById('expFacets'); if(!box) return;
+  const t=EXP_FACETS.tags||[];
+  let h='';
+  h+='<div class="frow"><span class="flabel">标签</span>'+(t.length?t.map(([x])=>expChip(x,'tags')).join(''):'<span class="muted">—</span>')+'</div>';
+  if(EXP_FACETS.roles.length) h+='<div class="frow"><span class="flabel">角色</span>'+EXP_FACETS.roles.map(r=>expChip(r,'roles')).join('')+'</div>';
+  if(EXP_FACETS.modules.length) h+='<div class="frow"><span class="flabel">模块</span>'+EXP_FACETS.modules.map(m=>expChip(m,'modules')).join('')+'</div>';
+  if(EXP_FACETS.bugs.length) h+='<div class="frow"><span class="flabel">BUG</span>'+EXP_FACETS.bugs.map(b=>expChip(b,'bugs')).join('')+'</div>';
+  const any=EXP_ACTIVE.roles.size||EXP_ACTIVE.modules.size||EXP_ACTIVE.bugs.size||EXP_ACTIVE.tags.size;
+  if(any) h+='<div class="frow"><button class="fclear" onclick="expClearFacets()">✕ 清除筛选</button></div>';
+  box.innerHTML=h;
+}
+function expToggleFacet(el){ const g=el.dataset.grp,l=el.dataset.label; if(EXP_ACTIVE[g].has(l))EXP_ACTIVE[g].delete(l); else EXP_ACTIVE[g].add(l); expRenderFacets(); expRender(); }
+function expClearFacets(){ EXP_ACTIVE={roles:new Set(),modules:new Set(),bugs:new Set(),tags:new Set()}; expRenderFacets(); expRender(); }
+function expMatch(it){
   const q=(document.getElementById('expSearch').value||'').toLowerCase();
+  if(q){ const hay=(it.title+' '+(it.tags||[]).join(' ')+(it.roles||[]).join(' ')+(it.modules||[]).join(' ')+(it.bugs||[]).join(' ')+(it.path||'')).toLowerCase(); if(!hay.includes(q)) return false; }
+  if(EXP_ACTIVE.tags.size && !(it.tags||[]).some(t=>EXP_ACTIVE.tags.has(t))) return false;
+  if(EXP_ACTIVE.roles.size && !(it.roles||[]).some(r=>EXP_ACTIVE.roles.has(r))) return false;
+  if(EXP_ACTIVE.modules.size && !(it.modules||[]).some(m=>EXP_ACTIVE.modules.has(m))) return false;
+  if(EXP_ACTIVE.bugs.size && !(it.bugs||[]).some(b=>EXP_ACTIVE.bugs.has(b))) return false;
+  return true;
+}
+function expRender(){
+  const showNotice=document.getElementById('expNotice') && document.getElementById('expNotice').checked;
   const box=document.getElementById('expList');
-  const list=EXP_ITEMS.filter(it=>!q || it.title.toLowerCase().includes(q) || it.path.toLowerCase().includes(q));
+  const list=EXP_ITEMS.filter(it=>{
+    if(it.group==='notice' && !showNotice) return false;
+    return expMatch(it);
+  });
   window._expFiltered=list;
-  box.innerHTML=list.map((it,i)=>'<div class="item" data-i="'+i+'" onclick="expOpen('+i+')">['+it.type+'] '+blEsc(it.title)+'</div>').join('') || '<div class="item">无匹配</div>';
+  box.innerHTML=list.map((it,i)=>{
+    const meta=[...(it.roles||[]),...(it.modules||[]),...(it.bugs||[])].map(x=>'<span class="mini">'+blEsc(x)+'</span>').join(' ');
+    return '<div class="item" data-i="'+i+'" onclick="expOpen('+i+')">['+it.type+'] '+blEsc(it.title)+(meta?'<div class="imeta">'+meta+'</div>':'')+'</div>';
+  }).join('') || '<div class="item">无匹配</div>';
 }
 function expFilter(){ expRender(); }
 async function expOpen(i){
   const list=window._expFiltered||EXP_ITEMS;
   const it=list[i]; if(!it) return;
   const view=document.getElementById('expView');
+  const meta=[...(it.roles||[]),...(it.modules||[]),...(it.bugs||[])];
+  const metaHtml=meta.length?'<div class="refmeta">'+meta.map(x=>'<span class="mini">'+blEsc(x)+'</span>').join(' ')+'</div>':'';
   if(it.type==='文档' && it.path){
     const r=await A('GET','/api/experience/doc?path='+encodeURIComponent(it.path));
-    if(r && r.ok){ view.innerHTML=expMd(r.text); }
+    if(r && r.ok){ view.innerHTML=metaHtml+expMd(r.text); }
     else { view.innerHTML='<div class="status bad">读取失败：'+(r&&r.error||'未知')+'</div>'; }
   } else {
-    view.innerHTML='<div class="refbox">'+blEsc(it.title)+'</div>';
+    view.innerHTML=metaHtml+'<div class="refbox">'+blEsc(it.title)+'</div>';
   }
 }
 // 轻量 markdown → 安全 HTML（先转义，再处理 # 标题 / **粗体** / `代码` / - 列表 / 引用 / 表格行）

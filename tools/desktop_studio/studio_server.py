@@ -17,6 +17,8 @@ import webbrowser
 import datetime
 import base64
 import urllib.parse
+import re
+import glob
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import studio_core as core
@@ -122,6 +124,161 @@ def _run_gate():
              "green": (failed == 0 and xfail == 0)}
     return {"ok": True, "godot": exe, "gate1": gate1, "gate2": gate2,
             "green": gate1["green"] and gate2["green"]}
+
+
+# ── 经验库增强检索：服务端实时富化 knowledge.refs ──────────────────────────────
+# 解析每篇子文档的「检索关键词」行 → 标签云；扫描正文（标题+前 4000 字）→ 角色/模块/BUG 分面。
+# 词表集中维护、与文档解耦：新文档只要含这些词即自动归入对应分面，零 schema 改动、零文档改动。
+_EXP_ROLE_KW = {
+    "架构": ["架构", "分层", "单向依赖", "依赖注入", "服务实例", "门面", "装配中枢", "分层铁律", "跨模块通信"],
+    "程序": ["事务化", "资产守恒", "inventorytransaction", "combatcore", "combatservice", "逻辑内核", "try_consume", "单一真源", "发号器"],
+    "前端": ["mouse_filter", "吞点击", "屏幕栈", "前端", "hbox", "vbox", "control节点", "信号接缝", "接缝"],
+    "美工": ["纹理压缩", "立绘", "图标", "换皮", "reskin", "美术", "背景图"],
+    "运维": ["门禁", "双闸门", "headless", "run_all", "pre-commit", "连接器", "部署", "打包", "studio", "工作室平台", "安全自检"],
+    "PM": ["多ai", "协同", "sop", "派单", "changelog", "待办", "治理", "规划", "复盘"],
+    "迭代": ["回归", "可复用", "模式", "优化", "扩展", "迭代"],
+}
+_EXP_MOD_KW = {
+    "战斗": ["战斗", "回合制", "战棋", "atb", "网格", "combatcore", "tacticalbattlescene"],
+    "经济": ["经济", "背包", "商店", "锻造", "炼药", "资产守恒"],
+    "结缘": ["结缘", "好感", "姻缘", "配偶", "结义", "师徒", "关系网"],
+    "UI": ["mouse_filter", "屏幕栈", "ui皮肤"],
+    "存档": ["读档", "写档", "存档", "脏档", "savemanager"],
+    "纹理": ["纹理压缩", "纹理"],
+    "信号": ["eventbus", "信号接缝", "notify", "cmd", "接缝"],
+    "装配": ["gamemanager", "装配", "场景切换"],
+    "门禁": ["门禁", "双闸门"],
+    "平台": ["工作室平台", "studio", "连接器"],
+    "多AI": ["多ai", "协同", "派单"],
+    "数据": ["数值配置", "data/configs", "配置表"],
+}
+
+
+def _exp_derive_facets(scan_text):
+    """从一段文本派生 (roles, modules)。BUG 号在调用处从全文单独提取（显式无歧义）。"""
+    low = scan_text.lower()
+    roles = set()
+    for role, kws in _EXP_ROLE_KW.items():
+        if any(kw.lower() in low for kw in kws):
+            roles.add(role)
+    mods = set()
+    for mod, kws in _EXP_MOD_KW.items():
+        if any(kw.lower() in low for kw in kws):
+            mods.add(mod)
+    return sorted(roles), sorted(mods)
+
+
+def _exp_enrich(knowledge, root):
+    """把 manifest 的 knowledge 段富化为可检索结构。
+
+    返回：refs(带 tags/roles/modules/bugs) + patterns/mistakes(同结构) + facets(全局分面与标签云)。
+    向后兼容：仍保留原始 reusable_patterns / predecessor_mistakes 字符串列表。
+    """
+    refs_raw = knowledge.get("refs") or []
+    refs = []
+    facets = {"roles": set(), "modules": set(), "bugs": set(), "tags": {}}
+
+    def _bump(t):
+        t = t.strip()
+        if t:
+            facets["tags"][t] = facets["tags"].get(t, 0) + 1
+
+    for entry in refs_raw:
+        if isinstance(entry, dict):
+            p = (entry.get("path") or "")
+            extra_tags = entry.get("tags") or []
+        else:
+            p = entry
+            extra_tags = []
+        # 支持 glob（如 docs/变更通告_*.md）
+        paths = []
+        if "*" in p and root:
+            paths = sorted(glob.glob(os.path.join(root, p)))
+        else:
+            paths = [p]
+        for rel in paths:
+            if not rel:
+                continue
+            title = os.path.basename(rel).replace(".md", "").replace(".txt", "") or rel
+            grp = "notice" if "变更通告" in rel else "core"
+            tags = list(extra_tags)
+            roles = mods = bugs = []
+            if root and (rel.endswith(".md") or rel.endswith(".txt")):
+                target = os.path.realpath(os.path.join(root, rel))
+                root_real = os.path.realpath(root)
+                if (target == root_real or target.startswith(root_real + os.sep)) and os.path.exists(target):
+                    try:
+                        with open(target, "r", encoding="utf-8") as f:
+                            body = f.read()
+                        kw_line = ""
+                        for ln in body.splitlines():
+                            if "检索关键词" in ln:
+                                kw_line = ln.split("检索关键词", 1)[1].lstrip("：:").strip()
+                                break
+                        for tk in re.split(r"[、,，\s]+", kw_line):
+                            if tk:
+                                tags.append(tk)
+                        # 角色/模块：优先用 curated「检索关键词」行（权威意图）；无则回退正文前 4000 字
+                        scan = (title + "\n" + kw_line) if kw_line else (title + "\n" + body[:4000])
+                        roles, mods = _exp_derive_facets(scan)
+                        # BUG 号：全文显式提取（无歧义）
+                        bugs = sorted(set(re.findall(r"BUG-\d+", body, re.IGNORECASE)), key=str.lower)
+                    except Exception:
+                        pass
+            # 变更通告数量大，仅作为可检索条目；标签云/分面只统计核心知识，避免污染默认视图
+            if grp == "core":
+                for t in tags:
+                    _bump(t)
+                for r in roles:
+                    facets["roles"].add(r)
+                for m in mods:
+                    facets["modules"].add(m)
+                for b in bugs:
+                    facets["bugs"].add(b)
+            # 归一化为相对工程根的路径（正向斜杠），保证 /api/experience/doc 能正确解析（含 glob 展开出的绝对路径）
+            rpath = rel
+            if root and os.path.isabs(rel):
+                try:
+                    rpath = os.path.relpath(rel, root).replace("\\", "/")
+                except Exception:
+                    pass
+            refs.append({"path": rpath, "title": title, "group": grp, "tags": tags,
+                         "roles": roles, "modules": mods, "bugs": bugs})
+
+    patterns = []
+    for t in knowledge.get("reusable_patterns") or []:
+        roles, mods = _exp_derive_facets(t)
+        bugs = sorted(set(re.findall(r"BUG-\d+", t, re.IGNORECASE)), key=str.lower)
+        for r in roles:
+            facets["roles"].add(r)
+        for m in mods:
+            facets["modules"].add(m)
+        for b in bugs:
+            facets["bugs"].add(b)
+        patterns.append({"text": t, "roles": roles, "modules": mods, "bugs": bugs})
+    mistakes = []
+    for t in knowledge.get("predecessor_mistakes") or []:
+        roles, mods = _exp_derive_facets(t)
+        bugs = sorted(set(re.findall(r"BUG-\d+", t, re.IGNORECASE)), key=str.lower)
+        for r in roles:
+            facets["roles"].add(r)
+        for m in mods:
+            facets["modules"].add(m)
+        for b in bugs:
+            facets["bugs"].add(b)
+        mistakes.append({"text": t, "roles": roles, "modules": mods, "bugs": bugs})
+
+    out = dict(knowledge)
+    out["refs"] = refs
+    out["patterns"] = patterns
+    out["mistakes"] = mistakes
+    out["facets"] = {
+        "roles": sorted(facets["roles"]),
+        "modules": sorted(facets["modules"]),
+        "bugs": sorted(facets["bugs"], key=str.lower),
+        "tags": sorted(facets["tags"].items(), key=lambda kv: (-kv[1], kv[0])),
+    }
+    return out
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -343,7 +500,9 @@ class Handler(BaseHTTPRequestHandler):
                 return _send_json(self, {"ok": False, "error": str(e)}, 500)
             if info is None:
                 return _send_json(self, {"ok": False, "error": "未知工程 %s" % pid}, 404)
-            return _send_json(self, {"ok": True, "pid": pid, "knowledge": info.get("knowledge", {})})
+            root = core.discover_project_root()
+            kn = _exp_enrich(info.get("knowledge", {}), root)
+            return _send_json(self, {"ok": True, "pid": pid, "knowledge": kn})
         if len(parts) >= 3 and parts[0] == "api" and parts[1] == "experience" and parts[2] == "doc":
             qs = urllib.parse.parse_qs(self.path.split("?", 1)[1] if "?" in self.path else {})
             rel = (qs.get("path") or [""])[0]
