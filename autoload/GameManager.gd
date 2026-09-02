@@ -39,6 +39,21 @@ var last_wedding := {}
 # 运行时坐标，存 autoload（切场景存活），不进存档（位置非存档数据）。
 var town_player_spawn_pos: Vector2 = Vector2.ZERO
 
+# === 区域枢纽读条切换：异步加载 + 加载覆盖层（2026-09-02 优化）===
+# 覆盖层为 GameManager 自建 CanvasLayer（层 600，高于 SYSTEM_OVERLAY 500），
+# 不触碰 UI 窗口主权的 scenes/ui/** 文件；提示文案取自 loading_tips.json。
+const LOADING_TIPS_FILE := "res://data/configs/ui/loading_tips.json"
+const LOADING_OVERLAY_LAYER := 600
+
+var _async_loading: bool = false
+var _async_loading_path: String = ""
+var _preload_pending: Array[String] = []   # 后台预加载相邻区域场景（load_threaded_request 队列）
+var _loading_overlay: CanvasLayer = null
+var _loading_bg: ColorRect = null
+var _loading_label: Label = null
+var _loading_tips: Array[String] = []
+var _loading_anim_t: float = 0.0
+
 ## 延迟一帧切换场景：避免在 UI 关闭/节点 queue_free 的同一帧内调用 change_scene_to_file，
 ## 触发 Godot "Parent node is busy adding/removing children" 内部死锁/卡死。
 ## 2026-09-02 实测：主菜单点击「继续游戏」后 freeze 根因即此。
@@ -48,6 +63,141 @@ func _deferred_change_scene(path: String) -> void:
 	await get_tree().process_frame
 	if is_instance_valid(get_tree()):
 		get_tree().change_scene_to_file(path)
+
+## 异步切换场景：后台线程加载 + 加载覆盖层（区域枢纽读条优化）。
+## 加载完成后在 _process 轮询里收尾，避免阻塞主线程；启动失败回退同步加载。
+func _async_change_scene(path: String) -> void:
+	if _async_loading:
+		GameLogger.warn("GameManager", "已有异步加载进行中，忽略新请求: %s" % path)
+		return
+	_show_loading_overlay()
+	var err: int = ResourceLoader.load_threaded_request(path)
+	if err != OK and err != ERR_ALREADY_IN_USE:
+		GameLogger.error("GameManager", "异步加载启动失败(%d): %s" % [err, path])
+		_hide_loading_overlay()
+		_deferred_change_scene(path)
+		return
+	_async_loading_path = path
+	_async_loading = true
+
+## 每帧轮询异步加载进度；完成后用已加载的 PackedScene 切场景（避免二次加载）
+func _poll_async_loading() -> void:
+	if not _async_loading:
+		return
+	var st: int = ResourceLoader.load_threaded_get_status(_async_loading_path)
+	if st == ResourceLoader.THREAD_LOAD_LOADED:
+		var packed: PackedScene = ResourceLoader.load_threaded_get(_async_loading_path)
+		_async_loading = false
+		_hide_loading_overlay()
+		if packed != null:
+			get_tree().change_scene_to_packed(packed)
+		else:
+			_deferred_change_scene(_async_loading_path)
+	elif st == ResourceLoader.THREAD_LOAD_FAILED:
+		GameLogger.error("GameManager", "异步加载失败: %s" % _async_loading_path)
+		_async_loading = false
+		_hide_loading_overlay()
+		_deferred_change_scene(_async_loading_path)
+
+## 预加载相邻区域场景（regions.json connections）：进入区域时后台预热，切过去秒开
+func _preload_adjacent_regions(region_id: String) -> void:
+	for conn in ConfigManager.get_region_connections(region_id):
+		var r: Dictionary = ConfigManager.get_region(conn)
+		var p: String = String(r.get("scene_path", ""))
+		if p.is_empty() or ResourceLoader.has_cached(p):
+			continue
+		if ResourceLoader.load_threaded_request(p) == OK:
+			_preload_pending.append(p)
+
+## 每帧收尾预加载队列：加载完成的资源入缓存（后续 change_scene_to_file 秒切）
+func _poll_preloads() -> void:
+	if _preload_pending.is_empty():
+		return
+	var still: Array[String] = []
+	for p in _preload_pending:
+		var st: int = ResourceLoader.load_threaded_get_status(p)
+		if st == ResourceLoader.THREAD_LOAD_LOADED:
+			ResourceLoader.load_threaded_get(p)
+		elif st == ResourceLoader.THREAD_LOAD_FAILED:
+			GameLogger.warn("GameManager", "预加载区域失败: %s" % p)
+		else:
+			still.append(p)
+	_preload_pending = still
+
+## 构建加载覆盖层：全屏半透明底 + 居中提示文案（层 600，高于系统浮层 500）
+func _show_loading_overlay() -> void:
+	if _loading_overlay != null:
+		return
+	_load_loading_tips()
+	var canvas := CanvasLayer.new()
+	canvas.layer = LOADING_OVERLAY_LAYER
+	canvas.name = "LoadingOverlay"
+	var bg := ColorRect.new()
+	bg.color = Color(0.05, 0.05, 0.08, 0.85)
+	bg.mouse_filter = Control.MOUSE_FILTER_STOP
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	canvas.add_child(bg)
+	var label := Label.new()
+	label.text = _pick_loading_tip()
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 22)
+	label.set_anchors_preset(Control.PRESET_FULL_RECT)
+	canvas.add_child(label)
+	# 树处于 setup 阶段（测试/启动期）时同步 add_child 会失败，延迟到帧末挂载；
+	# 生产路径（goto_region 用户操作）树已就绪，行为不变
+	_mount_loading_overlay.call_deferred(canvas)
+	_loading_overlay = canvas
+	_loading_bg = bg
+	_loading_label = label
+	_loading_anim_t = 0.0
+
+## 延迟挂载覆盖层到根节点（树忙碌时 add_child 需延后到帧末；已被释放则跳过）
+func _mount_loading_overlay(canvas: CanvasLayer) -> void:
+	if not is_instance_valid(canvas):
+		return
+	get_tree().root.add_child(canvas)
+
+## 移除加载覆盖层（已挂载则 queue_free 延迟释放，未挂载则直接 free，切场景帧内安全）
+func _hide_loading_overlay() -> void:
+	if _loading_overlay == null:
+		return
+	var ov: CanvasLayer = _loading_overlay
+	_loading_overlay = null
+	_loading_bg = null
+	_loading_label = null
+	if ov.is_inside_tree():
+		ov.queue_free()
+	else:
+		ov.free()
+
+## 从 loading_tips.json 读取加载提示文案（只读一次，缓存）
+func _load_loading_tips() -> void:
+	if not _loading_tips.is_empty():
+		return
+	if not FileAccess.file_exists(LOADING_TIPS_FILE):
+		return
+	var f := FileAccess.open(LOADING_TIPS_FILE, FileAccess.READ)
+	var text := f.get_as_text()
+	f.close()
+	var parsed: Variant = JSON.parse_string(text)
+	if parsed is Dictionary:
+		var arr: Array = parsed.get("tips", [])
+		for t in arr:
+			_loading_tips.append(String(t))
+
+## 随机取一条加载提示（无配置时给兜底文案）
+func _pick_loading_tip() -> String:
+	if _loading_tips.is_empty():
+		return "正在加载..."
+	return _loading_tips[randi() % _loading_tips.size()]
+
+## 加载覆盖层动效：提示文案透明度呼吸（轻微脉冲，避免死板）
+func _animate_loading_overlay(delta: float) -> void:
+	if _loading_label == null or not is_instance_valid(_loading_label):
+		return
+	_loading_anim_t += delta
+	_loading_label.modulate.a = 0.6 + 0.4 * sin(_loading_anim_t * 3.0)
 
 func _ready() -> void:
 	player_state = PlayerState.new()
@@ -84,6 +234,9 @@ func _process(delta: float) -> void:
 		_buff_tick_accum = 0.0
 		if player_state != null:
 			player_state.purge_expired_time_buffs()
+	_poll_async_loading()
+	_poll_preloads()
+	_animate_loading_overlay(delta)
 
 func _init_services() -> void:
 	combat_service = CombatService.new()
@@ -259,7 +412,8 @@ func goto_region(id: String) -> void:
 	ResourceManager.reclaim_all()
 	current_region_id = id
 	current_map_id = id
-	_deferred_change_scene(scene_path)
+	_preload_adjacent_regions(id)
+	_async_change_scene(scene_path)
 
 func _equip_starting_abilities() -> void:
 	var slot := 0
