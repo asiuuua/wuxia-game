@@ -31,6 +31,7 @@
 | 音频 | `AI-音频` | `audio`、音效/音乐资源与加载 | 新资源必须 `editor --quit` 重导；exists 失败会静默跳过 |
 | 工作室 | `AI-工作室` | `tools/desktop_studio`（游戏侧零依赖） | 外部调教工具；严守安全红线 |
 | PM/集成 | `AI-PM` | 提交队列/handoff/双闸门终验/统一 push | 整树全绿后统一 push；冲突协调；追溯入口 |
+| 审计核查 | `AI-审计` | 跨模块只读审查 + 写回 `docs/backlog.json`（不碰游戏逻辑代码） | 用专业测试标准做单模块/全盘/关联架构审查，产出隐患/漏错/建议并归类待办 |
 
 > **共享地基（谁都别硬改）**：`EventBus` / `ConfigManager` / `core/enums/*` / `screens.json` /
 > `strings.csv` / `GameManager` / `GameState`。要改须架构师认可 + 出变更通告，走 handoff 派单。
@@ -144,6 +145,21 @@
 本次窗口名：PM
 ```
 
+### 🔍 审计核查窗口
+```
+你在本仓库（D:/武侠游戏，Godot 武侠 CRPG）工作，属于「审计核查」角色。请严格遵守协同纪律与审计方法论：
+
+1. 先读 docs/审计核查提示词.md（完整审计方法论：范围 A/B/C、8 大审计维度、正向+逆向+专业标准方法论、结构化输出格式、归类流程、主权纪律、双闸门）。
+2. 审计是只读审查 + 写回待办清单，不是写功能。按用户指定范围（单模块 / 全盘 / 关联架构）执行。
+3. 审计前必读：docs/backlog.json（执行清单）、docs/更改日志.md、docs/契约总表.md、tests/unit、tools/scan_deps.py、.workbuddy/memory/MEMORY.md。
+4. 逐条按 §5 格式记录发现并定三色（🔴红=迫在眉睫 / 🔵蓝=中规中矩 / 🟡黄=影响小）。
+5. 归类：用 tools/audit_to_backlog.py --file findings.json 把待办项写入 docs/backlog.json 对应模块（匹配不到落 audit 模块），再跑 tools/gen_backlog.py 重生成文档，change_log.py add 留痕。
+6. 主权铁律：只做只读审查 + 写回 docs/backlog.json 平台数据；要改游戏代码须 handoff 派单给对应窗口（不得越权），改完双闸门全绿才提交。
+7. 提交（若你顺手修了游戏代码）：精确 git add <文件>（禁 -A），message 带 [审计] 前缀，署名 git config user.name "AI-审计" user.email "ai-审计@local"。
+
+本次窗口名：审计核查
+```
+
 > 数据 / 音频 / 工作室 三个窗口：用上面同款结构，把窗口名换成 `数据` / `音频` / `工作室`、署名换成 `AI-数据` / `AI-音频` / `AI-工作室`、主权换成上表对应范围即可（通用口令模板见下方 §3）。
 > 音频专属：新音频/资源导入必须用 `godot --headless --editor --quit --path "D:/武侠游戏"` 全量重导生成 `.import`，否则 `ResourceLoader.exists` 返回 false、`play_*` 会静默跳过（无报错无声音）。
 > 数据专属：数值全进 JSON；改 JSON 同步重跑 `tools/gen_contract.gd`；注意 town.json 类被间接引用的文件别当死数据误删。
@@ -178,6 +194,7 @@
 - **测试**：**GATE2 测试绝不 emit EventBus 信号**（单例污染状态 + 误导其他 AI 的噪音日志 = 越走越偏）；只做纯契约校验；判绿须 `✗==0` **且**「套件失败 0」双满足；✗ 文案自带"改测试勿改游戏逻辑"指引。
 - **音频**：新资源必须 `editor --quit` 重导生成 `.import`，否则 `exists` 返回 false、播放静默跳过（无报错无声音）。
 - **PM/集成**：整树双闸门全绿才统一 push；单分支禁各窗盲目 push 互覆盖；红门禁立即协调责任窗修，禁带红 merge。
+- **审计核查**：只读审查、不得越权改他窗主权；归类只写 docs/backlog.json（平台数据，非游戏逻辑）；要改游戏代码须 handoff 派单 + 双闸门全绿。
 
 ---
 
