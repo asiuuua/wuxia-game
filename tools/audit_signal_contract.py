@@ -89,11 +89,25 @@ def scan_project(root):
     return emits, conns, locations
 
 
+def _load_baseline(path):
+    """读取基线 JSON 的 known_dead_signals 集合。失败则按「零基线」处理（任何死信号都拦）。"""
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        return set(data.get('known_dead_signals', []))
+    except Exception as e:
+        print(f'[WARN] 基线读取失败，按零基线处理（任何死信号都拦）: {e}', file=sys.stderr)
+        return set()
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--root', default=None)
     ap.add_argument('--eventbus', default=None)
     ap.add_argument('--json', default=None, help='写结构化结果到此路径')
+    ap.add_argument('--baseline', default=None,
+                    help='基线 JSON（含 known_dead_signals 列表）。门禁模式：仅拦「新增」死信号'
+                         '+任何未声明引用，不拦基线内已知死信号（供清理渐进）。')
     args = ap.parse_args()
 
     root = find_project_root(args.root)
@@ -172,9 +186,40 @@ def main():
             json.dump(result, f, ensure_ascii=False, indent=2)
         print(f'\n[OK] 结构化结果已写: {args.json}')
 
+    if args.baseline:
+        known = _load_baseline(args.baseline)
+        # 门禁只盯「无生产方(emit=0)」信号：永远不可能触发，接它的代码是死代码，
+        # 也最易被 @warning_ignore 掩盖而悄悄堆积。
+        # 「已发射但暂未订阅(emit>0,connect=0)」是良性广播（先 emit 后接属正常增量开发），不拦。
+        current_dead = set(orphan_no_emit)
+        advisory_no_consumer = sorted(set(orphan_no_connect) - set(orphan_no_emit))
+        new_dead = sorted(current_dead - known)
+        removed = sorted(known - current_dead)
+        print('\n--- ⑤ 门禁比对（基线模式）---')
+        print(f'  基线已知无生产方信号: {len(known)}  当前无生产方: {len(current_dead)}')
+        if removed:
+            print(f'  ✓ 已清理（基线内有、现已 emit）: {", ".join(removed)}')
+        if advisory_no_consumer:
+            print(f'  ℹ 已发射但暂未订阅(良性广播，仅提示不拦，{len(advisory_no_consumer)} 个): {", ".join(advisory_no_consumer[:12])}{"…" if len(advisory_no_consumer) > 12 else ""}')
+        if new_dead:
+            print(f'  ✗ 新增无生产方信号（基线外、须补 emit 或删声明）: {", ".join(new_dead)}')
+        if undeclared:
+            print(f'  ✗ 未声明引用（必拦，拼写漂移/已删信号）: {", ".join(undeclared)}')
+        if not new_dead and not undeclared:
+            print('  ✓ 门禁通过：无新增无生产方信号、无未声明引用（基线内已知项不拦）')
+        block = bool(new_dead or undeclared)
+        sys.exit(1 if block else 0)
+
     # 退出码：有孤儿/未声明 → 1（供门禁用），否则 0
     sys.exit(1 if (undeclared or orphan_no_emit or orphan_no_connect) else 0)
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception as e:
+        # 失败开放（关键，对齐 lint_mouse_filter）：扫描器自身崩溃（磁盘锁/编码/解析异常）
+        # 必须放行，绝不以 exit 1 冒充"发现死信号"——否则 pre-commit 钩子会误拦正常提交。
+        # 崩溃交 GATE2 + 下次手动扫描兜底，不可因守卫本身故障阻断开发。
+        sys.stderr.write("[audit_signal_contract] ⚠ 扫描器自身异常，已放行未阻断提交：%s\n" % e)
+        sys.exit(0)

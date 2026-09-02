@@ -1,10 +1,11 @@
 #!/bin/sh
 # .git/hooks/pre-commit —— 多 AI 协同「机器级硬约束」
 #
-# 作用：提交时自动扫描本次暂存的 .tscn，若发现
-#   【按钮下可见装饰子节点 mouse_filter 仍为 STOP(0)】
-# 这类"静默吞点击"BUG（不报错、GATE1 抓不到），直接拦下提交，
-# 强迫 AI/人在合并前修复 —— 不靠记忆、不靠自觉。
+# 作用：提交时自动扫描，拦下两类「静默」BUG（不报错、GATE1 抓不到、靠 @warning_ignore 掩盖）：
+#   【GATE0a】按钮下可见装饰子节点 mouse_filter 仍为 STOP(0) —— 静默吞点击
+#   【GATE0b】EventBus 信号契约漂移 —— 新增「无生产方(emit=0)」死信号，或引用未声明信号
+#             （基线 tools/audit_signal_baseline.json 容纳已知遗留 17 个，仅拦「新增」项，
+#              不拦「已发射暂未订阅」的良性广播，避免误伤正常增量开发）
 #
 # 安装：python tools/install_hooks.py   （首次克隆或换机器跑一次即可）
 #
@@ -17,40 +18,63 @@ if [ ! -x "$PY" ]; then
   PY="$(command -v python3 || command -v python || true)"
 fi
 if [ -z "$PY" ]; then
-  echo "[pre-commit] 未找到 Python，跳过静默拦截扫描（请安装 Python 或装好 managed runtime）"
+  echo "[pre-commit] 未找到 Python，跳过全部静默拦截扫描（请安装 Python 或装好 managed runtime）"
   exit 0
 fi
 
-# 仅取本次暂存的 .tscn（新增/复制/修改/重命名，排除已删除）
-STAGED=$(git diff --cached --name-only --diff-filter=ACMR -- '*.tscn' || true)
-if [ -z "$STAGED" ]; then
-  # 本次没动 .tscn，无需扫描；仍提醒留痕纪律
-  echo "[pre-commit] 本次未改动 .tscn，跳过静默拦截扫描。"
-  echo "[pre-commit] 提醒：改完记得 change_log.py add 登记；合并前双闸门 GATE1+GATE2 须全绿。"
-  exit 0
+# ===== GATE0a：mouse_filter 静默吞点击（仅当本次暂存 .tscn）=====
+STAGED_TSCN=$(git diff --cached --name-only --diff-filter=ACMR -- '*.tscn' || true)
+if [ -z "$STAGED_TSCN" ]; then
+  echo "[pre-commit] 本次未改动 .tscn，跳过静默拦截(mouse_filter)扫描。"
+else
+  FILES=""
+  for f in $STAGED_TSCN; do
+    FILES="$FILES \"$REPO/$f\""
+  done
+  echo "[pre-commit] 扫描本次暂存的 $(echo "$STAGED_TSCN" | wc -l | tr -d ' ') 个 .tscn（mouse_filter 静默拦截）…"
+  set +e
+  eval "$PY" "\"$REPO/tools/lint_mouse_filter.py\"" --tier default --files $FILES
+  RC=$?
+  set -e
+  if [ "$RC" -ne 0 ]; then
+    echo ""
+    echo "❌ pre-commit 拦截(GATE0a)：发现『静默吞点击』高危写法（mouse_filter=STOP 的按钮装饰子节点）。"
+    echo "   这是会『不报错却让按钮点不动/鼠标卡住』的 BUG，请改为 mouse_filter = 2（IGNORE 点击穿透）。"
+    echo "   修复后重新 git add 该文件并再次提交。"
+    echo "   （确认是误报且需应急绕过：git commit --no-verify —— 但禁止常规使用）"
+    exit 1
+  fi
+  echo "✓ 静默拦截(mouse_filter)扫描通过。"
 fi
 
-# 转绝对路径
-FILES=""
-for f in $STAGED; do
-  FILES="$FILES \"$REPO/$f\""
-done
-
-echo "[pre-commit] 扫描本次暂存的 $(echo "$STAGED" | wc -l | tr -d ' ') 个 .tscn …"
-set +e
-eval "$PY" "\"$REPO/tools/lint_mouse_filter.py\"" --tier default --files $FILES
-RC=$?
-set -e
-
-if [ "$RC" -ne 0 ]; then
-  echo ""
-  echo "❌ pre-commit 拦截：发现『静默吞点击』高危写法（mouse_filter=STOP 的按钮装饰子节点）。"
-  echo "   这是会『不报错却让按钮点不动/鼠标卡住』的 BUG，请改为 mouse_filter = 2（IGNORE 点击穿透）。"
-  echo "   修复后重新 git add 该文件并再次提交。"
-  echo "   （确认是误报且需应急绕过：git commit --no-verify —— 但禁止常规使用）"
-  exit 1
+# ===== GATE0b：EventBus 信号契约（仅当本次暂存 .gd）=====
+STAGED_GD=$(git diff --cached --name-only --diff-filter=ACMR -- '*.gd' || true)
+if [ -z "$STAGED_GD" ]; then
+  echo "[pre-commit] 本次未改动 .gd，跳过 EventBus 信号契约门禁。"
+else
+  AUDIT_TOOL="$REPO/tools/audit_signal_contract.py"
+  AUDIT_BASE="$REPO/tools/audit_signal_baseline.json"
+  if [ ! -f "$AUDIT_TOOL" ] || [ ! -f "$AUDIT_BASE" ]; then
+    # 基础设施缺失：fail-open（绝不因门禁脚本丢了就拦死所有人的提交）
+    echo "[pre-commit] ⚠ 信号契约门禁脚本/基线缺失（$AUDIT_TOOL / $AUDIT_BASE），跳过该门禁（请重装 tools/）。"
+  else
+    echo "[pre-commit] 扫描 EventBus 信号契约（基线模式，全工程）…"
+    set +e
+    "$PY" "$AUDIT_TOOL" --baseline "$AUDIT_BASE"
+    RC=$?
+    set -e
+    if [ "$RC" -ne 0 ]; then
+      echo ""
+      echo "❌ pre-commit 拦截(GATE0b)：EventBus 信号契约门禁未过。"
+      echo "   可能原因：① 新增了『无生产方(emit=0)』的死信号（永不被 emit，接它的代码是死代码）；"
+      echo "            ② emit/connect 了一个 EventBus.gd 未声明的信号名（拼写漂移/已删信号）。"
+      echo "   修复：给新信号补 emit，或删除未接线声明；已知遗留项已在 tools/audit_signal_baseline.json 豁免。"
+      echo "   详情见 docs/关联架构审计_信号契约.md。应急绕过：git commit --no-verify（禁止常规使用）。"
+      exit 1
+    fi
+    echo "✓ EventBus 信号契约门禁通过（无新增无生产方死信号、无未声明引用）。"
+  fi
 fi
 
-echo "✓ 静默拦截扫描通过。"
 echo "[pre-commit] 提醒：改完记得 change_log.py add 登记；合并前双闸门 GATE1+GATE2 须全绿。"
 exit 0

@@ -2,23 +2,23 @@
   "findings": [
     {
       "module": "battle",
-      "title": "战斗内使用消耗品被 consume 但 item_used_in_battle 无订阅方→效果静默丢失",
+      "title": "战斗内使用消耗品被 consume 但 item_used_in_battle 无订阅方→效果静默丢失（已失效/解决）",
       "type": "隐性BUG",
-      "status": "open",
-      "source": "services/inventory/inventory_service.gd:450",
-      "detail": "inventory_service._apply_use_heal(450)/_apply_use_exp(521) 在 context=='battle' 时先 consume_instance 扣物品，再 EventBus.item_used_in_battle.emit(item_id, effect) 返回 BATTLE_PENDING，设计由战斗场景经战斗状态结算。但全工程零 EventBus.item_used_in_battle.connect（含字符串形式），战斗场景不订阅→物品消失、治疗/经验效果从不生效。EventBus.gd:25 注释明确'由战斗场景结算'。GameLogger 仍打'已派发战斗结算'掩盖失败。属资产损失类隐性BUG。",
-      "suggestion": "战斗窗口在 BattleScene(含战术版) _ready 内 EventBus.item_used_in_battle.connect(_on_item_used_in_battle)，按 effect.hp/mp/exp 经战斗状态结算(护盾/溢出/HUD)；或改为 inventory 直调 combat_service.apply_item_effect。需先确认战斗用药 UI 是否真走 inventory_service.use_item('battle')。",
-      "plain": {"what": "在战斗里吃药/经验丹，东西没了但血蓝经验没加——背包把'战斗用药'广播出去了，但战斗场景没在听。属资产损失类隐性BUG，建议战斗窗口接上这个广播或改直调结算。"}
+      "status": "resolved",
+      "source": "services/inventory/inventory_service.gd:445-448,515-518",
+      "detail": "原审计(2026-09-02)结论：_apply_use_heal(450)/_apply_use_exp(521) 在 context=='battle' 时 consume 后 emit item_used_in_battle，但零 connect→战斗内用药静默丢产出。经复核工作树(战斗窗口未提交改动)已失效：产品决策 2026-09-02 已『战斗内禁止用药』——两函数 battle 分支直接返回 NOT_ALLOWED_IN_BATTLE(不扣物品、不结算)。且信号已更名 item_used_in_battle→item_used(仅城镇分支 emit，connect 已接线)。故『战斗内用药扣了却没结算』场景不再存在。归因：战斗窗口已在工作树修复，AI-架构未改动游戏代码。",
+      "suggestion": "无需处理。仅记录：原 handoff 战斗窗口接订阅/直调结算已因产品决策取消。若未来重新开放战斗用药，须同步接 item_used 或直调结算。",
+      "plain": {"what": "原『战斗内用药扣了却没结算』的隐性BUG已失效：战斗内用药被产品决策禁止(返回 NOT_ALLOWED_IN_BATTLE 不扣不结算)，且信号已更名 item_used(城镇分支发射并已接线)。本 FINDING 关闭。"}
     },
     {
       "module": "audit",
-      "title": "EventBus 17 个信号未接线（16 完全死信号 + player_exp_changed 订阅但生产端未 emit）",
+      "title": "EventBus 17 个信号无生产方(emit=0，含 player_exp_changed) 待渐进清理",
       "type": "占位",
       "status": "open",
       "source": "autoload/EventBus.gd",
-      "detail": "audit_signal_contract.py 静态扫描 101 声明信号：16 个 emit=0 且 connect=0（cmd_buy/cmd_sell/cmd_forge/cmd_join_sect/cmd_contribute_sect/cmd_set_unit_faction/cmd_apply_story_buff 共7个CMD信号被直调替代；bond_romance_stage_changed/combat_character_died/config_loaded/config_validation_failed/grid_unit_moved/quest_ready_to_turn_in/ui_screen_opened/ui_screen_closed/unit_downed 共9个事件未接线）。另 player_exp_changed connect=1(HUD status_card_panel.gd:50 完整connect/disconnect)但 gain_exp()(data/runtime/player_state.gd:87)从未emit且订阅者_refresh(:84-114)不读exp→死信号。@warning_ignore 掩盖 unused_signal 警告，死信号不外显。",
+      "detail": "audit_signal_contract.py 静态扫描 100 声明信号：17 个无生产方(emit=0)——16 个 emit=0 且 connect=0（cmd_buy/cmd_sell/cmd_forge/cmd_join_sect/cmd_contribute_sect/cmd_set_unit_faction/cmd_apply_story_buff 共7个CMD信号被直调替代；bond_romance_stage_changed/combat_character_died/config_loaded/config_validation_failed/grid_unit_moved/quest_ready_to_turn_in/ui_screen_opened/ui_screen_closed/unit_downed 共9个事件未接线）+ player_exp_changed(connect=1 但 gain_exp 从未emit)。@warning_ignore 掩盖 unused_signal 警告。注：『已发射暂未订阅(emit>0,connect=0)』的 38 个为良性广播，不计入门禁拦截目标。【已建防呆】pre-commit GATE0b 接入 audit_signal_contract.py --baseline，仅拦『新增』无生产方信号+未声明引用；基线 tools/audit_signal_baseline.json 收录这17个已知项(不拦)。17遗留项待架构窗口渐进清理(补emit或删声明，清理时同步从基线移除)。",
       "suggestion": "架构/共享地基窗口统一处置：①CMD类确已改直调则删EventBus信号+残留；②事件类确为预留则补reserved注释或删；③player_exp_changed 要么gain_exp补emit且HUD显示经验条，要么删信号+HUD connect。改 EventBus.gd(共享地基冻结清单)须 change_log+双窗口确认，单窗禁擅改。",
-      "plain": {"what": "EventBus 里有一批信号从没被发过也没人听（死信号），还有 player_exp_changed HUD接了但生产端从没发、且HUD那函数也不读经验。这些是契约噪音，@warning_ignore 盖住了。建议架构窗口统一清理或补接线，动 EventBus 共享地基要协同。"}
+      "plain": {"what": "EventBus 有17个信号从没被发过(无生产方)，含 player_exp_changed HUD接了但生产端从没发。已接入提交门禁防再堆积、基线收录这17个待渐进清理；动 EventBus 共享地基要协同。"}
     }
   ]
 }

@@ -1,0 +1,25 @@
+{
+  "generated_at": "2026-09-02",
+  "scope": "no_producer(emit=0)",
+  "note": "已知「无生产方(emit=0)」的 EventBus 信号基线（共17）。门禁仅拦「新增」无生产方信号+任何未声明引用(undeclared)，不拦基线内已知项，也不拦「已发射暂未订阅(emit>0,connect=0)」的良性广播。架构/共享地基窗口清理 EventBus 时逐项移除（补 emit 或删声明）。item_used_in_battle 已因产品决策(战斗禁用药)更名为 item_used 并接线，不在基线。",
+  "known_dead_signals": [
+    "bond_romance_stage_changed",
+    "cmd_apply_story_buff",
+    "cmd_buy",
+    "cmd_contribute_sect",
+    "cmd_forge",
+    "cmd_join_sect",
+    "cmd_sell",
+    "cmd_set_unit_faction",
+    "combat_character_died",
+    "config_loaded",
+    "config_validation_failed",
+    "grid_unit_moved",
+    "player_exp_changed",
+    "quest_ready_to_turn_in",
+    "ui_screen_closed",
+    "ui_screen_opened",
+    "unit_downed"
+  ],
+  "count": 17
+}
