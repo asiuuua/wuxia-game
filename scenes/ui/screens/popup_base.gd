@@ -36,6 +36,41 @@ func make_glass_panel(size: Vector2) -> Panel:
 func request_close() -> void:
 	EventBus.popup_close_requested.emit(self)
 
+# === 响应式锚点（2026-09-02 统一收口）===
+# 各 PopupBase 弹窗在 _ready 末尾调用 enable_responsive($Panel, Vector2(W,H)) 即可获得：
+#   ① 大视口保持原尺寸（视觉不变）② 小视口自动内缩防溢出/错位 ③ 分辨率变化时自动重排居中。
+# 取代各屏手写 PRESET_CENTER / 固定 offset 的脆弱写法（见 ui_center_utils.fit_panel_to_viewport）。
+var _rp_panel: Control = null
+var _rp_desired: Vector2 = Vector2.ZERO
+var _rp_mx: float = 0.06
+var _rp_my: float = 0.06
+
+## 启用响应式面板。desired 为面板「设计尺寸」（通常取 .tscn 里 Panel 的 size）。
+## margin 为视口留白比例（默认 6%）。弹窗关闭（tree_exiting）时自动断开 size_changed，避免悬空监听。
+func enable_responsive(panel: Control, desired: Vector2, margin_x := 0.06, margin_y := 0.06) -> void:
+	_rp_panel = panel
+	_rp_desired = desired
+	_rp_mx = margin_x
+	_rp_my = margin_y
+	_fit_responsive()
+	var vp := get_viewport()
+	if vp == null:
+		return  # headless 单测无真实视口，跳过接线（测试窗口派单 9526b65a3386）
+	if not vp.size_changed.is_connected(_fit_responsive):
+		vp.size_changed.connect(_fit_responsive)
+	# tree_exiting 不论子类是否定义 _exit_tree 都会触发，故用它做清理，避免与子类 _exit_tree 冲突
+	if not tree_exiting.is_connected(_cleanup_responsive):
+		tree_exiting.connect(_cleanup_responsive)
+
+func _fit_responsive() -> void:
+	if _rp_panel != null and is_instance_valid(_rp_panel):
+		UICenterUtils.fit_panel_to_viewport(_rp_panel, _rp_desired, _rp_mx, _rp_my)
+
+func _cleanup_responsive() -> void:
+	var vp := get_viewport()
+	if vp != null and vp.size_changed.is_connected(_fit_responsive):
+		vp.size_changed.disconnect(_fit_responsive)
+
 ## 统一 ESC 关闭（与 BaseScreen 行为对齐，消除各屏手写 _unhandled_input 的遗漏/分叉）：
 ## 按下 ui_cancel 经 request_close() 收口；close_on_cancel=false 的屏（如由外部场景统一开关者）不响应。
 ## 子类若另写 _unhandled_input 且不调 super，则以其自身逻辑为准，不会与这里叠加。

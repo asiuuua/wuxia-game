@@ -21,6 +21,7 @@ func _ready() -> void:
 	refresh()
 	EventBus.notify_forge_completed.connect(_on_forge_completed)
 	EventBus.notify_forge_failed.connect(_on_forge_failed)
+	enable_responsive($Panel, Vector2(640, 560))
 
 func _build_ui() -> void:
 	_title.text = tr("ui_forge_title")

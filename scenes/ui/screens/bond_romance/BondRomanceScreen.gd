@@ -27,6 +27,7 @@ func _ready() -> void:
 	_refresh()
 	if not EventBus.bond_relationship_changed.is_connected(_on_relationship_changed):
 		EventBus.bond_relationship_changed.connect(_on_relationship_changed)
+	enable_responsive($Panel, Vector2(760, 620))
 
 func _build_ui() -> void:
 	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

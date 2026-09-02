@@ -5,6 +5,11 @@
 # 本组件不持有任何存档业务逻辑（不认识 SaveManager），只负责「收一个名字并回报」，便于复用。
 extends Control
 
+const UICenterUtils = preload("res://scenes/ui/ui_center_utils.gd")
+
+# 响应式锚点（派单 23a9d0b92b83）：面板设计尺寸，小视口自动内缩防溢出/错位
+const SAVE_NAME_PANEL_SIZE := Vector2(460, 190)
+
 ## 确认保存：参数为输入框当前文本（未做去空格/兜底，交给调用方按业务处理）
 signal confirmed(save_name: String)
 ## 取消 / 点遮罩 / ESC 关闭
@@ -26,6 +31,24 @@ func _ready() -> void:
 	_edit.text_submitted.connect(func(_t: String): _on_ok())
 	_dim.gui_input.connect(_on_dim_gui_input)
 	_edit.grab_focus.call_deferred()   # 延后一帧：等节点真正进树拿到焦点
+	# 响应式锚点：小视口内缩防溢出 + 分辨率变化自动重排居中
+	_fit_responsive()
+	var vp := get_viewport()
+	if vp != null and not vp.size_changed.is_connected(_fit_responsive):
+		vp.size_changed.connect(_fit_responsive)
+	if not tree_exiting.is_connected(_cleanup_responsive):
+		tree_exiting.connect(_cleanup_responsive)
+
+func _fit_responsive() -> void:
+	var panel := $Panel as Control
+	if panel == null:
+		return
+	UICenterUtils.fit_panel_to_viewport(panel, SAVE_NAME_PANEL_SIZE)
+
+func _cleanup_responsive() -> void:
+	var vp := get_viewport()
+	if vp != null and vp.size_changed.is_connected(_fit_responsive):
+		vp.size_changed.disconnect(_fit_responsive)
 
 ## 可选：预填默认名（不传则为空，只显示占位提示）
 func setup(default_name: String = "") -> void:

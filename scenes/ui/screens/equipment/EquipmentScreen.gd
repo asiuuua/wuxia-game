@@ -23,6 +23,7 @@ func _ready() -> void:
 	_build_ui()
 	refresh()
 	EventBus.equipment_changed.connect(_on_equipment_changed)
+	enable_responsive($Panel, Vector2(560, 560))
 
 func _build_ui() -> void:
 	_title.text = tr("ui_equip_title")

@@ -25,6 +25,7 @@ func _ready() -> void:
 	EventBus.notify_sect_join_failed.connect(_on_sect_join_failed)
 	EventBus.notify_sect_reputation_changed.connect(_on_rep_changed)
 	EventBus.notify_sect_rank_up.connect(_on_rank_up)
+	enable_responsive($Panel, Vector2(640, 560))
 
 func _build_ui() -> void:
 	_title.text = tr("ui_sect_title")

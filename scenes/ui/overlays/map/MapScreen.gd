@@ -12,6 +12,10 @@ extends Control
 class_name MapScreen
 
 const UIPalette = preload("res://core/constants/ui_theme.gd")
+const UICenterUtils = preload("res://scenes/ui/ui_center_utils.gd")
+
+# 响应式锚点（派单 23a9d0b92b83）：面板设计尺寸，小视口自动内缩防溢出/错位
+const MAP_PANEL_SIZE := Vector2(560, 480)
 
 # 区域枢纽总览：区域列表来自 data/configs/world/regions.json（填表模式，ConfigManager 读取），不再硬编码
 
@@ -28,6 +32,24 @@ func _ready() -> void:
 		return
 	focus_mode = Control.FOCUS_NONE
 	_build()
+	# 响应式锚点：小视口内缩防溢出 + 分辨率变化自动重排居中
+	_fit_responsive()
+	var vp := get_viewport()
+	if vp != null and not vp.size_changed.is_connected(_fit_responsive):
+		vp.size_changed.connect(_fit_responsive)
+	if not tree_exiting.is_connected(_cleanup_responsive):
+		tree_exiting.connect(_cleanup_responsive)
+
+func _fit_responsive() -> void:
+	var panel := $Panel as Control
+	if panel == null:
+		return
+	UICenterUtils.fit_panel_to_viewport(panel, MAP_PANEL_SIZE)
+
+func _cleanup_responsive() -> void:
+	var vp := get_viewport()
+	if vp != null and vp.size_changed.is_connected(_fit_responsive):
+		vp.size_changed.disconnect(_fit_responsive)
 
 func _build() -> void:
 	_title.text = tr("ui_map_title")

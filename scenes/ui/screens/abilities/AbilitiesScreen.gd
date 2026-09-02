@@ -23,6 +23,7 @@ func _ready() -> void:
 	popup_id = "Abilities"
 	_build_ui()
 	_refresh()
+	enable_responsive($Panel, Vector2(720, 540))
 
 func _build_ui() -> void:
 	_title.add_theme_color_override("font_color", UIPalette.GOLD)

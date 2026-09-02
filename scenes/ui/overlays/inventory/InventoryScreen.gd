@@ -59,6 +59,7 @@ func _ready() -> void:
 	_refresh()
 	EventBus.inventory_item_added.connect(_on_inv_changed)
 	EventBus.inventory_item_removed.connect(_on_inv_changed)
+	enable_responsive($Center/Panel, Vector2(720, 560))
 
 func _refresh() -> void:
 	if _weight_label == null:

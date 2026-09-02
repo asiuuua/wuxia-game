@@ -11,6 +11,7 @@
 extends Control
 
 const UIPalette = preload("res://core/constants/ui_theme.gd")
+const UICenterUtils = preload("res://scenes/ui/ui_center_utils.gd")
 
 @warning_ignore("unused_signal")
 signal confirmed()
@@ -37,6 +38,10 @@ func _ready() -> void:
 	_build_ui()
 	_apply_skin()
 	_apply_layout()
+	# 响应式：分辨率变化时按当前视口重新居中（复用 _apply_layout 的对称 offset 计算）
+	get_viewport().size_changed.connect(_apply_layout)
+	if not tree_exiting.is_connected(_cleanup_confirm):
+		tree_exiting.connect(_cleanup_confirm)
 	_play_show_anim()
 
 ## 应用通用皮肤（来自 data/configs/ui/skin/theme.json）：重载玻璃面板配色 + 标题/内容文字色。
@@ -53,28 +58,40 @@ func _apply_skin() -> void:
 
 ## 应用确认框尺寸（来自 data/configs/ui/skin/confirm_dialog.layout.json）：
 ## 调 $Panel 的中心锚点 offset，使弹窗主体变为指定宽高。缺文件回退 .tscn 默认 440x220。
+## 响应式钳制（派单 23a9d0b92b83）：小视口内缩防溢出，大视口保持设计尺寸（统一走 UICenterUtils）。
 func _apply_layout() -> void:
 	var path := "res://data/configs/ui/skin/confirm_dialog.layout.json"
-	if not FileAccess.file_exists(path):
-		return
-	var f := FileAccess.open(path, FileAccess.READ)
-	if f == null:
-		return
-	var txt := f.get_as_text()
-	f.close()
-	var j := JSON.new()
-	if j.parse(txt) != OK:
-		return
-	var d: Dictionary = j.data
-	var w := float(d.get("panel_width", 440.0))
-	var h := float(d.get("panel_height", 220.0))
+	var w := 440.0
+	var h := 220.0
+	if FileAccess.file_exists(path):
+		var f := FileAccess.open(path, FileAccess.READ)
+		if f != null:
+			var txt := f.get_as_text()
+			f.close()
+			var j := JSON.new()
+			if j.parse(txt) == OK:
+				var d: Dictionary = j.data
+				w = float(d.get("panel_width", w))
+				h = float(d.get("panel_height", h))
 	var panel := $Panel as Control
 	if panel == null:
 		return
-	panel.offset_left = -w * 0.5
-	panel.offset_top = -h * 0.5
-	panel.offset_right = w * 0.5
-	panel.offset_bottom = h * 0.5
+	var vp := get_viewport()
+	if vp == null:
+		return  # headless 单测无真实视口，跳过（测试窗口派单 9526b65a3386）
+	var sz := UICenterUtils.clamp_panel_size(Vector2(w, h), vp.get_visible_rect().size)
+	panel.size = sz
+	panel.custom_minimum_size = sz
+	panel.offset_left = -sz.x * 0.5
+	panel.offset_top = -sz.y * 0.5
+	panel.offset_right = sz.x * 0.5
+	panel.offset_bottom = sz.y * 0.5
+
+## 分辨率变化时重排居中（响应式）：复用 _apply_layout 按当前视口重新计算对称 offset。
+## 弹窗销毁时经 tree_exiting 断连，避免悬空监听。
+func _cleanup_confirm() -> void:
+	if get_viewport().size_changed.is_connected(_apply_layout):
+		get_viewport().size_changed.disconnect(_apply_layout)
 
 ## 入场中心缩放弹入（替代原「纯淡入占位」动画）：与 UIManager 的透明度淡入叠加，
 ## 让确认框从 92% 弹出到 100%，带轻微回弹。纯代码 Tween，无需美术资源。

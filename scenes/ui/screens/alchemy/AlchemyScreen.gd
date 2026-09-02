@@ -20,6 +20,7 @@ func _ready() -> void:
 	refresh()
 	EventBus.alchemy_refined.connect(_on_alchemy_refined)
 	EventBus.alchemy_failed.connect(_on_alchemy_failed)
+	enable_responsive($Panel, Vector2(640, 560))
 
 func _build_ui() -> void:
 	_title.text = tr("ui_alchemy_title")

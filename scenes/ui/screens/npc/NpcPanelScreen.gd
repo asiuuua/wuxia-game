@@ -49,6 +49,7 @@ func _ready() -> void:
 	if _pending_open != null:
 		_open(_pending_open)
 		_pending_open = null
+	enable_responsive($Panel, Vector2(800, 640))
 
 ## UIManager.open_screen 在 add_child 之前就会调用 _on_open，此时 @onready 节点未就绪；
 ## 采用与 CelebrationOverlay / DialogOverlay 相同的模式：先暂存，等 _ready 后再真正刷新。

@@ -6,6 +6,7 @@
 extends TestBase
 
 const UICenterUtils = preload("res://scenes/ui/ui_center_utils.gd")
+const SaveNameDialogScene = preload("res://scenes/ui/components/save_name_dialog/SaveNameDialog.tscn")
 
 # 各弹窗主面板节点路径（相对场景根节点；注意 get_node_or_null 里不能用 "$" 语法糖，须写纯节点名）
 const PANELS := {
@@ -54,3 +55,40 @@ func test_popup_panels_no_overflow_at_default_viewport() -> void:
 		if scr.get_node_or_null(path) == null:
 			expect(false, "%s 主面板 %s 应存在" % [name, path])
 		UIManager.close_screen(scr)
+
+func test_confirm_dialog_responsive_wiring() -> void:
+	# 确认框（派单 23a9d0b92b83 新接线）：经 UIManager.show_popup 打开，_apply_layout 响应式钳制不崩、主面板存在
+	var dlg: Control = UIManager.show_popup("ConfirmDialog")
+	expect(dlg != null, "打开 ConfirmDialog 应成功（响应式接线不崩）")
+	if dlg == null:
+		return
+	expect(dlg.get_node_or_null("Panel") != null, "ConfirmDialog 主面板 Panel 应存在")
+	UIManager.close_screen(dlg)
+
+func test_map_screen_responsive_wiring() -> void:
+	# 地图覆盖层（派单 23a9d0b92b83 新接线）：经 open_screen 打开，_fit_responsive 接线不崩、主面板存在
+	var scr: Control = UIManager.open_screen("MapScreen", UIManager.Layer.FULLSCREEN)
+	expect(scr != null, "打开 MapScreen 应成功（响应式接线不崩）")
+	if scr == null:
+		return
+	expect(scr.get_node_or_null("Panel") != null, "MapScreen 主面板 Panel 应存在")
+	UIManager.close_screen(scr)
+
+func test_save_name_dialog_responsive_wiring() -> void:
+	# 存档命名弹窗（派单 23a9d0b92b83 新接线）：不入树直接调 _fit_responsive，
+	# 验证 headless 无真实视口时响应式接线空安全跳过（不崩、不把面板误裁成 240 下限）。
+	# 注：run_all._ready 期间 root 正在装配子节点，add_child 会报 "busy"，故不走入树路径。
+	var dlg: Control = SaveNameDialogScene.instantiate()
+	expect(dlg != null, "实例化 SaveNameDialog 应成功")
+	if dlg == null:
+		return
+	var panel := dlg.get_node_or_null("Panel") as Control
+	expect(panel != null, "SaveNameDialog 主面板 Panel 应存在")
+	if panel == null:
+		dlg.free()
+		return
+	var before: Vector2 = panel.custom_minimum_size
+	dlg._fit_responsive()
+	expect(panel.custom_minimum_size == before,
+		"无真实视口时 _fit_responsive 应空安全跳过（尺寸不变 %s）" % panel.custom_minimum_size)
+	dlg.free()

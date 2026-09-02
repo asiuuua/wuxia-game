@@ -23,6 +23,7 @@ func _ready() -> void:
 	EventBus.notify_trade_completed.connect(_on_trade_completed)
 	EventBus.notify_trade_failed.connect(_on_trade_failed)
 	EventBus.player_money_changed.connect(_on_money_changed)
+	enable_responsive($Panel, Vector2(640, 560))
 
 func _build_ui() -> void:
 	_title.text = tr("ui_shop_title")

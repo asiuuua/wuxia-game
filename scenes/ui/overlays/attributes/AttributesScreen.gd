@@ -36,6 +36,7 @@ func _ready() -> void:
 	EventBus.player_mp_changed.connect(_on_changed)
 	EventBus.player_level_up.connect(_on_changed)
 	EventBus.player_money_changed.connect(_on_changed)
+	enable_responsive($Panel, Vector2(520, 560))
 
 func _build_ui() -> void:
 	_title.text = tr("ui_attr_title")
