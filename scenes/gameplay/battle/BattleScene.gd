@@ -301,14 +301,14 @@ func _on_auto_pressed() -> void:
 		for eid in seq:
 			if GameManager.combat_service.is_over():
 				break
-		if eid == "player":
-			await _director.play_events(GameManager.combat_service.player_attack_events(""))
-			if _battle_dead():
-				return
-		else:
-			await _director.play_events(GameManager.combat_service.enemy_act_events(eid))
-			if _battle_dead():
-				return
+			if eid == "player":
+				await _director.play_events(GameManager.combat_service.player_attack_events(""))
+				if _battle_dead():
+					return
+			else:
+				await _director.play_events(GameManager.combat_service.enemy_act_events(eid))
+				if _battle_dead():
+					return
 	if rounds >= MAX_AUTO_ROUNDS and not GameManager.combat_service.is_over():
 		GameLogger.warn("Battle", "自动战斗超过 %d 回合上限，已强制停手" % MAX_AUTO_ROUNDS)
 	_refresh()
