@@ -27,15 +27,11 @@ signal item_used(item_id: String, effect: Dictionary)             # 使用消耗
 signal combat_started(combat_id: String)
 @warning_ignore("unused_signal")
 signal combat_ended(combat_id: String, result: int)
-@warning_ignore("unused_signal")
-signal combat_character_died(character_id: String)
 
 # === 战术战棋网格（战斗窗口主权 · 共享地基纯追加） ===
 # 视图层（BattleGridNode/BattleEntity）订阅；逻辑层 CombatCore 产生，谁产生谁 emit
 @warning_ignore("unused_signal")
 signal grid_highlight_update(highlight_dict: Dictionary)   # 高亮刷新：{type:int -> Array[Vector2i]}（蓝/绿/红）
-@warning_ignore("unused_signal")
-signal grid_unit_moved(unit_id: String, from_grid: Vector2i, to_grid: Vector2i)  # 单位网格移动（驱动实体 Tween 动画）
 
 # === 蓝图中枢事件（严格区分 NOTIFY 通知 / CMD 指令） ===
 # NOTIFY：已发生事实，发出方不等待返回（战斗模块发完即结束）
@@ -43,15 +39,9 @@ signal grid_unit_moved(unit_id: String, from_grid: Vector2i, to_grid: Vector2i) 
 signal combat_finished(combat_id: String, victory: bool, escaped: bool, unit_snapshots: Array)
 @warning_ignore("unused_signal")
 signal quest_failed(quest_id: String, reason: String)
-@warning_ignore("unused_signal")
-signal unit_downed(unit_id: String, is_non_lethal: bool)
 # CMD：请求执行动作（任务/对话发出，战斗模块接收后开启战斗）
 @warning_ignore("unused_signal")
 signal cmd_start_combat(attacker_list: Array, defender_list: Array)
-@warning_ignore("unused_signal")
-signal cmd_set_unit_faction(unit_id: String, faction_id: int)
-@warning_ignore("unused_signal")
-signal cmd_apply_story_buff(unit_id: String, buff_id: String)
 
 # === 难度系统（阶段1 骨架） ===
 @warning_ignore("unused_signal")
@@ -100,8 +90,6 @@ signal quest_objective_updated(quest_id: String, objective_id: String, progress:
 signal quest_objective_completed(quest_id: String, objective_id: String)
 @warning_ignore("unused_signal")
 signal quest_completed(quest_id: String)
-@warning_ignore("unused_signal")
-signal quest_ready_to_turn_in(quest_id: String)
 @warning_ignore("unused_signal")
 signal quest_turned_in(quest_id: String)
 @warning_ignore("unused_signal")
@@ -161,17 +149,8 @@ signal notification_show(text: String)
 @warning_ignore("unused_signal")
 signal patch_applied(patch_id: String, version: String)
 
-# === 配置（规范 §4.4） ===
-@warning_ignore("unused_signal")
-signal config_loaded(success: bool)
-@warning_ignore("unused_signal")
-signal config_validation_failed(errors: Array)
 
 # === UI ===
-@warning_ignore("unused_signal")
-signal ui_screen_opened(screen_name: String)
-@warning_ignore("unused_signal")
-signal ui_screen_closed(screen_name: String)
 @warning_ignore("unused_signal")
 signal ui_action_requested(action_id: String)                  # 菜单/按钮动作请求：UI 只 emit，UIManager 据此路由（数据驱动，零硬编码跳转）
 @warning_ignore("unused_signal")
@@ -195,27 +174,17 @@ signal world_time_changed(day: int, time_of_day: float, season: int, weather: in
 
 # === 锻造系统（Phase 2 系统填充 · 契约层） ===
 @warning_ignore("unused_signal")
-signal cmd_forge(recipe_id: String, count: int)
-@warning_ignore("unused_signal")
 signal notify_forge_completed(recipe_id: String, output_item_id: String, count: int)
 @warning_ignore("unused_signal")
 signal notify_forge_failed(recipe_id: String, reason: String)
 
 # === 商店系统（Phase 2 系统填充 · 契约层） ===
 @warning_ignore("unused_signal")
-signal cmd_buy(shop_id: String, item_id: String, count: int)
-@warning_ignore("unused_signal")
-signal cmd_sell(shop_id: String, item_id: String, count: int)
-@warning_ignore("unused_signal")
 signal notify_trade_completed(shop_id: String, item_id: String, count: int, is_buy: bool)
 @warning_ignore("unused_signal")
 signal notify_trade_failed(shop_id: String, item_id: String, reason: String)
 
 # === 门派系统（Phase 2 系统填充 · 契约层） ===
-@warning_ignore("unused_signal")
-signal cmd_join_sect(sect_id: String)
-@warning_ignore("unused_signal")
-signal cmd_contribute_sect(sect_id: String, amount: int)
 @warning_ignore("unused_signal")
 signal notify_sect_joined(sect_id: String)
 @warning_ignore("unused_signal")
@@ -240,8 +209,6 @@ signal bond_gift_disliked(npc_id: String, item_id: String)
 # === 姻缘系统（模块18 · M2：姻缘/婚姻分支） ===
 @warning_ignore("unused_signal")
 signal bond_romance_formed(npc_id: String, stage: int)
-@warning_ignore("unused_signal")
-signal bond_romance_stage_changed(npc_id: String, new_stage: int)
 @warning_ignore("unused_signal")
 signal bond_relationship_changed()
 @warning_ignore("unused_signal")
