@@ -6,12 +6,32 @@ matte_175 生成器 v3（ffmpeg + premultiplied alpha）
 """
 import os
 import subprocess
+import shutil
 
-SRC = "D:/武侠游戏/assets/characters/matte_clean"
-DST = "D:/武侠游戏/assets/characters/matte_175"
+# BUG-13 修复：路径相对化，避免硬编码绝对路径导致换机即废。
+# 从本脚本向上查找带 project.godot 的工程根；找不到则回退环境变量/默认路径。
+def discover_project_root():
+    here = os.path.dirname(os.path.abspath(__file__))
+    for _ in range(6):
+        if os.path.exists(os.path.join(here, "project.godot")):
+            return here
+        parent = os.path.dirname(here)
+        if parent == here:
+            break
+        here = parent
+    return os.environ.get("WUXIA_PROJECT_ROOT", r"D:/武侠游戏")
+
+ROOT = discover_project_root()
+SRC = os.path.join(ROOT, "assets", "characters", "matte_clean")
+DST = os.path.join(ROOT, "assets", "characters", "matte_175")
+# ffmpeg 优先用环境变量/系统 PATH，最后回退本机 venv 内置二进制（仅本机兜底）
 FFMPEG = (
-    r"C:\Users\Administrator\.workbuddy\binaries\python\envs\default"
-    r"\Lib\site-packages\imageio_ffmpeg\binaries\ffmpeg-win-x86_64-v7.1.exe"
+    os.environ.get("FFMPEG_BIN")
+    or shutil.which("ffmpeg")
+    or (
+        r"C:\Users\Administrator\.workbuddy\binaries\python\envs\default"
+        r"\Lib\site-packages\imageio_ffmpeg\binaries\ffmpeg-win-x86_64-v7.1.exe"
+    )
 )
 N = 31
 OUT_W = 98   # 720 * (175/1280)
