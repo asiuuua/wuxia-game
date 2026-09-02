@@ -1,0 +1,92 @@
+# ============================================================================
+# 工程适配器 manifest 模板（工作室平台通用模板）
+# ----------------------------------------------------------------------------
+# 用途：每个工程项目（武侠游戏 / 小程序 / 未来 RPG …）复制本文件一份，填本工程
+#       的路径与上下文即可。平台「切换版本」= 加载对应工程的本文件，Domain 逻辑
+#       不动，只换映射。
+# 本质：本平台是「连接器」而非「数据容器」——本文件只描述"项目在哪、怎么对接"，
+#       不复制项目数据；项目数据始终留在工程自己的 git 仓库里。
+# 三大复用能力（2026-09-02 再定位）：
+#   ai_context  新 AI 窗口一眼读懂你想要的架构（上岗说明书）
+#   reskin      换皮不换药：小白只换图/乐/文，底层不动
+#   knowledge    前人的踩坑与经验，跨项目复用
+# ============================================================================
+
+project_id: example_game          # 工程唯一 id（英文，作目录/标识）
+display_name: 示例游戏（填你的工程名）
+data_root: D:/你的工程根目录        # 工程数据根（本地路径；远程走 git 快照）
+git_repo: D:/你的工程根目录          # 元数据中心来源（本地直接读 / 远程走 git 快照）
+
+# ── 启用哪些横向能力模块（Domain Module）──────────────────────────────────
+# 换游戏也存在的"能力"；本项目没用到的模块就别列，平台自动隐藏。
+modules:
+  - ui_visual        # UI 视觉：登录/贴图/预加载/主菜单
+  - narrative        # 剧情创作：NPC/对话/欢庆
+  - combat           # 战斗关卡：战棋/技能/Demo
+  - asset            # 资产资源：立绘/纹理/回收站
+  - governance        # 系统治理：日志/待办/总控台
+
+# ── 各模块在本工程下的数据映射（适配层，不碰 Domain 逻辑）─────────────────
+adapters:
+  narrative:
+    npc_path: data/configs/npcs/town_npcs.json
+    dlg_dir: data/configs/npcs/dialogs/shards
+  ui_visual:
+    login_bg: assets/ui/main_menu_bg.png
+  combat:
+    grid_bg: assets/battle/grid_bg.png
+
+# ── AI 可读上下文（新 AI 窗口 / 新人一眼读懂你想要的架构）─────────────────
+# 平台把这一段直接喂给接手本工程的 AI，等于"上岗说明书"，省去每次重新摸索。
+ai_context:
+  architecture_intent: |
+    等距 2.5D 武侠 RPG；Godot 4.7.2 纯 GDScript；
+    架构铁律：autoload→core→data→services→scenes→resources，单向依赖，
+    跨模块只走 EventBus，数值全进 JSON，命名见名知意。
+  key_decisions:
+    - "战斗：回合制 + 自动；世界：区域枢纽式独立场景 + 读条切换"
+    - "瓶颈才增量 GDExtension，绝不整体重写"
+  conventions:
+    - "类注释用中文；commit 带 [模块] 前缀；窗口署名 git config user.name=AI-<窗>"
+  common_pitfalls:
+    - "mouse_filter 枚举写反（STOP/PASS/IGNORE 与直觉相反）会静默吞点击"
+    - "纹理改压缩后取像素要用 Image.load_png_from_buffer，别用 get_pixel()"
+  role_responsibilities:
+    battle: "战斗逻辑与战棋表现，不碰 UI 贴图"
+    narrative: "NPC/对话数据，不碰底层引擎"
+    ui: "只改 tscn 与贴图，不碰游戏逻辑"
+
+# ── 换皮不换药（reskin）：小白只换这几类，底层代码不动 ───────────────────
+# 列出"可被替换而不破坏工程"的资产/文本层；平台可生成换皮清单给非开发者。
+reskin:
+  swappable:
+    - layer: 立绘/头像
+      path: resources/icons/        # 按 id 丢 png 即生效，零代码改动
+      note: "换美术风格只换这里"
+    - layer: 背景音乐/音效
+      path: resources/audio/
+      note: "改 ui_sfx.json 的 path 指向即换音，零代码"
+    - layer: 剧情文本
+      path: data/configs/npcs/dialogs/
+      note: "纯文本/JSON 替换，小白可改"
+    - layer: 登录/主菜单视觉
+      path: assets/ui/
+      note: "换皮项目主视觉"
+  locked:
+    - "core/ services/ autoload/ 下的逻辑（换皮绝不碰）"
+    - "EventBus 信号契约（见 docs/契约总表.md）"
+
+# ── 知识复用（前人的踩坑与经验，跨项目可被检索/复用）─────────────────────
+knowledge:
+  # 指向本工程 git 内的经验沉淀文件（总控台/元数据中心读取）
+  refs:
+    - docs/多AI协同机制_SOP.md
+    - .workbuddy/memory/MEMORY.md
+    - docs/变更通告_*.md
+  # 跨项目可借鉴点（供未来新工程参考"上个项目怎么做的"）
+  reusable_patterns:
+    - "静默拦截 BUG 用 lint_mouse_filter.py + 信号接缝测试双闸门守卫"
+    - "纹理压缩默认 mode=0，需显式改 mode=2 并全量重导"
+  # 前人踩过的坑（新项目/新 AI 直接规避）
+  predecessor_mistakes:
+    - "误删 town.json 当死数据 → 实为战术底图几何依赖（查 change_log 秒定位）"

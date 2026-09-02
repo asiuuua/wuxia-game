@@ -245,6 +245,16 @@ class Handler(BaseHTTPRequestHandler):
             return _send_json(self, data)
         if path == "/api/backlog":
             return _send_json(self, core.backlog_get())
+        if path == "/api/modules":
+            # 模块注册中心：返回当前角色可见的 Domain Module 清单（Phase 1a 骨架）。
+            # 后续 Phase 3 接入鉴权后，role 从 token 解析；当前 super_admin 返回全部。
+            from modules import get_modules_for_role, MODULE_REGISTRY
+            role = "super_admin"  # Phase 1 暂无鉴权，默认全量
+            return _send_json(self, {
+                "modules": get_modules_for_role(role),
+                "total_domains": len(MODULE_REGISTRY),
+                "roles": list(ROLES.values()),
+            })
         if len(parts) == 3 and parts[0] == "api" and parts[1] == "npc":
             n = core.npc_get(parts[2])
             return _send_json(self, n if n is not None else {}, 404 if n is None else 200)
