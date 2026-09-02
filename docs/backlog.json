@@ -78,20 +78,28 @@
         {
           "title": "推广 layout/assets JSON 到所有 UI 屏 + 新增主题配色（Phase 1）",
           "type": "待办",
-          "status": "open",
+          "status": "done",
           "placeholder": false,
           "source": "docs/提案_UI放权方案.md",
           "detail": "主菜单已验证 main_menu_layout.json / main_menu_assets.json 模式；推广到 设置/读档/确认框/HUD；新增 theme.json 覆盖 UIPalette token。",
-          "suggestion": "游戏侧加通用 UISkinLoader 读 data/configs/ui/skin/；工作室侧加对应拖拽/取色 UI。"
+          "suggestion": "游戏侧加通用 UISkinLoader 读 data/configs/ui/skin/；工作室侧加对应拖拽/取色 UI。",
+          "resolvedBy": "UI",
+          "resolvedAt": "2026-09-02 13:03:50",
+          "commit": "678c104",
+          "resolution": "UISkin 装载器 + 确认框尺寸/主题配色放权 + 工作室「UI 皮肤定制」tab；双闸门全绿、exe 重建6副本md5一致。"
         },
         {
           "title": "VFX 预设库 + 参数外置（Phase 2：飘叶/流烟/水面）",
           "type": "待办",
-          "status": "open",
+          "status": "done",
           "placeholder": false,
           "source": "scenes/ui/screens/main_menu/MainMenu.gd（已有飘叶/云/水/船补间）",
           "detail": "MainMenu.gd 已有 CPUParticles2D 飘叶 + 云/水/船补间；把写死数值外置成 skin/vfx/<屏>.json 参数，开发者登记预设库 registry.json，小白挑强度/颜色/开关。",
-          "suggestion": "预算守卫（每屏层≤3、粒子桌面≤60/安卓≤24）；安卓降级。"
+          "suggestion": "预算守卫（每屏层≤3、粒子桌面≤60/安卓≤24）；安卓降级。",
+          "resolvedBy": "UI",
+          "resolvedAt": "2026-09-02 13:03:50",
+          "commit": "6c7cab5",
+          "resolution": "UIVFX 装载器 + 主菜单飘叶/云/水/船特效参数外置成 main_menu.vfx.json + 工作室「视觉特效」面板；数值裁剪防性能拉垮；双闸门全绿、exe 重建6副本md5一致。"
         },
         {
           "title": "视频层 + 骨骼动画资产白名单（Phase 3，谨慎）",
