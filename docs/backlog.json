@@ -17,11 +17,15 @@
         {
           "title": "HUD 是否在战斗中常驻",
           "type": "待办",
-          "status": "open",
+          "status": "done",
           "placeholder": false,
           "source": "架构待决策（MEMORY）",
           "detail": "BattleScene mount_hud 存在视觉重叠风险，需拍板战斗中 HUD 的常驻策略。",
-          "suggestion": "先确认设计意图：战斗中 HUD 是否需常驻；若常驻则调整层级/布局避免与主战斗 UI 重叠。"
+          "suggestion": "先确认设计意图：战斗中 HUD 是否需常驻；若常驻则调整层级/布局避免与主战斗 UI 重叠。",
+          "resolvedBy": "AI-UI",
+          "resolvedAt": "2026-09-02 16:27:51",
+          "commit": "cfb145b",
+          "resolution": "设计拍版：HUD 绝不战斗常驻，战斗中用独立战斗 UI。GameManager.start_battle() 首行显式 unmount_hud()，策略收口在唯一战斗入口；新增 test_hud_not_in_battle.gd 回归。GATE1 零错误、GATE2 56 套件 0 失败 0✗。TownScene._exit_tree 卸载作兜底，回城后 HUD 自动恢复。"
         },
         {
           "title": "缺图标统一占位图（品红棋盘）待替换真实图标",
