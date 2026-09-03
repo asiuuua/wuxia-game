@@ -1,4 +1,4 @@
-# autoload/ConfigManager.gd
+﻿# autoload/ConfigManager.gd
 # 配置表管理器：启动时加载所有 JSON 配置，提供按 ID 查询能力
 # 设计：逻辑与数据分离，所有数值写在 data/configs，绝不硬编码进代码
 
@@ -88,6 +88,9 @@ const UI_SFX_FILES: Array[String] = [
 ]
 const MENU_FILES: Array[String] = ["res://data/configs/ui/menu_config.json"]
 
+# 战斗数值换算表（阶段A：五维根属性→面板属性派生；整表 Dictionary，非 id 键控）
+const COMBAT_ATTR_FILE := "res://data/configs/combat/attribute_table.json"
+
 var _abilities: Dictionary = {}
 var _items: Dictionary = {}
 var _enemies: Dictionary = {}
@@ -110,6 +113,7 @@ var _world_config: Dictionary = {}
 var _ui_anim: Dictionary = {}   # UI 动效令牌（整体 Dictionary，非 id 键控）
 var _ui_sfx: Dictionary = {}    # UI 音效映射（整体 Dictionary，非 id 键控）
 var _status_effects: Dictionary = {}   # 状态效果配置（战斗核心懒加载用；纯追加，零硬编码取用口）
+var _combat_attr: Dictionary = {}   # 战斗数值换算表（阶段A；整表 Dictionary，非 id 键控）
 var _config_version: String = ""
 var _is_loaded: bool = false
 var _config_errors: Array[String] = []  # 配置容错层：累积加载/引用校验发现的问题
@@ -135,6 +139,7 @@ func _ready() -> void:
 	_load_ui_anim()
 	_load_ui_sfx()
 	_load_menus()
+	_load_combat_attr()
 	_validate_references()
 	_flush_config_errors()
 	_is_loaded = true
@@ -817,6 +822,15 @@ func get_all_relation_ids() -> Array[String]:
 	out.assign(_relations.keys())
 	return out
 
+## 测试注入：向关系表临时登记一个 NPC（仅单元测试用）。调用方必须在 after_each 里
+## 用 unregister_test_relation 移除，避免残留污染生产数据与后续计数类测试。
+func register_test_relation(id: String, data: Dictionary) -> void:
+	_relations[id] = data
+
+## 撤销测试注入的关系 NPC
+func unregister_test_relation(id: String) -> void:
+	_relations.erase(id)
+
 # === 世界环境（阶段A 基础设施） ===
 func get_world_config() -> Dictionary:
 	return _world_config
@@ -847,6 +861,33 @@ func _load_menus() -> void:
 	if data.is_empty():
 		return
 	_menus = data
+
+# === 战斗数值换算表（阶段A：五维根属性→面板属性派生）===
+# 整表 Dictionary 直接整存；所有换算系数集中此处，代码只读取不硬编码（derive_mode=flat 时零回归）。
+func _load_combat_attr() -> void:
+	var data: Dictionary = _load_json(COMBAT_ATTR_FILE)
+	if data.is_empty():
+		push_warning("[Config] 战斗数值换算表缺失或为空: %s" % COMBAT_ATTR_FILE)
+		return
+	_combat_attr = data
+
+## 取整张战斗数值换算表（空则返回 {}）
+func get_combat_attr() -> Dictionary:
+	return _combat_attr
+
+## 当前派生模式：flat（扁平，原有行为）/ five_attr（五维派生）；缺省 flat
+func get_derive_mode() -> String:
+	return String(_combat_attr.get("derive_mode", "flat"))
+
+## 取五维根属性→面板换算系数（attr=五维名，panel=面板名）；缺失返回 fallback
+func get_five_attr_weight(attr: String, panel: String, fallback: float = 0.0) -> float:
+	var weights: Dictionary = _combat_attr.get("five_attr_weights", {})
+	var node: Dictionary = weights.get(attr, {})
+	return float(node.get(panel, fallback))
+
+## 防御软上限 K（reduction = 1 - K/(K+有效防御)）；缺省 60
+func get_defense_softcap_k() -> float:
+	return float(_combat_attr.get("defense", {}).get("soft_cap_k", 60.0))
 
 func _load_json(path: String) -> Dictionary:
 	if not FileAccess.file_exists(path):

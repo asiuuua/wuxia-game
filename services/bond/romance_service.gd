@@ -53,6 +53,39 @@ func _propose_affection(npc_id: String) -> int:
 	var cfg: Dictionary = _romance_cfg(npc_id)
 	return int(cfg.get("propose_affection", 100))
 
+# === 婚配资格（用户 2026-09-03 拍板：不娶血亲；师徒/结义非血亲、单身/鳏寡可娶；已婚者不娶；不限上限） ===
+# 从 relations.json 顶层 kin_type 字符串映射到 BondEnums.KinType
+func _kin_type_of(npc_id: String) -> int:
+	var npc: Dictionary = ConfigManager.get_relation(npc_id)
+	if npc.is_empty():
+		return BondEnums.KinType.NONE
+	match String(npc.get("kin_type", "NONE")):
+		"SWORN":
+			return BondEnums.KinType.SWORN
+		"MASTER":
+			return BondEnums.KinType.MASTER
+		"PARENT":
+			return BondEnums.KinType.PARENT
+		"CHILD":
+			return BondEnums.KinType.CHILD
+		"SIBLING":
+			return BondEnums.KinType.SIBLING
+		_:
+			return BondEnums.KinType.NONE
+
+# NPC 婚配状态：relations.json 顶层 marital_status；married 不可求娶，single/widowed 可（缺省 single）
+func _marriage_status(npc_id: String) -> String:
+	var npc: Dictionary = ConfigManager.get_relation(npc_id)
+	if npc.is_empty():
+		return "single"
+	return String(npc.get("marital_status", "single"))
+
+# 婚配资格：非血亲（NONE/SWORN/MASTER 均可），且非「已嫁」；鳏寡(widowed)可再娶
+func _kin_marriage_ok(npc_id: String) -> bool:
+	if BondEnums.is_blood_kin(_kin_type_of(npc_id)):
+		return false
+	return _marriage_status(npc_id) != "married"
+
 # === 查询 ===
 # 是否已是配偶
 func is_spouse(npc_id: String) -> bool:
@@ -117,6 +150,8 @@ func can_propose(npc_id: String) -> bool:
 		return false
 	if is_spouse(npc_id):
 		return false
+	if not _kin_marriage_ok(npc_id):
+		return false
 	if GameManager.bond_service.get_affection(npc_id) < _propose_affection(npc_id):
 		return false
 	# BUG-10 修复：缺聘礼时按钮亦应禁用（与 propose() 一致），避免 enabled 却点击被拒。
@@ -167,6 +202,10 @@ func propose(npc_id: String) -> Dictionary:
 		return {"ok": false, "reason": "NOT_ROMANCEABLE", "stage": -1}
 	if not _gender_ok(npc_id):
 		return {"ok": false, "reason": "GENDER_MISMATCH", "stage": -1}
+	if BondEnums.is_blood_kin(_kin_type_of(npc_id)):
+		return {"ok": false, "reason": "BLOOD_KIN", "stage": -1}
+	if _marriage_status(npc_id) == "married":
+		return {"ok": false, "reason": "ALREADY_MARRIED", "stage": -1}
 	if GameManager.bond_service.get_affection(npc_id) < _propose_affection(npc_id):
 		return {"ok": false, "reason": "AFFECTION_NOT_FULL", "stage": -1}
 	var cfg: Dictionary = _romance_cfg(npc_id)
@@ -192,6 +231,7 @@ func propose(npc_id: String) -> Dictionary:
 	var rec: Dictionary = {
 		"stage": BondEnums.RomanceStage.MARRIED,
 		"wed_day": int(Time.get_unix_time_from_system()),
+		"rank": BondEnums.default_rank_for_order(spouses.size()),
 		"children": [],
 		"pregnancy": {},
 	}
@@ -252,12 +292,82 @@ func debug_make_spouse(npc_id: String) -> void:
 	var rec: Dictionary = {
 		"stage": BondEnums.RomanceStage.MARRIED,
 		"wed_day": int(Time.get_unix_time_from_system()),
+		"rank": BondEnums.default_rank_for_order(spouses.size()),
 		"children": [],
 		"pregnancy": {},
 	}
 	spouses[npc_id] = rec
 	EventBus.bond_romance_formed.emit(npc_id, rec["stage"])
 	EventBus.bond_relationship_changed.emit()
+
+# === 后宅名分（用户 2026-09-03 拍板：大房~七房、小妾一~七、通房丫鬟；限名分、不限配偶数、不加成） ===
+# 配偶在婚配词典中的次序（0起；用于旧档缺省名分回退，保持稳定）
+func _order_of_spouse(npc_id: String) -> int:
+	var order := 0
+	for id in spouses.keys():
+		if id == npc_id:
+			return order
+		order += 1
+	return BondEnums.SpouseRank.CHAMBERMAID
+
+# 某配偶的后宅名分；未存名分（旧档）按结婚次序默认
+func get_spouse_rank(npc_id: String) -> int:
+	if not spouses.has(npc_id):
+		return BondEnums.SpouseRank.CHAMBERMAID
+	var rec: Dictionary = spouses[npc_id]
+	if not rec.has("rank"):
+		return BondEnums.default_rank_for_order(_order_of_spouse(npc_id))
+	return int(rec["rank"])
+
+# 某配偶名分中文名
+func get_spouse_rank_name(npc_id: String) -> String:
+	return BondEnums.spouse_rank_name(get_spouse_rank(npc_id))
+
+# 自定义后宅名分（可重排谁是大房/小妾/通房丫鬟）；rank 越界回退到通房丫鬟
+func set_spouse_rank(npc_id: String, rank: int) -> bool:
+	if not spouses.has(npc_id):
+		return false
+	var r := int(rank)
+	if r < 0:
+		r = BondEnums.SpouseRank.PRIMARY
+	elif r > BondEnums.SpouseRank.CHAMBERMAID:
+		r = BondEnums.SpouseRank.CHAMBERMAID
+	spouses[npc_id]["rank"] = r
+	EventBus.bond_relationship_changed.emit()
+	return true
+
+# 按名分排序后的配偶列表（同名分按婚配先后来）；供后宅面板顺位展示
+func get_sorted_spouses() -> Array:
+	var arr: Array = []
+	for npc_id in spouses.keys():
+		arr.append({"npc_id": npc_id, "rank": get_spouse_rank(npc_id), "rank_name": get_spouse_rank_name(npc_id)})
+	arr.sort_custom(func(a, b): return int(a["rank"]) < int(b["rank"]))
+	return arr
+
+# === 子嗣阶段（出生 → 成年，按出生后天数分段；时间源仍为 advance_days） ===
+# 子嗣成长阶段
+func get_child_stage(child_id: String) -> int:
+	if not children.has(child_id):
+		return BondEnums.ChildStage.INFANT
+	var age: int = int(children[child_id].get("age_days", 0))
+	if age >= 1800:
+		return BondEnums.ChildStage.ADULT
+	if age >= 720:
+		return BondEnums.ChildStage.TEEN
+	if age >= 180:
+		return BondEnums.ChildStage.CHILD
+	if age >= 30:
+		return BondEnums.ChildStage.TODDLER
+	return BondEnums.ChildStage.INFANT
+
+func get_child_stage_name(child_id: String) -> String:
+	return BondEnums.child_stage_name(get_child_stage(child_id))
+
+# 子嗣出生后天数
+func get_child_age_days(child_id: String) -> int:
+	if not children.has(child_id):
+		return 0
+	return int(children[child_id].get("age_days", 0))
 
 # === 子嗣（预留数据层：寝欢 + 怀胎十月，时间源解耦） ===
 # 寝欢：配偶且已婚才可；启动孕期计时（游戏时间由 advance_days 推进）
@@ -316,17 +426,19 @@ func begin_celebration(npc_id: String) -> Dictionary:
 		return {"ok": false, "reason": "QUOTA_EXCEEDED", "used": cel.get("used", 0), "quota": cel.get("quota", 0)}
 	cel["used"] = int(cel.get("used", 0)) + 1
 	celebration_quotas[npc_id] = cel
-	# 受孕：仅当已是配偶且未孕（非配偶的好感满 NPC 也能欢庆，但不受孕）
+	# 受孕：仅当已是配偶且未孕（非配偶的好感满 NPC 也能欢庆，但不受孕）；概率走 romance.conceive_chance（缺省 1.0）
 	var conceived := false
 	if is_spouse(npc_id):
 		var rec: Dictionary = spouses[npc_id]
 		if rec.get("pregnancy", {}).is_empty():
-			rec["pregnancy"] = {
-				"start_day": int(Time.get_unix_time_from_system()),
-				"gestation_days": 300,
-				"progress": 0,
-			}
-			conceived = true
+			var chance: float = float(_romance_cfg(npc_id).get("conceive_chance", 1.0))
+			if randf() < chance:
+				rec["pregnancy"] = {
+					"start_day": int(Time.get_unix_time_from_system()),
+					"gestation_days": 300,
+					"progress": 0,
+				}
+				conceived = true
 		spouses[npc_id] = rec
 	EventBus.celebration_started.emit(npc_id, npc_id)
 	var qq := add_quanquan(npc_id, 10)  # 寝欢 +10 婘眷值
@@ -485,10 +597,16 @@ func _special_portrait_cfg(npc_id: String) -> Dictionary:
 		return parsed.get(npc_id, parsed.get("default", {}))
 	return {}
 
-# 推进游戏天数：孕期进度累加，满 gestation_days 则分娩（由 TimeService/休息动作喂天数）
+# 推进游戏天数：孕期进度累加，满 gestation_days 则分娩；同时推进子嗣年龄（驱动成长阶段）。
+# 由 TimeService/休息动作喂天数
 func advance_days(n: int) -> void:
 	if n <= 0:
 		return
+	# 子嗣年龄推进（出生后的累计天数，驱动婴儿→成年的成长阶段；先于受孕分娩，避免新生儿被同次加龄）
+	for cid in children.keys():
+		var c: Dictionary = children[cid]
+		c["age_days"] = int(c.get("age_days", 0)) + n
+		children[cid] = c
 	for npc_id in spouses.keys():
 		var rec: Dictionary = spouses[npc_id]
 		var preg: Dictionary = rec.get("pregnancy", {})
@@ -508,6 +626,7 @@ func _birth(npc_id: String, rec: Dictionary) -> void:
 		"mother_id": npc_id,
 		"born_day": int(Time.get_unix_time_from_system()),
 		"name": "子嗣%d" % (children.size() + 1),
+		"age_days": 0,
 	}
 	var kids: Array = rec.get("children", [])
 	kids.append(cid)

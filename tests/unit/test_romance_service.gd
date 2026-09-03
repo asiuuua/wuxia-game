@@ -7,6 +7,35 @@ func before_each() -> void:
 	GameManager.romance_service.reset()
 	GameManager.inventory_service.reset()
 	GameManager.player_state.gender = 0   # 男
+	_register_test_relations()
+
+func after_each() -> void:
+	var ids := ["npc_test_sister", "npc_test_married", "npc_test_teacher", "npc_test_sworn"]
+	for id in ids:
+		ConfigManager.unregister_test_relation(id)
+
+# 测试期注入婚配资格专用替身（不污染正式 relations.json；after_each 统一清除）
+func _register_test_relations() -> void:
+	ConfigManager.register_test_relation("npc_test_sister", {
+		"id": "npc_test_sister", "name": "测试·幼妹", "gender": 1,
+		"is_romanceable": true, "kin_type": "SIBLING", "marital_status": "single",
+		"required_gender": 0, "romance": {"propose_affection": 100},
+	})
+	ConfigManager.register_test_relation("npc_test_married", {
+		"id": "npc_test_married", "name": "测试·已嫁", "gender": 1,
+		"is_romanceable": true, "kin_type": "NONE", "marital_status": "married",
+		"required_gender": 0, "romance": {"propose_affection": 100},
+	})
+	ConfigManager.register_test_relation("npc_test_teacher", {
+		"id": "npc_test_teacher", "name": "测试·师尊", "gender": 1,
+		"is_romanceable": true, "kin_type": "MASTER", "marital_status": "single",
+		"required_gender": 0, "romance": {"propose_affection": 100},
+	})
+	ConfigManager.register_test_relation("npc_test_sworn", {
+		"id": "npc_test_sworn", "name": "测试·义妹", "gender": 1,
+		"is_romanceable": true, "kin_type": "SWORN", "marital_status": "widowed",
+		"required_gender": 0, "romance": {"propose_affection": 100},
+	})
 
 func test_service_wired() -> void:
 	expect(GameManager.romance_service != null, "romance_service 应已装配")
@@ -206,3 +235,88 @@ func test_portrait_list_includes_base() -> void:
 	var lst = rs.get_portrait_list("npc_su_waner")
 	expect(lst.size() >= 1, "立绘列表至少含基准半身立绘")
 	expect(String(lst[0]).contains("half_body"), "基准应为半身立绘路径")
+
+# === 婚配资格（2026-09-03 新增：不娶血亲；已婚不娶；师徒/结义单身或鳏寡可娶；不限上限） ===
+# 血亲（幼妹 SIBLING）不可求婚/受拒
+func test_blood_kin_blocked() -> void:
+	var rs = GameManager.romance_service
+	# npc_test_sister 顶层 init_affection=100，直接达标
+	expect(not rs.can_propose("npc_test_sister"), "血亲不可求婚")
+	var p: Dictionary = rs.propose("npc_test_sister")
+	expect(not p.get("ok", false), "血亲求婚应被拒")
+	expect(String(p.get("reason", "")) == "BLOOD_KIN", "血亲拒绝原因应为 BLOOD_KIN")
+
+# 已嫁 NPC（marital_status=married）不可求娶
+func test_married_npc_blocked() -> void:
+	var rs = GameManager.romance_service
+	expect(not rs.can_propose("npc_test_married"), "已婚者不可求婚")
+	var p: Dictionary = rs.propose("npc_test_married")
+	expect(not p.get("ok", false), "已婚者求婚应被拒")
+	expect(String(p.get("reason", "")) == "ALREADY_MARRIED", "拒绝原因应为 ALREADY_MARRIED")
+
+# 师徒（MASTER/单身）与结义（SWORN/鳏寡）均可求娶
+func test_teacher_sworn_marriage_allowed() -> void:
+	var rs = GameManager.romance_service
+	GameManager.bond_service.set_affection("npc_test_teacher", 100)
+	GameManager.bond_service.set_affection("npc_test_sworn", 100)
+	expect(rs.can_propose("npc_test_teacher"), "单身师尊应可求婚")
+	expect(rs.can_propose("npc_test_sworn"), "鳏寡义妹应可求婚")
+	var r1: Dictionary = rs.propose("npc_test_teacher")
+	var r2: Dictionary = rs.propose("npc_test_sworn")
+	expect(r1.get("ok", false), "师尊求婚应成功")
+	expect(r2.get("ok", false), "义妹求婚应成功")
+	expect(rs.is_spouse("npc_test_teacher"), "师尊应记为配偶")
+	expect(rs.is_spouse("npc_test_sworn"), "义妹应记为配偶")
+
+# === 后宅名分（2026-09-03 新增：大房~七房、小妾一~七、通房丫鬟；自定义重排） ===
+func test_spouse_rank_default_and_reassign() -> void:
+	var rs = GameManager.romance_service
+	# 首位配偶 = 大房
+	rs.debug_make_spouse("npc_su_waner")
+	expect_eq(rs.get_spouse_rank("npc_su_waner"), BondEnums.SpouseRank.PRIMARY, "首位应为大房")
+	expect(rs.get_spouse_rank_name("npc_su_waner") == "大房", "名分中文应为大房")
+	# 第二位 = 二房
+	rs.debug_make_spouse("npc_xiao_ying")
+	expect_eq(rs.get_spouse_rank("npc_xiao_ying"), BondEnums.SpouseRank.SECOND, "次位应为二房")
+	# 自定义重排：把小樱抬成大房，苏婉儿降为通房丫鬟
+	expect(rs.set_spouse_rank("npc_xiao_ying", BondEnums.SpouseRank.PRIMARY), "应可重排为大房")
+	expect_eq(rs.get_spouse_rank("npc_xiao_ying"), BondEnums.SpouseRank.PRIMARY, "重排后小樱为大房")
+	expect(rs.set_spouse_rank("npc_su_waner", BondEnums.SpouseRank.CHAMBERMAID), "应可降为通房丫鬟")
+	expect(rs.get_spouse_rank_name("npc_su_waner") == "通房丫鬟", "苏婉儿中文名应为通房丫鬟")
+
+# 名分不设上限：可无限娶妻，且不加成（仅登记）；单位数时名分按结婚次序为房位
+func test_spouse_rank_unlimited_and_sorted() -> void:
+	var rs = GameManager.romance_service
+	var ids := ["npc_su_waner", "npc_xiao_ying", "npc_test_teacher", "npc_test_sworn"]
+	for id in ids:
+		rs.debug_make_spouse(id)
+	expect_eq(rs.get_spouse_count(), 4, "可有 4 位配偶（不设上限）")
+	# 第3/4位为三房/四房（7 房之内均称"房"，第 8 位起才回落小妾）
+	expect_eq(rs.get_spouse_rank("npc_test_teacher"), BondEnums.SpouseRank.THIRD, "第3位应三房")
+	expect_eq(rs.get_spouse_rank("npc_test_sworn"), BondEnums.SpouseRank.FOURTH, "第4位应四房")
+	var sorted: Array = rs.get_sorted_spouses()
+	expect_eq(sorted.size(), 4, "排序表含4人")
+
+# === 子嗣成长阶段（2026-09-03 新增：婴儿→幼童→孩童→少年→成年） ===
+func test_child_growth_stage() -> void:
+	var rs = GameManager.romance_service
+	rs.debug_make_spouse("npc_su_waner")
+	rs.begin_intimacy("npc_su_waner")
+	rs.advance_days(300)  # 满孕期分娩
+	var kids: Array = rs.get_children_of("npc_su_waner")
+	expect_eq(kids.size(), 1, "应出生1子")
+	var cid: String = String(kids[0])
+	expect_eq(rs.get_child_stage(cid), BondEnums.ChildStage.INFANT, "出生应为婴儿")
+	expect(rs.get_child_stage_name(cid) == "婴儿", "阶段中文应为婴儿")
+	# 幼童：+35 天（累计35）
+	rs.advance_days(35)
+	expect_eq(rs.get_child_stage(cid), BondEnums.ChildStage.TODDLER, "满30天应为幼童")
+	# 孩童：再+200（累计235）
+	rs.advance_days(200)
+	expect_eq(rs.get_child_stage(cid), BondEnums.ChildStage.CHILD, "满180天应为孩童")
+	# 少年：再+600（累计835）
+	rs.advance_days(600)
+	expect_eq(rs.get_child_stage(cid), BondEnums.ChildStage.TEEN, "满720天应为少年")
+	# 成年：再+1200（累计2035）
+	rs.advance_days(1200)
+	expect_eq(rs.get_child_stage(cid), BondEnums.ChildStage.ADULT, "满1800天应为成年")
