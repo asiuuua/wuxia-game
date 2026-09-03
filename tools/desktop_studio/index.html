@@ -253,6 +253,16 @@
 
   <!-- DIALOG -->
   <section class="tab" id="tab-dialog">
+    <div class="qgraph-banner" style="margin-bottom:12px;padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div style="min-width:0">
+          <b style="color:var(--accent)">🧭 任务流程图（QuestGraph 节点图）</b>
+          <span class="muted" style="display:block;font-size:12px;margin-top:2px">读者：区域分片里 <code>type="quest_graph"</code> 的任务以节点图组织（start/choice/battle/dialog/give_item/flag_check/end…），由游戏侧 QuestGraph 引擎执行。此处只读展示，编辑仍在下方台词表/任务文件进行。</span>
+        </div>
+        <button class="act sec" onclick="qgLoad()">↻ 刷新</button>
+      </div>
+      <div id="qgList" class="muted" style="font-size:13px">加载中…</div>
+    </div>
     <div class="layout">
       <div class="list" id="dlgList"></div>
       <div class="editor">
@@ -687,7 +697,7 @@
       <div id="backlogRoot" class="backlog-wrap">加载中…</div>
     </div>
     <style>
-      #tab-coord{display:flex;min-height:62vh}
+      #tab-coord.active{display:flex;min-height:62vh}
       #coordRail{position:relative;flex:0 0 360px;width:360px;z-index:20;align-self:flex-start}
       #coordSidebar{position:relative;width:360px;overflow:auto;background:var(--panel);
         border:1px solid var(--line);border-radius:10px;box-shadow:8px 0 24px rgba(0,0,0,.4);padding:16px 14px;max-height:calc(100vh - 200px)}
@@ -1370,11 +1380,30 @@ document.getElementById('mapCanvas').addEventListener('click',e=>{
 
 // ---------- DIALOG ----------
 let curDlg='';
+async function qgLoad(){
+  const el=document.getElementById('qgList');let r;
+  try{ r=await A('GET','/api/quest_graph'); }catch(e){ el.textContent='读取失败：'+e; return; }
+  const qs=(r&&r.quests)||[];
+  if(!qs.length){ el.textContent='（暂无 quest_graph 任务）'; return; }
+  el.innerHTML=qs.map(q=>{
+    const types=(q.node_types||[]).map(t=>`<code>${t}</code>`).join(' ');
+    const ends=(q.endings||[]).map(e=>`<code>${e}</code>`).join(' ');
+    return `<div class="qg-item" style="padding:8px 0;border-bottom:1px dashed var(--line);display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">
+      <b style="color:var(--accent)">${q.name}</b>
+      <span class="muted">id=<code>${q.id}</code></span>
+      <span class="muted">区域=${q.region}</span>
+      <span class="muted">节点=${q.node_count} · 起点=<code>${q.start_node}</code></span>
+      <span>类型 ${types}</span>
+      <span class="muted">结局 ${ends||'—'}</span>
+    </div>`;
+  }).join('');
+}
 async function dlgLoad(){
   const list=await A('GET','/api/dialog');const el=document.getElementById('dlgList');el.innerHTML='';
   list.forEach(id=>{const d=document.createElement('div');d.className='item';d.textContent=id;d.onclick=()=>dlgSel(id);el.appendChild(d);});
   if(list.length===0)el.innerHTML='<div class="item">（暂无对话）</div>';
   document.getElementById('lineList').innerHTML='';
+  qgLoad();
 }
 async function dlgSel(id){
   curDlg=id;document.querySelectorAll('#dlgList .item').forEach(x=>x.classList.remove('sel'));

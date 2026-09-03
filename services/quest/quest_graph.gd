@@ -12,12 +12,25 @@ const OP_PROGRESS := "progress_set"
 const OP_EMIT := "emit_event"
 const MAX_STEPS := 800
 
+# 触发型节点类型：T2 起会产出 action，交由上层 Handler 接到真实系统（对话/战斗/背包）
+const NODE_DIALOG := "dialog"
+const NODE_BATTLE := "battle"
+const NODE_GIVE_ITEM := "give_item"
+const _TRIGGER_NODES := [NODE_DIALOG, NODE_BATTLE, NODE_GIVE_ITEM]
+
 var _log: Array = []
 var _store: RefCounted = null
+var _actions: Array = []
+var _handler: Callable = Callable()
 
-## 运行一张图；store 缺省时用内存独立存储（不落存档）。返回 {steps, ending, log}
-func run(quest: Dictionary, store: RefCounted = null) -> Dictionary:
+## 运行一张图；store 缺省时用内存独立存储（不落存档）。
+## handler 可选：注入后，遇到 dialog/battle/give_item 触发型节点会把动作交给 handler（真实系统钩子），
+## 并沿其 "next" 继续；未注入 handler 时回退为原纯逻辑直连（向后兼容、不破坏既有图/测试）。
+## 返回 {steps, ending, log, actions}，actions 为本轮收集的触发型动作列表。
+func run(quest: Dictionary, store: RefCounted = null, handler: Callable = Callable()) -> Dictionary:
 	_log.clear()
+	_actions.clear()
+	_handler = handler
 	_store = store if store != null else _make_local_store()
 	var nodes: Dictionary = quest.get("nodes", {})
 	var current: String = String(quest.get("start_node", ""))
@@ -43,13 +56,44 @@ func run(quest: Dictionary, store: RefCounted = null) -> Dictionary:
 				_log.append("choice: 无可匹配选项，中断")
 		elif ntype == "flag_check":
 			current = String(node.get("next", "")) if _cond(node.get("require", node.get("if", {}))) else String(node.get("else_next", ""))
+		elif _TRIGGER_NODES.has(ntype):
+			current = _trigger(node, ntype)
 		else:
 			current = String(node.get("next", ""))
 	if guard >= MAX_STEPS and current != "":
 		_log.append("警告: 疑似成环，已达最大步数")
 	if ending == "":
 		ending = _resolve_ending(quest)
-	return {"steps": steps, "ending": ending, "log": _log.duplicate()}
+	return {"steps": steps, "ending": ending, "log": _log.duplicate(), "actions": _actions.duplicate()}
+
+## 触发型节点：构造 action 交给 handler（真系统钩子）；未注入 handler 时回退为"胜利默认路径"
+func _trigger(node: Dictionary, ntype: String) -> String:
+	var act := {"node": "", "type": ntype, "data": {}}
+	act["node"] = str(node.get("self_id", node.get("id", "")))
+	match ntype:
+		NODE_DIALOG:
+			act["data"] = {"dialog_ref": str(node.get("dialog_ref", "")), "lines_from": str(node.get("lines_from", ""))}
+		NODE_BATTLE:
+			act["data"] = {
+				"battle_ref": str(node.get("battle_ref", "")),
+				"on_win": node.get("on_win", []),
+				"on_win_next": str(node.get("on_win_next", "")),
+				"on_lose_next": node.get("on_lose_next"),
+			}
+		NODE_GIVE_ITEM:
+			act["data"] = {"item": str(node.get("item", "")), "qty": int(node.get("qty", 1))}
+	_actions.append(act)
+	_log.append("触发:" + ntype + ":" + str(act["data"]))
+	var next: String = String(node.get("next", ""))
+	if ntype == NODE_BATTLE and next.is_empty():
+		next = String(node.get("on_win_next", ""))
+	if _handler.is_valid():
+		_handler.call(act)
+		return next
+	# 无 handler（占位/T1 兼容）：触发视为顺利完成，沿胜利默认路径推进
+	if ntype == NODE_BATTLE:
+		_apply(node.get("on_win", []))
+	return next
 
 ## 直接判定条件（供单元测试/上层复用）；store 缺省沿用最近一次
 func evaluate_condition(cond, store: RefCounted = null) -> bool:

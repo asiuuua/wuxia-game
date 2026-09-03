@@ -331,6 +331,46 @@ def save_json(path, data):
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
+# ============================ 任务流程图（QuestGraph） ============================
+# T2：让编辑器认识 regions 分片里 type == "quest_graph" 的新结构。
+# 后端只做「读取 → 平铺成可视化友好列表」，不搬数据、不写回；写回仍走各自任务文件。
+def quest_graph_list():
+    root = discover_project_root()
+    regions_dir = os.path.join(root, "data", "configs", "regions")
+    out = []
+    if not os.path.isdir(regions_dir):
+        return out
+    for region in sorted(os.listdir(regions_dir)):
+        qs_path = os.path.join(regions_dir, region, "quests.json")
+        if not os.path.isfile(qs_path):
+            continue
+        data = load_json(qs_path, {"quests": []})
+        for q in data.get("quests", []):
+            if not isinstance(q, dict) or q.get("type") != "quest_graph":
+                continue
+            graph = q.get("quest_graph") or {}
+            nodes = graph.get("nodes") or {}
+            out.append({
+                "region": region,
+                "id": q.get("id", ""),
+                "name": q.get("name", q.get("id", "")),
+                "start_node": graph.get("start_node", ""),
+                "node_count": len(nodes),
+                "node_types": sorted({str(n.get("type", "?")) for n in nodes.values() if isinstance(n, dict)}),
+                "endings": [e.get("id") for e in (graph.get("endings") or []) if isinstance(e, dict)],
+                "nodes": nodes,
+                "objectives": q.get("objectives", []),
+            })
+    return out
+
+
+def quest_graph_get(qid):
+    for q in quest_graph_list():
+        if q.get("id") == qid:
+            return q
+    return None
+
+
 # ============================ 日志 ============================
 def log_event(action, target, detail=""):
     _ensure_dirs()

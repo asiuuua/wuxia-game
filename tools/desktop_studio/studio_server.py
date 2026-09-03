@@ -536,6 +536,8 @@ class Handler(BaseHTTPRequestHandler):
             return _send_json(self, core.dlg_list())
         if path == "/api/celebration":
             return _send_json(self, core.cel_list())
+        if path == "/api/quest_graph":
+            return _send_json(self, {"ok": True, "quests": core.quest_graph_list()})
         if path == "/api/trash":
             return _send_json(self, core.trash_list())
         if path == "/api/log":

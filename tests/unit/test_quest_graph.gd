@@ -12,6 +12,12 @@ func _b(cond: bool) -> int:
 
 func before_each() -> void:
 	_store = FlagStore.new(false)   # 内存独立存储，避免污染存档
+	seen_actions.clear()
+
+var seen_actions: Array = []
+
+func _spy_action(act: Dictionary) -> void:
+	seen_actions.append(act)
 
 func _graph() -> Dictionary:
 	return {
@@ -94,6 +100,48 @@ func test_ending_fallback() -> void:
 	}
 	var r: Dictionary = g.run(cfg, store2)
 	expect(_b(str(r.get("ending", "")) == "good"), "无 end 节点时按 endings 表回退匹配")
+
+func _trigger_graph() -> Dictionary:
+	return {
+		"start_node": "n_start",
+		"nodes": {
+			"n_start": {"type": "start", "next": "n_dialog"},
+			"n_dialog": {"type": "dialog", "dialog_ref": "npc_village_chief", "next": "n_battle"},
+			"n_battle": {"type": "battle", "battle_ref": "nv_battle_bandit",
+				"on_win": [{"op": "flag_set", "key": "nv_bandit_cleared", "value": true}],
+				"on_win_next": "n_reward", "on_lose_next": null},
+			"n_reward": {"type": "give_item", "item": "nv_item_pendant", "qty": 1, "next": "n_end"},
+			"n_end": {"type": "end", "ending": "good"}
+		},
+		"endings": [{"id": "good", "require": {"flag": "nv_bandit_cleared", "eq": true}}]
+	}
+
+func test_trigger_no_handler_passthrough() -> void:
+	# 无 handler 时触发型节点回退直连 next，行为与 T1 占位一致、不崩
+	var g := QuestGraph.new()
+	var r: Dictionary = g.run(_trigger_graph(), FlagStore.new(false))
+	expect(_b(str(r.get("ending", "")) == "good"), "无 handler 也能走完到结局")
+	expect(_b(r.get("actions", []).size() > 0), "即便无 handler 也收集 action 清单")
+
+func test_trigger_collects_actions() -> void:
+	var handler := Callable(self, "_spy_action")
+	var g := QuestGraph.new()
+	var r: Dictionary = g.run(_trigger_graph(), FlagStore.new(false), handler)
+	expect(_b(r.get("actions", []).size() == 3), "三类触发节点应产出 3 个 action")
+	var a1: Dictionary = r["actions"][0]
+	expect(_b(String(a1.get("type", "")) == "dialog"), "首个 action 应为 dialog")
+	expect(_b(String((a1.get("data", {}) as Dictionary).get("dialog_ref", "")) == "npc_village_chief"), "dialog_ref 正确")
+	var a2: Dictionary = r["actions"][1]
+	expect(_b(String(a2.get("type", "")) == "battle"), "第二个 action 应为 battle")
+	var a2d: Dictionary = a2.get("data", {})
+	expect(_b(String(a2d.get("battle_ref", "")) == "nv_battle_bandit"), "battle_ref 正确")
+	expect(_b(String(a2d.get("on_win_next", "")) == "n_reward"), "on_win_next 正确")
+	var a3: Dictionary = r["actions"][2]
+	expect(_b(String(a3.get("type", "")) == "give_item"), "第三个 action 应为 give_item")
+	var a3d: Dictionary = a3.get("data", {})
+	expect(_b(String(a3d.get("item", "")) == "nv_item_pendant"), "give_item 的物品正确")
+	expect_eq(int(a3d.get("qty", 0)), 1, "give_item 数量正确")
+	expect(_b(seen_actions.size() == 3), "handler 被回调了 3 次（真实系统钩子已接通）")
 
 func test_loop_guard() -> void:
 	var g := QuestGraph.new()
