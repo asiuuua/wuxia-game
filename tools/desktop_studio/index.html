@@ -186,6 +186,7 @@
   </div>
   <button data-tab="sys">⚙️ 系统运维</button>
   <button data-tab="coord">🤝 协同启动卡 / 待办清单</button>
+  <button data-tab="handoff">🤝 派单传递板</button>
   <button data-tab="exp">📚 经验库</button>
   <button data-tab="orchestrate">🧭 任务总控</button>
 </nav>
@@ -720,6 +721,22 @@
       .bl-grp.prio-yellow{color:#fbbf24;border-left-color:#fbbf24}
     </style>
   </section>
+
+  <!-- 派单传递板（2026-09-03 新增）：展示跨窗口 handoff 派单（open/claimed/done/closed），
+       数据来自 handoff_view.json 快照，与「待办清单」(规划层) 区分；支持认领 -->
+  <section class="tab" id="tab-handoff">
+    <div class="coord-main">
+      <h3 style="margin:0 0 8px">🤝 派单传递板（Handoff）</h3>
+      <p class="muted" style="margin:0 0 8px">这里展示的是<b>跨窗口负责式派单</b>：每条都写明 <b>谁派给谁（from→to）</b>、认领记录、完成备注、双闸门自验标准——是「确凿派发」的责任单。它和左侧「待办清单」不同：待办清单是<b>规划层</b>（"项目还缺什么"），派单传递板是<b>执行层</b>（"这件具体谁负责、做到哪步"）。</p>
+      <div class="row" style="align-items:center;gap:8px;margin-bottom:12px">
+        <label style="flex:0 0 auto">认领方窗口</label>
+        <input id="hfBy" value="工作室窗口" style="flex:0 0 200px">
+        <button class="act sec" onclick="handoffRefresh()">🔄 刷新快照</button>
+        <span class="muted" style="margin:0">数据来自 <code style="background:#1b1f33;padding:1px 5px;border-radius:3px">tools/handoff.py export</code> 生成的快照</span>
+      </div>
+      <div id="handoffRoot" class="backlog-wrap">加载中…</div>
+    </div>
+  </section>
 </main>
 
 <section class="tab" id="tab-exp">
@@ -1013,6 +1030,7 @@ document.querySelectorAll('#nav button').forEach(b=>b.onclick=(e)=>{
   // 双闸门已并入「系统运维」页签，触发改为按钮手动（gateRun）；原 gate tab 分发不再需要
   if(b.dataset.tab==='orchestrate')orcLoad();
   if(b.dataset.tab==='coord'){backlogLoad();loadStartupCard();_initCoordRail();}
+  if(b.dataset.tab==='handoff'){handoffLoad();}
   if(b.dataset.tab==='sys'){logLoad();setLoad();trashLoad();}
 });
 
@@ -2697,6 +2715,57 @@ async function backlogLoad(){
   render();
 }
 function blEsc(s){return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+
+// ===== 派单传递板（2026-09-03 新增）：读 /api/handoff 快照，展示 + 认领 =====
+async function handoffLoad(){
+  const box=document.getElementById('handoffRoot'); if(!box) return;
+  let d; try{ d=await A('GET','/api/handoff'); }catch(e){ box.textContent='加载失败'; return; }
+  if(!d||!d.ok){ box.innerHTML='<div style="padding:20px;color:#9aa0b8">'+((d&&d.error)?blEsc(d.error):'无数据')+(d&&d.hint?('<br>'+blEsc(d.hint)):'')+'</div>'; return; }
+  const G={open:['🔴 待认领','#f87171'],claimed:['🟡 进行中','#fbbf24'],done:['✅ 已完成','#34d399'],closed:['💤 已关闭','#9aa0b8']};
+  function hfCard(it){
+    const badges='<span class="hf-badge">'+blEsc(it.state)+'</span>'
+      +(it.claim_by?'<span class="hf-badge">认领:'+blEsc(it.claim_by)+'</span>':'');
+    const files=(it.files||[]).map(f=>'<code>'+blEsc(f)+'</code>').join(' ');
+    const note=(it.note_done?('完成备注：'+blEsc(it.note_done)):(it.note_followup?('后续备注：'+blEsc(it.note_followup)):''));
+    const claimBtn=(it.state==='open')?'<button class="act" onclick="hfClaim(\''+blEsc(it.id)+'\')">✋ 认领</button>':'';
+    return '<div class="hf-card">'
+      +'<div class="hf-top"><span class="hf-title">'+blEsc(it.title)+'</span>'+badges+'</div>'
+      +'<div class="hf-route">'+blEsc(it.from)+' → '+blEsc(it.to)+'　·　'+blEsc(it.ts)+'</div>'
+      +(it.desc?('<div class="hf-desc">'+blEsc(it.desc)+'</div>'):'')
+      +(files?'<div class="hf-kv"><b>涉及文件</b>'+files+'</div>':'')
+      +(it.verify?('<div class="hf-kv"><b>核验标准</b>'+blEsc(it.verify)+'</div>'):'')
+      +(it.followup?('<div class="hf-kv"><b>后续依赖</b>'+blEsc(it.followup)+'</div>'):'')
+      +(note?'<div class="hf-kv"><b>备注</b>'+note+'</div>':'')
+      +'<div class="hf-act">'+claimBtn+'</div>'
+      +'</div>';
+  }
+  let h='<style>.hf-grp{font-size:15px;font-weight:700;margin:16px 0 8px;padding-left:10px}'
+    +'.hf-card{background:#15182a;border:1px solid #2a2f47;border-radius:10px;padding:12px 14px;margin-bottom:10px}'
+    +'.hf-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.hf-title{font-size:15px;font-weight:600}'
+    +'.hf-badge{font-size:11px;padding:2px 8px;border-radius:999px;background:#1b1f33;border:1px solid #2a2f47;color:#9aa0b8}'
+    +'.hf-route{font-size:12px;color:#9aa0b8;margin:4px 0}'
+    +'.hf-desc{font-size:13px;color:#c7cbe0;margin:6px 0;white-space:pre-wrap;max-height:200px;overflow:auto}'
+    +'.hf-kv{font-size:13px;color:#c7cbe0;margin:4px 0}.hf-kv b{color:#7c9cff;margin-right:6px}'
+    +'.hf-kv code{background:#101b16;border:1px solid #2a2f47;border-radius:4px;padding:1px 6px;margin:0 4px 2px 0;font-size:12px}'
+    +'.hf-act{margin-top:8px}</style>';
+  let any=false;
+  for(const k of ['open','claimed','done','closed']){
+    const items=d[k]||[];
+    if(items.length){ any=true; h+='<div class="hf-grp" style="border-left:4px solid '+G[k][1]+';color:'+G[k][1]+'">'+G[k][0]+'（'+items.length+'）</div>'; items.forEach(it=>h+=hfCard(it)); }
+  }
+  if(!any) h+='<div class="bl-desc">当前无派单（open='+(d.open?d.open.length:0)+' claimed='+(d.claimed?d.claimed.length:0)+' done='+(d.done?d.done.length:0)+' closed='+(d.closed?d.closed.length:0)+'）</div>';
+  box.innerHTML=h;
+}
+async function hfClaim(id){
+  const by=(document.getElementById('hfBy')||{}).value||'工作室窗口';
+  let d; try{ d=await A('POST','/api/handoff/claim',{id:id,by:by}); }catch(e){ alert('认领失败'); return; }
+  if(!d||!d.ok){ alert('认领失败：'+((d&&d.error)||'')); return; }
+  handoffLoad();
+}
+async function handoffRefresh(){
+  let d; try{ d=await A('POST','/api/handoff/refresh',{}); }catch(e){ return; }
+  handoffLoad();
+}
 
 // ---------- 协同启动卡（各 AI 窗口工作指令清单，数据来自 /api/startup_card） ----------
 // 2026-09-02 重构：渲染为左侧隐藏栏里的点选列表，点窗口名即复制对应口令（见 tab-coord 结构）。
