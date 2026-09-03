@@ -1,0 +1,167 @@
+# services/quest/quest_graph.gd
+# 任务流程图解释器(QuestGraph)：对标巫师3 / 赛博朋克 QuestGraph 的任务节点图引擎。
+# 设计：纯逻辑、不持有 Node。输入一段 quest_graph 配置 + 一个 FlagStore，走节点/读条件/写状态/判结局。
+# 条件DSL + 副作用op + 节点流解释 + 结局判定 集中在同文件，向前兼容、可注入测试。
+# 说明：dialog/battle/give_item 等"触发型"节点在 T1 以占位记录处理，真正的 UI/战斗/背包接入留 T2。
+class_name QuestGraph
+extends RefCounted
+
+const OP_FLAG_SET := "flag_set"
+const OP_FAVOR_ADD := "favor_add"
+const OP_PROGRESS := "progress_set"
+const OP_EMIT := "emit_event"
+const MAX_STEPS := 800
+
+var _log: Array = []
+var _store: RefCounted = null
+
+## 运行一张图；store 缺省时用内存独立存储（不落存档）。返回 {steps, ending, log}
+func run(quest: Dictionary, store: RefCounted = null) -> Dictionary:
+	_log.clear()
+	_store = store if store != null else _make_local_store()
+	var nodes: Dictionary = quest.get("nodes", {})
+	var current: String = String(quest.get("start_node", ""))
+	var steps: Array = []
+	var guard := 0
+	var ending := ""
+	while current != "" and guard < MAX_STEPS:
+		guard += 1
+		if not nodes.has(current):
+			_log.append("节点缺失:" + current)
+			break
+		var node: Dictionary = nodes[current]
+		_log.append("步进:" + current + "(" + String(node.get("type", "")) + ")")
+		steps.append(current)
+		_apply(node.get("then", node.get("on_enter", [])))
+		var ntype: String = String(node.get("type", ""))
+		if ntype == "end":
+			ending = String(node.get("ending", ""))
+			current = ""
+		elif ntype == "choice":
+			current = _resolve_choice(node)
+			if current == "":
+				_log.append("choice: 无可匹配选项，中断")
+		elif ntype == "flag_check":
+			current = String(node.get("next", "")) if _cond(node.get("require", node.get("if", {}))) else String(node.get("else_next", ""))
+		else:
+			current = String(node.get("next", ""))
+	if guard >= MAX_STEPS and current != "":
+		_log.append("警告: 疑似成环，已达最大步数")
+	if ending == "":
+		ending = _resolve_ending(quest)
+	return {"steps": steps, "ending": ending, "log": _log.duplicate()}
+
+## 直接判定条件（供单元测试/上层复用）；store 缺省沿用最近一次
+func evaluate_condition(cond, store: RefCounted = null) -> bool:
+	if store != null:
+		_store = store
+	return _cond(cond)
+
+func get_log() -> Array:
+	return _log
+
+# ---------- 条件 DSL ----------
+func _cond(cond) -> bool:
+	if cond is bool:
+		return cond
+	if cond == null:
+		return true
+	if not (cond is Dictionary):
+		return true
+	var c: Dictionary = cond
+	if c.is_empty():
+		return true
+	if c.has("all"):
+		for sub in c["all"]:
+			if not _cond(sub):
+				return false
+		return true
+	if c.has("any"):
+		for sub in c["any"]:
+			if _cond(sub):
+				return true
+		return false
+	if c.has("not"):
+		return not _cond(c["not"])
+	if c.has("flag"):
+		var k: String = str(c["flag"])
+		var got = _store.get_flag(k, c.get("def", null))
+		if c.has("eq"):
+			return str(got) == str(c["eq"])
+		if c.has("ne"):
+			return str(got) != str(c["ne"])
+		return bool(got)
+	if c.has("favor"):
+		var v: float = _store.get_favor(str(c["favor"]))
+		if c.has("gte"):
+			return v >= float(c["gte"])
+		if c.has("lte"):
+			return v <= float(c["lte"])
+		if c.has("eq"):
+			return v == float(c["eq"])
+		return v != 0.0
+	if c.has("progress"):
+		var p: int = _store.get_progress(str(c["progress"]))
+		if c.has("gte"):
+			return p >= int(c["gte"])
+		return p >= 1
+	return false
+
+# ---------- 副作用 ops ----------
+func _apply(ops) -> void:
+	if ops == null:
+		return
+	for op in ops:
+		if not (op is Dictionary):
+			continue
+		var o: Dictionary = op
+		match String(o.get("op", "")):
+			OP_FLAG_SET:
+				_store.set_flag(str(o.get("key", "")), o.get("value", true))
+			OP_FAVOR_ADD:
+				_store.add_favor(str(o.get("target", "")), float(o.get("value", 0)))
+			OP_PROGRESS:
+				_store.set_progress(str(o.get("quest", "")), int(o.get("value", 1)))
+			OP_EMIT:
+				_log.append("emit:" + str(o.get("event", "")))
+			_:
+				_log.append("op-skip:" + str(o.get("op", "")))
+
+# ---------- choice 分支：取首个满足 show 条件的选项 ----------
+func _resolve_choice(node: Dictionary) -> String:
+	for opt in node.get("options", []):
+		if not (opt is Dictionary):
+			continue
+		if _cond(opt.get("show", {})):
+			_apply(opt.get("then", []))
+			var next: String = str(opt.get("next", ""))
+			_log.append("选择:" + str(opt.get("text_key", "")) + " -> " + next)
+			return next
+	return ""
+
+# ---------- 结局回退：走到非 end 终止时按 endings 表匹配 ----------
+func _resolve_ending(quest: Dictionary) -> String:
+	for e in quest.get("endings", []):
+		if e is Dictionary and _cond(e.get("require", {})):
+			return str(e.get("id", ""))
+	return ""
+
+func _make_local_store() -> RefCounted:
+	return _MemStore.new()
+
+# 内存独立存储（测试/无存档场景），接口与 FlagStore 对齐（duck-typed）
+class _MemStore:
+	extends RefCounted
+	var _d: Dictionary = {}
+	func get_flag(k: String, def: Variant = null) -> Variant:
+		return _d.get(k, def)
+	func set_flag(k: String, v: Variant) -> void:
+		_d[k] = v
+	func get_favor(id: String) -> float:
+		return float(_d.get("favor:" + id, 0.0))
+	func add_favor(id: String, delta: float) -> void:
+		_d["favor:" + id] = get_favor(id) + delta
+	func get_progress(q: String) -> int:
+		return int(_d.get("progress:" + q, 0))
+	func set_progress(q: String, v: int) -> void:
+		_d["progress:" + q] = v
