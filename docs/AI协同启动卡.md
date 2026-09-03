@@ -15,6 +15,12 @@
 
 > 不用懂技术，照抄即可。换窗口就换一块粘。
 
+> **⚠️（AI 必读）工作室桌面工具怎么跑——别再重打包 exe**：
+> 用户平时用的是**源码模式**：双击 `tools/desktop_studio/studio_launcher.bat`（等价于 `python studio_server.py`），
+> 它直接读磁盘上的 `index.html` / `startup_card.json`，**改完刷新页面即时生效，无需重打包**。
+> 只有"要把新 `.exe` 发给用户 / 出发行版"时才用 PyInstaller 重打包（见 `desktop-studio-exe-rebuild` skill）。
+> 改完工具相关文件，跑源码模式验证即可；**千万别 kill 用户正在运行的源码服务再裸起 exe**，那会让他"看不到"工具。
+
 ---
 
 ## 1. 窗口一览（主权 / 署名 / 一句话职责）
