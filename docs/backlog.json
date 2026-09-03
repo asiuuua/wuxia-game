@@ -171,32 +171,41 @@
         {
           "title": "部分纹理 compress/mode=0 未做 GPU 压缩",
           "type": "优化建议",
-          "status": "open",
+          "status": "done",
           "placeholder": false,
           "source": "resources/icons/status/zhuoshao.png.import:18（compress/mode=0）；批量见 resources/icons/*、enemies/*、menu/* 多处",
           "detail": "大量图标/状态/敌人/菜单纹理 .import 中 compress/mode=0（Lossless，未 GPU 压缩），移动端/显存敏感；项目纹理压缩铁律要求 mode=2（Compress/VRAM）。",
-          "suggestion": "跑 tools/desktop_studio/compress_textures.py 批量将 compress/mode=0→2（GPU 压缩），降显存与加载开销；压缩前先备份 .import 或用 git 可回退。"
+          "suggestion": "跑 tools/desktop_studio/compress_textures.py 批量将 compress/mode=0→2（GPU 压缩），降显存与加载开销；压缩前先备份 .import 或用 git 可回退。",
+          "resolvedBy": "测试窗口",
+          "resolvedAt": "2026-09-02 22:50:24",
+          "resolution": "只读审计确认已闭环：全仓(resources+scenes+autoload+services+data 共134+个.import)扫描 compress/mode=0 残留=0。资源类窗口此前已全量压缩为 mode=2(GPU/VRAM)，卡点名的 icons/enemies/menu 均已达标。零代码改动，仅同步状态。审核by测试窗口，审计日期2026-09-02。"
         },
         {
           "title": "ConfigManager 配置校验错误走 print 而非 game_logger",
           "type": "优化建议",
-          "status": "open",
+          "status": "done",
           "placeholder": false,
           "source": "autoload/ConfigManager.gd:507,509",
           "detail": "ConfigManager 配置校验发现问题时用 print 输出，与项目统一日志通道 core/utils/game_logger.gd 不一致，日志分散、难检索。",
-          "suggestion": "将配置校验错误输出改为 GameLogger.error/warn，统一日志通道。"
+          "suggestion": "将配置校验错误输出改为 GameLogger.error/warn，统一日志通道。",
+          "resolvedBy": "测试窗口",
+          "resolvedAt": "2026-09-02 22:50:29",
+          "resolution": "只读审计确认已闭环：ConfigManager.gd:507,509 现用 GameLogger.warn(\" Config\\,...)，已统一走项目日志通道"
         },
         {
           "title": "EventBus 17 个信号无生产方(emit=0，含 player_exp_changed) 待渐进清理",
           "type": "占位",
-          "status": "open",
+          "status": "done",
           "placeholder": true,
           "source": "autoload/EventBus.gd",
           "detail": "audit_signal_contract.py 静态扫描 100 声明信号：17 个无生产方(emit=0)——16 个 emit=0 且 connect=0（cmd_buy/cmd_sell/cmd_forge/cmd_join_sect/cmd_contribute_sect/cmd_set_unit_faction/cmd_apply_story_buff 共7个CMD信号被直调替代；bond_romance_stage_changed/combat_character_died/config_loaded/config_validation_failed/grid_unit_moved/quest_ready_to_turn_in/ui_screen_opened/ui_screen_closed/unit_downed 共9个事件未接线）+ player_exp_changed(connect=1 但 gain_exp 从未emit)。@warning_ignore 掩盖 unused_signal 警告。注：『已发射暂未订阅(emit>0,connect=0)』的 38 个为良性广播，不计入门禁拦截目标。【已建防呆】pre-commit GATE0b 接入 audit_signal_contract.py --baseline，仅拦『新增』无生产方信号+未声明引用；基线 tools/audit_signal_baseline.json 收录这17个已知项(不拦)。17遗留项待架构窗口渐进清理(补emit或删声明，清理时同步从基线移除)。",
           "suggestion": "架构/共享地基窗口统一处置：①CMD类确已改直调则删EventBus信号+残留；②事件类确为预留则补reserved注释或删；③player_exp_changed 要么gain_exp补emit且HUD显示经验条，要么删信号+HUD connect。改 EventBus.gd(共享地基冻结清单)须 change_log+双窗口确认，单窗禁擅改。",
           "plain": {
             "what": "EventBus 里有一批信号从没被发过也没人听（死信号），还有 player_exp_changed HUD接了但生产端从没发、且HUD那函数也不读经验。这些是契约噪音，@warning_ignore 盖住了。建议架构窗口统一清理或补接线，动 EventBus 共享地基要协同。"
-          }
+          },
+          "resolvedBy": "测试窗口",
+          "resolvedAt": "2026-09-02 22:50:36",
+          "resolution": "只读审计发现卡描述已过期：用 .signal.emit 全仓统计，真正 emit=0 仅 2 个(game_error/patch_applied)，其中 game_error 被 error_handler.gd 用4处(非死信号)。player_exp_changed 及大量所指信号均有生产方，已接线。唯一真死信号候选项=patch_applied(仅test_eventbus契约出现、无生产方无业务监听)。旧'17个'描述作废；patch_applied 已另派精准新单转交架构窗口，此项据此闭环。零代码改动，仅同步状态。"
         }
       ]
     },
@@ -529,7 +538,7 @@
         {
           "title": "跨项目知识复用 + 换皮模板（连接器而非容器）",
           "type": "优化建议",
-          "status": "open",
+          "status": "done",
           "placeholder": false,
           "source": "用户决策 2026-09-02（平台本质再定位）",
           "detail": "平台定位为连接器：只对接工程、不存工程数据。需支持①新 AI 一眼读懂各工程架构(ai_context) ②换皮不换药：小白只换图/乐/文(reskin) ③前人的踩坑与经验跨项目复用(knowledge)。manifest 模板已含这三段（tools/desktop_studio/projects/manifest_template.yaml）。",
@@ -537,11 +546,14 @@
           "plain": {
             "what": "让平台不止管一个游戏，而是「换个项目一键对接」，且能复用前一个项目的架构经验和踩坑。",
             "why": "你以后还有小程序等其他项目；换皮不换药的活儿让不懂开发的小白也能只换图/音乐/文本就出新作，大幅降成本。",
-            "progress": "理念与模板已定，待 Phase 2 把模板接进版本切换。",
-            "missing": "manifest 三段已设计，尚未被平台真正读取/渲染。",
+            "progress": "已闭环：manifest 三段已被平台读取/渲染（工程清单/ai_context/reskin 换皮清单/knowledge 经验库+标签云分面+总控知识路由），并加回归测试守护；本轮补上一键对接 UI（工程切换）。",
+            "missing": "已无实质缺口（卡片描述过期：manifest 三段早已读取/渲染，见 resolvedBy/resolution）。",
             "plan": "Phase 2 把 manifest 模板落地；Phase 6 总控台加「经验库」面板。",
             "bugs": "暂无 BUG，属架构预留能力。"
-          }
+          },
+          "resolvedBy": "工作室工具",
+          "resolvedAt": "2026-09-03 02:47:04",
+          "resolution": "闭环：manifest 三段(ai_context/reskin/knowledge)已读取/渲染(get_connector_info+经验库面板+总控知识路由)；回归测试已加(security_selftest 8项)；本轮补齐最后一环——前端「工程切换」一键对接UI(list_projects补data_root+prjLoad/prjSwitch)，Phase 2 版本切换落地"
         }
       ]
     }
