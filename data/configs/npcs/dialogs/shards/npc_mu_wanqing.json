@@ -1,0 +1,18 @@
+{
+  "id": "npc_mu_wanqing",
+  "lines": [
+    {
+      "id": "mwq_1",
+      "speaker_id": "npc_mu_wanqing",
+      "text": "少侠，你我心意相通，何不择日成亲？往后江湖路远，愿与你同行。",
+      "next_id": "mwq_2"
+    },
+    {
+      "id": "mwq_2",
+      "speaker_name": "李十五",
+      "speaker_id": "player",
+      "text": "晚晴姑娘，承蒙垂青，此生定不负你。",
+      "next_id": ""
+    }
+  ]
+}

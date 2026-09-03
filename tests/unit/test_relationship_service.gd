@@ -10,11 +10,59 @@ func before_each() -> void:
 func test_service_wired() -> void:
 	expect(GameManager.relationship_service != null, "关系网服务应已装配")
 
-## 关系图应聚合全部样例 NPC（4 个）
-func test_graph_aggregates_four_npcs() -> void:
+## 关系图应聚合全部样例 NPC（6 个：4 旧 + 柳如烟/慕晚晴）
+func test_graph_aggregates_all_npcs() -> void:
 	var g: Dictionary = GameManager.relationship_service.get_relationship_graph()
-	expect_eq(int(g["nodes"].size()), 4, "应有 4 个样例 NPC 节点")
-	expect_eq(int(g["summary"].get("npc_total", 0)), 4, "概览 npc_total 应为 4")
+	expect_eq(int(g["nodes"].size()), 6, "应有 6 个样例 NPC 节点")
+	expect_eq(int(g["summary"].get("npc_total", 0)), 6, "概览 npc_total 应为 6")
+
+## 满好感播种：新女性 NPC 开局即满好感、可直接求婚（结缘全流程起点）
+func test_initial_affection_seeded_full() -> void:
+	GameManager.bond_service.reset()
+	expect_eq(GameManager.bond_service.get_affection("npc_liu_ruyan"), 100, "柳如烟开局好感应满 100")
+	expect_eq(GameManager.bond_service.get_affection("npc_mu_wanqing"), 100, "慕晚晴开局好感应满 100")
+	expect_eq(GameManager.bond_service.get_affection("npc_su_waner"), 0, "苏婉儿无 initial_affection 应仍 0")
+	var rel: Array = GameManager.relationship_service.get_marriageable_npc_ids()
+	expect(rel.find("npc_liu_ruyan") >= 0, "柳如烟开局即可结缘")
+	expect(rel.find("npc_mu_wanqing") >= 0, "慕晚晴开局即可结缘")
+
+## 结缘全流程：满好感播种 → 求婚 → 已婚 → 寝欢 → 怀胎 → 分娩（柳如烟）
+func test_full_marriage_flow_liu_ruyan() -> void:
+	var rs = GameManager.romance_service
+	var bs = GameManager.bond_service
+	bs.reset()
+	# 播种后直接可求婚（无需送礼拉好感）
+	expect(rs.can_propose("npc_liu_ruyan"), "柳如烟满好感应可求婚")
+	var p: Dictionary = rs.propose("npc_liu_ruyan")
+	expect(p.get("ok", false), "柳如烟求婚应成功")
+	expect(rs.is_spouse("npc_liu_ruyan"), "柳如烟应记为配偶")
+	expect_eq(rs.get_romance_stage("npc_liu_ruyan"), BondEnums.RomanceStage.MARRIED, "阶段应为已婚")
+	# 寝欢启动孕期
+	var im: Dictionary = rs.begin_intimacy("npc_liu_ruyan")
+	expect(im.get("ok", false), "已婚配偶寝欢应成功")
+	expect(rs.is_pregnant("npc_liu_ruyan"), "柳如烟应处于孕期")
+	# 推进怀胎十月分娩
+	rs.advance_days(300)
+	expect_eq(rs.get_children_of("npc_liu_ruyan").size(), 1, "满孕期应出生 1 子")
+	var g: Dictionary = GameManager.relationship_service.get_relationship_graph()
+	expect_eq(int(g["summary"].get("spouse_count", 0)), 1, "配偶数应为 1")
+	expect_eq(int(g["summary"].get("child_count", 0)), 1, "子嗣数应为 1")
+
+## 结缘全流程：慕晚晴求婚 + 关系网含其节点
+func test_full_marriage_flow_mu_wanqing() -> void:
+	var rs = GameManager.romance_service
+	var bs = GameManager.bond_service
+	bs.reset()
+	var p: Dictionary = rs.propose("npc_mu_wanqing")
+	expect(p.get("ok", false), "慕晚晴求婚应成功")
+	expect(rs.is_spouse("npc_mu_wanqing"), "慕晚晴应记为配偶")
+	var g: Dictionary = GameManager.relationship_service.get_relationship_graph()
+	var found := false
+	for n in g["nodes"]:
+		if String(n.get("npc_id", "")) == "npc_mu_wanqing":
+			found = true
+			expect(bool(n.get("is_spouse", false)), "慕晚晴节点应为配偶")
+	expect(found, "关系图应含慕晚晴节点")
 
 ## 可结缘列表应随好感度变化
 func test_marriageable_follows_affection() -> void:

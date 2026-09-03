@@ -56,6 +56,16 @@
       "file": "res://data/configs/npcs/dialogs/shards/dlg_event_demo.json",
       "npc_id": "event_demo_npc",
       "chapter": "prologue"
+    },
+    "npc_liu_ruyan": {
+      "file": "res://data/configs/npcs/dialogs/shards/npc_liu_ruyan.json",
+      "npc_id": "npc_liu_ruyan",
+      "chapter": "prologue"
+    },
+    "npc_mu_wanqing": {
+      "file": "res://data/configs/npcs/dialogs/shards/npc_mu_wanqing.json",
+      "npc_id": "npc_mu_wanqing",
+      "chapter": "prologue"
     }
   }
 }

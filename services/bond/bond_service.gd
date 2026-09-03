@@ -239,6 +239,18 @@ func reset() -> void:
 	gift_count.clear()
 	fired_events.clear()
 	interaction_log.clear()
+	_init_affection_from_config()
+
+## 从 relations.json 播种初始好感（initial_affection>0 的 NPC 开局即满/初始好感）
+## 新游戏/测试 reset 后自动生效，保证"满好感可结缘"NPC 开箱即测。
+func _init_affection_from_config() -> void:
+	for npc_id in ConfigManager.get_all_relation_ids():
+		var npc: Dictionary = ConfigManager.get_relation(npc_id)
+		if npc.is_empty():
+			continue
+		var initial: int = int(npc.get("initial_affection", 0))
+		if initial > 0:
+			set_affection(npc_id, initial)
 
 func get_save_key() -> String:
 	return "bond"

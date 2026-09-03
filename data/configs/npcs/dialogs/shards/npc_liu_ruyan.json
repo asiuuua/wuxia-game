@@ -1,0 +1,18 @@
+{
+  "id": "npc_liu_ruyan",
+  "lines": [
+    {
+      "id": "lry_1",
+      "speaker_id": "npc_liu_ruyan",
+      "text": "公子来得正好，妾身已候你多时了……你我情投意合，今日便随你回府可好？",
+      "next_id": "lry_2"
+    },
+    {
+      "id": "lry_2",
+      "speaker_name": "李十五",
+      "speaker_id": "player",
+      "text": "如烟姑娘，我愿与你结为连理，此生不负。",
+      "next_id": ""
+    }
+  ]
+}

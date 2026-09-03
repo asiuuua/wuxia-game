@@ -92,6 +92,24 @@
       "portrait": "res://assets/characters/village_chief_face.png",
       "dialog_id": "dlg_event_demo",
       "half_body_portrait": "res://assets/characters/half_body/event_demo_npc.png"
+    },
+    {
+      "id": "npc_liu_ruyan",
+      "name": "柳如烟",
+      "pos_x": 250,
+      "pos_y": 220,
+      "sprite": "res://assets/characters/npc_liu_ruyan.png",
+      "dialog_id": "npc_liu_ruyan",
+      "half_body_portrait": "res://assets/characters/half_body/npc_liu_ruyan.png"
+    },
+    {
+      "id": "npc_mu_wanqing",
+      "name": "慕晚晴",
+      "pos_x": 350,
+      "pos_y": 150,
+      "sprite": "res://assets/characters/npc_mu_wanqing.png",
+      "dialog_id": "npc_mu_wanqing",
+      "half_body_portrait": "res://assets/characters/half_body/npc_mu_wanqing.png"
     }
   ]
 }
