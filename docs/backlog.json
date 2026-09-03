@@ -379,6 +379,22 @@
           "resolvedAt": "2026-09-02 17:10:12",
           "commit": "a250383",
           "resolution": "已闭环：_do_rest is_any_screen_open() 静默 return 改弹可见提示(请先关闭界面再休息)；界面内按R不再无反应。根治派单UI窗口1418749423f9(UIManager统一处理遮挡输入族)。双闸门GATE1零错/GATE2 57套件0失败。"
+        },
+        {
+          "title": "结缘系统 UI 层补全（NPC详情页/人物图鉴/姻缘面板/后宅名分）",
+          "type": "待办",
+          "status": "open",
+          "placeholder": false,
+          "source": "派单 d2be93b6b8d9（架构→UI窗口）",
+          "detail": "数据层已就绪（romance_service 求婚/名分/寝欢/子嗣、bond_service 好感、relationship_service 关系图；新女性NPC 柳如烟/慕晚晴 开局满好感可结缘）。UI 层缺：1)菜单人物分类加「人物图鉴」入口+NPC列表面 2)NPC详情页整合人物关系/设置后宅名分 3)姻缘面板配偶行加查看详情/设置名分/寝欢 4)城镇悬停NPC显示详情。均属 UI/工作室主权。",
+          "suggestion": "UI窗口认领：按派单 d2be93b6b8d9 desc 补齐四处 UI 入口，双闸门全绿。",
+          "plain": {
+            "what": "你菜单里要看/操作 NPC（图鉴、详情、设名分、怀胎生子）却找不到入口。",
+            "why": "数据层功能都做好了，但界面上没有按钮和页面能点到这些功能。",
+            "progress": "open：功能在数据层可用，UI 层入口还没做。",
+            "missing": "菜单人物图鉴入口、NPC详情页、后宅名分设置、姻缘面板寝欢按钮。",
+            "plan": "由 UI 窗口按派单补齐上述界面入口。"
+          }
         }
       ]
     },

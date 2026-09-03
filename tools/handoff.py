@@ -194,6 +194,53 @@ def cmd_dashboard(args):
     return 0
 
 
+# === 派单权威快照（后台/看板只读消费）===
+# 事件重放合成当前全部派单的状态视图，写 .workbuddy/handovers/handoff_view.json。
+# 工作室后台 /api/handoff 可直接读此文件展示/认领，不解析私有 jsonl、不受 backlog.json 影响；
+# 派单一经 issue 写入即在此快照可见 → 确凿派发、改稿/加功能不丢。
+VIEW_PATH = os.path.join(BOARD, "handoff_view.json")
+
+
+def cmd_export(args):
+    ensure()
+    issues = all_issues()
+    evs = all_events()
+    view = {
+        "updated": now(),
+        "pending": 0,
+        "open": [],
+        "claimed": [],
+        "done": [],
+        "closed": [],
+    }
+    for it in sorted(issues, key=lambda x: x["ts"]):
+        s = state_of(it["id"], evs)
+        rec = {
+            "id": it["id"],
+            "ts": it["ts"],
+            "from": it["from"],
+            "to": it["to"],
+            "title": it["title"],
+            "desc": it["desc"],
+            "files": it.get("files", []),
+            "verify": it["verify"],
+            "followup": it["followup"],
+            "state": s["state"],
+            "claim_by": s["claim_by"],
+            "note_done": s["note_done"],
+            "note_followup": s["note_followup"],
+        }
+        view[s["state"]].append(rec)
+    view["pending"] = len(view["open"]) + len(view["claimed"])
+    out_path: str = args.out if getattr(args, "out", "") else VIEW_PATH
+    with open(out_path, "w", encoding="utf-8") as f:
+        json.dump(view, f, ensure_ascii=False, indent=2)
+    print("[handoff] 快照已更新 %s：pending=%d（open=%d claimed=%d）done=%d closed=%d" % (
+        out_path, view["pending"], len(view["open"]), len(view["claimed"]),
+        len(view["done"]), len(view["closed"])))
+    return 0
+
+
 def build_parser():
     p = argparse.ArgumentParser(description="跨窗口协作隐患传递板")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -225,6 +272,9 @@ def build_parser():
     sc.set_defaults(func=cmd_scan)
 
     sub.add_parser("dashboard", help="全局任务状态").set_defaults(func=cmd_dashboard)
+    exp = sub.add_parser("export", help="生成派单权威快照 handoff_view.json（后台/看板只读）")
+    exp.add_argument("--out", default="", help="输出路径（默认 .workbuddy/handovers/handoff_view.json）")
+    exp.set_defaults(func=cmd_export)
     return p
 
 
