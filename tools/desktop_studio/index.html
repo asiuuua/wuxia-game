@@ -116,21 +116,9 @@
   <h1>🗡 武侠游戏 · 内容工作室（桌面版）</h1>
   <span class="st" id="hstat">加载中…</span>
 </header>
-<!-- 操作日志：固定在左上角的小型可滑动列表（默认缩小，点标题展开/收起），独立于系统运维页签，全页签可见 -->
-<div id="opLogFloat" class="op-log-float collapsed">
-  <div class="olf-head" onclick="opLogToggle()">
-    <span class="olf-title">📜 操作日志</span>
-    <span class="olf-actions">
-      <button class="olf-btn" title="刷新" onclick="event.stopPropagation();logLoad()">↻</button>
-      <button class="olf-btn" id="olfToggle" title="展开/收起">▸</button>
-    </span>
-  </div>
-  <div class="olf-body" id="logBoxFloat"><div class="olf-empty">加载中…</div></div>
-</div>
 <style>
-.op-log-float{position:fixed;top:62px;left:12px;width:300px;max-height:46vh;z-index:60;
-  background:var(--panel);border:1px solid var(--line);border-radius:10px;
-  box-shadow:0 8px 28px rgba(0,0,0,.5);overflow:hidden;display:flex;flex-direction:column;font-family:inherit}
+/* 操作日志：置于「系统运维」页签内的可折叠块（不再用 fixed 浮窗遮挡/挤占页面） */
+.op-log-float{position:relative;width:100%;max-width:760px;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.5);overflow:hidden;display:flex;flex-direction:column;font-family:inherit}
 .op-log-float .olf-head{display:flex;align-items:center;justify-content:space-between;
   padding:7px 10px;background:#15182a;border-bottom:1px solid var(--line);
   font-size:13px;font-weight:700;color:var(--accent);cursor:pointer;user-select:none}
@@ -139,7 +127,7 @@
 .op-log-float .olf-actions .olf-btn{background:#1c2138;border:1px solid #2a2f47;color:#cdd3e6;
   border-radius:6px;padding:1px 7px;cursor:pointer;font-size:12px;line-height:1.4}
 .op-log-float .olf-actions .olf-btn:hover{background:#7c9cff22;border-color:#7c9cff}
-.op-log-float .olf-body{padding:8px 10px;overflow:auto;flex:1;font-size:12px;line-height:1.5}
+.op-log-float .olf-body{padding:8px 10px;overflow:auto;flex:1;font-size:12px;line-height:1.5;max-height:50vh}
 .op-log-float.collapsed .olf-body{display:none}
 .op-log-float.collapsed .olf-head{border-bottom:none}
 .op-log-float .olf-empty{color:var(--muted)}
@@ -601,7 +589,7 @@
     </div>
   </section>
 
-  <!-- 系统运维 合并视图：操作日志（已移为左上角固定浮窗 #opLogFloat）/ 设置 / 回收站 / 双闸门 合并到一个页签。各子块元素 ID 保持不变，原加载函数 setLoad/trashLoad/gateLoad 照常工作；logLoad 现渲染到浮窗 -->
+  <!-- 系统运维 合并视图：设置 / 回收站 / 双闸门 / 操作日志（见本页签底部「📜 操作日志」可折叠块，已移出 fixed 浮窗不再遮挡页面）合并到一个页签。各子块元素 ID 保持不变，setLoad/trashLoad/gateLoad 照常工作；logLoad 渲染到 #logBoxFloat -->
   <section class="tab" id="tab-sys">
     <hr style="border:none;border-top:1px solid var(--line);margin:0 0 24px">
     <div class="coord-sub">
@@ -650,6 +638,21 @@
           </div>
           <div id="gateView" style="margin-top:8px;max-height:62vh;overflow:auto;line-height:1.8"></div>
         </div>
+      </div>
+    </div>
+    <hr style="border:none;border-top:1px solid var(--line);margin:24px 0">
+    <div class="coord-sub">
+      <h3 style="margin:0 0 8px">📜 操作日志</h3>
+      <div class="hint">本工作室的全部操作记录（改文件、删文件、跑双闸门等），每 30 秒自动刷新。点标题栏可展开/收起。</div>
+      <div id="opLogFloat" class="op-log-float collapsed">
+        <div class="olf-head" onclick="opLogToggle()">
+          <span class="olf-title">📜 操作日志（点此展开/收起）</span>
+          <span class="olf-actions">
+            <button class="olf-btn" title="刷新" onclick="event.stopPropagation();logLoad()">↻</button>
+            <button class="olf-btn" id="olfToggle" title="展开/收起">▸</button>
+          </span>
+        </div>
+        <div class="olf-body" id="logBoxFloat"><div class="olf-empty">加载中…</div></div>
       </div>
     </div>
   </section>
