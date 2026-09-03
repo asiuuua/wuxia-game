@@ -161,9 +161,12 @@ func _build_sections(npc: Dictionary) -> void:
 	if GameManager.bond_service != null:
 		aff = GameManager.bond_service.get_affection(_npc_id)
 	_kv("好感度", "%d / 100" % aff)
-	_section("五、互动")
+	_section("五、人物关系")
+	_kv("与主角关系", _relation_text())
+	_section("六、互动")
 	var btns: Array = []
 	if GameManager.romance_service != null and GameManager.romance_service.is_spouse(_npc_id):
+		btns.append(_btn("设置名分", true, _on_set_rank))
 		btns.append(_btn("同游旅行 (+5 婘眷值)", true, _on_travel))
 		if not GameManager.romance_service.get_children_of(_npc_id).is_empty():
 			btns.append(_btn("一家人出游 (+15 婘眷值)", true, _on_family_outing))
@@ -174,8 +177,21 @@ func _build_sections(npc: Dictionary) -> void:
 	btns.append(_btn("查看其背包", true, _on_view_backpack))
 	for b in btns:
 		_content.add_child(b)
-	_section("六、个人背包")
+	_section("七、个人背包")
 	_note(String(stats.get("backpack_note", "（NPC 个人背包：后续可由任务/赠予把物品给主角查看）")))
+
+## 与主角的关系标签：配偶·名分 / 结义 / 师徒 / 可结缘 / 相识
+func _relation_text() -> String:
+	var rs = GameManager.romance_service
+	if rs != null and rs.is_spouse(_npc_id):
+		return "配偶·%s" % rs.get_spouse_rank_name(_npc_id)
+	if GameManager.sworn_service != null and GameManager.sworn_service.is_sworn(_npc_id):
+		return "结义"
+	if GameManager.master_service != null and GameManager.master_service.is_master(_npc_id):
+		return "师徒"
+	if rs != null and rs.can_propose(_npc_id):
+		return "可结缘"
+	return "相识"
 
 func _load_stats(npc_id: String) -> Dictionary:
 	if not FileAccess.file_exists(NPC_STATS_PATH):
@@ -240,6 +256,9 @@ func _on_select_portrait() -> void:
 	EventBus.notification_show.emit("已切换为该 NPC 立绘形象（对话框/NPC 面板生效）")
 	_apply_current_portrait()
 
+func _on_set_rank() -> void:
+	UIManager.open_screen("RankSelectDialog", UIManager.Layer.POPUP, {"npc_id": _npc_id})
+
 func _on_spar() -> void:
 	EventBus.notification_show.emit("（切磋接口预留：后续接入战斗）")
 
@@ -290,9 +309,9 @@ func _editor_preview() -> void:
 	_note("茶具、古琴")
 	_section("四、与主角好感")
 	_kv("好感度", "68 / 100")
-	_section("五、互动")
+	_section("六、互动")
 	_content.add_child(_btn("切磋", false, _on_spar))
 	_content.add_child(_btn("送礼", true, _on_gift))
 	_content.add_child(_btn("查看其背包", true, _on_view_backpack))
-	_section("六、个人背包")
+	_section("七、个人背包")
 	_note(String(_load_stats("").get("backpack_note", "（NPC 个人背包：后续可由任务/赠予把物品给主角查看）")))

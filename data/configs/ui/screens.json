@@ -19,5 +19,7 @@
   "GameMenu": "res://scenes/ui/screens/game_menu/GameMenuScreen.tscn",
   "AbilitiesScreen": "res://scenes/ui/screens/abilities/AbilitiesScreen.tscn",
   "CelebrationOverlay": "res://scenes/ui/overlays/celebration/CelebrationOverlay.tscn",
-  "NpcPanel": "res://scenes/ui/screens/npc/NpcPanelScreen.tscn"
+  "NpcPanel": "res://scenes/ui/screens/npc/NpcPanelScreen.tscn",
+  "NpcGalleryScreen": "res://scenes/ui/screens/npc_gallery/NpcGalleryScreen.tscn",
+  "RankSelectDialog": "res://scenes/ui/components/rank_select_dialog/RankSelectDialog.tscn"
 }

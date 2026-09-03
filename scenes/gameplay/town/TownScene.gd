@@ -7,6 +7,8 @@
 extends Node2D
 class_name TownScene
 
+const UIPalette = preload("res://core/constants/ui_theme.gd")
+
 const MOVE_SPEED := 200.0
 const PLAYER_SCENE_H := 175.0  # 玩家在场景里的目标高度（像素）— 白背景视频重抠版（matte_clean），用户要求缩一半看效果（350→175）
 const NPC_SCENE_H := 140.0     # NPC 同
@@ -14,6 +16,7 @@ const SHADOW_BASE_W := 64      # 阴影纹理基准宽（运行时按角色实�
 const SHADOW_BASE_H := 18      # 阴影纹理基准高
 const SHADOW_WIDTH_RATIO := 0.55  # 阴影宽 = 角色宽 × 此系数
 const SHADOW_ALPHA := 0.45     # 阴影最深处不透明度
+const HOVER_RADIUS := 70.0     # 鼠标悬停 NPC 的判定半径（世界坐标）
 
 # 场景底图（demo 硬编码；后续迁 ConfigManager）
 const SCENE_BG_PATH := "res://assets/scenes/town_main.png"
@@ -71,6 +74,14 @@ var _player: Node2D
 var _npc_nodes: Dictionary = {}   # npc_id -> Node2D
 var _nearby_npc: String = ""
 
+# === NPC 悬停详情小面板（鼠标悬停 NPC 显示名字/关系/好感，点击进 NpcPanel） ===
+var _hover_layer: CanvasLayer
+var _hover_panel: Panel
+var _hover_name: Label
+var _hover_rel: Label
+var _hover_aff: Label
+var _hover_npc: String = ""
+
 # === 椭圆阴影纹理（程序生成一次，所有角色共用）===
 var _shadow_tex: Texture2D
 
@@ -82,6 +93,7 @@ func _ready() -> void:
 	_build_shadow_texture()
 	_build_world()
 	_spawn_npcs()
+	_build_hover_panel()
 	EventBus.scene_changed.emit("town_001")
 	GameState.set_last_safe_point("town_001", "safe_town")
 
@@ -254,8 +266,105 @@ func _spawn_npcs() -> void:
 		_apply_breath(node)
 		_npc_nodes[npc_id] = node
 
+# === NPC 悬停详情小面板 ===
+func _build_hover_panel() -> void:
+	_hover_layer = CanvasLayer.new()
+	_hover_layer.layer = 350  # 位于 POPUP(300) 与 TOOLTIP(400) 之间，不挡弹窗/Toast
+	add_child(_hover_layer)
+	_hover_panel = Panel.new()
+	_hover_panel.visible = false
+	_hover_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.071, 0.078, 0.11, 0.88)
+	sb.border_width_left = 1
+	sb.border_width_top = 1
+	sb.border_width_right = 1
+	sb.border_width_bottom = 1
+	sb.border_color = Color(1, 1, 1, 0.2)
+	sb.corner_radius_top_left = 8
+	sb.corner_radius_top_right = 8
+	sb.corner_radius_bottom_left = 8
+	sb.corner_radius_bottom_right = 8
+	sb.content_margin_left = 10
+	sb.content_margin_right = 10
+	sb.content_margin_top = 8
+	sb.content_margin_bottom = 8
+	_hover_panel.add_theme_stylebox_override("panel", sb)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 2)
+	_hover_name = Label.new()
+	_hover_name.add_theme_font_size_override("font_size", 16)
+	_hover_name.add_theme_color_override("font_color", UIPalette.GOLD)
+	box.add_child(_hover_name)
+	_hover_rel = Label.new()
+	_hover_rel.add_theme_font_size_override("font_size", 13)
+	box.add_child(_hover_rel)
+	_hover_aff = Label.new()
+	_hover_aff.add_theme_font_size_override("font_size", 13)
+	box.add_child(_hover_aff)
+	_hover_panel.add_child(box)
+	_hover_panel.gui_input.connect(_on_hover_panel_input)
+	_hover_layer.add_child(_hover_panel)
+
+func _update_hover() -> void:
+	if UIManager.is_any_screen_open():
+		_hide_hover_panel()
+		return
+	var mouse_world := get_global_mouse_position()
+	var target := ""
+	for npc_id in _npc_nodes:
+		if _npc_nodes[npc_id].position.distance_to(mouse_world) < HOVER_RADIUS:
+			target = npc_id
+			break
+	if target != "":
+		_show_hover_panel(target, mouse_world)
+	else:
+		_hide_hover_panel()
+
+func _show_hover_panel(npc_id: String, world_pos: Vector2) -> void:
+	if _hover_panel == null or not is_instance_valid(_hover_panel):
+		return
+	if _hover_npc == npc_id and _hover_panel.visible:
+		return
+	_hover_npc = npc_id
+	var npc: Dictionary = ConfigManager.get_npc(npc_id)
+	_hover_name.text = String(npc.get("name", npc_id))
+	_hover_rel.text = "关系：%s" % _hover_relation(npc_id)
+	var aff := 0
+	if GameManager.bond_service != null:
+		aff = GameManager.bond_service.get_affection(npc_id)
+	_hover_aff.text = "好感：%d / 100" % aff
+	# 世界坐标 → 屏幕坐标（相机跟随玩家，需经 canvas transform 换算）
+	var screen := get_canvas_transform() * world_pos
+	_hover_panel.position = screen + Vector2(18, -18)
+	_hover_panel.visible = true
+
+func _hide_hover_panel() -> void:
+	_hover_npc = ""
+	if _hover_panel != null and is_instance_valid(_hover_panel):
+		_hover_panel.visible = false
+
+func _hover_relation(npc_id: String) -> String:
+	var rs = GameManager.romance_service
+	if rs != null and rs.is_spouse(npc_id):
+		return "配偶·%s" % rs.get_spouse_rank_name(npc_id)
+	if GameManager.sworn_service != null and GameManager.sworn_service.is_sworn(npc_id):
+		return "结义"
+	if GameManager.master_service != null and GameManager.master_service.is_master(npc_id):
+		return "师徒"
+	if rs != null and rs.can_propose(npc_id):
+		return "可结缘"
+	return "相识"
+
+func _on_hover_panel_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		if _hover_npc != "":
+			UIManager.open_screen("NpcPanel", UIManager.Layer.POPUP, {"npc_id": _hover_npc})
+			_hide_hover_panel()
+
 func _physics_process(delta: float) -> void:
 	if UIManager.is_any_screen_open():
+		_hide_hover_panel()
 		return
 	var dir := Vector2.ZERO
 	if Input.is_action_pressed("move_up"):
@@ -273,6 +382,7 @@ func _physics_process(delta: float) -> void:
 		if _player.position.distance_to(_npc_nodes[npc_id].position) < 60:
 			_nearby_npc = npc_id
 			break
+	_update_hover()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("toggle_inventory"):
@@ -420,4 +530,5 @@ func _exit_tree() -> void:
 	# HUD 挂在 autoload 的 HUD 层、不随本场景树销毁，须显式卸载，否则切场景后残留双 HUD
 	UIManager.unmount_hud()
 	UIManager.close_all_screens()
+	# 悬停面板挂在独立 CanvasLayer，随场景树释放，无需额外处理
 

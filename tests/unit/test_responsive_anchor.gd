@@ -19,6 +19,8 @@ const PANELS := {
 	"ForgeScreen": ["Panel", 640, 560],
 	"GameMenu": ["Panel", 760, 540],
 	"NpcPanel": ["Panel", 800, 640],
+	"NpcGalleryScreen": ["Panel", 760, 620],
+	"RankSelectDialog": ["Panel", 560, 520],
 	"SectScreen": ["Panel", 640, 560],
 	"ShopScreen": ["Panel", 640, 560],
 }

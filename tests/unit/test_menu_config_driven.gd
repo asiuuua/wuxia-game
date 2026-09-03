@@ -42,7 +42,7 @@ func test_game_menu_emits_action_ids() -> void:
 	var s: Control = GameMenuScreen.instantiate()
 	s._ready()
 	var btns: Array = _collect_menu_buttons(s)
-	expect(btns.size() == 12, "应生成 12 个菜单按钮，实际 %d" % btns.size())
+	expect(btns.size() == 13, "应生成 13 个菜单按钮，实际 %d" % btns.size())
 	for b in btns:
 		b.emit_signal("pressed")
 
@@ -52,10 +52,16 @@ func test_game_menu_emits_action_ids() -> void:
 	expect(captured.has("open_bond"), "姻缘按钮应 emit open_bond")
 	expect(captured.has("open_settings"), "设置按钮应 emit open_settings")
 	expect(captured.has("open_forge"), "锻造按钮应 emit open_forge")
-	expect(captured.size() == 12, "应 emit 12 个 action_id，实际 %d" % captured.size())
+	expect(captured.has("open_npc_gallery"), "人物图鉴按钮应 emit open_npc_gallery")
+	expect(captured.size() == 13, "应 emit 13 个 action_id，实际 %d" % captured.size())
 	s.free()
 
 func test_ui_routes_menu_action_to_screen() -> void:
 	EventBus.ui_action_requested.emit("open_bond")
 	expect(UIManager.get_open_screen("BondRomance") != null, "路由应打开 BondRomance 屏")
+	UIManager.close_all_screens()
+
+func test_ui_routes_npc_gallery_action() -> void:
+	EventBus.ui_action_requested.emit("open_npc_gallery")
+	expect(UIManager.get_open_screen("NpcGalleryScreen") != null, "路由应打开 NpcGalleryScreen 屏")
 	UIManager.close_all_screens()

@@ -5,7 +5,8 @@
       "items": [
         {"action_id": "open_attributes", "icon_id": "menu/attributes", "name": "属性", "screen": "AttributesScreen"},
         {"action_id": "open_inventory", "icon_id": "menu/inventory", "name": "背包", "screen": "InventoryScreen"},
-        {"action_id": "open_equipment", "icon_id": "menu/equipment", "name": "装备", "screen": "EquipmentScreen"}
+        {"action_id": "open_equipment", "icon_id": "menu/equipment", "name": "装备", "screen": "EquipmentScreen"},
+        {"action_id": "open_npc_gallery", "icon_id": "menu/npc", "name": "人物图鉴", "screen": "NpcGalleryScreen"}
       ]
     },
     {

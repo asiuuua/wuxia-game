@@ -99,6 +99,36 @@ func _row(npc_id: String, tag: String, aff: int, buttons: Array) -> void:
 		row.add_child(b)
 	_content.add_child(row)
 
+## 配偶行（按钮多，换第二行右对齐，避免单行溢出 760 面板）
+func _spouse_row(npc_id: String, tag: String, aff: int, buttons: Array) -> void:
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 6)
+	var line1 := HBoxContainer.new()
+	var icon := TextureRect.new()
+	icon.texture = UIManager.get_icon("npc/" + npc_id)
+	icon.custom_minimum_size = Vector2(36, 36)
+	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	line1.add_child(icon)
+	var name_l := Label.new()
+	name_l.custom_minimum_size = Vector2(150, 0)
+	name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name_l.text = "%s  [%s]" % [_npc_name(npc_id), tag]
+	line1.add_child(name_l)
+	var aff_l := Label.new()
+	aff_l.custom_minimum_size = Vector2(90, 0)
+	aff_l.text = "好感%d" % aff
+	line1.add_child(aff_l)
+	box.add_child(line1)
+	if not buttons.is_empty():
+		var line2 := HBoxContainer.new()
+		line2.alignment = BoxContainer.ALIGNMENT_END
+		line2.add_theme_constant_override("separation", 8)
+		for b in buttons:
+			line2.add_child(b)
+		box.add_child(line2)
+	_content.add_child(box)
+
 # === 各区块 ===
 func _add_spouse_section() -> void:
 	_section("一、配偶")
@@ -115,10 +145,13 @@ func _add_spouse_section() -> void:
 		var preg: bool = rs.is_pregnant(npc_id)
 		var tag: String = "配偶·%s·子嗣%d%s" % [stage_name, kids.size(), "·孕" if preg else ""]
 		var btns := [
+			_btn("查看详情", true, _on_view_details.bind(npc_id)),
+			_btn("设置名分", true, _on_set_rank.bind(npc_id)),
+			_btn("寝欢", true, _on_intimacy.bind(npc_id)),
 			_btn("欢庆(%d)" % rs.get_celebration_left(npc_id), true, _on_celebration.bind(npc_id)),
 			_btn("举办婚礼", true, _on_wedding.bind(npc_id)),
 		]
-		_row(npc_id, tag, GameManager.bond_service.get_affection(npc_id), btns)
+		_spouse_row(npc_id, tag, GameManager.bond_service.get_affection(npc_id), btns)
 
 func _add_child_section() -> void:
 	_section("二、子嗣")
@@ -199,6 +232,7 @@ func _add_candidate_section() -> void:
 			btns.append(_btn("收徒", ms.can_take_apprentice(npc_id), _on_take_apprentice.bind(npc_id)))
 		if btns.is_empty():
 			continue
+		btns.push_front(_btn("查看详情", true, _on_view_details.bind(npc_id)))
 		any = true
 		_row(npc_id, "候选", bs.get_affection(npc_id), btns)
 	if not any:
@@ -243,6 +277,20 @@ func _on_wedding(npc_id: String) -> void:
 	else:
 		EventBus.notification_show.emit("未能举办：%s" % String(r.get("reason", "未知")))
 		_refresh()
+
+func _on_view_details(npc_id: String) -> void:
+	UIManager.open_screen("NpcPanel", UIManager.Layer.POPUP, {"npc_id": npc_id})
+
+func _on_set_rank(npc_id: String) -> void:
+	UIManager.open_screen("RankSelectDialog", UIManager.Layer.POPUP, {"npc_id": npc_id})
+
+func _on_intimacy(npc_id: String) -> void:
+	var r: Dictionary = GameManager.romance_service.begin_intimacy(npc_id)
+	if r.get("ok", false):
+		EventBus.notification_show.emit("与 %s 共度良宵，似有喜兆……" % _npc_name(npc_id))
+	else:
+		EventBus.notification_show.emit("未能寝欢：%s" % String(r.get("reason", "未知")))
+	_refresh()
 
 func _on_swear(npc_id: String) -> void:
 	_act(GameManager.sworn_service.sworn(npc_id), "义结金兰！")
