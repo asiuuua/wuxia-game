@@ -91,6 +91,10 @@ const MENU_FILES: Array[String] = ["res://data/configs/ui/menu_config.json"]
 # 战斗数值换算表（阶段A：五维根属性→面板属性派生；整表 Dictionary，非 id 键控）
 const COMBAT_ATTR_FILE := "res://data/configs/combat/attribute_table.json"
 
+# 区域配置仓库（区域化剧情骨架）：总索引 + 区域目录。区域对白登记进 _dialog_index 走懒加载
+const REGION_MAP_INDEX := "res://data/configs/regions/_map_index.json"
+const REGION_DIR := "res://data/configs/regions/"
+
 var _abilities: Dictionary = {}
 var _items: Dictionary = {}
 var _enemies: Dictionary = {}
@@ -140,6 +144,7 @@ func _ready() -> void:
 	_load_ui_sfx()
 	_load_menus()
 	_load_combat_attr()
+	_load_regions()
 	_validate_references()
 	_flush_config_errors()
 	_is_loaded = true
@@ -604,6 +609,80 @@ func get_region_connections(id: String) -> Array[String]:
 	var c: Array = r.get("connections", [])
 	var out: Array[String] = []
 	out.assign(c)
+	return out
+
+# === 区域配置仓库（region 剧情骨架 · 纯增量）===
+# 把 regions/ 下各区域的 npc/quest/item/battle/enemy 合并进全局查询表；
+# 区域对白登记进 _dialog_index，复用已有"分片懒加载 + 闲置卸载 + pin"机制。
+var _region_index: Dictionary = {}   # region_id -> index.json 元信息
+var _region_loaded: bool = false
+
+func _load_regions() -> void:
+	if _region_loaded:
+		return
+	_region_loaded = true
+	var map: Dictionary = _load_json(REGION_MAP_INDEX)
+	for r in map.get("regions", []):
+		if not (r is Dictionary) or not r.has("region_id"):
+			_record_error("区域总索引存在非法条目，已跳过")
+			continue
+		var rid: String = str(r["region_id"])
+		var idx: Dictionary = _load_json(_region_path(rid, "index.json"))
+		if idx.is_empty():
+			_record_error("区域 %s 缺失 index.json 点名册，跳过该区域" % rid)
+			continue
+		if _region_index.has(rid):
+			_record_error("区域 %s 重复定义，后者覆盖" % rid)
+		_region_index[rid] = idx
+		_merge_region_kind(rid, "npcs", _npcs, "NPC")
+		_merge_region_kind(rid, "quests", _quests, "任务")
+		_merge_region_kind(rid, "items", _items, "物品")
+		_merge_region_kind(rid, "battles", _battles, "战斗")
+		_merge_region_kind(rid, "enemies", _enemies, "敌人")
+		_register_region_dialogs(rid, idx)
+
+## 区域文件绝对路径：res://data/configs/regions/<rid>/<fname>
+func _region_path(rid: String, fname: String) -> String:
+	return "%s%s/%s" % [REGION_DIR, rid, fname]
+
+## 把某个区域的某类实体并入全局查询表（重复则以区域为准覆盖）
+func _merge_region_kind(rid: String, kind: String, target: Dictionary, label: String) -> void:
+	var path := _region_path(rid, kind + ".json")
+	var data: Dictionary = _load_json(path)
+	for entry in data.get(kind, []):
+		if not _is_valid_entry(entry, path, "region_" + kind):
+			continue
+		var eid: String = str(entry["id"])
+		if target.has(eid):
+			_record_error("区域 %s 的%s %s 与全局重复，后者覆盖" % [rid, label, eid])
+		target[eid] = entry
+
+## 把区域对白登记进懒加载索引（不加载内容，get_dialog 时才现取）
+func _register_region_dialogs(rid: String, idx: Dictionary) -> void:
+	for did in idx.get("dialogs", []):
+		var key: String = str(did)
+		if _dialog_index.has(key):
+			_record_error("区域 %s 对话 %s 索引重复，后者覆盖" % [rid, key])
+		_dialog_index[key] = {"file": _region_path(rid, "dialogs/%s.json" % key)}
+
+## 取区域元信息（display_name / prefix / plotline / 各实体清单）；不存在返回空字典
+func get_region_meta(rid: String) -> Dictionary:
+	return _region_index.get(rid, {})
+
+## 取全部区域元信息（region_id -> index 内容）
+func get_all_region_meta() -> Dictionary:
+	return _region_index
+
+## 取区域剧情一句话（plotline），用于地图/剧情指引展示
+func get_region_plotline(rid: String) -> String:
+	return String(get_region_meta(rid).get("plotline", ""))
+
+## 取区域内特定实体清单（如 get_region_entity_list("newbie_village","npcs")）
+func get_region_entity_list(rid: String, kind: String) -> Array[String]:
+	var idx: Dictionary = get_region_meta(rid)
+	var arr: Array = idx.get(kind, [])
+	var out: Array[String] = []
+	out.assign(arr)
 	return out
 
 # === 任务 ===
