@@ -8,6 +8,14 @@
 启动方式：
   - 双击 studio_launcher.bat
   - 或：python studio_server.py
+
+【开发约束铁律·任何 AI 改本文件前必读】
+  - 启动入口(__main__)已加 try/except 兜底：启动期异常会打印真实 traceback 并停留，
+    禁止再制造"闪一下黑窗口没信息"的体验。
+  - 必须保证 `import studio_core` 及所有模块 import 不报错，否则用户双击 bat 闪退。
+  - 端口自动顺延(8765→8785)，勿把端口写死或改成需用户手填的常量（本就是本地 Web 服务，
+    对外零端口配置；若将来重做成纯桌面应用应彻底去掉 http.server）。
+  - 改完请 kill 自己起的测试服务进程，并跑一次启动验证（见 MEMORY.md「开发完必须释放」）。
 """
 
 import os
@@ -18,6 +26,7 @@ import datetime
 import base64
 import urllib.parse
 import re
+import subprocess
 import glob
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -331,6 +340,41 @@ def _exp_enrich(knowledge, root):
     return out
 
 
+def _handoff_view():
+    """读取派单权威快照 handoff_view.json（由 tools/handoff.py export 生成，事件重放合成）。"""
+    try:
+        root = core.discover_project_root()
+        if not root:
+            return {"ok": False, "error": "未找到工程根目录"}
+        p = os.path.join(root, ".workbuddy", "handovers", "handoff_view.json")
+        if not os.path.exists(p):
+            return {"ok": False, "missing": True,
+                    "hint": "请先运行 python tools/handoff.py export 生成派单快照"}
+        with open(p, encoding="utf-8") as f:
+            data = json.load(f)
+        data["ok"] = True
+        return data
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+def _handoff_cmd(*args):
+    """调用 tools/handoff.py 子命令（claim/done/close/export），返回 (ok, out)。"""
+    try:
+        root = core.discover_project_root()
+        if not root:
+            return False, "未找到工程根目录"
+        hp = os.path.join(root, "tools", "handoff.py")
+        if not os.path.exists(hp):
+            return False, "handoff.py 不存在"
+        r = subprocess.run([sys.executable, hp, *args],
+                           capture_output=True, text=True, encoding="utf-8",
+                           errors="replace", cwd=root, timeout=60)
+        return (r.returncode == 0), (r.stdout + r.stderr).strip()
+    except Exception as e:
+        return False, str(e)
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *args):
         pass
@@ -345,6 +389,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(data)))
+        self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(data)
 
@@ -517,6 +562,8 @@ class Handler(BaseHTTPRequestHandler):
             return _send_json(self, core.saveload_screen_layout_get())
         if path == "/api/backlog":
             return _send_json(self, core.backlog_get())
+        if path == "/api/handoff":
+            return _send_json(self, _handoff_view())
         if path == "/api/modules":
             # 模块注册中心：返回当前角色可见的 Domain Module 清单（Phase 1a 骨架）。
             # 后续 Phase 3 接入鉴权后，role 从 token 解析；当前 super_admin 返回全部。
@@ -646,6 +693,20 @@ class Handler(BaseHTTPRequestHandler):
                 return _send_json(self, {"ok": True, "msg": "已登记到 docs/更改日志.md"})
             except Exception as e:
                 return _send_json(self, {"ok": False, "error": str(e)}, 500)
+        # ---- 派单传递板：认领 + 刷新快照 ----
+        if path == "/api/handoff/claim":
+            tid = (body.get("id") or "").strip()
+            by = (body.get("by") or "").strip()
+            if not tid or not by:
+                return _send_json(self, {"ok": False, "error": "id 与 by 必填"}, 400)
+            ok, out = _handoff_cmd("claim", "--by", by, "--id", tid)
+            if not ok:
+                return _send_json(self, {"ok": False, "error": out}, 500)
+            _handoff_cmd("export")  # 认领后刷新快照，前端即时可见
+            return _send_json(self, {"ok": True, "msg": out, "view": _handoff_view()})
+        if path == "/api/handoff/refresh":
+            ok, out = _handoff_cmd("export")
+            return _send_json(self, {"ok": ok, "msg": out, "view": _handoff_view()})
         if path == "/api/project_root/set":
             ok, m = core.set_project_root(body.get("root", ""))
             return _send_json(self, {"ok": ok, "msg": m,
@@ -911,4 +972,15 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as _e:
+        # 兜底：任何启动期异常都打印真实错误并停留，避免"黑窗口闪一下就没"看不出原因
+        import traceback
+        traceback.print_exc()
+        sys.stderr.write("\n[启动失败] 内容工作室未能启动，错误信息见上。按任意键关闭本窗口...\n")
+        try:
+            if sys.stdin.isatty():
+                input()
+        except Exception:
+            pass
