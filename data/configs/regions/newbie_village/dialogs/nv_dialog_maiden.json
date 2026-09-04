@@ -1,21 +1,36 @@
 {
   "version": "1.0.0",
-  "dialog_id": "nv_dialog_maiden",
-  "_doc": "本段对白分片：村口姑娘吴巧娘。用到时现取，写完闲置自动卸载。lines 里 choices 即‘对话扳道岔’。",
+  "id": "nv_dialog_maiden",
+  "_doc": "本段对白分片：村口姑娘吴巧娘。用到时现取，写完闲置自动卸载。P2 协议归一(2026-09-04)：choices→options(带 jump_id 跳转行)、speaker→speaker_id；effects 为行内命令，选择选项时由 DialogueEventExecutor.apply_inline 执行。",
   "lines": [
     {
-      "speaker": "nv_npc_maiden",
+      "id": "l1",
+      "speaker_id": "nv_npc_maiden",
       "text": "客官你是外地来的罢？这几日山贼夜袭，吓得我们不敢出门。",
-      "choices": [
+      "options": [
         {
           "text": "我帮你守着。",
+          "jump_id": "opt_help",
           "effects": ["quest_accept:nv_quest_guard", "set_flag:nv_flag_offer_help"]
         },
         {
           "text": "再说。",
+          "jump_id": "opt_later",
           "effects": []
         }
       ]
+    },
+    {
+      "id": "opt_help",
+      "speaker_id": "nv_npc_maiden",
+      "text": "多谢少侠！山贼的头目惯在村口老槐树下转悠，你千万小心。守住了村子，我这玉簪便托付与你。",
+      "effects": []
+    },
+    {
+      "id": "opt_later",
+      "speaker_id": "nv_npc_maiden",
+      "text": "也罢，少侠再想想罢。山贼夜夜都来，村里的姐妹们都睡不安稳。",
+      "effects": []
     }
   ]
 }

@@ -1,16 +1,36 @@
 {
   "version": "1.0.0",
-  "dialog_id": "mt_dialog_priest",
+  "id": "mt_dialog_priest",
+  "_doc": "迷烟镇金记铺掌柜。P2 协议归一(2026-09-04)：choices→options(带 jump_id 跳转行)、speaker→speaker_id；effects 为行内命令，选择选项时由 DialogueEventExecutor.apply_inline 执行。",
   "lines": [
     {
-      "speaker": "mt_npc_priest",
+      "id": "l1",
+      "speaker_id": "mt_npc_priest",
       "text": "施主带了玉簪来，这便是金记铺那位姑娘交代的了。只是镇外野狼又闹将起来，还望施主代为驱逐。",
-      "choices": [
+      "options": [
         {
           "text": "包在我身上。",
+          "jump_id": "opt_accept",
           "effects": ["quest_accept:mt_quest_deliver", "set_flag:mt_flag_accepted"]
+        },
+        {
+          "text": "容我先想想。",
+          "jump_id": "opt_think",
+          "effects": []
         }
       ]
+    },
+    {
+      "id": "opt_accept",
+      "speaker_id": "mt_npc_priest",
+      "text": "好胆魄！野狼多在镇外古庙附近出没，施主带了兵刃去，万事小心。",
+      "effects": []
+    },
+    {
+      "id": "opt_think",
+      "speaker_id": "mt_npc_priest",
+      "text": "不急不急，施主想好了再来寻老朽便是。玉簪先押在柜上，分文不少。",
+      "effects": []
     }
   ]
 }

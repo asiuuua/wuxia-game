@@ -27,6 +27,40 @@ func _on_event(event_key: String) -> void:
 			continue
 		_apply_effect(eff)
 
+## 行内命令执行（P2 区域分片协议 2026-09-04）：
+## 把 "set_flag:nv_flag_x" / "quest_accept:nv_quest_guard" 这类字符串命令直接执行。
+## 与 trigger_events（事件键间接查 dialogue_events.json）并存分工：
+##   - trigger_events：老协议，间接查表，保留兼容（dlg_tutorial 等存量分片在用）
+##   - effects：新协议，行/选项直接携带命令字符串（工作室剧情设计台产出的格式）
+## P3 统一 CommandDispatcher 时两者归一。未知命令仅告警不崩。
+func apply_inline(cmd: String) -> void:
+	if cmd == "":
+		return
+	var parts := cmd.split(":", true, 1)
+	var c := parts[0].strip_edges()
+	var arg := ""
+	if parts.size() > 1:
+		arg = parts[1].strip_edges()
+	match c:
+		"set_flag":
+			# "set_flag:键"（默认true）或 "set_flag:键=值"
+			var key := arg
+			var val: Variant = true
+			if arg.find("=") != -1:
+				var kv := arg.split("=", true, 1)
+				key = kv[0].strip_edges()
+				val = kv[1].strip_edges()
+			if key != "":
+				FlagStore.new().set_flag(key, val)
+		"quest_accept":
+			_accept_quest(arg)
+		"quest_complete":
+			_complete_quest(arg)
+		"sfx":
+			_play_sfx(arg)
+		_:
+			push_warning("[DialogueEvent] 未知行内命令: %s" % cmd)
+
 ## 按效果类型分发；单条出错不影响其余，整体不崩
 func _apply_effect(eff: Dictionary) -> void:
 	var type: String = eff.get("type", "")

@@ -118,12 +118,32 @@ func next() -> Dictionary:
 	_current_id = nid
 	return _present_current()
 
-## 选择分支选项：跳转到 jump_id
+## 选择分支选项：跳转到 jump_id；先执行该选项携带的行内 effects（P2 区域分片协议）
 func select_option(jump_id: String) -> Dictionary:
 	if not _session_active or jump_id == "":
 		return {"ended": true}
+	var cur: Dictionary = _index.get(_current_id, {})
+	for o in cur.get("options", []):
+		if String(o.get("jump_id", "")) == jump_id:
+			_apply_inline_effects(o.get("effects", []))
+			break
 	_current_id = jump_id
 	return _present_current()
+
+# === 行内命令（P2 区域分片协议 2026-09-04）===
+## 行/选项可携带 effects: ["set_flag:xxx", "quest_accept:xxx"] 命令数组，
+## 委托 GameManager.dialogue_event_executor.apply_inline 执行。
+## 与老 trigger_events（事件键查表）并存；未装配执行器时静默跳过，与
+## "事件未订阅仅不生效"哲学一致。P3 统一 CommandDispatcher 时归一。
+func _apply_inline_effects(effects: Array) -> void:
+	for eff in effects:
+		if eff is String and not String(eff).is_empty():
+			_execute_inline_command(String(eff))
+
+func _execute_inline_command(cmd: String) -> void:
+	if GameManager == null or GameManager.dialogue_event_executor == null:
+		return
+	GameManager.dialogue_event_executor.apply_inline(cmd)
 
 ## 结束会话（由 UI 关闭时调用；若已自然结束则为空操作）
 func end() -> void:
@@ -177,6 +197,8 @@ func _present_current() -> Dictionary:
 		for ev in line.get("trigger_events", []):
 			if ev is String and ev != "":
 				EventBus.dialogue_event_triggered.emit(ev)
+		# 行内命令（P2 区域分片协议）：行自身携带 effects 直接执行
+		_apply_inline_effects(line.get("effects", []))
 		return _render_line(line)
 	_terminate_session()
 	EventBus.dialogue_ended.emit(_dialog_id)

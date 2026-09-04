@@ -22,7 +22,8 @@
   ],
   "quests": [
     "nv_quest_guard",
-    "nv_quest_help_maiden"
+    "nv_quest_help_maiden",
+    "nv_qg_demo"
   ],
   "items": [
     "nv_item_hairpin",
