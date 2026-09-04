@@ -56,10 +56,13 @@ func test_region_priest_chain_and_end() -> void:
 	if GameManager == null or GameManager.quest_service == null:
 		expect(false, "GameManager.quest_service 不可用")
 		return
+	# P3 前置门禁：mt_quest_deliver 前置 nv_flag_maiden_helped，须先满足（模拟新手村已送簪）
+	GameState.set_global_flag("nv_flag_maiden_helped", true)
 	var svc := DialogueService.new()
 	var first: Dictionary = svc.start("mt_npc_priest")
 	expect(not bool(first.get("ended", true)), "mt_dialog_priest 应能开场")
 	var picked: Dictionary = svc.select_option("opt_accept")
-	expect(GameManager.quest_service.is_active("mt_quest_deliver"), "mt_quest_deliver 应被接取")
+	expect(GameManager.quest_service.is_active("mt_quest_deliver"), "前置满足时 mt_quest_deliver 应被接取")
 	var last: Dictionary = svc.next()   # opt_accept 无 next_id → 自然结束
 	expect(bool(last.get("ended", true)), "末行继续应自然结束会话")
+	GameState._global_flags.erase("nv_flag_maiden_helped")
