@@ -19,6 +19,7 @@ import copy
 import shutil
 import datetime
 import threading
+import csv
 import sys
 import io
 import base64
@@ -159,6 +160,7 @@ def _paths():
     root = discover_project_root()
     return {
         "npc": os.path.join(root, "data", "configs", "npcs", "town_npcs.json"),
+        "npc_stats": os.path.join(root, "data", "configs", "npcs", "npc_stats.json"),
         "dlg_index": os.path.join(root, "data", "configs", "npcs", "dialogs", "_index.json"),
         "dlg_dir": os.path.join(root, "data", "configs", "npcs", "dialogs", "shards"),
         "cel": os.path.join(root, "data", "configs", "bond", "celebrations.json"),
@@ -288,6 +290,48 @@ def npc_portrait_clear(npc_id):
     return True, "已清除立绘字段（游戏将回退占位图）", meta
 
 
+def npc_asset_upload(payload):
+    """通用 NPC 图片资源上传：立绘 sprite / 头像 portrait 的「选文件」入口。
+    payload: {"filename": "xxx.png", "data": "<base64 单图>"}
+    保存到 assets/characters/ 并返回 res:// 路径；文件名会被清洗防路径穿越。
+    """
+    raw = base64.b64decode(payload.get("data", b"") or b"")
+    if not raw:
+        return False, "空图片数据", ""
+    fn = os.path.basename(str(payload.get("filename", "") or ""))
+    low = fn.lower()
+    if not low.endswith((".png", ".webp", ".jpg", ".jpeg")):
+        return False, "仅支持 png/webp/jpg 图片", ""
+    safe = _safe_id(os.path.splitext(fn)[0]) or "asset"
+    ext = ".webp" if low.endswith(".webp") else (".jpg" if low.endswith((".jpg", ".jpeg")) else ".png")
+    char_dir = os.path.join(_paths()["assets"], "characters")
+    os.makedirs(char_dir, exist_ok=True)
+    dst = os.path.join(char_dir, "%s%s" % (safe, ext))
+    with open(dst, "wb") as f:
+        f.write(raw)
+    res = "res://assets/characters/%s%s" % (safe, ext)
+    log_event("npc_asset", "upload", "上传 NPC 图片 %s" % res)
+    return True, "已上传 %s%s" % (safe, ext), res
+
+
+def npc_half_body_file(res):
+    """把 NPC 半身立绘的 res:// 路径解析为可访问的磁盘图片路径；非法/不存在返回 None。
+
+    仅允许 assets/characters/half_body/ 前缀，并用 realpath 强校验落在该目录内，防路径穿越。
+    """
+    if not res or not isinstance(res, str) or not res.startswith("res://assets/characters/half_body/"):
+        return None
+    root = discover_project_root()
+    base = os.path.realpath(_half_body_dir())
+    rel = res[len("res://"):].replace("/", os.sep)
+    candidate = os.path.realpath(os.path.join(root, rel))
+    if not (candidate == base or candidate.startswith(base + os.sep)):
+        return None
+    if not (os.path.isfile(candidate) and _detect_image_ext(candidate)):
+        return None
+    return candidate
+
+
 def _backup_dir(src):
     try:
         ts = int(datetime.datetime.now().timestamp() * 1000)
@@ -369,6 +413,111 @@ def quest_graph_get(qid):
         if q.get("id") == qid:
             return q
     return None
+
+
+def _find_graph_refs(start, nodes):
+    """找出指向不存在节点的硬引用；存图前校验，防止写坏运行时图。"""
+    refs = []
+    for nid, n in nodes.items():
+        if not isinstance(n, dict):
+            continue
+        for k in ("next", "on_win_next", "on_lose_next"):
+            v = n.get(k)
+            if isinstance(v, str) and v and v not in nodes:
+                refs.append("%s.%s→%s" % (nid, k, v))
+        opts = n.get("options")
+        if isinstance(opts, list):
+            for j, o in enumerate(opts):
+                if isinstance(o, dict) and o.get("jump_id") and o["jump_id"] not in nodes:
+                    refs.append("%s.options[%d].jump_id→%s" % (nid, j, o["jump_id"]))
+    if start and start not in nodes:
+        refs.append("start_node→%s" % start)
+    return refs
+
+
+def quest_graph_save(region, qid, graph):
+    """T2 写回：把可视化编辑后的图存回 regions/<region>/quests.json 的对应 quest。
+    先校验节点引用，save_json 自带备份；只有 type==quest_graph 且 id 匹配才写。"""
+    root = discover_project_root()
+    qs_path = os.path.join(root, "data", "configs", "regions", str(region), "quests.json")
+    if not os.path.isfile(qs_path):
+        return False, "找不到任务文件 regions/%s/quests.json" % region
+    graph = graph or {}
+    nodes = graph.get("nodes")
+    if not isinstance(nodes, dict):
+        return False, "quest_graph 缺 nodes（须为字典）"
+    start = graph.get("start_node", "")
+    bad = _find_graph_refs(start, nodes)
+    if bad:
+        return False, "存在指向不存在节点的引用，已拦截保存：%s" % "; ".join(sorted(set(bad))[:8])
+    data = load_json(qs_path, {"quests": []})
+    if not isinstance(data.get("quests"), list):
+        return False, "quests.json 缺少 quests 数组"
+    for q in data["quests"]:
+        if isinstance(q, dict) and q.get("id") == qid and q.get("type") == "quest_graph":
+            q["quest_graph"] = graph
+            save_json(qs_path, data)
+            log_event("quest_graph_save", qid, "区域 %s 保存任务流程图" % region)
+            return True, "已保存任务图 %s（区域 %s）" % (qid, region)
+    return False, "未找到 quest id=%s（type=quest_graph）" % qid
+
+
+# ============================ i18n 文案表（strings.csv，多语言只加表） ============================
+# 游戏 LocalizationManager 读 data/configs/localization/strings.csv（key,zh_CN,zh_TW,en）注册进
+# TranslationServer，之后全局 tr(text_key) 即返回当前语言文案。这里把文案表接回后台，方便小白
+# 只改表、不改逻辑地做多语言。
+def _i18n_path():
+    return os.path.join(discover_project_root(), "data", "configs", "localization", "strings.csv")
+
+
+def i18n_read():
+    path = _i18n_path()
+    if not os.path.isfile(path):
+        return []
+    with open(path, encoding="utf-8-sig", newline="") as f:
+        return list(csv.reader(f))
+
+
+def i18n_list():
+    rows = i18n_read()
+    if not rows:
+        return []
+    out = []
+    for r in rows[1:]:
+        if not r or not str(r[0]).strip():
+            continue
+        def cell(i):
+            return str(r[i]).strip() if i < len(r) else ""
+        out.append({"key": str(r[0]).strip(), "zh_CN": cell(1), "zh_TW": cell(2), "en": cell(3)})
+    return out
+
+
+def i18n_upsert(key, zh_cn="", zh_tw="", en=""):
+    key = str(key or "").strip()
+    if not key:
+        return False, "key 不能为空"
+    rows = i18n_read()
+    if not rows:
+        rows = [["keys", "zh_CN", "zh_TW", "en"]]
+    found = False
+    for r in rows[1:]:
+        if r and str(r[0]).strip() == key:
+            while len(r) < 4:
+                r.append("")
+            for i, v in ((1, zh_cn), (2, zh_tw), (3, en)):
+                if str(v).strip() != "":
+                    r[i] = str(v)
+            found = True
+            break
+    if not found:
+        rows.append([key, str(zh_cn), str(zh_tw), str(en)])
+    path = _i18n_path()
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    _backup(path)
+    with open(path, "w", encoding="utf-8", newline="") as f:
+        csv.writer(f).writerows(rows)
+    log_event("i18n_save", key, "更新文案表")
+    return True, "已保存文案 %s（多语言立即生效）" % key
 
 
 # ============================ 日志 ============================
@@ -528,9 +677,77 @@ def _shard_path(dlg_id):
     return os.path.join(_paths()["dlg_dir"], "%s.json" % dlg_id)
 
 
+# ---- 区域表感知：NPC 读写统一落脚到 regions/<region>/npcs.json ----
+# 背景（两套数据表治理）：旧的 NPC 数据存在全局 town_npcs.json（已迁入区域表并留档备份）。
+# 现在 NPC 的读写一律以「区域表」为唯一来源；全局表仅作历史备份不再写入。
+# 新增默认落新手村；跨区域选择通过 fields['region'] 指定；跨区保存自动迁移。
+
+def _all_region_ids():
+    """所有已建区域的目录名（含 npcs.json 的）列表，按目录名排序。"""
+    regions_dir = os.path.join(discover_project_root(), "data", "configs", "regions")
+    out = []
+    if os.path.isdir(regions_dir):
+        for rid in sorted(os.listdir(regions_dir)):
+            if os.path.isfile(os.path.join(regions_dir, rid, "npcs.json")):
+                out.append(rid)
+    return out
+
+
+def _default_region():
+    """默认区域：优先新手村，否则第一个有 npcs.json 的区域；都无则回退 newbie_village。"""
+    ids = _all_region_ids()
+    if "newbie_village" in ids:
+        return "newbie_village"
+    return ids[0] if ids else "newbie_village"
+
+
+def _region_npc_file(rid):
+    root = discover_project_root()
+    return os.path.join(root, "data", "configs", "regions", str(rid), "npcs.json")
+
+
+def _load_region_file(rid):
+    """读某区域 NPC 表；目录/文件缺失则返回空结构并确保父目录存在。"""
+    p = _region_npc_file(rid)
+    try:
+        os.makedirs(os.path.dirname(p), exist_ok=True)
+    except Exception:
+        pass
+    data = load_json(p, {"npcs": []})
+    if not isinstance(data, dict):
+        data = {"npcs": []}
+    data.setdefault("npcs", [])
+    return p, data
+
+
+def _load_all_region_npcs():
+    """聚合所有区域 NPC：npc_id -> (region_id, npc_dict)。"""
+    agg = {}
+    for rid in _all_region_ids():
+        _, data = _load_region_file(rid)
+        for n in data.get("npcs", []):
+            if isinstance(n, dict) and n.get("id"):
+                agg[str(n["id"])] = (rid, n)
+    return agg
+
+
+def _remove_npc_from_region(rid, nid):
+    p, data = _load_region_file(rid)
+    data["npcs"] = [n for n in data.get("npcs", []) if n.get("id") != nid]
+    save_json(p, data)
+
+
 def npc_list():
-    data = load_json(_paths()["npc"], {"npcs": []})
-    return data.get("npcs", [])
+    out = []
+    for rid in _all_region_ids():
+        _, data = _load_region_file(rid)
+        for n in data.get("npcs", []):
+            if not isinstance(n, dict):
+                continue
+            e = dict(n)
+            e["region"] = rid
+            out.append(e)
+    return out
 
 
 def npc_get(nid):
@@ -540,13 +757,30 @@ def npc_get(nid):
     return None
 
 
+def _upsert_target_region(fields):
+    """决定写入哪个区域：优先 fields['region']，其次已存在所在区域，否则默认区域。"""
+    rid = str(fields.get("region", "") or "").strip()
+    if rid and rid in _all_region_ids():
+        return rid
+    nid = str(fields.get("id", "") or "").strip()
+    if nid:
+        agg = _load_all_region_npcs()
+        if nid in agg:
+            return agg[nid][0]
+    return _default_region()
+
+
 def npc_upsert(fields):
-    data = load_json(_paths()["npc"], {"npcs": []})
-    if "npcs" not in data:
-        data["npcs"] = []
     nid = str(fields.get("id", "")).strip()
     if not nid:
         return False, "id 不能为空"
+    rid = _upsert_target_region(fields)
+    p, data = _load_region_file(rid)
+    # 跨区移动：若该 NPC 当前在其它区域，从旧区域文件里移除
+    agg = _load_all_region_npcs()
+    old_region = agg.get(nid, (None,))[0]
+    if old_region and old_region != rid:
+        _remove_npc_from_region(old_region, nid)
     # 原有基础字段
     entry = {}
     for k in ("id", "name", "sprite", "portrait", "dialog_id", "quest_id", "battle_id"):
@@ -563,6 +797,7 @@ def npc_upsert(fields):
             entry[k] = str(fields.get(k, ""))
     if "portrait_frames" in fields and isinstance(fields["portrait_frames"], list):
         entry["portrait_frames"] = list(fields["portrait_frames"])
+    entry["scene"] = rid
     found = False
     for i, n in enumerate(data["npcs"]):
         if n.get("id") == nid:
@@ -576,50 +811,43 @@ def npc_upsert(fields):
             break
     if not found:
         data["npcs"].append(entry)
-    save_json(_paths()["npc"], data)
-    log_event("npc_save", nid, "保存 NPC")
-    return True, ("更新" if found else "新建") + " NPC %s" % nid
+    save_json(p, data)
+    log_event("npc_save", nid, "保存 NPC（区域 %s）" % rid)
+    return True, ("更新" if found else "新建") + " NPC %s（区域 %s）" % (nid, rid)
 
 
 def npc_delete(nid):
-    data = load_json(_paths()["npc"], {"npcs": []})
-    npcs = data.get("npcs", [])
-    kept = [n for n in npcs if n.get("id") != nid]
-    if len(kept) == len(npcs):
+    agg = _load_all_region_npcs()
+    if nid not in agg:
         return False, "未找到该 NPC"
-    removed = next(n for n in npcs if n.get("id") == nid)
+    rid, removed = agg[nid]
+    p, _ = _load_region_file(rid)
     s = load_settings()
-    data["npcs"] = kept
-    save_json(_paths()["npc"], data)
+    _remove_npc_from_region(rid, nid)
     if s.get("safe_mode", True):
-        trash_put("npc", nid, removed, {"type": "npc", "file": _paths()["npc"]})
-        return True, "已删除并放入回收站：%s" % nid
+        trash_put("npc", nid, dict(removed), {"type": "npc", "file": p})
+        return True, "已删除并放入回收站：%s（区域 %s）" % (nid, rid)
     return True, "已彻底删除：%s" % nid
 
 
 def npc_rename(old_id, new_id, fields):
     """重命名 NPC 的唯一 ID：删除旧记录（进回收站）、以新 ID 插入，避免产生重复记录。"""
-    data = load_json(_paths()["npc"], {"npcs": []})
-    if "npcs" not in data:
-        data["npcs"] = []
     old_id = str(old_id).strip()
     new_id = str(new_id).strip()
     if not old_id or not new_id:
         return False, "新旧 id 都不能为空"
     if old_id == new_id:
         return npc_upsert(fields)
-    old_entry = None
-    kept = []
-    for n in data["npcs"]:
-        if n.get("id") == old_id:
-            old_entry = n
-        else:
-            kept.append(n)
-    if old_entry is None:
+    agg = _load_all_region_npcs()
+    if old_id not in agg:
         return False, "未找到原 id：%s" % old_id
+    rid, old_entry = agg[old_id]
+    old_entry = dict(old_entry)
     s = load_settings()
+    p, data = _load_region_file(rid)
     if s.get("safe_mode", True):
-        trash_put("npc", old_id, old_entry, {"type": "npc", "file": _paths()["npc"]})
+        trash_put("npc", old_id, old_entry, {"type": "npc", "file": p})
+    kept = [n for n in data["npcs"] if n.get("id") != old_id]
     entry = {}
     for k in ("name", "sprite", "portrait", "dialog_id", "quest_id", "battle_id"):
         entry[k] = str(fields.get(k, ""))
@@ -629,15 +857,82 @@ def npc_rename(old_id, new_id, fields):
     except Exception:
         entry["pos_x"] = 0
         entry["pos_y"] = 0
+    # 立绘字段在重命名时随旧记录迁移
+    for k in ("half_body_portrait", "portrait_type", "portrait_skeleton", "portrait_atlas"):
+        if old_entry.get(k):
+            entry[k] = old_entry[k]
+    if isinstance(old_entry.get("portrait_frames"), list):
+        entry["portrait_frames"] = list(old_entry["portrait_frames"])
     entry["id"] = new_id
-    kept.append(entry)
-    data["npcs"] = kept
-    save_json(_paths()["npc"], data)
-    log_event("npc_rename", "%s->%s" % (old_id, new_id), "重命名 NPC（旧记录进回收站）")
+    target_region = str(fields.get("region", "") or "").strip()
+    if not (target_region and target_region in _all_region_ids()):
+        target_region = rid
+    entry["scene"] = target_region
+    if target_region == rid:
+        kept.append(entry)
+        data["npcs"] = kept
+        save_json(p, data)
+    else:
+        save_json(p, {"npcs": kept})
+        tp, tdata = _load_region_file(target_region)
+        tdata["npcs"].append(entry)
+        save_json(tp, tdata)
+    log_event("npc_rename", "%s->%s" % (old_id, new_id), "重命名 NPC（区域 %s）" % target_region)
     return True, "已将 %s 重命名为 %s（旧记录已进回收站，可恢复）" % (old_id, new_id)
 
 
 # ============================ 对话 / 剧情 ============================
+# ============================ NPC 详细资料（npc_stats.json） ============================
+# 属性/好感/送礼/武学/切磋/背包这类"详细资料"此前与后台完全脱节（孤儿表）。
+# 这里把它接回后台：get 读全表供面板渲染，upsert 按 npc_id 写回单个档案（合并、不覆盖未传字段）。
+def npc_stats_get(nid="", merged=False):
+    data = load_json(_paths()["npc_stats"], {})
+    if not nid:
+        return data
+    entry = data.get(nid, {})
+    if merged and isinstance(entry, dict):
+        # 基础字段以区域表为唯一来源（全局表已迁空留档）
+        base = npc_get(nid) or {}
+        out = dict(base)
+        out.pop("region", None)
+        out.update(entry)
+        return out
+    return entry
+
+
+def npc_stats_upsert(nid, fields):
+    nid = str(nid or "").strip()
+    if not nid:
+        return False, "NPC id 不能为空"
+    data = load_json(_paths()["npc_stats"], {})
+    if not isinstance(data, dict):
+        data = {}
+    cur = data.get(nid, {})
+    if not isinstance(cur, dict):
+        cur = {}
+    entry = dict(cur)
+    if "title" in fields:
+        entry["title"] = str(fields.get("title", ""))
+    for k in ("level", "attack", "defense", "hp"):
+        if k in fields and fields.get(k) is not None and fields[k] != "":
+            try:
+                entry[k] = int(fields[k])
+            except (TypeError, ValueError):
+                entry[k] = 0
+    for k in ("martial_arts", "gift_prefs"):
+        if k in fields:
+            v = fields.get(k)
+            entry[k] = [str(x).strip() for x in (v if isinstance(v, list) else []) if str(x).strip()] if isinstance(v, list) else []
+    if "can_spar" in fields:
+        entry["can_spar"] = bool(fields.get("can_spar"))
+    if "backpack_note" in fields:
+        entry["backpack_note"] = str(fields.get("backpack_note", ""))
+    data[nid] = entry
+    save_json(_paths()["npc_stats"], data)
+    log_event("npc_stats_save", nid, "保存 NPC 详细资料")
+    return True, "已保存 NPC 详细资料 %s" % nid
+
+
 def dlg_list():
     idx = load_json(_paths()["dlg_index"], {"shards": {}})
     return list(idx.get("shards", {}).keys())
@@ -685,13 +980,34 @@ def dlg_line_upsert(dlg_id, line):
         "next_id": str(line.get("next_id", "")),
         "trigger_events": [str(x).strip() for x in line.get("trigger_events", []) if str(x).strip()],
     }
+
+    def _norm_options(opts):
+        out = []
+        if not isinstance(opts, list):
+            return out
+        for o in opts:
+            if not isinstance(o, dict):
+                continue
+            opt = {k: o[k] for k in ("text", "text_key", "jump_id") if k in o}
+            if "cond" in o and isinstance(o["cond"], dict):
+                opt["cond"] = dict(o["cond"])
+            out.append(opt)
+        return out
+
     found = False
     for i, ln in enumerate(data["lines"]):
         if ln.get("id") == lid:
+            # 分支保护：请求没带 options 时沿用该行已存分支（防止旧编辑器/旧代码清空分支）
+            if "options" in line:
+                rec["options"] = _norm_options(line["options"])
+            elif isinstance(ln.get("options"), list) and ln["options"]:
+                rec["options"] = ln["options"]
             data["lines"][i] = rec
             found = True
             break
     if not found:
+        if "options" in line:
+            rec["options"] = _norm_options(line["options"])
         data["lines"].append(rec)
     save_json(p, data)
     log_event("dlg_line_save", "%s/%s" % (dlg_id, lid), "保存台词")

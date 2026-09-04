@@ -532,6 +532,10 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path == "/api/npc":
             return _send_json(self, core.npc_list())
+        if path == "/api/npc_stats":
+            return _send_json(self, core.npc_stats_get())
+        if path == "/api/i18n":
+            return _send_json(self, {"ok": True, "rows": core.i18n_list()})
         if path == "/api/dialog":
             return _send_json(self, core.dlg_list())
         if path == "/api/celebration":
@@ -725,6 +729,26 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/npc":
             ok, m = core.npc_upsert(body)
             return _send_json(self, {"ok": ok, "msg": m})
+        if path == "/api/npc/half_body/file":
+            # 读取 NPC 半身立绘图片给浏览器预览：把 res:// 路径解析成真实图片返回
+            qs = urllib.parse.parse_qs(self.path.split("?", 1)[1] if "?" in self.path else {})
+            res = (qs.get("res") or [""])[0]
+            fp = core.npc_half_body_file(res)
+            if fp:
+                with open(fp, "rb") as f:
+                    data = f.read()
+                self.send_response(200)
+                self.send_header("Content-Type", _mime_of(fp))
+                self.send_header("Content-Length", str(len(data)))
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                self.wfile.write(data)
+                return
+            _send_json(self, {"error": "no portrait"}, 404)
+            return
+        if path == "/api/npc/asset_upload":
+            ok, m, res = core.npc_asset_upload(body)
+            return _send_json(self, {"ok": ok, "msg": m, "res": res})
         if path == "/api/npc/portrait":
             nid = body.get("npc_id", "")
             ok, m, meta = core.npc_portrait_import(nid, body)
@@ -757,6 +781,15 @@ class Handler(BaseHTTPRequestHandler):
                 ok, m = core.dlg_delete(body.get("dlg_id", ""))
             else:
                 ok, m = False, "未知 action"
+            return _send_json(self, {"ok": ok, "msg": m})
+        if path == "/api/npc_stats":
+            ok, m = core.npc_stats_upsert(body.get("npc_id", ""), body.get("fields", {}))
+            return _send_json(self, {"ok": ok, "msg": m})
+        if path == "/api/i18n":
+            ok, m = core.i18n_upsert(body.get("key", ""), body.get("zh_CN", ""), body.get("zh_TW", ""), body.get("en", ""))
+            return _send_json(self, {"ok": ok, "msg": m})
+        if path == "/api/quest_graph/save":
+            ok, m = core.quest_graph_save(body.get("region", ""), body.get("qid", ""), body.get("graph", {}))
             return _send_json(self, {"ok": ok, "msg": m})
         if path == "/api/celebration":
             ok, m = core.cel_upsert(body.get("npc_id", ""), body.get("entry", {}))
