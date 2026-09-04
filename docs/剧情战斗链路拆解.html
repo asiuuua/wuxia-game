@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>分支剧情 · 场景NPC · 战斗 · 后台表格 —— 整条链路大白话拆解</title>
+<style>
+  :root{
+    --bg:#0f141c; --card:#161d29; --card2:#1c2534; --line:#263244;
+    --ink:#e6edf7; --sub:#9fb0c9; --accent:#e8b44a; --accent2:#4aa8e8;
+    --good:#5bd99a; --warn:#e8794a; --code:#1b2431;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:"Microsoft YaHei",system-ui,-apple-system,sans-serif;line-height:1.75;font-size:15px}
+  .wrap{max-width:960px;margin:0 auto;padding:40px 22px 80px}
+  header{padding:14px 0 8px}
+  .kicker{color:var(--accent);letter-spacing:.18em;font-size:13px;font-weight:700}
+  h1{font-size:28px;margin:6px 0 4px}
+  .sub{color:var(--sub);font-size:14px}
+  h2{font-size:22px;margin:42px 0 12px;padding-bottom:8px;border-bottom:2px solid var(--line);color:#fff}
+  h2 .no{color:var(--accent);margin-right:8px}
+  h3{font-size:17px;margin:26px 0 8px;color:var(--accent2)}
+  p{margin:10px 0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:14px 0}
+  .card h4{margin:4px 0 8px;color:#fff;font-size:15px}
+  .meta{color:var(--sub);font-size:13px}
+  code{background:var(--code);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-family:Consolas,monospace;font-size:13px;color:#d6e6ff}
+  pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font-size:13px}
+  pre code{background:none;border:none;padding:0}
+  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:13.5px}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:var(--card2);color:var(--accent);font-weight:700}
+  tr:nth-child(even) td{background:rgba(255,255,255,.02)}
+  .callout{background:linear-gradient(90deg,rgba(232,180,74,.10),rgba(232,180,74,.03));border-left:4px solid var(--accent);padding:12px 16px;border-radius:8px;margin:14px 0}
+  .callout.blue{background:linear-gradient(90deg,rgba(74,168,232,.10),rgba(74,168,232,.03));border-left-color:var(--accent2)}
+  .callout.green{background:linear-gradient(90deg,rgba(91,217,154,.10),rgba(91,217,154,.03));border-left-color:var(--good)}
+  .flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0}
+  .node{background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:13px;white-space:nowrap}
+  .node b{color:#fff}
+  .arrow{color:var(--accent);font-weight:700}
+  .tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:20px;background:var(--card2);border:1px solid var(--line);color:var(--sub);margin-right:4px}
+  ul{margin:8px 0;padding-left:22px}
+  li{margin:6px 0}
+  a{color:var(--accent2);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .foot{margin-top:50px;color:var(--sub);font-size:12.5px;border-top:1px solid var(--line);padding-top:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="kicker">ARCHITECTURE · 剧情 x 战斗 x 数据链路</div>
+  <h1>分支剧情、场景NPC、战斗、后台表格 —— 一整条链路是怎么串起来的</h1>
+  <div class="sub">以《逸剑风云决》这类"主线多分支 + 战棋战斗 + 多结局"的游戏为参照，映射到我们项目自己的数据表与代码，全程用小白听得懂的话讲。</div>
+</header>
+
+<div class="callout">
+  <b>先记住一个大白话总纲：</b>一个游戏的剧情，本质上是一本"<b>剧本书</b>（表格）+ 一支<b>旅行笔记</b>（状态标记 flag）+ 一群<b>传令飞鸽</b>（事件信号）"。主线是一条<b>有很多分岔的火车轨道</b>，每个岔口由"道岔开关"（好感 / 之前的抉择 / 支线完成度 ）决定走哪根岔道，每条岔道最后通向不同的<b>终点站（结局）</b>。下面逐步拆开。
+</div>
+
+<h2><span class="no">①</span>三个核心概念 · 三板斧</h2>
+<p>任何"剧情会分叉、战斗会接入"的游戏，底层都离不开这三样。它们是理解后面全部内容的总钥匙。</p>
+<table>
+  <tr><th>概念</th><th>白话解释</th><th>在这游戏里对应谁</th></tr>
+  <tr><td><b>1. 配置表（数据）</b></td><td>"剧本书 + 花名册"。每条任务、每个场景 NPC、每个敌人、每场战斗，都只是表格里的一行。游戏运行时**按 ID 查表**，代码本身不写死剧情。</td><td>Data 表：quests.json / town_npcs.json / battles.json / enemies.json / dialogs.json</td></tr>
+  <tr><td><b>2. 状态标记 Flag（记忆）</b></td><td>"旅行笔记"。记录"你走到第几步、做过哪些事、谁对你的好感多少、选过什么"。它决定岔道往哪走。</td><td>PlayerState / 任务阶段 / 好感度 / 结局计数</td></tr>
+  <tr><td><b>3. 事件信号 Event（传令）</b></td><td>"飞鸽传书"。剧情推进、战斗结束、好感变化时广播一条消息，全游戏谁想听谁响应，但互不写死。</td><td>EventBus：quest_accepted / quest_phase_changed / combat_finished / bond_* / scene_changed…</td></tr>
+</table>
+<div class="callout blue">
+  <b>为什么必须拆成这三个？</b>因为把它们拆开，策划就能<b>只改表格加剧情、加敌人、加分支</b>，而不用改代码；代码只做"查表 + 广播 + 听信号"这三件事。这也是咱们项目里 <code>ConfigManager</code>（总管读表）和 <code>EventBus</code>（总管传令）存在的意义。
+</div>
+
+<h2><span class="no">②</span>分支剧情是怎么"推进"设计的（核心）</h2>
+<h3>2.1 任务不是一条线，是一串"步骤节点"</h3>
+<p>一个任务 = 一串有序的节点，每个节点就是一行表格：<code>{ 目标做什么 → 触发谁 → 完成了 → 记一笔笔记 → 推进到下一节点 }</code>。用咱们 <code>quests.json</code> 里真实的"清剿山贼"举例：</p>
+<pre><code>{
+  "id": "q_bandit_001",
+  "name": "清剿山贼",
+  "type": "main",
+  "objectives": [ { "id":"defeat", "desc":"击败山贼",
+                    "target_battle":"battle_bandit_001", "need":1 } ],
+  "rewards": { "exp":60, "items":[ {"item_id":"pill_...","count":3} ] }
+}</code></pre>
+<p>这一行的意思是：<b>这一步骤的目标就是打赢 <code>battle_bandit_001</code> 这场战斗</b>。战斗打完 → 目标达成 → 发奖励。派单后 Step ③ 会讲这场战斗又从哪来、赢了之后发啥信号。</p>
+
+<h3>2.2 分岔点 = "读笔记 + 扳道岔"</h3>
+<div class="flow">
+  <span class="node">任务进行中</span><span class="arrow">→</span>
+  <span class="node">玩家在岔口做了<b>抉择</b>（对话选项 / 帮不帮 / 打不打）</span><span class="arrow">→</span>
+  <span class="node">写进<b>笔记</b>：flag = A 或 B</span><span class="arrow">→</span>
+  <span class="node">下一节点<b>读该 flag</b>，跳到 A 支 或 B 支</span>
+</div>
+<p>核心就一句话：<b>"道岔开关"永远来自"笔记里已存的 flag"，剧情绝不在场景里写死。</b>下次推进时读一下是"帮过老乞丐"还是"没帮"，就走不同对白 / 不同后续战斗 / 开不同门。</p>
+
+<h3>2.3 多结局怎么来的：末尾是一排"结局闸门"</h3>
+<p>逸剑风云决主线结局多达 <b>20 种</b>（旧版 10 + 新版 10），触发全看三项：<b>几位女主的好感、支线完成度、几个关键抉择节点</b> <a href="https://www.taptap.cn/moment/838821125776476935">[$TRAE_REF]</a>。底层翻译成工程语言就是：</p>
+<ul>
+  <li>三条（甚至更多）"女主好感"其实各是一条<b>笔记分数</b>，随互动 / 送礼 / 陪伴累计；</li>
+  <li>十几个关键抉择节点分别在岔口<b>写入不同 flag</b>（比如"是否卷入权力斗争"）；</li>
+  <li>结尾不是"最后一场战斗决定结局"，而是<b>一排"闸门条件"</b>：只有当你笔记里 <code>(好感A≥x && 好感B≥y && 负债flag==true …)</code> 才开某扇门 → 放对应结局演出；缺哪个条件就走别的门。</li>
+</ul>
+<p>这也是为什么攻略会提醒你"留档"——因为你没把记号凑齐，就开不了那扇门 <a href="http://m.toutiao.com/group/7524179528445329962/">[$TRAE_REF]</a>。</p>
+
+<h2><span class="no">③</span>怎么和场景 NPC 勾挂</h2>
+<p><b>场景（Scene）只是"舞台布景"，是谁站在台上、说什么话，由 NPC 表格决定。</b>看咱们 <code>town_npcs.json</code> 的真实一行：</p>
+<pre><code>{
+  "id":"npc_bandit", "name":"山贼",
+  "pos_x":700, "pos_y":100,          // 站在城镇哪一格
+  "sprite":"res://assets/...",         // 长什么样
+  "dialog_id":"npc_bandit",           // 👈 跟他说话放哪段台词
+  "quest_id":"q_bandit_001",          // 👈 他能触发哪条任务
+  "battle_id":"battle_bandit_001"     // 👈 挨他碰能开哪场战斗
+}</code></pre>
+<p>这一行就把<b>三个勾挂点</b>全连上了：<code>dialog_id</code>(对话) + <code>quest_id</code>(任务) + <code>battle_id</code>(战斗)。游戏内置一个"碰撞即触发"的逻辑：你走到 NPC 面前按对话，就读 <code>dialog_id</code>；他的对白里若带了"接任务"事件，就调 <code>quest_id</code> 那条。</p>
+<div class="card">
+  <h4>对话里的分支怎么选</h4>
+  <p class="meta">对白本身也存表（dialogs.json），里面每个选项可以带"效果"。看 <code>dialogue_events.json</code> 的真实片段——对话行的 <code>trigger_events</code> 引用这里的 key，触发接任务/完成任务：</p>
+  <pre><code>"events":{
+  "accept_demo_quest":[ { "type":"quest_accept", "quest_id":"demo_quest" } ]
+}</code></pre>
+  <p>所以"选『接下任务』"= 对白里挂一个事件 <code>quest_accept</code> → 动画/音效 + 把任务写进笔记。选"不接"就不挂这个事件、顺手写个 <code>declined=true</code> 的 flag——这就成了未来一个岔口的道岔开关。</p>
+</div>
+
+<h2><span class="no">④</span>怎么和战斗勾挂</h2>
+<p>战斗不是"每个场景里内嵌一块棋盘"，而是<b>独立的一场"棋局"，按这次遭遇的参数临时摆出来</b>。看 <code>battles.json</code> 的真实一行（战棋）——<b>棋盘宽度、高度、障碍物、双方站位、敌人是谁，全在表格里写死</b>：</p>
+<pre><code>{
+  "id":"tactical_ally_inject",
+  "enemy_ids":["bandit_001"],         // 👈 敌人=数据id，不是场景
+  "turn_mode":"sequential",           // sequential=回合制战棋
+  "tactical":true,                    // 👈 标了才是战棋（没标=半即时）
+  "allies":["test_ally_npc"],
+  "grid":{ "width":10, "height":8,    // 👈 棋盘尺寸也按场配
+           "obstacles":["4,3","5,3","4,4","5,4"],
+           "deployment":{ "player":[1,4], "bandit_001":[8,4] } }
+}</code></pre>
+<h3>4.1 触发战斗的两条路</h3>
+<table>
+  <tr><th>触发方式</th><th>怎么触发</th><th>对应我们项目</th></tr>
+  <tr><td><b>① 明雷 / 撞怪</b></td><td>世界上能看见的敌人（明雷），一撞上就切场开战；撞之前是自由的探索层。</td><td>NPC / 地图上的遭遇点 <code>battle_id</code></td></tr>
+  <tr><td><b>② 剧情战</b></td><td>任务节点里点名"这步要打 boss"。逸剑的 BOSS 战/单挑建议用战棋回合制即可参见其攻略 <a href="https://wanderingsword.wiki/zh-cn/">[$TRAE_REF]</a>。</td><td>quests.json 的 <code>objective.target_battle → battles.json</code></td></tr>
+</table>
+<h3>4.2 打赢 / 打输 / 必败怎么跳支</h3>
+<div class="flow">
+  <span class="node">战斗结束</span><span class="arrow">→</span>
+  <span class="node">广播<b>combat_finished(结果)</b>信号</span><span class="arrow">→</span>
+  <span class="node">剧情脚本听结果</span><span class="arrow">→</span>
+  <span class="node">胜利→推进 A 支</span><span class="arrow"></span>
+  <span class="node">失败/逃跑→推进 B 支</span><span class="arrow"></span>
+  <span class="node">剧情设定"必败"→走由败方触发的演出</span>
+</div>
+<p>逸剑把双模式放在<b>同一块格子上、格子数随场景变</b>，就是说棋台是共用的、只是"盘子大小"不同 <a href="https://www.taptap.cn/moment/665862976745506921">[$TRAE_REF]</a>。我们的 <code>turn_mode + tactical 开关</code> 正是同一个棋台的两套打法。</p>
+
+<h2><span class="no">⑤</span>你最关心的：难道每个场景都要盖一个棋盘？资源不炸吗？</h2>
+<div class="callout green">
+  <b>直接回答：不用，也不炸。</b>全游戏只有<b>一个共用的战斗棋盘场景</b>（BattleScene），并没有给每个世界场景单独盖棋盘的 .tscn。
+</div>
+<h3>5.1 世界和战斗是"两层"，不是"一份文件里塞两样"</h3>
+<ul>
+  <li><b>探索层</b>：城镇 / 野外的世界地图场景，负责走来走去、对话、接任务——不装棋盘。</li>
+  <li><b>战斗层</b>：独立的一张 BattleScene，负责"进战斗时铺棋盘、摆敌人的棋盘布局"。双方一撞 / 一进剧情战，就<b>从探索层切到战斗层</b>；打完再<b>切回探索层</b>。</li>
+</ul>
+<h3>5.2 棋盘是"参数"不是"美术场景"</h3>
+<p>棋盘的长相（宽、高、障碍物、谁站哪）是 <code>battles.json</code> 里那几行数字，交给代码按参数铺出来（我们的 <code>grid.width/height/obstacles/deployment</code> 就是干这个的）。敌人也是 <code>enemy_ids</code> 的 id → 去 <code>enemies.json</code> 查几行数据 + 复用同一份棋子模板。<b>加了 100 场战斗，只是表格加 100 行，美术资源几乎不增。</b></p>
+<h3>5.3 一次只加载一个场景（这就是"单加载"的真相）</h3>
+<p>用 Godot 的场景切换（<code>change_scene_to_file</code>）时，内存里<b>几乎同时只有一个大场景在跑</b>：平时驻留"当前所在的世界场景"，进战斗那一刻才把棋盘场景换进来，打完换回去。常驻的只有轻量的管理器（UI、配置、事件总线）。所以哪怕大地图有几十个场景，它们的资源也不是同时塞进内存的——这也是国产这类开放世界同屏不爆炸的关键。</p>
+
+<h2><span class="no">⑥</span>和后台表格的整体关联（五表联动图）</h2>
+<p>把上面串成一张"关系网"，这就是整条链路的地图。数据流向永远是 <b>Stage → NPC → 对话 → 任务 → 战斗 → 分岔 → 结局</b>，且每一步都靠 ID 在表间跳转：</p>
+<div class="flow">
+  <span class="node">TownScene / 世界图<b>（探索层）</b></span><span class="arrow">→</span>
+  <span class="node"><b>town_npcs.json</b><br>场景NPC</span><span class="arrow">→</span>
+  <span class="node"><b>dialogs.json + dialogue_events.json</b><br>对白 / 分支选项 / 事件</span>
+</div>
+<div class="flow">
+  <span class="node"><b>quests.json</b><br>任务链 + 分岔道岔</span><span class="arrow">→目标 target_battle→</span>
+  <span class="node"><b>battles.json</b><br>遭遇 / 敌群 / 棋盘参数</span><span class="arrow">→ enemy_ids →</span>
+  <span class="node"><b>enemies.json</b><br>敌人属性</span>
+</div>
+<div class="flow">
+  <span class="node">战斗层 <b>BattleScene</b>（唯一共用棋盘）</span><span class="arrow">→</span>
+  <span class="node"><b>combat_finished</b> 信号</span><span class="arrow">→</span>
+  <span class="node">剧情脚本读 <b>flag + 好感</b></span><span class="arrow">→</span>
+  <span class="node">跳对应分岔 → 汇入<b>结局闸门</b> → 多结局</span>
+</div>
+<table>
+  <tr><th>后台表</th><th>它是谁</th><th>怎么和别的表咬合</th></tr>
+  <tr><td><code>quests.json</code></td><td>任务链 / 剧本主线</td><td>objective.<code>target_battle</code>→battles；NPC.<code>quest_id</code>→本表；完成发 rewards</td></tr>
+  <tr><td><code>town_npcs.json</code></td><td>场景站位 / 谁触发</td><td><code>dialog_id</code>→dialogs；<code>quest_id</code>→quests；<code>battle_id</code>→battles</td></tr>
+  <tr><td><code>dialogs.json / dialogue_events.json</code></td><td>台词 / 分支选项 / 效果</td><td><code>trigger_events</code>→ quest_accept / quest_complete / 设 flag</td></tr>
+  <tr><td><code>battles.json</code></td><td>遭遇 + 棋盘参数</td><td><code>enemy_ids</code>→enemies；<code>grid</code>喂给 BattleScene；被 quests 引用</td></tr>
+  <tr><td><code>enemies.json</code></td><td>敌人数值</td><td>被 battles 的 enemy_ids 查表生成战斗单位</td></tr>
+  <tr><td>PlayerState / 好感表</td><td>旅行笔记（flag）</td><td>各岔口读它扳道岔；结局闸门读它开灯</td></tr>
+</table>
+
+<h2><span class="no">⑦</span>打通整条链路 · 一个小白看得懂的完整例子</h2>
+<p>咱们把"洛村的乞丐试炼"这条小线从头到尾走一遍（数据都是项目里真实存在的），你就能看到一个剧情怎么一路"拽着"NPC、对话、战斗、flag、结局跑完全程：</p>
+<table>
+  <tr><th>#</th><th>发生什么</th><th>它读/写了哪张表、哪个信号</th></tr>
+  <tr><td>1</td><td>你走进洛村（探索层 TownScene）</td><td><a>scene_changed</a> 信号；世界图提供 <b>舞台</b></td></tr>
+  <tr><td>2</td><td>撞见"村口老乞丐" NPC</td><td>town_npcs.json 查 <code>demo_npc</code>：长这样 + 站哪 + </code>dialog_id=demo_npc</code></td></tr>
+  <tr><td>3</td><td>按对话，老乞丐说话</td><td>读 dialogs.json(对话)；对白挂 <code>quest_accept</code> 事件（dialogue_events）</td></tr>
+  <tr><td>4</td><td>选"接下寻玉佩"</td><td>quest_accept → 任务 <code>demo_quest</code> 写进笔记；广播 <a>quest_accepted</a></td></tr>
+  <tr><td>5</td><td>目标：击败城西野狗</td><td>quests.json 目标 <code>target_battle=demo_battle</code></td></tr>
+  <tr><td>6</td><td>进战斗</td><td>读 battles.json <code>demo_battle</code>：enemy=demo_enemy → 切 BattleScene 铺棋盘开打；广播 <a>combat_started</a></td></tr>
+  <tr><td>7</td><td>打赢</td><td>广播 <a>combat_finished(胜利)</a>；任务目标完成 → 发 exp/silver 奖励；<a>quest_completed</a></td></tr>
+  <tr><td>8</td><td>切回洛村，找老乞丐交玉佩</td><td>又从 town_npcs 读 <code>demo_npc</code>，对白读"拿了玉佩"走<b>感谢分支</b>（由"有玉佩"这个 flag 决定的道岔）</td></tr>
+  <tr><td>…</td><td>一路上还有十几条这样的线</td><td>每条都在关键处写 flag、读 flag</td></tr>
+  <tr><td>末</td><td>剧情走到终点</td><td>"结局闸门"逐条核对 好感A / 好感B / 某抉择flag / 支线完成度 —— 达标开对应结局，否则走另一结局</td></tr>
+</table>
+<div class="callout">
+  <b>一句话记住整条链路：</b>场景是舞台 → NPC 是演员（表格定位）→ 对话是台词（表格+分支）→ 战斗是插演一场棋（表格配敌配棋盘）→ 每件事做完都<b>写一笔 flag、广播一个信号</b> → 下一个岔口和结局闸门靠这些记号扳道岔 → 每个人玩出不同结局。
+</div>
+
+<h2><span class="no">⑧</span>给咱们项目的落地建议（架构清单）</h2>
+<ul>
+  <li><b>分支不写死在场景里</b>：所有岔口用"读 flag + condition 表达式"，新增分支=加表+加 flag，不动场景代码。</li>
+  <li><b>战斗只做一个参数棋盘</b>：BattleScene 共用一份，<code>grid + enemy_ids + tactical</code> 用 battles.json 按场注入，绝不逐个场景盖。</li>
+  <li><b>任务节点统一"目标 → 触发 → 完成 → 推进"四段式</b>：给 quests.json 加 <code>prerequisites(前置flag)</code> 与 <code>then_set(完成后写什么flag)</code> 字段，支撑分支链和结局闸门。</li>
+  <li><b>对话选项即道岔</b>：dialogs 每条选项允许 `trigger_events`(可含 set_flag)，用现有 <code>dialogue_events.json</code> 扩展即可。</li>
+  <li><b>结局做成"条件闸门表"</b>：新表/字段列出各结局需满足的 flag 与好感阈值，运行时逐条判定，出结局别写进战斗判定。</li>
+  <li><b>探索层与战斗层分离</b>：坚持"一次只驻留一个场景 + 常驻管理器"，保证多场景大地图内存可控。</li>
+</ul>
+
+<div class="foot">
+  参考对照：逸剑风云决多结局条件 <a href="https://www.taptap.cn/moment/838821125776476935">[$TRAE_REF]</a> ｜ 双战斗模式（战棋/半即时）<a href="https://www.bilibili.com/video/BV1qmoaBfEYQ">[$TRAE_REF]</a> ｜ 战斗在地块上开、格子随场景变 <a href="https://www.taptap.cn/moment/665862976745506921">[$TRAE_REF]</a> ｜ 主线套路与多结局留档 <a href="http://m.toutiao.com/group/7524179528445329962/">[$TRAE_REF]</a>。
+  <br>本文为给开发者/策划看懂"剧情→场景→战斗→表格"整条链路的内部设计说明。
+</div>
+</div>
+</body>
+</html>

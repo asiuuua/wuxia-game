@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>桌面端 · 多人协作 · 可扩展工坊改造方案</title>
+<style>
+  :root{--ink:#2b2b33;--muted:#6b6b76;--line:#e3e3ea;--bg:#f7f7fa;--card:#fff;
+    --acc:#7c3aed;--acc2:#0e7490;--good:#16a34a;--warn:#d97706;--bad:#dc2626;}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Microsoft YaHei","PingFang SC",sans-serif;color:var(--ink);background:var(--bg);line-height:1.75}
+  .wrap{max-width:1020px;margin:0 auto;padding:32px 20px 70px}
+  h1{font-size:26px;border-bottom:3px solid var(--acc);padding-bottom:10px}
+  h2{font-size:21px;margin-top:38px;color:var(--acc);border-left:5px solid var(--acc);padding-left:10px}
+  h3{font-size:16px;margin-top:24px}
+  .sub{color:var(--muted);font-size:14px;margin-top:6px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin:14px 0;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+  code{background:#eef0f4;padding:1px 5px;border-radius:4px;font-family:Consolas,monospace;font-size:13px}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.5px}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:#efe9ff;color:var(--acc)}
+  tr:nth-child(even) td{background:#fbfaff}
+  .p{display:inline-block;padding:1px 10px;border-radius:12px;font-size:12px;font-weight:700;margin-right:6px}
+  .p1{background:#fef3c7;color:#b45309}.p2{background:#dbeafe;color:#1d4ed8}.p3{background:#dcfce7;color:#15803d}.p4{background:#fee2e2;color:#b91c1c}
+  .json{background:#1f2129;color:#d7dae3;padding:14px;border-radius:8px;overflow:auto;font-family:Consolas,monospace;font-size:12.5px;line-height:1.55}
+  .json .k{color:#8fd0ff}.json .s{color:#b9e6a8}.json .c{color:#7d8396}
+  .note{background:#fff8ec;border-left:4px solid var(--warn);padding:10px 14px;border-radius:6px;font-size:14px}
+  .ok{background:#f0fdf4;border-left:4px solid var(--good);padding:10px 14px;border-radius:6px;font-size:14px}
+  .risk{background:#fef2f2;border-left:4px solid var(--bad);padding:10px 14px;border-radius:6px;font-size:14px}
+  ul{margin:8px 0;padding-left:22px}li{margin:4px 0}
+  .flow{font-family:Consolas,monospace;font-size:13px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:12px;white-space:pre;overflow:auto}
+  .badge-good{color:var(--good);font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>桌面端 · 多人协作 · 可扩展工坊改造方案</h1>
+<div class="sub">从「本地单机 Web 工具」演进为「纯 Windows 桌面应用 + 多人远程协作 + 插件可对接」 · 2026-09-03</div>
+
+<div class="card">
+<b>给外行的一句话总纲：</b>想做的事要拆成四根柱子管——<b>① 桌面外壳</b>、<b>② 多人同时编辑</b>、<b>③ 别人可对接（插件化）</b>、<b>④ 不崩溃</b>。四根里，<b>桌面外壳几乎免费</b>（现在已是 exe），<b>多人协作是唯一要正规设计的大工程</b>，插件化靠"标准接口"，不崩溃靠"分层 + 备份 + 隔离"。下面一根一根说清。
+</div>
+
+<h2>1. 先破除一个误解：桌面化最容易，多人协作才最难</h2>
+<div class="card">
+<b>你已经有一只脚迈进门了。</b>你的工具里已有 <code>build/工作室专业调教/*.spec</code>——那是 <b>PyInstaller 打包出来的 exe</b>，它现在已经是个可双击的 Windows 程序。
+<ul style="margin-top:6px">
+  <li>所以第①根柱子"桌面化"<b>不是新工程</b>，而是"把现在这个 web 工具包一个正式窗口外壳"，换个壳而已。</li>
+  <li><b>真正难、唯一要用心设计的</b>，是"几个人同时改同一个任务文件，还不互相盖掉对方"。这是第②根柱子，是整件事的天花板。</li>
+</ul>
+<div class="note">💡 顺序别乱：<b>先搭稳单机桌面化 + 插件框架，最后再开多人并发</b>，否则两边都做不好。</div>
+</div>
+
+<h2>2. 现状盘点：你现在手上有什么</h2>
+<table>
+  <tr><th>现在</th><th>意味着</th></tr>
+  <tr><td>后端 Python 标准库 <code>http.server+Threading</code>，已处理一堆 <code>/api/*</code></td><td>逻辑成熟，能整体复用，别重写</td></tr>
+  <tr><td>前端单文件 <code>index.html</code>，原生 JS，零依赖</td><td>画面和操作都在这里，桌面化直接复用</td></tr>
+  <tr><td>PyInstaller <code>.spec</code> 已能打 exe</td><td>桌面入口已存在，只差"窗口体验"</td></tr>
+  <tr><td>已有一堆保险：备份、回收站、日志、路径穿越防护</td><td>第④根柱子的地基已有一半</td></tr>
+</table>
+
+<h2>3. 四根柱子逐一设计</h2>
+
+<h3>柱 ①　桌面外壳（纯 Windows 桌面应用）</h3>
+<p><b>目标</b>：双击打开是一个有独立标题栏/菜单的真实窗口，不是浏览器标签。</p>
+<table>
+  <tr><th>方案</th><th>简述</th><th>体积/门槛</th><th>评价</th></tr>
+  <tr><td><b>A · PyWebview</b>（推荐）</td><td>Python 起一个"系统内嵌浏览器"窗口，本地起服务、窗口加载你的 index.html</td><td>打包 ~40–60MB，不用学新技术</td><td class="badge-good">✅ 最贴现在：Python 后端全保留，前端一行不改</td></tr>
+  <tr><td>B · Electron</td><td>Chromium 全家桶 + Node，包一层</td><td>~150–250MB，内存高</td><td>功能最全但"杀鸡用牛刀"，后端还得从 Python 换 Node</td></tr>
+  <tr><td>C · Tauri</td><td>Rust + 系统 Webview，极轻</td><td>~8MB，但要会 Rust，后端要重写</td><td>最轻，但迁移成本最高</td></tr>
+</table>
+<div class="ok"><b>建议选 A（PyWebview）</b>：把 <code>studio_server</code> 稍作整理后用 PyWebview 起本地服务并开窗，<b>现有 index.html 和 studio_core 全部复用</b>，最平滑。</div>
+
+<h3>柱 ②　多人远程同时编辑（真正的大工程）</h3>
+<p><b>先诚实摆清 tradeoff：</b>"多人同时编辑"有两种层次，天差地别——</p>
+<table>
+  <tr><th>层次</th><th>什么样</th><th>体验</th><th>代价</th></tr>
+  <tr><td><b>轻量（务实，推荐先做）</b></td><td>编辑前先取最新版；保存时服务器比对——若别人在你之后改过同一文件，提示"有更新，请刷新合并"，<b>不让直接覆盖</b></td><td>略多一步"刷新"</td><td>低、可靠、够用</td></tr>
+  <tr><td><b>重量（实时协同）</b></td><td>像腾讯文档：两人同改一个节点像实时打字一样合并</td><td>最爽</td><td>极高（OT/CRDT 算法+传输协议），独立大工程</td></tr>
+</table>
+<div class="note">💡 对"任务/数值编辑器"这种<b>低频、结构化、按文件编辑</b>的场景，<b>强烈建议走轻量版</b>：<b>乐观锁 + 版本号 + 冲突提示</b>。先别追腾讯文档级实时，那是给自己挖坑。</div>
+<p><b>实施要点（轻量版）</b></p>
+<ul>
+  <li>引入一台<b>服务端</b>：把"读本地 JSON 文件"抽成一层"数据访问接口"，底层可切：本地文件 → SQLite → 远程服务器数据库。前端代码基本不变。</li>
+  <li>每个文件带 <code>version</code>；保存带 <code>base_version</code>，服务端比对，不一致则<b>拒绝并返回冲突</b>。</li>
+  <li>加<b>简单鉴权</b>（网内账号/口令）+ 操作日志（谁何时改了哪）。</li>
+</ul>
+<div class="risk">⚠️ 若将来真要求"两人同改一个节点实时无损合并"，那是<b>独立的、以月计的算法工程</b>。建议永远放最后、当可选增强，别当第一个目标。</div>
+
+<h3>柱 ③　别人可对接（插件化 / SDK）</h3>
+<p><b>目标</b>：别人下载你的主程序，不改你核心代码，只放一个"插件文件夹"就能对接自己功能，互不干扰、坏了不影响主程序。</p>
+<div class="json"><span class="c">// 一个插件长这样：plugins/&lt;plugin_id&gt;/</span>
+|-- manifest.yaml      <span class="c">// 插件身份证：声明页签、后端接口、依赖哪些数据表</span>
+|-- handlers.py        <span class="c">// (可选)后端逻辑：暴露若干 handler 函数</span>
+|-- panel.js           <span class="c">// (可选)界面加一个自己的页签</span>
+`-- assets/            <span class="c">// (可选)自己的图标/图片</span></div>
+<div class="json"><span class="c">// manifest.yaml 样例</span>
+plugin_id: my_prefab              <span class="c">// 全网唯一命名，避免和别人的冲突</span>
+display_name: 预制体速查
+version: "1.0.0"
+main_backend: handlers.py         <span class="c">// 后端入口</span>
+tabs:                             <span class="c">// 要往主界面加的页签</span>
+  - key: prefab
+    label: 预制体
+    entry: panel.js
+data_schemas: [ "regions/*/quests.json" ]   <span class="c">// 声明要读写哪些表(供鉴权/冲突检测)</span></div>
+<p><b>主程序怎么做插件化（关键设计）</b></p>
+<ul>
+  <li><b>启动扫描</b>：启动时扫 <code>plugins/</code>，读每个 <code>manifest.yaml</code>，把插件页签注入界面、把插件 handler 注册进路由。</li>
+  <li><b>后端注册表</b>：主程序维护一份"路由表 <code>URL → handler</code>"；插件往表里<code>挂</code>自己的 handler，不碰别人已有的。</li>
+  <li><b>前端容器</b>：主页面只留一个"页签容器"，插件页签载入它自己的 <code>panel.js</code>，<code>index.html</code> 本体不被改。</li>
+  <li><b>插件隔离</b>：插件 handler 用 try/except + 超时包裹；崩溃只回滚该插件，不影响主程序（见柱④）。</li>
+  <li><b>写一份开发者文档</b>（SDK 说明：怎么写 manifest、怎么注册接口、命名规则），别人照着做即可。</li>
+</ul>
+<div class="ok"><b>这样"别人下载后对接自己功能"就成立</b>：他把自己的 <code>plugins/我的功能/</code> 整个文件夹拷进来、重启，就有自己专属的页签与接口，跟你互不干扰。</div>
+
+<h3>柱 ④　不崩溃与可恢复</h3>
+<ul>
+  <li><b>分层</b>：UI(窗口) / 核心服务 / 存储 三层分离。窗口崩了能重启，不丢内存外数据。</li>
+  <li><b>原子写</b>：写文件先写临时文件再改名替换（<code>tmp → rename</code>），断电 / 写一半也不会留下半个文件。</li>
+  <li><b>自动备份</b>：每次改动前备份上一版（你已有 <code>safety_data/backups</code>，保留并强化），一键回滚。</li>
+  <li><b>崩溃恢复</b>：启动时校验数据完整性，发现损坏自动回退到最近备份并提示。</li>
+  <li><b>插件隔离</b>：插件错误捕获 + 超时 + 资源限制，坏插件只影响自己。</li>
+  <li><b>统一日志</b>：所有操作进 <code>studio_log.jsonl</code>（已有），出问题查得到时间线。</li>
+</ul>
+
+<h2>4. 分阶段演进路线（不推翻现有，每步可验收）</h2>
+<table>
+  <tr><th>阶段</th><th>干成什么</th><th>要不要新依赖</th><th>验收</th></tr>
+  <tr><td><span class="p p1">P1</span></td><td><b>桌面化</b>：PyWebview 起窗，双击变真实应用</td><td>PyWebview（打进 exe）</td><td>双击打开独立窗口，功能与现在一致</td></tr>
+  <tr><td><span class="p p1">P2</span></td><td><b>抽数据访问层</b>：把"读写文件"抽象成接口（本地文件实现先行）</td><td>无</td><td>现有功能不回归，接口可替换</td></tr>
+  <tr><td><span class="p p2">P3</span></td><td><b>轻量多人</b>：SQLite + version + 冲突检测 + 网内鉴权 + 操作日志</td><td>SQLite(内置)</td><td>两人同时改同文件不会互相覆盖，能提示冲突</td></tr>
+  <tr><td><span class="p p3">P4</span></td><td><b>插件化</b>：manifest 扫描 + 后端注册表 + 前端容器 + 隔离 + SDK 文档</td><td>无</td><td>写一个示例插件即能被主程序加载，坏插件不影响运行</td></tr>
+  <tr><td><span class="p p4">P5(可选)</span></td><td><b>实时协同 / 完整远程</b>：真正的多人实时无损合并 / 云部署</td><td>大</td><td>腾讯文档级体验（很长的一段路）</td></tr>
+</table>
+<div class="note">💡 <b>为什么这个顺序</b>：桌面化先给"正式产品形态"；数据访问层是"多人"和"插件"共同的地基（它们都依赖"数据不是硬编码读文件"）；多人放插件前（P3 先于 P4），因为"多人冲突检测"和"插件数据写入"共用同一套"按文件+版本"框架。若你只抢核心，先做 P1+P2 就立刻受益。</div>
+
+<h2>5. 一页看懂最终架构</h2>
+<div class="flow">┌─────────── 你(或别人)的 Windows 桌面 ───────────┐
+│  窗口外壳(PyWebview)                                │
+│   ┌─ index.html 主界面 ─┐   插件页签(panel.js)      │
+│   │  页签容器            │   ─────────────          │
+│   └─────────┬───────────┘                          │
+│             │  HTTP(localhost)                     │
+│   ┌─────────▼───────────────────────────────┐      │
+│   │ 核心服务(Python)                         │      │
+│   │  /api/*   +  插件 handler(注册表)          │      │
+│   └─────────┬───────────────────────────────┘      │
+└─────────────┼───────────────────────────────────────┘
+              ▼ 数据访问层(Data Layer)   ← P2 抽的接口
+  本地文件 ─── SQLite ─── 远程服务器(多人, 版本+冲突检测)</div>
+
+<h2>6. 风险与注意</h2>
+<ul>
+  <li><b>别在前期就追"腾讯文档级实时"</b>——那是整件事里唯一的高危大坑，留到最后的 P5 可选。前期用乐观锁完全够。</li>
+  <li><b>后端别重写</b>：现有 <code>studio_core/studio_server</code> 成熟，桌面化靠 PyWebview 复用，不推倒。</li>
+  <li><b>多人不等于"必须联网外网"</b>：局域网(办公室同一 WiFi)就能多人，不必上公网服务器。</li>
+  <li><b>插件命名规范</b>：manifest <code>plugin_id</code> 要求全局唯一前缀，杜绝互相撞车。</li>
+  <li><b>安全</b>：多人开启后，本地接口别裸暴露公网；持久则加鉴权与 HTTPS，沿用你已有的路径穿越防护。</li>
+</ul>
+
+<div class="card">
+<b>结论一句话</b>：桌面化用 <b>PyWebview</b> 最快落地；多人用 <b>乐观锁 + 版本比对</b> 最务实（腾讯文档级永久可作远期彩蛋）；插件化靠 <b>manifest + 后端注册表 + 前端容器 + 隔离</b> 实现"别人拷个文件夹就能对接"；不崩溃靠 <b>分层 + 原子写 + 备份恢复 + 插件隔离</b>。四根柱子 <b>P1→P4</b> 逐段验收，现有代码整体保住。
+</div>
+
+</div>
+</body>
+</html>

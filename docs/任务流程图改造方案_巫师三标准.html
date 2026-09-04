@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>任务流程图改造方案 · 对齐巫师三 QuestGraph 标准</title>
+<style>
+  :root{--ink:#2b2b33;--muted:#6b6b76;--line:#e3e3ea;--bg:#f7f7fa;--card:#fff;
+    --acc:#7c3aed;--acc2:#0e7490;--good:#16a34a;--warn:#d97706;--bad:#dc2626;}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Microsoft YaHei","PingFang SC",sans-serif;color:var(--ink);background:var(--bg);line-height:1.75}
+  .wrap{max-width:1020px;margin:0 auto;padding:32px 20px 70px}
+  h1{font-size:26px;border-bottom:3px solid var(--acc);padding-bottom:10px}
+  h2{font-size:21px;margin-top:38px;color:var(--acc);border-left:5px solid var(--acc);padding-left:10px}
+  h3{font-size:16px;margin-top:24px}
+  .sub{color:var(--muted);font-size:14px;margin-top:6px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin:14px 0;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+  code{background:#eef0f4;padding:1px 5px;border-radius:4px;font-family:Consolas,monospace;font-size:13px}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.5px}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:#efe9ff;color:var(--acc)}
+  tr:nth-child(even) td{background:#fbfaff}
+  .phase{display:inline-block;padding:1px 10px;border-radius:12px;font-size:12px;font-weight:700;margin-right:6px}
+  .p0{background:#fee2e2;color:#b91c1c}.p1{background:#fef3c7;color:#b45309}.p2{background:#dbeafe;color:#1d4ed8}.p3{background:#dcfce7;color:#15803d}
+  .json{background:#1f2129;color:#d7dae3;padding:14px;border-radius:8px;overflow:auto;font-family:Consolas,monospace;font-size:12.5px;line-height:1.55}
+  .json .k{color:#8fd0ff}.json .s{color:#b9e6a8}.json .c{color:#7d8396}
+  .note{background:#fff8ec;border-left:4px solid var(--warn);padding:10px 14px;border-radius:6px;font-size:14px}
+  .ok{background:#f0fdf4;border-left:4px solid var(--good);padding:10px 14px;border-radius:6px;font-size:14px}
+  ul{margin:8px 0;padding-left:22px}li{margin:4px 0}
+  .flow{font-family:Consolas,monospace;font-size:13px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:12px;white-space:pre;overflow:auto}
+  .badge-gap{color:var(--warn);font-weight:700}.badge-good{color:var(--good);font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>任务流程图改造方案 · 对齐巫师三 QuestGraph 标准</h1>
+<div class="sub">把工作室现有「剧情对话(线性台词表)」升级为「可视化任务流程图(节点图)」 · 高标准、可落地、向后兼容 &nbsp;·&nbsp; 2026-09-03</div>
+
+<div class="card">
+<b>给外行的一句话版：</b>现在剧情是"一条项链，一颗珠子连一颗，走到底"。改造后是"一张地图，起点在地图左上角，终点有好几个，路线上的岔路口会弹选项，走哪条由你之前攒下的好感/选择决定"。巫师3每个任务就是这么画的图，我们照着画。
+</div>
+
+<h2>0. 先锚定目标：巫师3 QuestGraph 到底是什么</h2>
+<ul>
+  <li><b>任务 = 一张节点图（Graph）</b>：无数个小方块(节点)用箭头(连线)连起来，像地铁线路图。</li>
+  <li><b>节点类型可怕地丰富</b>：开场、对话、选项、打架、给道具、时间等待、剧情演出、结局……每个节点干一件确定的事。</li>
+  <li><b>带类型的连线</b>：一条箭头不是随便连，它带"类型"(正常走/赢了才走/失败才走)，还有<b>条件</b>——只有满足条件这条箭头才通车。</li>
+  <li><b>全局状态(Facts/Flag)</b>：游戏背后一本"大笔记"，记你好感多少、哪个选择做了、进度到哪。节点读笔记决定通车，写笔记改变后续。</li>
+  <li><b>目标(Goals)与阶段(Phase)</b>：任务分成几段，每段在屏幕右侧显示"当前目标"，玩家知道下一步要干嘛。<b>结局(Ending)</b>是图的多个终点，凑齐条件进哪个终点。</li>
+</ul>
+<p class="sub">我们在架构上完全照这个模型来，但落地为更贴合 Godot + JSON + 现有工作室的实现。</p>
+
+<h2>1. 改造核心：数据模型从"一条线" → "一张图"</h2>
+<div class="card">
+<h3 style="margin-top:2px">改造前 · 现在的线性台词表</h3>
+<div class="flow">dg_1 ──next──▶ dg_2 ──next──▶ dg_3 ──next──▶ (空=结束)
+(只能一条路走到底，没有岔口不读条件)</div>
+
+<h3>改造后 · 巫师三标准节点图</h3>
+<div class="flow">                        ┌─（条件: 帮过乞丐 = 真）─▶ 打山贼→给玉佩→【好结局】
+【开场】──▶【对话】─┐    │
+                        └─（条件: 没帮过  = 真）─▶ 【路边折返】→【婉拒结局】
+        │
+        └──(顺便记录: 已完成开场)──▶【选项节点】──────▶ ……</div>
+</div>
+<ul>
+  <li>一个任务 = 一个 <code>quest_graph</code>，里面有一堆 <code>nodes</code>。</li>
+  <li>每个节点是一块"积木"，箭头指向下一块。</li>
+  <li>一个节点能<ul>出来多条箭头</ul> = 选项/分支；每条箭头能带<b>条件门</b>。</li>
+  <li>节点能<b>写状态</b>(记好感/记选择) = 改变后面走哪条。</li>
+</ul>
+
+<h2>2. 新数据模型（Schema）</h2>
+<h3>2.1 节点类型总表</h3>
+<table>
+  <tr><th>节点类型 type</th><th>干什么</th><th>关键字段</th></tr>
+  <tr><td>start</td><td>任务入口</td><td>next</td></tr>
+  <tr><td>dialog</td><td>弹一段对话（引用现有对话表区间）</td><td>dialog_ref, lines_from, on_enter, next</td></tr>
+  <tr><td>choice</td><td>弹多个玩家选项</td><td>options[]（每个含 text_key/show/then/next）</td></tr>
+  <tr><td>battle</td><td>触发一场战斗</td><td>battle_ref, on_win[], on_lose[], on_escape[]</td></tr>
+  <tr><td>flag_set</td><td>写一段状态（记好感/记进度/记选择）</td><td>key, value</td></tr>
+  <tr><td>flag_check</td><td>读状态做纯判断分流</td><td>require[]{...}, then/then_else</td></tr>
+  <tr><td>give_item</td><td>发放/扣除道具</td><td>item, qty</td></tr>
+  <tr><td>advance_time</td><td>推进时间/天数（服药、休息类联动）</td><td>days, hour</td></tr>
+  <tr><td>goal</td><td>更新右侧"当前目标"文案</td><td>text_key</td></tr>
+  <tr><td>end</td><td>任务/支线终结</td><td>ending（good/bad/neutral）</td></tr>
+</table>
+
+<h3>2.2 一张完整图长什么样（目标 JSON 样例）</h3>
+<div class="json"><span class="c">// quests.json 里某任务的"图上身版"（向后兼容，见 §4）</span>
+{
+  <span class="k">"id"</span>: <span class="s">"nv_quest_guard_001"</span>,
+  <span class="k">"title_key"</span>: <span class="s">"q_guard_title"</span>,        <span class="c">// 文本与逻辑分离，见 §6</span>
+  <span class="k">"type"</span>: <span class="s">"quest_graph"</span>,
+  <span class="k">"version"</span>: 2,
+  <span class="k">"start_node"</span>: <span class="s">"q_start"</span>,
+  <span class="k">"nodes"</span>: {
+    <span class="k">"q_start"</span>: { <span class="k">"type"</span>:<span class="s">"start"</span>, <span class="k">"next"</span>:<span class="s">"q_goal1"</span> },
+
+    <span class="k">"q_goal1"</span>: { <span class="k">"type"</span>:<span class="s">"goal"</span>, <span class="k">"text_key"</span>:<span class="s">"q_guard_goal1"</span>, <span class="k">"next"</span>:<span class="s">"q_dlg"</span> },
+
+    <span class="k">"q_dlg"</span>: {
+      <span class="k">"type"</span>: <span class="s">"dialog"</span>,
+      <span class="k">"dialog_ref"</span>: <span class="s">"npc_village_chief"</span>,       <span class="c">// 复用现有对话分片</span>
+      <span class="k">"on_enter"</span>: [{<span class="k">"op"</span>:<span class="s">"flag_set"</span>, <span class="k">"key"</span>:<span class="s">"nv_started_guard"</span>, <span class="k">"value"</span>:<span class="k">true</span>}],
+      <span class="k">"next"</span>: <span class="s">"q_choice"</span>
+    },
+
+    <span class="k">"q_choice"</span>: {
+      <span class="k">"type"</span>: <span class="s">"choice"</span>,
+      <span class="k">"options"</span>: [
+        {
+          <span class="k">"text_key"</span>: <span class="s">"opt_help"</span>,
+          <span class="k">"show"</span>:   { <span class="k">"all"</span>: [{<span class="k">"flag"</span>:<span class="s">"nv_maiden_helped"</span>, <span class="k">"eq"</span>:<span class="k">true</span>}] },   <span class="c">// 条件门</span>
+          <span class="k">"then"</span>:    [{<span class="k">"op"</span>:<span class="s">"flag_set"</span>, <span class="k">"key"</span>:<span class="s">"nv_q_accepted"</span>, <span class="k">"value"</span>:<span class="k">true</span>}],
+          <span class="k">"next"</span>:    <span class="s">"q_battle"</span>
+        },
+        {
+          <span class="k">"text_key"</span>: <span class="s">"opt_refuse"</span>,
+          <span class="k">"show"</span>:   { <span class="k">"all"</span>: [{<span class="k">"flag"</span>:<span class="s">"nv_q_accepted"</span>, <span class="k">"eq"</span>:<span class="k">false</span>}] },
+          <span class="k">"then"</span>:    [],
+          <span class="k">"next"</span>:    <span class="s">"q_end_refuse"</span>
+        }
+      ]
+    },
+
+    <span class="k">"q_battle"</span>: {
+      <span class="k">"type"</span>: <span class="s">"battle"</span>,
+      <span class="k">"battle_ref"</span>: <span class="s">"nv_battle_bandit"</span>,
+      <span class="k">"on_win"</span>:      [{<span class="k">"op"</span>:<span class="s">"flag_set"</span>, <span class="k">"key"</span>:<span class="s">"nv_bandit_cleared"</span>, <span class="k">"value"</span>:<span class="k">true</span>}],
+      <span class="k">"on_win_next"</span>:   <span class="s">"q_reward"</span>,
+      <span class="k">"on_lose_next"</span>:  <span class="k">null</span>   <span class="c">// null = 可重试或剧情败走</span>
+    },
+
+    <span class="k">"q_reward"</span>: {
+      <span class="k">"type"</span>: <span class="s">"give_item"</span>, <span class="k">"item"</span>:<span class="s">"nv_item_pendant"</span>, <span class="k">"qty"</span>:1,
+      <span class="k">"then"</span>: [{<span class="k">"op"</span>:<span class="s">"favor_add"</span>, <span class="k">"target"</span>:<span class="s">"npc_village_chief"</span>, <span class="k">"value"</span>:15}],
+      <span class="k">"next"</span>: <span class="s">"q_end_good"</span>
+    },
+
+    <span class="k">"q_end_refuse"</span>: { <span class="k">"type"</span>:<span class="s">"end"</span>, <span class="k">"ending"</span>:<span class="s">"neutral"</span> },
+    <span class="k">"q_end_good"</span>:   { <span class="k">"type"</span>:<span class="s">"end"</span>, <span class="k">"ending"</span>:<span class="s">"good"</span> }
+  },
+  <span class="k">"endings"</span>: [
+    {<span class="k">"id"</span>:<span class="s">"good"</span>,    <span class="k">"require"</span>:{<span class="k">"all"</span>:[{<span class="k">"flag"</span>:<span class="s">"nv_q_accepted"</span>,<span class="k">"eq"</span>:<span class="k">true</span>}]}},
+    {<span class="k">"id"</span>:<span class="s">"neutral"</span>, <span class="k">"require"</span>:{<span class="k">"all"</span>:[{<span class="k">"flag"</span>:<span class="s">"nv_q_accepted"</span>,<span class="k">"eq"</span>:<span class="k">false</span>}]}}
+  ]
+}
+</div>
+
+<h2>3. 状态系统：全局"旅行笔记" FlagStore</h2>
+<div class="card">
+<ul>
+  <li>新增 <b>FlagStore</b>（落 <code>PlayerState</code> 或独立 autoload）：一个 <code>key → value</code> 的持久化字典。</li>
+  <li>存四种值：<b>布尔</b>(做过没做过)、<b>整数/计数</b>(进度、次数)、<b>好感/数值</b>(对某 NPC 的好感分)、<b>字符串</b>(当前选项记录)。</li>
+  <li>条件 DSL 支持：<code>flag</code>(读布尔) / <code>favor</code>(读好感) / <code>quest_progress</code> / 以及 <code>all</code>、<code>any</code>、<code>not</code> 组合。</li>
+  <li>写状态用副作用数组 <code>then / on_enter / on_win</code>，统一走同一套 op：<code>flag_set / favor_add / remove_item / emit_event</code>。</li>
+</ul>
+<div class="note">💡 这等价于巫师3的 Facts(监督者之眼) 和贝塞斯达的 Globals——不同游戏叫法不同，模型同一个。</div>
+</div>
+
+<h2>4. 向后兼容 & 迁移：旧台词表零破坏升级</h2>
+<div class="ok">
+<ul>
+  <li><b>旧数据一条不删</b>。现有 <code>dialog_id → shards/next_id 台词表</code> 原样保留。</li>
+  <li>新增的 <code>quest_graph</code> 是<b>另一层新结构</b>。凡是没有 graph 的任务，沿用老逻辑不变；有 graph 的走新引擎。两个并存、互不干扰。</li>
+  <li><b>可选自动迁移</b>：写一个迁移工具，把旧台词表自动转成"单一路径的 dialog 节点图"，转出来和分析有者语义一致（就是一条直线）。这样老内容也在编辑器里可见、可继续改造加分支。</li>
+</ul>
+</div>
+
+<h2>5. 工作室编辑器 UI 改造（对齐大厂，但分三步走，性价比最高）</h2>
+<h3>Phase A · 蓝图先行 <span class="phase p1">T1 · 最快见效</span></h3>
+<ul>
+  <li>后端 <code>studio_core.py</code> 新增任务图读写 API：<code>/api/quest_graph</code>（列/查/存节点/存连线）+ 新增对 <code>choice/require/then</code> 的 schema 校验。</li>
+  <li>前端「剧情对话」页签里，给台词行加一个<b>「选项」编辑区</b>：每个选项填 文本 + 跳转台词 + 可选条件。</li>
+  <li>跑 <code>check_crossref</code> 校验图内引用（连到不存在的节点/战斗/物品立刻报红）。</li>
+  <li>效果：不用画图就能先"填出多分支"，<b>先把分支+条件跑通</b>。</li>
+</ul>
+<h3>Phase B · 可视化节点图画布 <span class="phase p2">T2</span></h3>
+<ul>
+  <li>新增「任务流程图」页签：一个<b>轻量画布</b>（自研 SVG/Canvas），节点拖拽摆放、连箭头、点节点在右侧面板改字段。</li>
+  <li>节点上显示小标：类型徽章、条件小锁、目标文案。</li>
+  <li>可选导出 PNG/复制 JSON，方便策划评审、写文档。</li>
+  <li>实现建议：先用 <b>cytoscape.js / jointJS(开源图库)</b> 而非从零写图形算法，成本低、接近大厂手感。</li>
+</ul>
+<h3>Phase C · 对标大厂完整项 <span class="phase p3">T3 · 可选</span></h3>
+<ul>
+  <li><b>调试上帝视角</b>：游戏内热键打开「任务图面板」，看当前走到哪个节点、好感多少、哪个 flag 没开。</li>
+  <li><b>i18n 文本分离</b>：所有 <code>text_key</code> 统一走文案表，中文先占用，将来多语言零迁移。</li>
+  <li><b>编辑器即报错</b>：接线的接口"对不上类型当场红"。</li>
+</ul>
+
+<h2>6. 文本与逻辑分离（要高标，这一步顺手做对）</h2>
+<ul>
+  <li>所有面向玩家的话 <b>不写死在 JSON 字段里</b>，改用 <code>xxx_key</code>，指向一张 <code>loc/zh_CN.json</code> 文案表。</li>
+  <li>好处一条就值回票价：<b>将来繁中/英文/日文，只加一张文案表，不动任何逻辑与图</b>。</li>
+  <li>格式：<code>"q_guard_title": "新手村·守村之任"</code>，key 全局唯一。</li>
+</ul>
+
+<h2>7. 涉及改动文件清单</h2>
+<table>
+  <tr><th>层</th><th>文件</th><th>改什么</th></tr>
+  <tr><td>数据</td><td><code>data/configs/regions/*/quests.json</code></td><td>新增 <code>quest_graph</code> 子结构（nodes/start_node/endings）</td></tr>
+  <tr><td>运行时</td><td><code>autoload/ConfigManager.gd</code></td><td>解析并索引 graph 节点、引用校验</td></tr>
+  <tr><td>运行时</td><td><code>services/quest/</code>（新增 QuestGraphRuntime）</td><td>节点图解释器：走节点、读条件、写状态、触发战斗/对话/给道具</td></tr>
+  <tr><td>状态</td><td><code>PlayerState</code>（新增 flag 命名空间）</td><td>FlagStore：flag/favor/quest_progress 读写 + 持久化</td></tr>
+  <tr><td>工作室</td><td><code>tools/desktop_studio/studio_core.py</code></td><td><code>/api/quest_graph</code> 节点读写 + schema 校验</td></tr>
+  <tr><td>工作室</td><td><code>tools/desktop_studio/index.html</code></td><td>剧情对话页签加选项区；T2 新增任务流程图页签</td></tr>
+  <tr><td>工具</td><td><code>tools/check_crossref.py</code></td><td>扩到图内引用校验</td></tr>
+  <tr><td>测试</td><td><code>tests/unit/</code></td><td>quest_graph 契约测试 + FlagStore 测试</td></tr>
+</table>
+
+<h2>8. 分期落地路线 + 验收</h2>
+<table>
+  <tr><th>阶段</th><th>交付</th><th>验收标准（沿用双闸门）</th></tr>
+  <tr><td><span class="phase p1">T1</span></td><td>数据模型 + FlagStore + graph 解释器 + 编辑器表单级选项/条件</td><td>GATE1 零错误；GATE2 零失败；check_crossref 全绿；一条示例任务可真实跑出"两个选项、两个结局"</td></tr>
+  <tr><td><span class="phase p2">T2</span></td><td>可视化节点图画布（开源图库）</td><td>能拖拽连线、存储回图、重开看得见；旧台词自动迁移进画布</td></tr>
+  <tr><td><span class="phase p3">T3</span></td><td>调试上帝视角 + i18n + 编辑器即错</td><td>游戏内可开任务图面板；多语言只加文案表</td></tr>
+</table>
+
+<h2>9. 风险与注意</h2>
+<ul>
+  <li><b>绝不一次性推倒重写</b>：老台词表与 graph 并存、互不干扰，T1 先跑通再铺开。</li>
+  <li><b>共享地基改动需登记</b>：ConfigManager/PlayerState 属共享地基，改动须按项目流程 change_log + 双闸门 + commit_queue 入队。</li>
+  <li><b>编辑器 T2 用开源图库</b>，避免从零写图形算法陷入泥潭。</li>
+  <li><b>条件 DSL 保持最小</b>：只做 <code>all/any/not + flag/favor/quest_progress</code>，够用不追繁。</li>
+</ul>
+
+<div class="card">
+<b>最终一句话：</b>这套方案把工作室从「编辑一行行台词」升级为「绘制一张张任务地图」，并在<b>数据模型、条件引擎、状态系统、文本分离、可视化、调试</b>六个维度对齐大厂标准；分 <b>T1(先跑通分支) → T2(上可视化) → T3(补齐 i18n/调试)</b> 三步落地，每一步都能单独验收、不破坏现有内容。
+</div>
+
+</div>
+</body>
+</html>

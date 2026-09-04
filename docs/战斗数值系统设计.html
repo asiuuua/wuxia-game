@@ -1,0 +1,419 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>侠风录 · 战斗数值系统设计</title>
+<style>
+  :root{--ink:#24323f;--ink-soft:#5a6b7a;--line:#e3e9ef;--bg:#f6f8fa;--card:#fff;--accent:#b5342c;--accent-2:#8a2f27;--ok:#2f7d46;--warn:#c56a1c;--dpurple:#5b3c88;--dblue:#245a8a;--yellow:#f4f0e0;--code:#f3f5f7}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;color:var(--ink);background:var(--bg);line-height:1.75;font-size:15px}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 28px 80px}
+  header.hero{background:linear-gradient(135deg,#3a1d1b 0%,#6b2f29 55%,#8a3a2f 100%);color:#fff;padding:48px 40px 40px;margin:-8px -28px 8px}
+  header.hero h1{margin:0 0 10px;font-size:30px;letter-spacing:2px;font-weight:700}
+  header.hero .sub{opacity:.92;font-size:15px;max-width:820px}
+  .meta{display:flex;flex-wrap:wrap;gap:12px;margin-top:18px}
+  .meta span{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);padding:4px 14px;border-radius:20px;font-size:12.5px}
+  h2{font-size:22px;margin:46px 0 6px;padding:10px 0 8px;border-bottom:2px solid var(--line);color:var(--accent-2)}
+  h2 .no{display:inline-block;background:var(--accent);color:#fff;border-radius:6px;width:30px;height:30px;line-height:30px;text-align:center;font-size:16px;margin-right:10px}
+  h3{font-size:17px;margin:26px 0 8px;color:var(--ink)}
+  p{margin:10px 0}
+  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:13.5px;background:var(--card)}
+  th,td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top}
+  th{background:#eef2f6;color:var(--ink-soft);font-weight:600;white-space:nowrap}
+  tr:nth-child(even) td{background:#fafbfc}
+  tr.accent td:first-child{font-weight:600;color:var(--accent-2)}
+  .tag{display:inline-block;padding:1px 9px;border-radius:12px;font-size:12px;font-weight:600}
+  .t-ref{background:#efe6f7;color:var(--dpurple)}.t-new{background:#e4f2ea;color:var(--ok)}.t-warn{background:#fbece0;color:var(--warn)}.t-cur{background:#e7eef6;color:var(--dblue)}
+  .banner{border-left:5px solid var(--accent);background:#fdf3f2;padding:12px 16px;margin:16px 0;border-radius:0 8px 8px 0}
+  .banner.ok{border-color:var(--ok);background:#eff7f1}.banner.warn{border-color:var(--warn);background:#fdf5ec}.banner.blue{border-color:var(--dblue);background:#eef5fb}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+  .card h4{margin:0 0 8px;font-size:15px;color:var(--accent-2)}
+  .card p{margin:6px 0;color:var(--ink-soft);font-size:13px}
+  code{background:var(--code);padding:1px 6px;border-radius:4px;font-family:Consolas,monospace;font-size:12.5px;color:#b02618}
+  .formula{background:var(--yellow);border:1px solid #e7dcc3;border-radius:8px;padding:14px 18px;margin:14px 0;font-size:14px}
+  .formula b{color:var(--accent-2)}
+  ul{margin:8px 0;padding-left:22px}li{margin:5px 0}
+  hr{border:none;border-top:1px solid var(--line);margin:30px 0}
+  .toc{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 22px;column-count:2}
+  .toc a{color:var(--dblue);text-decoration:none;display:block;padding:3px 0}.toc a:hover{text-decoration:underline}
+  .bar{height:12px;border-radius:6px;background:#e8edf2;overflow:hidden;margin-top:4px}
+  .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),#d05a3f)}
+  .meter{display:flex;align-items:center;gap:10px;margin:6px 0}.meter .lab{width:110px;font-size:12.5px;color:var(--ink-soft)}.meter .bar{flex:1}
+  .foot{margin-top:50px;padding-top:16px;border-top:1px solid var(--line);color:var(--ink-soft);font-size:12.5px}
+</style>
+</head>
+<body>
+<header class="hero">
+  <h1>侠风录 · 战斗数值系统设计</h1>
+  <div class="sub">对标《逸剑风云决》战斗数值体系，为本地项目重构一套「可配置、有成长、有判定层次、防数值膨胀」的详细数值系统。输出属性换算、伤害乘区、武学维度、敌人难度刻度与全流程量级曲线，并映射到现有 Godot 代码与 JSON 配置表。</div>
+  <div class="meta"><span>版本 v1.0</span><span>2026-09-02</span><span>架构 / PM 窗口</span><span>落地范围：services/combat、data/configs</span></div>
+</header>
+<div class="wrap">
+  <div class="toc">
+    <b style="display:block;margin-bottom:6px">目录</b>
+    <a href="#s1">1. 方案概览与目标</a><a href="#s2">2. 逸剑风云决数值扒解（参考基准）</a>
+    <a href="#s3">3. 本地项目现状盘点</a><a href="#s4">4. 差距分析</a>
+    <a href="#s5">5. 目标数值架构（三层模型）</a><a href="#s6">6. 属性面板与换算表</a>
+    <a href="#s7">7. 判定：精准 / 会心 / 会意 / 擦伤</a><a href="#s8">8. 伤害计算公式（乘区体系）</a>
+    <a href="#s9">9. 武学威力与成长</a><a href="#s10">10. 敌人与难度刻度</a>
+    <a href="#s11">11. 气血 / 攻击量级曲线（全流程）</a><a href="#s12">12. 落地映射到现有代码</a>
+    <a href="#s13">13. 实施建议与验收</a>
+    <a href="#s14">14. 状态效果与控制体系（封招 / 点穴定身 / 流血…）</a>
+  </div>
+
+  <h2 id="s1"><span class="no">1</span>方案概览与目标</h2>
+  <p>本地项目当前的战斗判定偏「线性」「单层」：伤害 = <code>威力 − 防御×0.5</code>，属性仅 hp / attack / defense / speed / crit / mp 六个维度。早期可用，但在中后期会出现：<b>防御线性减伤导致坦克不可控、攻血无法按统一曲线设计、只有单暴击、武学无阶层与成长弧度</b>。</p>
+  <p>本次设计借鉴《逸剑风云决》成熟三层结构——<b>五维根属性 → 战斗面板属性 → 判定属性</b>，引入<b>双暴击（会心 / 会意）</b>、<b>命中判定（精准 / 擦伤）</b>、<b>乘区伤害</b>与<b>属性攻击体系</b>，落到现有配置表上，做到「改造不重写、逐表可开关」。</p>
+  <div class="banner"><b>设计原则</b>：① 数值全部进 JSON 配置，代码只读取不硬编码；② 旧配置在「简化模板」下无感兼容；③ 每条曲线给出公式与抽样档位，便于数值策划调参。</div>
+
+  <h2 id="s2"><span class="no">2</span>逸剑风云决数值扒解</h2>
+  <h3>2.1 五维属性 → 战斗属性换算</h3>
+  <p>逸剑风云决通过「体 / 御 / 劲 / 敏 / 势」五维派生面板属性，装备与升级只涨五维，把「堆哪一维」变成流派选择。</p>
+  <table>
+    <tr><th>五维</th><th>转化目标</th><th>换算系数</th><th>流派取向</th></tr>
+    <tr><td><b>体</b></td><td>气血最大值</td><td>+62 / 点</td><td>血厚</td></tr>
+    <tr><td><b>御</b></td><td>外功防御</td><td>+0.6 / 点</td><td rowspan="2">肉盾</td></tr>
+    <tr><td><b>御</b></td><td>气血最大值</td><td>+16.95 / 点</td></tr>
+    <tr><td><b>劲</b></td><td>最小外功攻击 / 最大外功攻击</td><td>+0.17 / +1.41 每点</td><td rowspan="3">输出</td></tr>
+    <tr><td><b>敏</b></td><td>会心率 / 最小外功攻击</td><td>+0.081 / +0.9 每点</td></tr>
+    <tr><td><b>势</b></td><td>最大外功攻击 / 会意率</td><td>+0.9 / +0.035 每点</td></tr>
+  </table>
+  <div class="banner blue"><b>启发</b>：攻击是「最小 / 最大」<b>区间</b>而非单一值——这是「擦伤 / 会意」判定的根基；「劲 / 敏 / 势」分别驱动区间两端与两种暴击，天然形成 build 分支。</div>
+  <h3>2.2 判定属性：双暴击与命中层次</h3>
+  <p>逸剑风云决的「暴击」被拆成两条并行曲线，命中失败不再是 <code>miss=0</code>，而降级为「擦伤」。</p>
+  <table>
+    <tr><th>判定属性</th><th>触发效果</th><th>关键约束</th></tr>
+    <tr><td><b>精准率</b></td><td>决定是否「精准命中」</td><td>未精准 → 进入擦伤分支</td></tr>
+    <tr><td><b>会心率</b></td><td>伤害 <b>+40%</b>，治疗 +50%</td><td>仅精准命中后可触发；上限 <b>80%</b>（直接会心另 +20% 突破）</td></tr>
+    <tr><td><b>会意率</b></td><td>伤害 <b>+25%</b>，且<b>必定按攻击最大值</b>结算</td><td>不受精准限制，命中与擦伤皆可触发；上限 40%</td></tr>
+    <tr><td><b>擦伤转化率</b></td><td>把「擦伤」转回普通伤害的概率</td><td>擦伤基于最小值结算、不可暴击</td></tr>
+  </table>
+  <p class="formula"><b>结算流程：</b>攻击 → 判<code>精准命中</code>？<br>· 命中 → 判 <code>会心</code>（+40%）<b>且同时</b>判 <code>会意</code>（+25%、按最大攻）→ 两者可同时叠加<br>· 未命中 → 判 <code>擦伤</code>（按最小攻、不暴击）或 <code>会意</code></p>
+  <h3>2.3 特殊属性（乘区词条）</h3>
+  <table>
+    <tr><th>维度</th><th>攻击侧</th><th>防御侧</th></tr>
+    <tr><td>外功</td><td>外功穿透 / 外功伤害加成</td><td>外功抗性 / 外功伤害减免</td></tr>
+    <tr><td>属性</td><td>属攻穿透（鸣金/裂石/牵丝/破竹）、属攻伤害加成、属性治疗（牵丝）</td><td>属攻抗性 × 4</td></tr>
+  </table>
+  <p><b>属性攻击</b>不是特效攻击，而是「额外攻击区间」：武学天赋突破到三重时，对应属性带来额外伤害，对应属性额外 <b>+50% 伤害</b>。</p>
+  <h3>2.4 武学阶位与消耗结构</h3>
+  <p>武学按兵刃分为剑 / 刀 / 拳 / 暗器 / 棍；招式按阶位分层，与真气消耗、冷却节奏强绑定。</p>
+  <table>
+    <tr><th>阶位</th><th>定位</th><th>真气</th><th>典型（实测样例）</th></tr>
+    <tr><td><b>普攻</b></td><td>常规，不耗真气</td><td>0</td><td>基础剑 / 刀法</td></tr>
+    <tr><td><b>二式 / 三式</b></td><td>进阶，带冷却</td><td>中 / 高</td><td>刀法二式、三式</td></tr>
+    <tr><td><b>绝式</b></td><td>大招，等待回合长</td><td>极高</td><td>青云扇法·谪仙一现：攻击力 692 / 真气 1433 / 待4回合</td></tr>
+  </table>
+
+  <h2 id="s3"><span class="no">3</span>本地项目现状盘点</h2>
+  <table>
+    <tr><th>文件</th><th>关键字段</th><th>现状点评</th></tr>
+    <tr><td><code>services/combat/combat_core.gd</code></td><td><code>_resolve_hit</code></td><td>伤害 = <code>max(1, power − def×0.5)</code>，单暴击<code>chance(crit)*crit_damage</code>，含闪避、护盾吸收、反射/荆棘</td></tr>
+    <tr><td><code>data/runtime/combat_character.gd</code></td><td>hp / atk / def / speed / crit / mp</td><td>扁平属性面板，无「区间攻击」、无命中判定</td></tr>
+    <tr><td><code>status_effects.json</code></td><td>pojia / qianggong / gushou / zhuoshao / zhongdu …</td><td>flat 修正 + DOT，缺「属性攻击 / 命中 / 暴击」侧面状态</td></tr>
+    <tr><td><code>skills.json</code></td><td>id / cost / cooldown / 效果</td><td>无 <code>tier</code>（阶位）、无威力系数、无 ATB 消耗</td></tr>
+    <tr><td><code>npcs/enemies.json</code></td><td>hp / attack / speed / abilities / loot</td><td>8 个手填值，无可随 Lv 缩放，无防御字段</td></tr>
+    <tr><td><code>items/weapons.json</code></td><td>attack / bonus_attack / speed / durability</td><td>只加单体 attack，未派生「五维加成 / 属性攻击」</td></tr>
+    <tr><td><code>difficulty/difficulty_table.json</code></td><td>player/enemy damage &amp; hp &amp; armor mult</td><td>难度倍率框架已具备，可复用</td></tr>
+  </table>
+
+  <h2 id="s4"><span class="no">4</span>差距分析</h2>
+  <table>
+    <tr><th style="width:16%">维度</th><th style="width:30%">逸剑风云决（基准）</th><th style="width:27%">本地现状</th><th>差距 / 风险</th></tr>
+    <tr><td>属性层次</td><td>五维 → 面板 → 判定 三层</td><td>扁平单层六属性</td><td><span class="tag t-warn">缺层级</span> 无法表达 build 分支</td></tr>
+    <tr><td>攻击形态</td><td>最小 / 最大攻击区间</td><td>单一 attack</td><td><span class="tag t-warn">缺区间</span> 无法实现擦伤 / 会意</td></tr>
+    <tr><td>命中 / 暴击</td><td>精准 + 会心 + 会意 + 擦伤</td><td>单暴击 + 单闪避</td><td><span class="tag t-warn">缺层次</span> no-miss 处理粗暴</td></tr>
+    <tr><td>防御减伤</td><td>穿透 / 抗性 / 减免乘区</td><td>线性 <code>−def×0.5</code></td><td><span class="tag t-warn">易膨胀</span> 后期攻防失控</td></tr>
+    <tr><td>伤害构成</td><td>外功 + 属性攻击双区间 × 乘区</td><td>单威力直算</td><td><span class="tag t-warn">无克制</span></td></tr>
+    <tr><td>武学维度</td><td>阶位 × 真气 × 等待回合计时</td><td>cost / cooldown</td><td><span class="tag t-warn">缺阶位</span></td></tr>
+    <tr><td>敌人刻度</td><td>带 Lv / 成型图鉴，按强度曲线</td><td>手填 8 个</td><td><span class="tag t-warn">无曲线</span></td></tr>
+    <tr><td>难度框架</td><td>内置多层难度</td><td>已有多项 mult</td><td><span class="tag t-cur">可复用</span> 需扩展</td></tr>
+  </table>
+
+  <h2 id="s5"><span class="no">5</span>目标数值架构（三层模型）</h2>
+  <div class="grid3">
+    <div class="card"><h4>L1 根属性（五维）</h4><p>劲 · 体 · 御 · 敏 · 势<br>升级与装备主词条只进这一层</p></div>
+    <div class="card"><h4>L2 面板属性</h4><p>最大气血 · 最小/最大外攻 · 外防 · 真气 · 攻击区间</p></div>
+    <div class="card"><h4>L3 判定属性</h4><p>精准 · 会心 · 会意 · 擦伤 · 穿透 / 伤害加成</p></div>
+  </div>
+  <div class="banner"><b>兼容开关：</b>新增 <code>derive_mode</code>（<code>flat | five_attr</code>）。<b>flat</b> 走现有扁平面板，改造期零风险；<b>five_attr</b> 走五维换算管线。默认 <code>flat</code>，按阶段平滑切换，避免一次性重构导致 GATE2 生效失败。</div>
+
+  <h2 id="s6"><span class="no">6</span>属性面板与换算表</h2>
+  <h3>6.1 五维换算表（目标版，参考逸剑风云决并归一化）</h3>
+  <table>
+    <tr><th>五维</th><th>换算目标</th><th>系数</th><th>用途</th></tr>
+    <tr class="accent"><td>体</td><td>最大气血</td><td>+62 / 点</td><td>基础血量</td></tr>
+    <tr class="accent"><td>御</td><td>外功防御<br>最大气血</td><td>+0.6 / 点<br>+16.95 / 点</td><td>减伤 + 副血量</td></tr>
+    <tr class="accent"><td>劲</td><td>最小外攻 / 最大外攻</td><td>+0.17 / 点、+1.41 / 点</td><td>输出下限与上限</td></tr>
+    <tr class="accent"><td>敏</td><td>会心率 / 最小外攻</td><td>+0.081 / 点、+0.9 / 点</td><td>双暴击之一 + 命中下限</td></tr>
+    <tr class="accent"><td>势</td><td>最大外攻 / 会意率</td><td>+0.9 / 点、+0.035 / 点</td><td>双暴击之二 + 命中上限</td></tr>
+  </table>
+  <table>
+    <tr><th style="width:20%">面板属性</th><th>定义 / 换算</th><th>对本地现字段的映射</th></tr>
+    <tr><td>最大气血</td><td>体×62 + 御×16.95 + 装备</td><td><code>max_hp</code>（扩展为派生）</td></tr>
+    <tr><td>最小外攻</td><td>劲×0.17 + 敏×0.9 + 武器下限</td><td rowspan="2"><code>min_atk / max_atk</code>（替代单一 atk）</td></tr>
+    <tr><td>最大外攻</td><td>劲×1.41 + 势×0.9 + 武器上限</td></tr>
+    <tr><td>外功防御</td><td>御×0.6 + 装备</td><td><code>defense</code></td></tr>
+    <tr><td>真气</td><td>固定值 + 心法加成（暂维持 100 档）</td><td><code>mp</code></td></tr>
+    <tr><td>速度 / ATB</td><td>独立结算，维持现有集气模型</td><td><code>speed</code></td></tr>
+    <tr><td>会心 / 会意 / 精准率</td><td>敏×0.081、势×0.035、由武学天赋提供</td><td><code>crit</code> 拆分扩为三判定</td></tr>
+  </table>
+  <div class="banner ok"><b>落地建议：</b>新增 <code>data/configs/combat/attribute_table.json</code> 集中存放系数，<code>combat_character.gd</code> 构造时跑派生管线；保留 <code>flat</code> 字段，未配置五维的角色自动降级到现行为。</div>
+
+  <h2 id="s7"><span class="no">7</span>判定：精准 / 会心 / 会意 / 擦伤</h2>
+  <table>
+    <tr><th>判定</th><th>默认上限</th><th>触发效果</th><th>本地落地字段</th></tr>
+    <tr><td><b>精准率</b></td><td>—</td><td>基础命中判定</td><td><code>precision</code></td></tr>
+    <tr><td><b>会心率</b></td><td>80%（直接会心 +20% 可破限）</td><td>伤害 +40%、治疗 +50%</td><td><code>crit_rate</code> + <code>crit_damage</code></td></tr>
+    <tr><td><b>会意率</b></td><td>40%（直接会意 +10% 可破限）</td><td>伤害 +25%、按最大攻结算</td><td><code>accuity_rate</code>（新增）</td></tr>
+    <tr><td><b>擦伤</b></td><td>—</td><td>按最小攻结算、不可暴击</td><td><code>graze_rate</code>（新增）</td></tr>
+    <tr><td>闪避</td><td>—</td><td>完全无伤（保留，用于轻功）</td><td>现有 <code>dodge_rate</code></td></tr>
+  </table>
+  <p class="formula"><b>目标判定流程（改 <code>_resolve_hit</code>）：</b><br>① 判 <code>闪避</code>（轻功类）→ miss<br>② 判 <code>精准命中</code>？<br>· 命中 → 判 <code>会心</code> 且 判 <code>会意</code>（可叠加）→ 均未触发则普通区间攻击<br>· 未命中 → 判 <code>擦伤</code>（基于 min_atk，不可暴击；可由擦伤转化率救回普通）<br>③ 结算伤害乘区（见 §8）</p>
+
+  <h2 id="s8"><span class="no">8</span>伤害计算公式（乘区体系）</h2>
+  <p>核心改动：<b>线性防御减伤 → 带软上限的乘区减伤</b>，并把伤害拆成多个相乘因子，便于各配置表独立调参。</p>
+  <div class="formula">
+    <b>单段伤害 =</b><br>· <b>基础区间</b>：<code>base = rand(min_atk, max_atk)</code>（未命中段用 min_atk）<br>
+    · × <b>武学威力</b>：<code>power_mult</code>（普攻 1.0 ~ 绝式 6.0，见 §9）<br>
+    · × <b>暴击倍率</b>：会心 ×1.40、会意 ×1.25（可叠加 → ×1.75）<br>
+    · × <b>增伤乘区</b>：<code>(1 + 外功伤害加成 − 目标外功伤害减免)</code><br>
+    · × <b>属性克制</b>：<code>(1 + 属性额外加成)</code>，对应属性 +50% 封顶<br>
+    · − <b>防御减免</b>（非线性，软上限）→ 先经 <b>穿透</b> 削弱敌方防御<br>
+    · → <code>max(1, 最终)</code>，再经护盾吸收 / 反弹 / 血量结算（沿用现有）
+  </div>
+  <p><b>防御软上限公式（替代 <code>−def×0.5</code>）：</b></p>
+  <div class="formula">
+    <code>reduction = 1 − K / (K + 有效防御)</code><br>其中 <code>有效防御 = max(0, 防御 − 减益 − 外功穿透)</code>，<code>K</code> 为常数（建议初值 60，存配置表）<br>
+    <b>意义：</b>防御越高单点收益越低，从「线性堆防无限减伤」变为「曲线趋近上限」，避免后期攻防数值崩坏，也让 <code>穿透</code> 真正有意义。
+  </div>
+  <table>
+    <tr><th>防御值</th><th>旧式减伤 <code>def×0.5</code></th><th>新式减伤 <code>K=60</code></th><th>备注</th></tr>
+    <tr><td>30</td><td>15（线性）</td><td>≈ 15.0（33%）</td><td>前期接近</td></tr>
+    <tr><td>60</td><td>30（线性）</td><td>30.0（50%）</td><td>收益拐点</td></tr>
+    <tr><td>120</td><td>60（线性）</td><td>≈ 40.0（66.7%）</td><td><span class="tag t-warn">线性在此过度</span></td></tr>
+    <tr><td>240</td><td>120（线性）</td><td>48.0（80%）</td><td>软上限逼近</td></tr>
+  </table>
+
+  <h2 id="s9"><span class="no">9</span>武学威力与成长</h2>
+  <h3>9.1 阶位表（推荐基线）</h3>
+  <table>
+    <tr><th>阶位 <code>tier</code></th><th>威力系数 <code>power_mult</code></th><th>真气消耗</th><th>ATB / 等待回合</th><th>定位</th></tr>
+    <tr><td>普攻</td><td>1.0 × 外攻区间</td><td>0</td><td>短</td><td>兜底 / 回蓝</td></tr>
+    <tr><td>二式</td><td>1.6 ~ 2.2 ×</td><td>中</td><td>中</td><td>主力循环</td></tr>
+    <tr><td>三式</td><td>2.5 ~ 3.5 ×</td><td>高</td><td>高</td><td>爆发 / 控场</td></tr>
+    <tr><td>绝式</td><td>4.0 ~ 6.0 ×</td><td>极高</td><td>极高</td><td>大招，带等待回合</td></tr>
+  </table>
+  <div class="banner"><b>对齐逸剑风：</b>绝式不仅威力高，还承担「等待回合 = 较长 ATB 蓄力」，配合打断 / 控制形成「读条—打断—时机」博弈。建议 <code>skills.json</code> 增加 <code>tier</code> / <code>power_mult</code> / <code>atb_cost</code>，<code>cost</code> 语义保持兼容。</div>
+  <h3>9.2 武学等级成长（熟练度）</h3>
+  <table>
+    <tr><th>武学等级</th><th>威力成长系数</th><th>解锁效果</th></tr>
+    <tr><td>1~4 级</td><td>×1.00 → ×1.12</td><td>基础威力</td></tr>
+    <tr><td>5 级</td><td>×1.15</td><td>对应招式体系伤害 +7%</td></tr>
+    <tr><td>6~9 级</td><td>×1.18 → ×1.30</td><td>附加效果（如流派被动）</td></tr>
+    <tr><td>10 级</td><td>×1.35</td><td>武学天赋三重：属性攻击 / 治疗 +50%</td></tr>
+  </table>
+  <p class="banner blue"><b>启发自逸剑风：</b>「修炼到 5 级全招式 +7%」这种<b>同流派联动</b>，让多招共用的武学树产生深度，而非单招独立膨胀。</p>
+
+  <h2 id="s10"><span class="no">10</span>敌人与难度刻度</h2>
+  <h3>10.1 敌人按 Lv 缩放（新增 <code>level</code> / 曲线）</h3>
+  <table>
+    <tr><th>敌人模板</th><th>base Lv</th><th>气血曲线</th><th>攻击曲线</th><th>定位</th></tr>
+    <tr><td>山贼 / 斥候</td><td>1~2</td><td>≈ 45→60</td><td>12→14</td><td>开场杂兵</td></tr>
+    <tr><td>恶狼 / 狂信徒</td><td>2~3</td><td>≈ 38→70</td><td>14→16</td><td>过渡</td></tr>
+    <tr><td>头目 / 盾卫</td><td>3~4</td><td>≈ 65→85</td><td>15→17</td><td>精英</td></tr>
+    <tr><td>（未来）守卫 / 将领</td><td>5+</td><td>按曲线</td><td>按曲线</td><td>Boss</td></tr>
+  </table>
+  <table>
+    <tr><th>字段</th><th>含义</th><th>建议改动</th></tr>
+    <tr><td><code>level</code></td><td>当前实例等级</td><td><span class="tag t-new">新增</span> 由曲线生成</td></tr>
+    <tr><td><code>hp_curve</code> <code>atk_curve</code></td><td>成长系数</td><td><span class="tag t-new">新增</span> 二次多项式或指数，存表</td></tr>
+    <tr><td><code>base_hp / base_atk / defense</code></td><td>基础值</td><td>沿用 + 补 <code>defense</code>（当前敌人无防御）</td></tr>
+  </table>
+  <h3>10.2 难度刻度（复用现有，补充字段）</h3>
+  <table>
+    <tr><th>难度</th><th>现有 mult</th><th>建议补充</th><th>定位</th></tr>
+    <tr><td>EASY</td><td>玩家伤害高、敌伤害/血低</td><td>—</td><td>剧情向</td></tr>
+    <tr><td>NORMAL</td><td>全 1.0</td><td>—</td><td>基准</td></tr>
+    <tr><td>HARD / NIGHTMARE / HELL</td><td>敌血/抗上调</td><td><code>enemy_precision_mult</code>、<code>enemy_crit_mult</code></td><td>惩罚挑战</td></tr>
+  </table>
+  <p>核心指标：普通难度下「同档敌人约 2~3 击击杀，被命中可承受 4~6 次」；用 <code>有效强度 = hp × atk / 常数</code> 校准，BOSS 有效强度为同级杂兵 4~6 倍。</p>
+
+  <h2 id="s11"><span class="no">11</span>气血 / 攻击量级曲线（全流程）</h2>
+  <p>给出一条可复用的成长曲线。以下为「主角」档位抽样（公式 <code>HP(lv) = 150 × 1.10^(lv−1)</code>、<code>ATK(lv) = 10 × 1.12^(lv−1)</code> 圆整值）。</p>
+  <table>
+    <tr><th>Lv</th><th>主角气血</th><th>主角外攻（min~max）</th><th>对应敌人 HP</th><th>敌人 ATK</th><th>阶段</th></tr>
+    <tr><td>1</td><td>150</td><td>8 ~ 20</td><td>45</td><td>12</td><td>开场（山贼）</td></tr>
+    <tr><td>5</td><td>220</td><td>14 ~ 32</td><td>60</td><td>16</td><td>初城周围</td></tr>
+    <tr><td>10</td><td>360</td><td>24 ~ 56</td><td>110</td><td>26</td><td>江湖走动</td></tr>
+    <tr><td>15</td><td>580</td><td>40 ~ 90</td><td>200</td><td>40</td><td>门派</td></tr>
+    <tr><td>20</td><td>940</td><td>66 ~ 150</td><td>360</td><td>60</td><td>中期精英</td></tr>
+    <tr><td>30</td><td>2440</td><td>180 ~ 400</td><td>900</td><td>130</td><td>后期</td></tr>
+    <tr><td>40</td><td>6340</td><td>480 ~ 1100</td><td>2400</td><td>300</td><td>终局前</td></tr>
+    <tr><td>50</td><td>16500</td><td>1300 ~ 3000</td><td>6400</td><td>700</td><td>满级 / Boss</td></tr>
+  </table>
+  <p class="banner warn"><b>注意：</b>若真气固定 100、且绝式消耗被拉高（参考逸剑风绝式需上千真气），需同步评估真气成长或「气竭」机制，避免中期断档。建议 <code>five_attr</code> 模式引入真气成长项，或保留固定 100 + 冷却节奏。</p>
+  <div class="meter"><span class="lab">气血成长曲线</span><div class="bar"><i style="width:22%"></i></div></div>
+  <div class="meter"><span class="lab">攻击成长曲线</span><div class="bar"><i style="width:12%"></i></div></div>
+  <p>曲线为「指数近似」，实际用二次多项式平滑拟合，公式与抽样存入 <code>attribute_table.json</code> 的 <code>growth</code> 节点，策划可直接改数。</p>
+
+  <h2 id="s12"><span class="no">12</span>落地映射到现有代码</h2>
+  <table>
+    <tr><th>现有文件</th><th>改动类型</th><th>具体动作</th></tr>
+    <tr><td><code>combat_character.gd</code></td><td>扩展</td><td>新增 min_atk / max_atk / precision / accuity_rate / graze_rate；按 <code>derive_mode</code> 跑五维派生管线，flat 走原字段</td></tr>
+    <tr><td><code>combat_core.gd _resolve_hit</code></td><td>重构</td><td>§8 乘区公式；防御软上限 <code>K/(K+def)</code>；§7 多段判定；保留护盾 / 反射 / DoT</td></tr>
+    <tr><td><code>status_effects.json</code></td><td>扩展</td><td>新增：精准下降、会心/会意率修正、属性攻击削弱（散功削减真气）</td></tr>
+    <tr><td><code>skills.json</code></td><td>扩展</td><td>每招增加 <code>tier</code> / <code>power_mult</code> / <code>atb_cost</code>，现有字段语义不变</td></tr>
+    <tr><td><code>enemies.json</code></td><td>扩展</td><td>补 <code>defense</code>；增加 <code>level / hp_curve / atk_curve</code> 可选节点，缺省按手填值</td></tr>
+    <tr><td><code>weapons.json</code></td><td>扩展</td><td>可选 <code>five_attr_bonus</code>（五维加成）、<code>attr_atk</code>（属性攻击区间）</td></tr>
+    <tr><td><code>difficulty_table.json</code></td><td>扩展</td><td>补充敌人双暴击 / 精准乘数，复用现有 mult 字段</td></tr>
+    <tr><td><code>attribute_table.json</code></td><td><span class="tag t-new">新增</span></td><td>五维换算系数、防御 K 值、暴击上限、成长曲线公式</td></tr>
+  </table>
+  <p class="banner ok"><b>兼容策略：</b>所有新字段用「缺省值」兜底——未填五维的角色仍是扁平战斗、未设 tier 的招式仍按原 cost、未标 level 的敌人仍是手填值。可<b>分两阶段</b>合入：先加表 + derive 管线（零行为变化），再逐表填启用。</p>
+
+  <h2 id="s13"><span class="no">13</span>实施建议与验收</h2>
+  <h3>13.1 建议分阶段</h3>
+  <ul>
+    <li><b>阶段 A（风险隔离）</b>：新增 <code>attribute_table.json</code> + <code>derive_mode</code> 开关 + L2 派生管线。行为不变，双闸门全绿。</li>
+    <li><b>阶段 B（判定升级）</b>：combat_core 接入精准/会心/会意/擦伤与乘区公式，默认参数与旧行为对齐，单元测试补判定用例。</li>
+    <li><b>阶段 C（内容填充）</b>：skills / enemies / weapons / difficulty 建档分层，启用一条内置难度曲线。</li>
+    <li><b>阶段 D（调参）</b>：用 §11 曲线跑全流程模拟，校验有效强度、击杀回合数、受击承受次数。</li>
+  </ul>
+  <h3>13.2 验收指标</h3>
+  <table>
+    <tr><th>项</th><th>目标</th><th>校验方式</th></tr>
+    <tr><td>双闸门</td><td>GATE1 零 ERROR、GATE2 零 ✗ &amp; 失败 0</td><td>godot headless 跑两闸门</td></tr>
+    <tr><td>数值平衡</td><td>同档敌人 2~3 击击杀</td><td>单元测试 / 存档模拟</td></tr>
+    <tr><td>受击承受</td><td>被同档敌人命中可抗 4~6 次</td><td>模拟脚本</td></tr>
+    <tr><td>上限感受</td><td>防御软上限生效，堆防不再无限减伤</td><td>取 defense 30/60/120/240 递增</td></tr>
+    <tr><td>向前兼容</td><td>未填新字段的旧配置行为不变</td><td>现有 unit 全绿 + 旧敌人手填值可用</td></tr>
+  </table>
+
+  
+  
+  <h2 id="s14"><span class="no">14</span>状态效果与控制体系（封招 / 点穴定身 / 流血…）</h2>
+  <p>前 13 章解决了「伤害 / 暴击 / 成长」等判定层，但本地 <code>status_effects.json</code> 目前只有 <b>flat 属性修正 + 少量 DOT</b>（破防 / 聚气 / 守拙 / 灼烧 / 中毒），<b>缺「控制类」主态（封招 / 点穴定身 / 锁足 / 闭气）</b>与完整的结算 / 驱散 / 抗性体系。本章深扒回合制网游（梦幻西游、大话西游、问道、神武、阴阳师、剑网三、崩铁）并补充此缺口——它是把「数值战斗」升级成「有博弈的战术战斗」的关键一环。为贴合武侠题材，本体系所有状态统一采用<b>江湖武学命名</b>（封招 / 点穴定身 / 走火入魔 / 罡气护体…），英文 <code>id</code> 作为技术键保持不变。</p>
+  <div class="banner"><b>设计原则：</b>① 所有状态走 JSON（<code>status_effects.json</code> 扩展），代码只读取不硬编码；② 状态分「可驱散 / 印记 / 特殊」三层，明确互斥与结算时机；③ 全套默认弱化，未配置即为高容错基线，向后兼容。</div>
+
+  <h3>14.1 现状缺口与目标</h3>
+  <table>
+    <tr><th>维度</th><th>现状</th><th>目标</th></tr>
+    <tr><td>类型覆盖</td><td>只有 flat 修正 + DoT</td><td>补全控制 / 持续伤害 / 削弱 / 增益四类</td></tr>
+    <tr><td>可控性</td><td>无「禁止行动」类</td><td><span class="tag t-new">新增</span> 封招 / 点穴定身 / 锁足 / 闭气 / 昏睡</td></tr>
+    <tr><td>结算</td><td>回合计时粗略</td><td>明确定义「回合开始 / 结束」两段结算顺序</td></tr>
+    <tr><td>互斥 / 抗性</td><td>无</td><td>控制递减、效果抵抗、免疫、首领最低保护</td></tr>
+    <tr><td>驱散</td><td>无</td><td>驱散 / 净化 / 解除三层解控</td></tr>
+  </table>
+
+  <h3>14.2 状态三级分类（驱散边界）</h3>
+  <table>
+    <tr><th>层级</th><th>含义</th><th>能否被驱散</th><th>典型</th></tr>
+    <tr><td><b>可驱散状态</b></td><td>招式产生的增益 / 减益 / 常规控制</td><td>能（净化 / 驱散）</td><td>破防、灼烧、封招、迟缓</td></tr>
+    <tr><td><b>印记</b></td><td>叠加层数驱动的复合效果（如 3 层寒劲→冰封）</td><td>不能直接驱散，靠层数消退</td><td>寒劲印记、连环印记</td></tr>
+    <tr><td><b>特殊状态</b></td><td>仅特定解除 / 条件移除</td><td>否</td><td>首领硬控、星级锁、战败标记</td></tr>
+  </table>
+  <p class="banner blue"><b>价值：</b>明确「能清 / 不能清」的边界，避免「一个清心诀清掉一切」或「Boss 被控到死」两个极端；直接映射到本地 <code>status_effects</code> 数组的 <code>category</code> 字段。</p>
+
+  <h3>14.3 控制类主态清单（江湖武学命名，对标回合计时制）</h3>
+  <table>
+    <tr><th>武学命名</th><th>对应通用名</th><th>通俗解释</th><th>默认时长</th><th>叠加</th><th>解除</th><th>豁免</th></tr>
+    <tr class="accent"><td>封招</td><td>封印 / 禁法</td><td>完全禁动作（招式 + 普攻 + 道具）</td><td>1~2 回合</td><td>同源覆盖</td><td>净化 / 解控技</td><td>抗封、免疫封招</td></tr>
+    <tr><td>闭气</td><td>禁言 / 沉默</td><td>禁放招式（真气 / 招式锁死）</td><td>1 回合</td><td>刷新时长</td><td>净化</td><td>免疫闭气</td></tr>
+    <tr class="accent"><td>点穴定身</td><td>冰冻（冰核）</td><td>完全无法行动；受击先扣「冰劲封体」血量</td><td>2~3 回合</td><td>同源覆盖</td><td>救治 / 丹药 / 破冰 / 净化</td><td>冰抗、免疫点穴定身</td></tr>
+    <tr><td>锁足</td><td>定身 / 禁移动</td><td>禁移动，仍可攻击 / 施法</td><td>1 回合</td><td>刷新</td><td>解控技</td><td>免疫锁足</td></tr>
+    <tr><td>卸兵</td><td>缴械</td><td>禁普攻，不禁招式</td><td>1 回合</td><td>刷新</td><td>解控技</td><td>免疫卸兵</td></tr>
+    <tr><td>昏睡</td><td>睡眠</td><td>无法行动；首次受击即醒</td><td>2 回合</td><td>刷新</td><td>受击 / 净化</td><td>免疫昏睡</td></tr>
+    <tr><td>麻痹</td><td>石化</td><td>无法行动，提高所受伤害</td><td>2 回合</td><td>同源覆盖</td><td>净化 / 解控技</td><td>免疫麻痹</td></tr>
+    <tr class="accent"><td>走火入魔</td><td>混乱（内力激荡）</td><td>内力失控，随机攻击对象（可能打自己人）</td><td>1~2 回合</td><td>刷新</td><td>净化</td><td>免疫走火入魔</td></tr>
+    <tr><td>挑衅</td><td>嘲讽</td><td>强制目标进攻施加者</td><td>1 回合</td><td>刷新</td><td>净化</td><td>免疫挑衅</td></tr>
+    <tr><td>迟缓</td><td>减速</td><td>降低 ATB 集气速度 / 行动条进度</td><td>2~4 回合</td><td>可叠层</td><td>净化</td><td>免疫迟缓</td></tr>
+  </table>
+  <p class="formula"><b>本地落地字段：</b><code>status_effects</code> 每项扩展 <code>category</code>（control/dot/debuff/buff/imprint）与 <code>lock</code> 位（禁止招式 / 禁止普攻 / 禁止移动 / 禁止治疗）；<code>combat_character.is_locked(flag)</code> 供 <code>combat_core</code> 在行动判定前拦截。</p>
+
+  <h3>14.4 持续伤害类（经血之伤）</h3>
+  <table>
+    <tr><th>武学命名</th><th>对应通用名</th><th>机制</th><th>默认时长</th><th>结算</th></tr>
+    <tr class="accent"><td>流血</td><td>出血（伤）</td><td>每回合按攻击者阈值或目标当前气血一定比例扣减</td><td>3~5 回合</td><td>回合结束</td></tr>
+    <tr class="accent"><td>中毒</td><td>中毒（毒）</td><td>每回合扣当前气血占比例 + 扣少量真气</td><td>3~5 回合</td><td>回合开始</td></tr>
+    <tr class="accent"><td>灼伤</td><td>灼烧（炎）</td><td>每回合按上次攻击伤害固定比例扣减，可叠层</td><td>3 回合（层数可叠）</td><td>回合结束</td></tr>
+    <tr><td>蛊咒反噬</td><td>诅咒</td><td>每次受击反弹比例伤害（PVP 下调）</td><td>至战斗结束</td><td>受击时</td></tr>
+    <tr><td>瘴毒</td><td>瘟疫</td><td>回合开始扩散给相邻单位</td><td>3 回合</td><td>回合开始</td></tr>
+  </table>
+  <p class="banner warn"><b>约束：</b>百分比型持续伤害必须设上限（如 ≤ 目标当前气血 8~10%），否则低血目标被秒；此类伤害不参与暴击 / 无双，护体罡气可挡瞬时伤害但挡不了已生效的周期扣血。</p>
+
+  <h3>14.5 削弱 / 增益类（经络损益）</h3>
+  <table>
+    <tr><th>类别</th><th>武学命名</th><th>对应通用名</th><th>说明</th></tr>
+    <tr><td><b>削弱类</b></td><td>散功 / 破防 / 迟缓 / 气机涣散 / 药力受阻 / 封穴断疗</td><td>减攻 / 减防 / 减速 / 减暴击 / 降疗 / 禁疗</td><td>按百分比或固定值叠加，可叠层；封穴断疗克制回血流</td></tr>
+    <tr><td><b>增益类</b></td><td>聚气 / 运罡 / 凝神 / 身轻如燕 / 连环诀 / 护驾</td><td>增攻 / 增防 / 增暴 / 提速 / 连击 / 援护</td><td>回合型最适合平衡 PK；连环诀 / 护驾需明确是否消耗行动与受控影响</td></tr>
+    <tr><td><b>护体类</b></td><td>罡气护体 / 卸劲 / 金刚不坏</td><td>护盾 / 免伤 / 无敌</td><td>罡气有独立血量可被消耗；金刚不坏不叠伤、卸劲只降比例，三者在叠加规则上彼此覆盖</td></tr>
+    <tr><td><b>调理类</b></td><td>清心诀 / 调息</td><td>清除 Debuff / 回合末回血回蓝</td><td>调息回血与「药力受阻 / 封穴断疗」构成治疗-压制对抗</td></tr>
+    <tr><td><b>资源类</b></td><td>封气 / 反震 / 噬血</td><td>锁真气 / 反伤 / 吸血</td><td>封气禁止回气与放高耗招式；反震需设上限防单杀</td></tr>
+  </table>
+
+  <h3>14.6 结算时机与优先级（核心法则）</h3>
+  <div class="formula"><b>结算顺序（参照「回血先、扣血后」）：</b><br>① <b>回合开始</b>：中毒（扣血/扣蓝）→ 瘴毒扩散 → 出手<br>② <b>行动中</b>：真伤 / 反震 / 噬血 / 灼伤受击触发；控制类效果在此段生效<br>③ <b>回合结束</b>：灼伤 → 流血 → 蛊咒反噬 → 调息回血 / 回蓝（治疗类）→ 自然递减 / 生效计数</div>
+  <p class="banner"><b>必须固定：</b>① 回血类最后结算，避免「先回后伤」误判；② 点穴定身 / 昏睡等「无法行动」状态覆盖所有行动判定；③ 持续伤害在解控 / 免死后仍继续按回合结算，除非另有互斥；④ 点穴定身期间受击：<b>先扣「冰劲封体」血量再判定是否伤血</b>（可配 <code>freeze_takes_no_real_hp</code>，默认定身期间不受真实伤害）。</p>
+
+  <h3>14.7 化解控制：递减 / 抗性 / 免疫</h3>
+  <table>
+    <tr><th>机制</th><th>规则</th><th>落地</th></tr>
+    <tr><td><b>控制递减</b></td><td>同目标近回合内连续受同类控制，后续时长减半（向下取整）</td><td>记录近 3 回合同类控制计数</td></tr>
+    <tr><td><b>效果抵抗</b></td><td>命中前结算：施加方效果命中 vs 目标效果抵抗</td><td><code>effect_hit_rate</code> / <code>effect_resist</code></td></tr>
+    <tr><td><b>控制抵抗</b></td><td>对封招 / 点穴定身等「硬控」单独乘算抵抗</td><td><code>control_resist</code>（独立于效果抵抗）</td></tr>
+    <tr><td><b>免疫</b></td><td>免疫某种状态（标志位）</td><td><code>immunity</code> 数组</td></tr>
+    <tr><td><b>首领最低保护</b></td><td>Boss 免疫普通控制或控制至少生效 1 回合</td><td><code>min_control_turns</code>（防「控到死」）</td></tr>
+  </table>
+
+  <h3>14.8 驱散 / 净化 / 解除三层</h3>
+  <table>
+    <tr><th>层</th><th>目标</th><th>规则</th></tr>
+    <tr><td><b>驱散</b></td><td>去除目标身上可驱散的增益 / 减益（敌方增益 / 我方减益）</td><td>可指定「清己方减益 / 清敌方增益」；驱散不受效果命中与抵抗影响</td></tr>
+    <tr><td><b>净化</b></td><td>仅清「可驱散」层级的己方负面（如清心诀）</td><td>不能清印记与特殊状态</td></tr>
+    <tr><td><b>解除</b></td><td>移除指定「特殊」不可驱散状态</td><td>严格按状态 <code>clearable_by</code> 白名单</td></tr>
+  </table>
+  <p>多个状态同屏时按「队列顺序」从后往前清；建议把关键控制排前以便数值策划调整清取优先级。</p>
+
+  <h3>14.9 推荐落地核心状态总表（武学命名）</h3>
+  <table>
+    <tr><th>状态 ID</th><th>武学命名</th><th>对应通用名</th><th>类型</th><th>时长</th><th>强度</th><th>叠加</th><th>解除</th><th>豁免</th></tr>
+    <tr><td><code>seal</code></td><td>封招</td><td>封印</td><td>控制</td><td>1~2</td><td>禁全部动作</td><td>覆盖</td><td>净化 / 解控</td><td>抗封</td></tr>
+    <tr><td><code>silence</code></td><td>闭气</td><td>禁言</td><td>控制</td><td>1</td><td>禁招式</td><td>刷新</td><td>净化</td><td>免疫闭气</td></tr>
+    <tr><td><code>freeze</code></td><td>点穴定身</td><td>冰冻（冰核）</td><td>控制</td><td>2</td><td>完全禁行动</td><td>覆盖</td><td>破冰 / 净化</td><td>冰抗</td></tr>
+    <tr><td><code>root</code></td><td>锁足</td><td>定身</td><td>控制</td><td>1</td><td>禁移动</td><td>刷新</td><td>解控技</td><td>免疫锁足</td></tr>
+    <tr><td><code>disarm</code></td><td>卸兵</td><td>缴械</td><td>控制</td><td>1</td><td>禁普攻</td><td>刷新</td><td>解控技</td><td>免疫卸兵</td></tr>
+    <tr><td><code>sleep</code></td><td>昏睡</td><td>睡眠</td><td>控制</td><td>2</td><td>禁行动，受击醒</td><td>刷新</td><td>受击 / 净化</td><td>免疫昏睡</td></tr>
+    <tr><td><code>confusion</code></td><td>走火入魔</td><td>混乱</td><td>控制</td><td>1~2</td><td>乱打对象</td><td>刷新</td><td>净化</td><td>免疫走火入魔</td></tr>
+    <tr><td><code>taunt</code></td><td>挑衅</td><td>嘲讽</td><td>控制</td><td>1</td><td>强制集火</td><td>刷新</td><td>净化</td><td>免疫挑衅</td></tr>
+    <tr><td><code>bleed</code></td><td>流血</td><td>出血</td><td>持续伤害</td><td>3~5</td><td>回合末扣血</td><td>可叠层</td><td>止血 / 净化</td><td>免流血</td></tr>
+    <tr><td><code>poison</code></td><td>中毒</td><td>中毒</td><td>持续伤害</td><td>3~5</td><td>回合始扣血扣蓝</td><td>可叠层</td><td>解毒 / 净化</td><td>免毒</td></tr>
+    <tr><td><code>burn</code></td><td>灼伤</td><td>灼烧</td><td>持续伤害</td><td>3</td><td>回合末扣血</td><td>可叠层</td><td>净化</td><td>免灼烧</td></tr>
+    <tr><td><code>slow</code></td><td>迟缓</td><td>减速</td><td>削弱</td><td>2~4</td><td>降集气</td><td>可叠层</td><td>净化</td><td>免迟缓</td></tr>
+    <tr><td><code>weaken</code></td><td>散功 / 破防</td><td>减攻 / 减防</td><td>削弱</td><td>2~4</td><td>降攻防</td><td>可叠层</td><td>净化</td><td>免减益</td></tr>
+    <tr><td><code>anti_heal</code></td><td>封穴断疗</td><td>禁疗</td><td>削弱</td><td>2~4</td><td>禁 / 降治疗</td><td>可叠层</td><td>净化</td><td>免禁疗</td></tr>
+    <tr><td><code>hasten</code></td><td>身轻如燕</td><td>提速</td><td>增益</td><td>2~3</td><td>升集气</td><td>覆盖</td><td>自然衰减 / 驱散</td><td>—</td></tr>
+    <tr><td><code>shield</code></td><td>罡气护体</td><td>护盾</td><td>增益</td><td>1~3</td><td>独立血量吸收</td><td>同源覆盖</td><td>自然消耗</td><td>—</td></tr>
+  </table>
+
+  <h3>14.10 映射到本地代码与配置</h3>
+  <table>
+    <tr><th>文件</th><th>改动</th></tr>
+    <tr><td><code>status_effects.json</code></td><td>每项扩展 <code>display_name</code>（武学命名）/ <code>category</code> / <code>lock_flags</code>（禁止招式 / 普攻 / 移动 / 治疗）/ <code>clearable_by</code>（dispel/purify/remove+白名单）/ <code>stack_rule</code>（replace/refresh/stack）/ <code>settle_at</code>（turn_start/turn_end/on_hit）/ <code>immunity</code> 豁免；百分比扣血带 <code>max_pct</code> 上限</td></tr>
+    <tr><td><code>combat_character.gd</code></td><td>新增 <code>is_locked(flag)</code> / <code>control_resist</code> / <code>immunity</code> / 持续伤害结算回调；<code>apply_derive_panel</code> 后接「状态归一化」</td></tr>
+    <tr><td><code>combat_core.gd</code></td><td>行动判定前查 <code>is_locked</code>；回合开始 / 结束两段结算器；驱散 / 净化 / 解除三层；控制递减与免疫拦截</td></tr>
+    <tr><td><code>attribute_table.json</code></td><td><code>status</code> 节点：控制递减窗口（回合内命中次数）、各类上限（如持续伤害百分比上限、反震上限）、默认时长档</td></tr>
+  </table>
+
+  <h3>14.11 实施建议</h3>
+  <ul>
+    <li><b>阶段 B2（判定后）</b>：先把「结算时机两段式 + is_locked 拦截 + 驱散三层」框架接入 combat_core，全部默认弱化，行为不回归。</li>
+    <li><b>阶段 C2（内容）</b>：status_effects.json 建档核心 8~12 状态（§14.9，武学命名），招式 / 丹药 / 敌人引用 <code>display_name</code>。</li>
+    <li><b>阶段 D2（调参）</b>：按「封招命中率 40~45%、点穴定身追一口冰劲护体血量」等口径跑回合模拟，校验控制链上限与首领最低保护。</li>
+  </ul>
+  <div class="banner ok"><b>验收：</b>控制类状态全流程不掉链子——施加 → 效果命中 vs 抵抗 → 行动拦截 → 回合结算 →（递减 / 免疫 / 驱散）回避死；旧状态在缺省字段下行为与现在完全一致。</div>
+<div class="foot">本文档为数值方案设计，落地代码改动需先经双闸门验证并按提交队列（架构窗口）统一 flush。所有新增/扩展 JSON 字段保持缺省兜底兼容。</div>
+</div>
+</body>
+</html>

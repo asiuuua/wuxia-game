@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>剧情示例 · 烟雨楼失剑案 —— 表格与剧情如何咬合</title>
+<style>
+  :root{--bg:#0f141c;--card:#161d29;--card2:#1c2534;--line:#263244;--ink:#e6edf7;--sub:#9fb0c9;--accent:#e8b44a;--accent2:#4aa8e8;--good:#5bd99a;--warn:#e8794a;--code:#1b2431}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:"Microsoft YaHei",system-ui,-apple-system,sans-serif;line-height:1.72;font-size:15px}
+  .wrap{max-width:1040px;margin:0 auto;padding:40px 22px 80px}
+  header{padding:14px 0 8px}
+  .kicker{color:var(--accent);letter-spacing:.16em;font-size:13px;font-weight:700}
+  h1{font-size:27px;margin:6px 0 4px}
+  .sub{color:var(--sub);font-size:14px}
+  h2{font-size:21px;margin:40px 0 12px;border-bottom:2px solid var(--line);padding-bottom:8px;color:#fff}
+  h2 .no{color:var(--accent);margin-right:8px}
+  h3{font-size:16px;margin:22px 0 8px;color:var(--accent2)}
+  p{margin:10px 0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:14px 0}
+  b{color:#fff}
+  pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font-size:12.8px;line-height:1.6}
+  code,pre{font-family:Consolas,monospace;color:#d6e6ff}
+  code.inline{background:var(--code);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:13px}
+  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:13px}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:var(--card2);color:var(--accent);font-weight:700}
+  tr:nth-child(even) td{background:rgba(255,255,255,.02)}
+  .zh{color:#cfe3ff}
+  .callout{background:linear-gradient(90deg,rgba(232,180,74,.10),rgba(232,180,74,.03));border-left:4px solid var(--accent);padding:12px 16px;border-radius:8px;margin:14px 0}
+  .callout.blue{background:linear-gradient(90deg,rgba(74,168,232,.10),rgba(74,168,232,.03));border-left-color:var(--accent2)}
+  .callout.green{background:linear-gradient(90deg,rgba(91,217,154,.10),rgba(91,217,154,.03));border-left-color:var(--good)}
+  .flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0}
+  .node{background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:7px 11px;font-size:12.5px;white-space:nowrap}
+  .node b{color:#fff}
+  .arrow{color:var(--accent);font-weight:700}
+  .tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:20px;background:var(--card2);border:1px solid var(--line);color:var(--sub);margin-right:4px}
+  ul{margin:8px 0;padding-left:22px} li{margin:6px 0}
+  .flag{color:#7fd1ff}
+  .item{color:#ffd77d}
+  a{color:var(--accent2)}
+  .foot{margin-top:50px;color:var(--sub);font-size:12px;border-top:1px solid var(--line);padding-top:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="kicker">剧情示例 · 多支线交织 + 道具获取</div>
+  <h1>「烟雨楼失剑案」 —— 用一张张表格拼出来的故事</h1>
+  <div class="sub">一个人物关系盘根错节、要找道具、要打赢架、还分出三种结局的武侠小剧本。每一处"故事桥段"，下面都对应一张表、一笔 flag。看完你就能看懂：剧情不是码出来的，是查表查出来 + 记笔记记出来的。</div>
+</header>
+
+<div class="callout">
+  <b>上一篇的约定（一句话复习）：</b>游戏 = <b>一本书</b>（表格：每件事写在一"页"）＋ <b>一支小本子</b>（flag：记录"你做过啥、好感多少、拿过啥"）。走一步翻一页、记一笔；岔路口翻小本子决定往哪页走。
+</div>
+
+<h2><span class="no">①</span>先把故事梗概读一遍（当小说看）</h2>
+<div class="card">
+  <h3>《烟雨楼失剑案》</h3>
+  <p class="zh">"烟雨楼"是本书里泰山北斗级的门派。某个雨夜，镇派宝剑<b class="item">「青釭剑」</b>不翼而飞。你受掌门所托查案。当晚的值夜弟子阿禾说，隐约瞥见一个<b>披黑斗篷的瘦影</b>从后山方向掠走。</p>
+  <p class="zh">顺着这根线，三个线索缠在一起：<b>画师刘三</b>说雨夜见过可疑人、画得出轮廓，但要你给一副<b class="item">「上等狼毫笔」</b>才肯细讲；<b>猎户</b>说伸手不见五指的夜里，那个黑影往<b>城南破庙</b>去了；<b>游方郎中沈雪衣</b>知道接头暗号，但她跟你不熟不开口。</p>
+  <p class="zh">你以为追到城南破庙能一锤定音——却撞上一场硬仗。打赢才知道，这把剑背后藏着一场<b>内鬼夺权</b>的棋。最后是<b>当众揭穿内奸</b>、还是<b>只追回剑</b>、还是<b>被江湖恩怨牵连到别的结局</b>，全看你一路攒下的线索和一次关键抉择。</p>
+</div>
+<p>故事梗概里其实藏着 6 个"桥段"，每个都要「翻某本书的一页 + 记一笔小本子」。下面把它拆开。</p>
+
+<h2><span class="no">②</span>关系脉络图：六张表怎么互相咬合</h2>
+<p>先看这张关系图——绿色箭头是"拿/给道具"，蓝色箭头是"触发/推进"，红色箭头是"条件不足走另一边"。中间那几行小字就是"flag（小本子上的笔记）"，它们把几条支线拧成一股绳。</p>
+<div class="card">
+  <div class="flow">
+    <span class="node">值夜弟子<b>阿禾</b><br>首次线索</span><span class="arrow">→</span>
+    <span class="node">主线 <b>q_capital_invest</b><br>（查剑案）</span><span class="arrow">→同时开三条支线→</span>
+  </div>
+  <div class="flow">
+    <span class="node"><b>支线A</b> 画师刘三</span><span class="arrow">要物品→</span>
+    <span class="node">拿<b class="item">狼毫笔</b><br>(买/小任务得)</span><span class="arrow">给了→</span>
+    <span class="node">笔记：<span class="flag">painter_described ✓</span><br>刘三画出黑影轮廓</span>
+  </div>
+  <div class="flow">
+    <span class="node"><b>支线B</b> 城南破庙</span><span class="arrow">→打一场→</span>
+    <span class="node">打赢敌方掉<br><b class="item">黑铁令牌 ⬭</b></span><span class="arrow">→笔记：</span><span class="node"><span class="flag">got_black_talisman ✓</span></span>
+  </div>
+  <div class="flow">
+    <span class="node"><b>支线C</b> 郎中沈雪衣</span><span class="arrow">好感不足→</span>
+    <span class="node">送<b class="item">雪莲</b><span class="arrow">→笔记：</span><span class="node"><span class="flag">gave_snow_lotus ✓</span>+好感↑</span></span><span class="arrow">→她透露接头暗号</span>
+  </div>
+  <div class="flow">
+    <span class="node"><b>隐藏线D</b> 真凶线索<br>「要三样都齐」才开</span><span class="arrow">条件=</span>
+    <span class="node"><span class="flag">got_black_talisman ✓</span></span>
+    <span class="node"><span class="flag">painter_described ✓</span></span>
+    <span class="node"><span class="flag">gave_snow_lotus ✓</span></span>
+  </div>
+  <div class="flow">
+    <span class="node">齐了→识破<b>内鬼</b></span><span class="arrow">→</span>
+    <span class="node">关键抉择：当众揭穿？</span><span class="arrow">→ 好结局</span>
+    <span class="node">残缺→只追回剑</span><span class="arrow">→ 一般结局</span>
+    <span class="node">放过黑影→</span><span class="arrow">→ 另一结局</span>
+  </div>
+</div>
+<p><b>注意 NBA 藏在中间的关键：</b>狼毫笔、黑铁令牌、雪莲这三件<b>道具</b>，各自把一条支线往前推，而它们拿到的凭证（flag）又被<b>隐藏线 D</b> 一次性回收——只有三件全凑齐，才开得了通往真凶的门。这就是"多支线交织"的打架方式：<b>不在一条线上铺开，而是几根线凑材料汇到一根暗线上。</b></p>
+
+<h2><span class="no">③</span>第一张表：任务表 quests.json（这本书的"目录"）</h2>
+<p>任务表是故事的主目录。每条任务一行，目标、前置、完成后记什么笔记都写在里面。这里故意用咱们项目真实的字段风格（<code>prerequisites / then_set</code> 是给分支链预留的扩展）：</p>
+<pre>{
+  "quests": [
+    { "id":"q_capital_invest", "name":"烟雨楼失剑案", "type":"main",   // 主线
+      "prerequisites": {"spoken_to_ahoo": true},                            // 先跟阿禾聊过
+      "then_set": { "investigation_started": true },                        // 开查 → 记一笔
+      "on_start_unlocks": ["q_inkbrush","q_tackle_shadow","q_snow_lotus"] },// 👈 一次张开三条支线
+    { "id":"q_inkbrush", "name":"求画师帮忙", "type":"side",
+      "objectives":[
+        { "id":"get",   "desc":"给刘三弄一支上等狼毫笔",
+          "need_item":"item_foxhair_brush", "need_count":1 },                // 目标=拿道具
+        { "id":"give",  "desc":"把狼毫笔交给刘三" } ],
+      "then_set": { "painter_described": true } },                            // 给了→记"画师开口了"
+    { "id":"q_tackle_shadow", "name":"城南破庙黑影", "type":"side",
+      "objectives":[
+        { "id":"defeat", "desc":"在破庙击退黑衣刺客",
+          "target_battle":"battle_old_temple", "need":1 } ],                 // 目标=打一场
+      "rewards":{"exp":220,
+        "items":[ {"item_id":"item_black_talisman","count":1} ]},            // 打赢掉令牌
+      "then_set": { "got_black_talisman": true } },                          // + 记"拿到令牌"
+    { "id":"q_snow_lotus", "name":"郎中的心事", "type":"side",
+      "prerequisites": {"bond_shenxueyi >= 2": true},                        // 好感不够不开
+      "objectives":[
+        { "id":"gift", "desc":"赠沈雪衣一朵雪莲",
+          "need_item":"item_snow_lotus", "need_count":1 } ],                 // 送道具
+      "then_set": { "gave_snow_lotus": true, "bond_shenxueyi+1": true } },   // 送→记 + 好感+1
+    { "id":"q_hidden_truth", "name":"雷雨之夜的真凶", "type":"hidden",       // 隐藏线 D
+      "prerequisites":{                                                      // 👈 三件全齐才开
+        "got_black_talisman": true,
+        "painter_described": true,
+        "gave_snow_lotus": true } }
+  ]
+}</code><b class="zh">大白话解读：</b>主线一开「同时张开三条支线」；支线B靠"打赢掉道具"，支线A/C靠"交道具"；而隐藏线D的开关就是"三条支线各记下的那笔 flag"都成立。任务表自己不长剧情，只写<b>目标、前置、和完成要记什么笔记</b>。</pre>
+
+<h2><span class="no">④</span>第二张表：物品表（这些道具都是"配料单上的料"）</h2>
+<pre>{
+  "items": [
+    { "id":"item_foxhair_brush",   "name":"上等狼毫笔", "type":"material",
+      "desc":"画师心头好。能在杂货铺买，或帮笔商倒夜壶换得" },
+    { "id":"item_black_talisman",  "name":"黑铁令牌 ⬭", "type":"key",
+      "desc":"从破庙刺客身上掉的信物，刻着烟雨楼的内门暗记" },   // 👈 key=任务关键道具
+    { "id":"item_snow_lotus",      "name":"雪莲", "type":"pill",
+      "desc":"天山灵药。沈雪衣遍寻多年，求之不得" }
+  ]
+}</code>
+<p><b>大白话解读：</b>物品表不写剧情，只写"这是啥、能干嘛"。它和任务表咬合靠的是 <b>quest 里写的 <code>need_item: "item_xxx"</code></b>——"你要办这事，手上得有这么件东西"。而每件东西从哪来，又是<b>另一条线给的就是它</b>（令牌=打架掉）。这就形成"一条线产道具，另一条线收道具"的拧绳效果。</pre>
+
+<h2><span class="no">⑤</span>第三张表：场景NPC表（"谁站在台上"）</h2>
+<pre>{
+  "npcs": [
+    { "id":"npc_ahoo_pupil",  "name":"值夜弟子阿禾", "scene":"capital_yanyu_lou",
+      "dialog_id":"dlg_ahoo", "quest_id":"q_capital_invest" },        // 他→主线
+    { "id":"npc_liu_painter", "name":"画师刘三",    "scene":"capital_yanyu_lou",
+      "dialog_id":"dlg_liu",  "quest_id":"q_inkbrush" },              // 他→支线A
+    { "id":"npc_shen_healer2","name":"郎中沈雪衣",  "scene":"capital_teahouse",
+      "dialog_id":"dlg_shen", "quest_id":"q_snow_lotus",              // 她→支线C
+      "need_flag":"q_capital_invest.investigation_started" },         // 👈 没开主线这人还不出现
+    { "id":"npc_monk_abbot",  "name":"寺门和尚",    "scene":"south_old_temple",
+      "dialog_id":"dlg_abbot", "battle_id":"battle_old_temple" }      // 撞他→进支线B战斗
+  ]
+}</code>
+<p><b>大白话解读：</b>NPC 表只回答两件事——"这人在哪、你碰他能触发哪条线"。它用 <code>scene</code> 决定出现在哪个画面，用 <code>dialog_id</code> 决定说话，用 <code>quest_id</code>/<code>battle_id</code> 钩任务和战斗。甚至<b>有的人要等某条主线开了才出现</b>（<code>need_flag</code>），这就是"剧情没到、人不露脸"。</pre>
+
+<h2><span class="no">⑥</span>第四张表：对话表 + 触发事件表（"他开口说什么、选完干嘛"）</h2>
+<pre>// dialogs.json —— 说话 + 给选项
+{ "dialogs": { "dlg_liu": { "lines":[
+    "刘三：雨夜那背影我见过…",
+    { "choices":[            // 👈 对话里的岔路口
+      { "text":"我这儿有支上等狼毫笔（交道具）",
+        "consume_item":"item_foxhair_brush",        // 收走道具
+        "effects":["set_flag:painter_described", "advance:q_inkbrush"] }, // 记一笔+推进
+      { "text":"改日再来", "effects":[] } ] } ] } } }
+
+// dialogue_events.json —— 选项背后能触发的小效果
+{ "events":{
+  "set_flag":        { "type":"flag_set" },        // 往小本子写字
+  "advance":         { "type":"quest_advance" },   // 任务推进
+  "give_reward":     { "type":"grant_item", "item_id":"item_black_talisman" },
+  "gain_bond":       { "type":"bond_up", "target":"shen_xueyi", "delta":1 } } }
+</code>
+<p><b>大白话解读：</b>对话表写"说什么 + 给几个选项"，触发事件表写"每个选项背后做啥"。选"交笔"= 收道具 + 记一笔 + 推进支线A；沈雪衣那根线的"送雪莲"同理，会给 <code>gain_bond</code>（好感+1）。<b>选项就是扳道岔的手，效果表就是扳完之后小本子上落的那一笔。</b></pre>
+
+<h2><span class="no">⑦</span>第五、六张表：战斗表 + 敌人表（"那场硬仗的配料单"）</h2>
+<pre>// battles.json —— 这一场架怎么摆
+{ "battles":[ { "id":"battle_old_temple", "name":"破庙刺客战",
+  "enemy_ids":["enemy_ninja_001","enemy_brute_001"],
+  "turn_mode":"sequential", "tactical":true,
+  "grid":{ "width":9,"height":7,"obstacles":["4,5"],                 // 擂台多大、哪堵墙
+           "deployment":{"player":[1,3],"enemy_ninja_001":[7,2],"enemy_brute_001":[7,4]} },
+  "rewards":{"exp":220,"items":[{"item_id":"item_black_talisman","count":1}]} } ] }   // 打赢掉令牌
+
+// enemies.json —— 敌手多硬
+{ "enemies":[ { "id":"enemy_ninja_001","name":"黑衣刺客","lvl":6,"attack":18,
+                "defense":8,"speed":12,"max_hp":90 } ] }
+</code>
+<p><b>大白话解读：</b>"破庙刺客战"这张配料单写得很死：敌人是谁、擂台多宽有几堵墙、敌人站哪、打赢掉什么。敌人又去 <code>enemies.json</code> 查数值得多少血多凶。<b>战斗本身不写"这段剧情讲啥"，只写"这场架怎么打、打赢给啥"，剧情是打过之后由信号和 flag 接棒的。</b></pre>
+
+<h2><span class="no">⑧</span>最关键的教学：三个玩家各走一遍，故事就不一样</h2>
+<p>下面让<b>三个不同玩法的玩家</b>闯同一个剧本——你会发现，游戏从头到尾只做"查表 + 翻小本子 + 记笔记"，但三人的结局完全不同。<b>差别只来自小本子上记的 flag 不一样。</b></p>
+
+<table>
+  <tr><th style="width:16%">步骤</th><th>玩家甲（全收集狂）</th><th>玩家乙（只爱打架）</th><th>玩家丙（速通党）</th></tr>
+  <tr><td>开场</td><td>聊完阿禾，主线 <code>investigation_started ✓</code></td><td colspan="2">同左（没这步主线都不开）</td></tr>
+  <tr><td>支线A<br>画师</td><td>买狼毫笔交给刘三</td><td>没做准备，刘三不肯> donate，跳过</td><td>不找画师</td></tr>
+  <tr><td>flag</td><td><span class="flag">painter_described ✓</span></td><td>无</td><td>无</td></tr>
+  <tr><td>支线B<br>破庙</td><td>拿下硬仗</td><td>拿下硬仗（他的最爱）</td><td>心烦，绕路不打</td></tr>
+  <tr><td>掉落</td><td><span class="item">黑铁令牌</span> <span class="flag">got_black_talisman ✓</span></td><td>同左 <span class="flag">✓</span></td><td>无令牌</td></tr>
+  <tr><td>支线C<br>郎中</td><td>送雪莲，好感+1</td><td>好感不够，不搭理</td><td>直接省</td></tr>
+  <tr><td>flag</td><td><span class="flag">gave_snow_lotus ✓</span></td><td>无</td><td>无</td></tr>
+  <tr><td>隐藏线D 开门?</td><td><b>三 flag 全齐 → 门开了</b></td><td>缺两样 → 门关着</td><td>啥都没有 → 门关着</td></tr>
+  <tr><td>能否识破内鬼</td><td>能：画出轮廓+令牌内门暗记+郎中暗号 → 拼出内鬼</td><td>不能，只凭令牌知道"剑在后山"</td><td>不能，连剑在哪都要绕很久</td></tr>
+  <tr><td>结局</td><td><b>当众揭穿内奸，夺回宝剑</b>（好结局）</td><td><b>抢回剑，但内鬼没揪出</b>（一般）</td><td><b>剑拿回已子变血染山道</b>（另一结局）</td></tr>
+</table>
+<div class="callout green">
+  <b>看懂这张对比表，你就算真懂了：</b>三人都玩同一个剧本（同一本书），代码一模一样，处罚区别只是——玩家甲小本子上 <code>三种 flag 都打了勾</code>，隐藏线D的开门条件是"三勾开一格"；乙只勾了一格，丙一格没勾。而结局闸门又进一步，只有"画师✓+令牌✓+雪莲✓ 都满足"才给"揭穿内鬼"的路。所以<b>偷懒≠剧情坏了，而是你凑不齐那把开门的钥匙。</b>
+</div>
+
+<h2><span class="no">⑨</span>用大白话收个尾：表格到底是怎么把你玩出一个故事的</h2>
+<ul>
+  <li><b>任务表 = 目录</b>：一件大事分成几小步，每步写"目标、前置、完成记什么"。它管"你在干嘛、下一步去哪"。</li>
+  <li><b>物品表 = 道具池</b>：任务要道具，就报它的 id；道具产在别的任务/战斗，就形成"线A产出→线B消费"。</li>
+  <li><b>NPC表 = 演员表</b>：谁在哪、碰他能勾哪条线；有的人要主线开了才登场（need_flag）。</li>
+  <li><b>对话表 + 事件表 = 台词 + 动作</b>：选项就是扳道岔的手，每扳一下就在小本子记一笔、或推进一段、或收走道具、或加好感。</li>
+  <li><b>战斗表 + 敌人表 = 硬仗配料单</b>：这一场架怎么摆、打赢给啥；它不生产剧情，剧情由打赢后冒出来的信号/flag 接棒。</li>
+  <li><b>那本小本子（flag + 好感）</b>：是所有这些表的"胶水"。每条线做完记个勾，隐藏线和结局闸门靠这些勾开门/定结局。</li>
+</ul>
+<div class="callout">
+  <b>终极一句话：</b>剧情不是一篇篇写死的文章，而是一张张互相用 "道具 id / 前置 flag / 目标战斗 id" 串起来的表格。游戏运行时 <b>查表 → 演麻雀 × 记一笔 → 下一个岔口读笔记 → 扳道岔</b>，无限循环，直到结局闸门按你笔记上凑齐的勾数开门放结局。<b>你玩出来什么，不取决于游戏写没写那段，只取决于你小本子上的勾够不够、够不够格。</b>
+</div>
+
+<div class="foot">
+  内部设计示意：以上 quests/town_npcs/dialogs/battles/enemies 均为对项目现有表结构的通俗化示例（字段风格对齐 data/configs 下的真实 JSON）。
+</div>
+</div>
+</body>
+</html>

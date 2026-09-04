@@ -1,0 +1,431 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>背包系统派单任务书 · 武侠 RPG</title>
+  <style>
+    @font-face { font-family:'CrimsonPro'; src:url('./_shared/fonts/CrimsonPro-Regular.ttf') format('truetype'); font-weight:400; }
+    @font-face { font-family:'CrimsonPro'; src:url('./_shared/fonts/CrimsonPro-Bold.ttf') format('truetype'); font-weight:700; }
+    @font-face { font-family:'InstrumentSans'; src:url('./_shared/fonts/InstrumentSans-Regular.ttf') format('truetype'); font-weight:400; }
+    @font-face { font-family:'InstrumentSans'; src:url('./_shared/fonts/InstrumentSans-Bold.ttf') format('truetype'); font-weight:700; }
+    @font-face { font-family:'JetBrainsMono'; src:url('./_shared/fonts/JetBrainsMono-Regular.ttf') format('truetype'); font-weight:400; }
+    @font-face { font-family:'JetBrainsMono'; src:url('./_shared/fonts/JetBrainsMono-Bold.ttf') format('truetype'); font-weight:700; }
+  </style>
+  <style>
+    :root {
+      --bg:#f7f2e7; --bg2:#efe6d3; --ink:#2b2620; --muted:#7a6f5f; --rule:#d8cdb8;
+      --accent:#8c2f1f; --accent2:#3d5a3c; --gold:#a8842c; --white:#ffffff;
+      --font:'InstrumentSans','PingFang SC','Microsoft YaHei',sans-serif;
+      --font-head:'CrimsonPro','Songti SC','SimSun',serif;
+      --font-mono:'JetBrainsMono','Consolas',monospace;
+      --max:980px; --shadow:0 2px 10px rgba(43,38,32,0.08);
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    html{font-size:16px;scroll-behavior:smooth;}
+    body{font-family:var(--font);color:var(--ink);line-height:1.75;padding:0;
+      background:radial-gradient(ellipse at 20% 0%,rgba(164,132,44,0.06),transparent 50%),radial-gradient(ellipse at 80% 100%,rgba(61,90,60,0.06),transparent 50%),var(--bg);}
+    article.page{max-width:var(--max);margin:0 auto;padding:0 1.5rem 4rem;}
+    header.cover{position:relative;margin:0 -1.5rem 2.5rem;padding:4rem 2rem 3.2rem;text-align:center;color:#f5efe2;
+      background:linear-gradient(160deg,#2b2620 0%,#3d3428 55%,#4a3a28 100%);border-bottom:3px solid var(--gold);}
+    header.cover .kicker{display:inline-block;font-size:0.82rem;letter-spacing:0.35em;text-transform:uppercase;color:#d9c9a3;
+      border:1px solid rgba(217,201,163,0.5);padding:0.3rem 1rem;border-radius:999px;margin-bottom:1.2rem;}
+    header.cover h1{font-family:var(--font-head);font-size:clamp(1.8rem,4.2vw,2.7rem);font-weight:700;letter-spacing:0.06em;line-height:1.3;}
+    header.cover .sub{margin-top:0.9rem;font-size:1.02rem;color:#e6dcc6;max-width:680px;margin-left:auto;margin-right:auto;}
+    header.cover .meta{margin-top:1.3rem;font-size:0.8rem;color:#c9bda2;letter-spacing:0.06em;}
+    section{margin-top:3rem;}
+    h2{font-family:var(--font-head);font-size:1.55rem;font-weight:700;display:flex;align-items:baseline;gap:0.7rem;
+      padding-bottom:0.55rem;margin-bottom:1.2rem;border-bottom:2px solid var(--accent);}
+    h2 .no{font-family:var(--font-mono);font-size:0.95rem;color:var(--accent);letter-spacing:0.05em;white-space:nowrap;}
+    h3{font-family:var(--font-head);font-size:1.15rem;font-weight:700;color:var(--accent2);margin:1.8rem 0 0.7rem;padding-left:0.65rem;border-left:3px solid var(--accent2);}
+    p{margin:0.65rem 0;} strong{font-weight:700;}
+    code{font-family:var(--font-mono);font-size:0.86em;background:var(--bg2);padding:0.1em 0.4em;border-radius:4px;}
+    .lead{font-size:1.04rem;color:#4a4238;}
+    .callout{background:var(--bg2);border-left:4px solid var(--accent);padding:1rem 1.2rem;border-radius:0 8px 8px 0;margin:1.2rem 0;box-shadow:var(--shadow);}
+    .callout .t{font-weight:700;color:var(--accent);}
+    .callout.green{border-left-color:var(--accent2);} .callout.green .t{color:var(--accent2);}
+    .callout.gold{border-left-color:var(--gold);} .callout.gold .t{color:var(--gold);}
+    .table-wrap{overflow-x:auto;margin:1.1rem 0;border-radius:8px;box-shadow:var(--shadow);}
+    table{width:100%;border-collapse:collapse;background:var(--white);font-size:0.9rem;}
+    thead th{background:var(--ink);color:#f5efe2;text-align:left;padding:0.6rem 0.85rem;font-weight:700;white-space:nowrap;}
+    tbody td{padding:0.55rem 0.85rem;border-bottom:1px solid var(--rule);vertical-align:top;}
+    tbody tr:nth-child(even){background:#faf6ec;} tbody tr:hover{background:#f3ead6;}
+    .pbadge{display:inline-block;font-size:0.72rem;font-weight:700;padding:0.1rem 0.5rem;border-radius:4px;color:#fff;white-space:nowrap;}
+    .p0{background:#8c2f1f;} .p1{background:#a8842c;} .p2{background:#7a6f5f;} .done{background:#4a7c4f;}
+    .wbadge{display:inline-block;font-size:0.72rem;font-weight:700;padding:0.12rem 0.55rem;border-radius:999px;white-space:nowrap;background:var(--bg2);color:var(--ink);border:1px solid var(--rule);}
+    .w-backpack{background:#e8dcc8;color:#5a3d1a;border-color:#c9a86a;} .w-ui{background:#dce8dd;color:#2c4a2e;border-color:#8fb392;}
+    .task{background:var(--white);border:1px solid var(--rule);border-radius:12px;margin:1.3rem 0;box-shadow:var(--shadow);overflow:hidden;}
+    .task .head{display:flex;align-items:center;gap:0.7rem;flex-wrap:wrap;padding:0.8rem 1.1rem;background:var(--bg2);border-bottom:1px solid var(--rule);}
+    .task .head .tid{font-family:var(--font-mono);font-weight:700;color:var(--accent);font-size:0.95rem;white-space:nowrap;}
+    .task .head .tname{font-weight:700;font-size:1.02rem;flex:1;}
+    .task .body{padding:0.9rem 1.1rem 1.1rem;}
+    .task .row{display:grid;grid-template-columns:110px 1fr;gap:0.4rem 0.8rem;margin:0.45rem 0;font-size:0.9rem;}
+    .task .row .k{color:var(--muted);font-weight:700;}
+    .task .files{font-family:var(--font-mono);font-size:0.82rem;background:var(--bg2);padding:0.5rem 0.7rem;border-radius:6px;margin:0.4rem 0;}
+    .task .files div{margin:0.1rem 0;}
+    pre.cmd{font-family:var(--font-mono);font-size:0.8rem;line-height:1.55;background:#2b2620;color:#e8dcc8;padding:0.8rem 1rem;border-radius:8px;overflow-x:auto;margin:0.5rem 0;white-space:pre-wrap;word-break:break-all;}
+    .flow{display:flex;flex-wrap:wrap;gap:0.6rem;align-items:center;margin:1rem 0;}
+    .flow .step{background:var(--white);border:1px solid var(--rule);border-radius:8px;padding:0.45rem 0.85rem;font-size:0.88rem;box-shadow:var(--shadow);}
+    .flow .arrow{color:var(--accent);font-weight:700;}
+    .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin:1.3rem 0;}
+    .stat{background:var(--white);border:1px solid var(--rule);border-radius:10px;text-align:center;padding:1rem 0.5rem;box-shadow:var(--shadow);}
+    .stat .num{font-family:var(--font-head);font-size:1.8rem;font-weight:700;color:var(--accent);}
+    .stat .lbl{font-size:0.78rem;color:var(--muted);margin-top:0.15rem;}
+    footer{margin-top:4rem;padding-top:1.3rem;border-top:1px solid var(--rule);font-size:0.85rem;color:var(--muted);}
+    @media(max-width:720px){.stats{grid-template-columns:repeat(2,1fr);}.task .row{grid-template-columns:90px 1fr;}}
+  </style>
+</head>
+<body>
+<article class="page">
+  <header class="cover">
+    <span class="kicker">INVENTORY · DISPATCH</span>
+    <h1>背包系统派单任务书</h1>
+    <p class="sub">把《单机游戏背包系统设计落地参考》的 21 项子功能拆成 17 个可直接派单的实现任务，标注优先级、责任窗口、涉及文件与验收标准。</p>
+    <div class="meta">2026-09-03 · 服务层（背包窗口）＋ UI 层（UI 窗口）双线并行 · 双闸门验收</div>
+  </header>
+
+  <section id="status">
+    <h2><span class="no">壹</span>现状盘点：8 已完成 / 13 缺口</h2>
+    <p class="lead">先对照代码实测（<code>inventory_service.gd</code> 与 <code>InventoryScreen.gd</code> 的方法清单），确认哪些子功能已经闭环、哪些还是空白，避免重复造轮子。</p>
+    <div class="stats">
+      <div class="stat"><div class="num">21</div><div class="lbl">子功能总数</div></div>
+      <div class="stat"><div class="num">8</div><div class="lbl">已完成</div></div>
+      <div class="stat"><div class="num">13</div><div class="lbl">待派单缺口</div></div>
+      <div class="stat"><div class="num">17</div><div class="lbl">拆出的任务数</div></div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>状态</th><th>子功能</th><th>代码依据</th></tr></thead>
+        <tbody>
+          <tr><td><span class="pbadge done">已实现</span></td><td>排序</td><td><code>sort_bag()</code> + <code>_on_sort()</code></td></tr>
+          <tr><td><span class="pbadge done">已实现</span></td><td>快速装备/使用</td><td><code>use_item()</code> + <code>_on_slot_pressed()</code></td></tr>
+          <tr><td><span class="pbadge done">已实现</span></td><td>物品详情 Tooltip</td><td><code>_on_slot_hover()</code> 悬浮详情</td></tr>
+          <tr><td><span class="pbadge done">已实现</span></td><td>一键整理</td><td><code>organize()</code> 自动堆叠/压实/排序</td></tr>
+          <tr><td><span class="pbadge done">已实现</span></td><td>堆叠与数量显示</td><td><code>_stack_to_existing()</code> + ItemSlot 角标</td></tr>
+          <tr><td><span class="pbadge done">已实现</span></td><td>丢弃/出售</td><td><code>drop_item()</code> + 右键菜单</td></tr>
+          <tr><td><span class="pbadge done">已实现</span></td><td>分类页签</td><td><code>_fill_grid(bag_name)</code> 分袋页签</td></tr>
+          <tr><td><span class="pbadge done">已实现</span></td><td>物品锁定（服务层）</td><td><code>set_item_locked() / is_item_locked()</code>，UI 入口待补（T5）</td></tr>
+          <tr><td><span class="pbadge p0">缺口</span></td><td>筛选/过滤</td><td>无 <code>query_items()</code>，需新增（T1）</td></tr>
+          <tr><td><span class="pbadge p0">缺口</span></td><td>搜索</td><td>无 <code>search_items()</code>，需新增（T2）</td></tr>
+          <tr><td><span class="pbadge p0">缺口</span></td><td>装备对比</td><td>无对比面板（T4）</td></tr>
+          <tr><td><span class="pbadge p1">缺口</span></td><td>仓库/储物箱</td><td>无 <code>stash_service.gd</code>（T10/T11）</td></tr>
+          <tr><td><span class="pbadge p1">缺口</span></td><td>耐久度与修理</td><td>无耐久字段与修理（T12）</td></tr>
+          <tr><td><span class="pbadge p1">缺口</span></td><td>物品锁定 UI 入口</td><td>服务层已有，右键菜单未接（T5）</td></tr>
+          <tr><td><span class="pbadge p1">缺口</span></td><td>批量操作</td><td>无批量丢弃/出售/使用（T8/T9）</td></tr>
+          <tr><td><span class="pbadge p1">缺口</span></td><td>新物品标记</td><td>无 NEW 角标与已读记录（T7）</td></tr>
+          <tr><td><span class="pbadge p1">缺口</span></td><td>物品来源提示</td><td><code>add_item(source)</code> 已存来源，Tooltip 未展示（T6）</td></tr>
+          <tr><td><span class="pbadge p2">缺口</span></td><td>背包扩容</td><td>无扩容逻辑与购买入口（T13）</td></tr>
+          <tr><td><span class="pbadge p2">缺口</span></td><td>自定义排序/收藏夹</td><td>无自定义规则与收藏分组（T14）</td></tr>
+          <tr><td><span class="pbadge p2">缺口</span></td><td>物品图鉴/收集册</td><td>无 <code>codex_service.gd</code>（T15）</td></tr>
+          <tr><td><span class="pbadge p2">缺口</span></td><td>快捷栏配置</td><td>无快捷栏与热键使用（T16）</td></tr>
+          <tr><td><span class="pbadge p2">缺口</span></td><td>自动整理规则</td><td>无预设规则自动归类（T17）</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout gold"><span class="t">注意：</span>「物品锁定」子功能服务层已闭环（<code>set_item_locked</code> 等），只差 UI 入口，因此归入 P1 的 T5 补齐，不重复造服务层。</div>
+  </section>  <section id="overview">
+    <h2><span class="no">贰</span>派单总览：17 个任务</h2>
+    <p class="lead">任务按「服务层先行、UI 层跟进」拆分：跨层功能先派服务层接口（背包窗口），再派 UI 层（UI 窗口）。P0 是 MVP 必须，P1 是完整版，P2 是锦上添花。</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>任务</th><th>子功能</th><th>优先级</th><th>责任窗口</th><th>依赖</th><th>一句话范围</th></tr></thead>
+        <tbody>
+          <tr><td><strong>T1</strong></td><td>筛选/过滤（服务层）</td><td><span class="pbadge p0">P0</span></td><td><span class="wbadge w-backpack">背包窗口</span></td><td>—</td><td><code>query_items()</code> 多维过滤接口 + 单测</td></tr>
+          <tr><td><strong>T2</strong></td><td>搜索（服务层）</td><td><span class="pbadge p0">P0</span></td><td><span class="wbadge w-backpack">背包窗口</span></td><td>—</td><td><code>search_items()</code> 关键字模糊匹配 + 单测</td></tr>
+          <tr><td><strong>T3</strong></td><td>筛选/搜索 UI</td><td><span class="pbadge p0">P0</span></td><td><span class="wbadge w-ui">UI 窗口</span></td><td>T1、T2</td><td>过滤下拉 + 搜索框接入背包界面</td></tr>
+          <tr><td><strong>T4</strong></td><td>装备对比</td><td><span class="pbadge p0">P0</span></td><td><span class="wbadge w-ui">UI 窗口</span></td><td>—</td><td>与已装备逐项对比，绿↑红↓高亮</td></tr>
+          <tr><td><strong>T5</strong></td><td>物品锁定 UI 入口</td><td><span class="pbadge p1">P1</span></td><td><span class="wbadge w-ui">UI 窗口</span></td><td>—</td><td>右键菜单锁定/解锁，锁图标联动</td></tr>
+          <tr><td><strong>T6</strong></td><td>物品来源提示</td><td><span class="pbadge p1">P1</span></td><td><span class="wbadge w-ui">UI 窗口</span></td><td>—</td><td>Tooltip 展示掉落/任务/商店来源</td></tr>
+          <tr><td><strong>T7</strong></td><td>新物品标记</td><td><span class="pbadge p1">P1</span></td><td><span class="wbadge w-backpack">背包窗口</span>＋<span class="wbadge w-ui">UI 窗口</span></td><td>—</td><td>NEW 角标、已读记录、查看后消失</td></tr>
+          <tr><td><strong>T8</strong></td><td>批量操作（服务层）</td><td><span class="pbadge p1">P1</span></td><td><span class="wbadge w-backpack">背包窗口</span></td><td>—</td><td><code>batch_discard() / batch_sell()</code> + 单测</td></tr>
+          <tr><td><strong>T9</strong></td><td>批量操作 UI</td><td><span class="pbadge p1">P1</span></td><td><span class="wbadge w-ui">UI 窗口</span></td><td>T8</td><td>多选模式 + 批量操作栏</td></tr>
+          <tr><td><strong>T10</strong></td><td>仓库/储物箱（服务层）</td><td><span class="pbadge p1">P1</span></td><td><span class="wbadge w-backpack">背包窗口</span></td><td>—</td><td>新建 <code>stash_service.gd</code> 存取/跨场景保留</td></tr>
+          <tr><td><strong>T11</strong></td><td>仓库/储物箱 UI</td><td><span class="pbadge p1">P1</span></td><td><span class="wbadge w-ui">UI 窗口</span></td><td>T10</td><td>仓库界面 + 背包⇄仓库转移</td></tr>
+          <tr><td><strong>T12</strong></td><td>耐久度与修理</td><td><span class="pbadge p1">P1</span></td><td><span class="wbadge w-backpack">背包窗口</span>＋<span class="wbadge w-ui">UI 窗口</span></td><td>—</td><td>耐久字段、低耐久警示、修理结算</td></tr>
+          <tr><td><strong>T13</strong></td><td>背包扩容</td><td><span class="pbadge p2">P2</span></td><td><span class="wbadge w-backpack">背包窗口</span>＋<span class="wbadge w-ui">UI 窗口</span></td><td>—</td><td>扩容槽位、购买/任务解锁入口</td></tr>
+          <tr><td><strong>T14</strong></td><td>自定义排序/收藏夹</td><td><span class="pbadge p2">P2</span></td><td><span class="wbadge w-backpack">背包窗口</span>＋<span class="wbadge w-ui">UI 窗口</span></td><td>—</td><td>自定义排序规则 + 收藏分组置顶</td></tr>
+          <tr><td><strong>T15</strong></td><td>物品图鉴/收集册</td><td><span class="pbadge p2">P2</span></td><td><span class="wbadge w-backpack">背包窗口</span>＋<span class="wbadge w-ui">UI 窗口</span></td><td>—</td><td>新建 <code>codex_service.gd</code> 已见/已收集统计</td></tr>
+          <tr><td><strong>T16</strong></td><td>快捷栏配置</td><td><span class="pbadge p2">P2</span></td><td><span class="wbadge w-ui">UI 窗口</span></td><td>—</td><td>快捷栏 + 热键快速使用丹药/暗器</td></tr>
+          <tr><td><strong>T17</strong></td><td>自动整理规则</td><td><span class="pbadge p2">P2</span></td><td><span class="wbadge w-backpack">背包窗口</span>＋<span class="wbadge w-ui">UI 窗口</span></td><td>—</td><td>预设规则自动归类/分解</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout"><span class="t">派单节奏：</span>先派 P0 四单（T1→T2→T3→T4），T3 依赖 T1/T2 服务层完成；P1 的 T9 依赖 T8、T11 依赖 T10。服务层单与 UI 单可并行，但 UI 单必须等服务层接口合入后再开工，避免接口对不上返工。</div>
+  </section>  <section id="p0">
+    <h2><span class="no">叁</span>P0 任务：MVP 必须（T1–T4）</h2>
+
+    <div class="task">
+      <div class="head"><span class="tid">T1</span><span class="tname">背包筛选/过滤 · 服务层接口</span><span class="pbadge p0">P0</span><span class="wbadge w-backpack">背包窗口</span></div>
+      <div class="body">
+        <div class="row"><span class="k">目标</span><span>在 <code>inventory_service.gd</code> 新增 <code>query_items(bag_name: String, filters: Dictionary) -> Array</code>，支持类型/稀有度/状态（锁定、NEW、耐久低）多维组合过滤，返回 <code>ItemInstance</code> 数组。</span></div>
+        <div class="row"><span class="k">要点</span><span>过滤条件为空时返回全量；多条件为 AND 关系；不修改背包数据，纯查询；复用 <code>_bag_by_name()</code> 与 <code>get_instance_by_id()</code>。</span></div>
+        <div class="row"><span class="k">涉及文件</span></div>
+        <div class="files"><div>services/inventory/inventory_service.gd</div><div>tests/unit/test_inventory_service.gd（新增过滤用例）</div></div>
+        <div class="row"><span class="k">验收标准</span><span>GATE1 零错误；GATE2 新增过滤单测全绿；组合过滤结果与手算一致。</span></div>
+        <div class="row"><span class="k">派单命令</span></div>
+        <pre class="cmd">python tools/handoff.py issue --from 架构窗口 --to 背包窗口 --title "T1 背包筛选/过滤服务层接口" --desc "inventory_service.gd 新增 query_items(bag_name, filters)，支持类型/稀有度/状态多维组合过滤，纯查询不改数据" --files services/inventory/inventory_service.gd tests/unit/test_inventory_service.gd --verify "GATE1 零错误；GATE2 新增过滤单测全绿"</pre>
+      </div>
+    </div>
+
+    <div class="task">
+      <div class="head"><span class="tid">T2</span><span class="tname">背包搜索 · 服务层接口</span><span class="pbadge p0">P0</span><span class="wbadge w-backpack">背包窗口</span></div>
+      <div class="body">
+        <div class="row"><span class="k">目标</span><span>新增 <code>search_items(keyword: String) -> Array</code>，按物品名称关键字模糊匹配（忽略大小写），可与筛选叠加。</span></div>
+        <div class="row"><span class="k">要点</span><span>关键字为空返回空数组；匹配 <code>item_id</code> 与显示名；返回 <code>ItemInstance</code> 数组；不修改数据。</span></div>
+        <div class="row"><span class="k">涉及文件</span></div>
+        <div class="files"><div>services/inventory/inventory_service.gd</div><div>tests/unit/test_inventory_service.gd（新增搜索用例）</div></div>
+        <div class="row"><span class="k">验收标准</span><span>GATE1 零错误；GATE2 新增搜索单测全绿；模糊匹配与大小写忽略行为正确。</span></div>
+        <div class="row"><span class="k">派单命令</span></div>
+        <pre class="cmd">python tools/handoff.py issue --from 架构窗口 --to 背包窗口 --title "T2 背包搜索服务层接口" --desc "inventory_service.gd 新增 search_items(keyword)，名称关键字模糊匹配，可与筛选叠加" --files services/inventory/inventory_service.gd tests/unit/test_inventory_service.gd --verify "GATE1 零错误；GATE2 新增搜索单测全绿"</pre>
+      </div>
+    </div>
+
+    <div class="task">
+      <div class="head"><span class="tid">T3</span><span class="tname">筛选/搜索 UI</span><span class="pbadge p0">P0</span><span class="wbadge w-ui">UI 窗口</span></div>
+      <div class="body">
+        <div class="row"><span class="k">目标</span><span>在 <code>InventoryScreen.gd</code> / <code>InventoryScreen.tscn</code> 增加顶部过滤下拉（类型/稀有度）与搜索输入框，调用 T1/T2 接口刷新网格。</span></div>
+        <div class="row"><span class="k">要点</span><span>过滤条件变化即刷新；搜索框防抖（如 0.3s）；空结果显示占位提示；与分类页签叠加生效。</span></div>
+        <div class="row"><span class="k">依赖</span><span>T1、T2 服务层接口合入后再开工。</span></div>
+        <div class="row"><span class="k">涉及文件</span></div>
+        <div class="files"><div>scenes/ui/overlays/inventory/InventoryScreen.gd</div><div>scenes/ui/overlays/inventory/InventoryScreen.tscn</div></div>
+        <div class="row"><span class="k">验收标准</span><span>GATE1 零错误；手动验证：筛选/搜索后网格正确、清空条件恢复全量。</span></div>
+        <div class="row"><span class="k">派单命令</span></div>
+        <pre class="cmd">python tools/handoff.py issue --from 架构窗口 --to UI窗口 --title "T3 背包筛选/搜索UI" --desc "InventoryScreen 增加过滤下拉与搜索框，调用 query_items/search_items 刷新网格，空结果占位提示" --files scenes/ui/overlays/inventory/InventoryScreen.gd scenes/ui/overlays/inventory/InventoryScreen.tscn --verify "GATE1 零错误；手动验证筛选/搜索正确" --followup "T1/T2 服务层接口已合入，可直接调用"</pre>
+      </div>
+    </div>
+
+    <div class="task">
+      <div class="head"><span class="tid">T4</span><span class="tname">装备对比</span><span class="pbadge p0">P0</span><span class="wbadge w-ui">UI 窗口</span></div>
+      <div class="body">
+        <div class="row"><span class="k">目标</span><span>选中可装备物品时，与已装备部位逐项对比属性，绿↑红↓高亮，无已装备则显示空位。</span></div>
+        <div class="row"><span class="k">要点</span><span>复用 <code>get_equippable_instances()</code> 与装备槽位数据；对比面板内嵌于详情 Tooltip 或独立小窗；数值差标注 +N/-N。</span></div>
+        <div class="row"><span class="k">涉及文件</span></div>
+        <div class="files"><div>scenes/ui/overlays/inventory/InventoryScreen.gd</div><div>scenes/ui/overlays/inventory/InventoryScreen.tscn</div><div>scenes/ui/components/item_slot/ItemSlot.gd（如需高亮）</div></div>
+        <div class="row"><span class="k">验收标准</span><span>GATE1 零错误；手动验证：装备对比数值正确、绿/红高亮符合预期。</span></div>
+        <div class="row"><span class="k">派单命令</span></div>
+        <pre class="cmd">python tools/handoff.py issue --from 架构窗口 --to UI窗口 --title "T4 装备对比" --desc "选中可装备物品时与已装备部位逐项对比，绿↑红↓高亮，复用 get_equippable_instances" --files scenes/ui/overlays/inventory/InventoryScreen.gd scenes/ui/overlays/inventory/InventoryScreen.tscn --verify "GATE1 零错误；手动验证对比数值与高亮正确"</pre>
+      </div>
+    </div>
+  </section>  <section id="p1">
+    <h2><span class="no">肆</span>P1 任务：完整版（T5–T12）</h2>
+
+    <div class="task">
+      <div class="head"><span class="tid">T5</span><span class="tname">物品锁定 UI 入口</span><span class="pbadge p1">P1</span><span class="wbadge w-ui">UI 窗口</span></div>
+      <div class="body">
+        <div class="row"><span class="k">目标</span><span>右键菜单增加「锁定/解锁」，调用服务层 <code>set_item_locked()</code>，锁图标随状态刷新。</span></div>
+        <div class="row"><span class="k">要点</span><span>锁定物品在丢弃/出售/整理时不可被操作（服务层已保证）；菜单文案随状态切换；刷新后锁图标同步。</span></div>
+        <div class="row"><span class="k">涉及文件</span></div>
+        <div class="files"><div>scenes/ui/overlays/inventory/InventoryScreen.gd（_open_context / _on_context_id）</div><div>scenes/ui/components/item_slot/ItemSlot.gd（锁图标刷新）</div></div>
+        <div class="row"><span class="k">验收标准</span><span>GATE1 零错误；手动验证：锁定后图标出现、丢弃/出售被拦截、解锁恢复。</span></div>
+        <div class="row"><span class="k">派单命令</span></div>
+        <pre class="cmd">python tools/handoff.py issue --from 架构窗口 --to UI窗口 --title "T5 物品锁定UI入口" --desc "右键菜单增加锁定/解锁，调用 set_item_locked，锁图标联动刷新" --files scenes/ui/overlays/inventory/InventoryScreen.gd scenes/ui/components/item_slot/ItemSlot.gd --verify "GATE1 零错误；手动验证锁定拦截与图标联动"</pre>
+      </div>
+    </div>
+
+    <div class="task">
+      <div class="head"><span class="tid">T6</span><span class="tname">物品来源提示</span><span class="pbadge p1">P1</span><span class="wbadge w-ui">UI 窗口</span></div>
+      <div class="body">
+        <div class="row"><span class="k">目标</span><span>Tooltip 展示物品来源（掉落/任务/商店），复用 <code>add_item(source)</code> 已存的来源字段。</span></div>
+        <div class="row"><span class="k">要点</span><span>来源为空显示「未知」；来源随实例持久化（save/load 已含 source 则直接展示）。</span></div>
+        <div class="row"><span class="k">涉及文件</span></div>
+        <div class="files"><div>scenes/ui/overlays/inventory/InventoryScreen.gd（Tooltip 渲染）</div></div>
+        <div class="row"><span class="k">验收标准</span><span>GATE1 零错误；手动验证：不同来源物品 Tooltip 正确显示来源。</span></div>
+        <div class="row"><span class="k">派单命令</span></div>
+        <pre class="cmd">python tools/handoff.py issue --from 架构窗口 --to UI窗口 --title "T6 物品来源提示" --desc "Tooltip 展示物品来源（掉落/任务/商店），复用 add_item(source) 已存字段" --files scenes/ui/overlays/inventory/InventoryScreen.gd --verify "GATE1 零错误；手动验证来源显示正确"</pre>
+      </div>
+    </div>
+
+    <div class="task">
+      <div class="head"><span class="tid">T7</span><span class="tname">新物品标记（NEW 角标）</span><span class="pbadge p1">P1</span><span class="wbadge w-backpack">背包窗口</span>＋<span class="wbadge w-ui">UI 窗口</span></div>
+      <div class="body">
+        <div class="row"><span class="k">目标</span><span>新增物品打 NEW 标记，查看后消失；服务层记录已读实例，UI 层渲染角标。</span></div>
+        <div class="row"><span class="k">要点</span><span>服务层：<code>mark_new(iid)</code> / <code>mark_seen(iid)</code> / <code>is_new(iid)</code>，随 save/load 持久化；UI 层：ItemSlot 渲染 NEW 角标，打开详情/点击后调 <code>mark_seen</code>。</span></div>
+        <div class="row"><span class="k">涉及文件</span></div>
+        <div class="files"><div>services/inventory/inventory_service.gd（NEW 记录）</div><div>scenes/ui/components/item_slot/ItemSlot.gd（NEW 角标）</div><div>scenes/ui/overlays/inventory/InventoryScreen.gd（已读联动）</div><div>tests/unit/test_inventory_service.gd（NEW 单测）</div></div>
+        <div class="row"><span class="k">验收标准</span><span>GATE1 零错误；GATE2 新增 NEW 单测全绿；手动验证：新物品有角标、查看后消失。</span></div>
+        <div class="row"><span class="k">派单命令</span></div>
+        <pre class="cmd">python tools/handoff.py issue --from 架构窗口 --to 背包窗口 --title "T7 新物品标记服务层" --desc "inventory_service 新增 mark_new/mark_seen/is_new，随存档持久化" --files services/inventory/inventory_service.gd tests/unit/test_inventory_service.gd --verify "GATE1 零错误；GATE2 NEW 单测全绿"</pre>
+        <pre class="cmd">python tools/handoff.py issue --from 架构窗口 --to UI窗口 --title "T7b 新物品标记UI" --desc "ItemSlot 渲染 NEW 角标，查看后调 mark_seen 消失" --files scenes/ui/components/item_slot/ItemSlot.gd scenes/ui/overlays/inventory/InventoryScreen.gd --verify "GATE1 零错误；手动验证角标消失" --followup "T7 服务层已合入"</pre>
+      </div>
+    </div>
+
+    <div class="task">
+      <div class="head"><span class="tid">T8</span><span class="tname">批量操作 · 服务层</span><span class="pbadge p1">P1</span><span class="wbadge w-backpack">背包窗口</span></div>
+      <div class="body">
+        <div class="row"><span class="k">目标</span><span>新增 <code>batch_discard(iids: Array) -> Dictionary</code>、<code>batch_sell(iids: Array) -> Dictionary</code>，批量丢弃/出售并返回结算结果。</span></div>
+        <div class="row"><span class="k">要点</span><span>跳过锁定实例并计入结果；逐项结算数量与收益；任一失败不影响其余；返回 <code>{discarded, sold, skipped_locked, gold}</code>。</span></div>
+        <div class="row"><span class="k">涉及文件</span></div>
+        <div class="files"><div>services/inventory/inventory_service.gd</div><div>tests/unit/test_inventory_service.gd（批量用例）</div></div>
+        <div class="row"><span class="k">验收标准</span><span>GATE1 零错误；GATE2 批量单测全绿；锁定实例被跳过。</span></div>
+        <div class="row"><span class="k">派单命令</span></div>
+        <pre class="cmd">python tools/handoff.py issue --from 架构窗口 --to 背包窗口 --title "T8 批量操作服务层" --desc "inventory_service 新增 batch_discard/batch_sell，跳过锁定实例并返回结算" --files services/inventory/inventory_service.gd tests/unit/test_inventory_service.gd --verify "GATE1 零错误；GATE2 批量单测全绿"</pre>
+      </div>
+    </div>    <div class="task">
+      <div class="head"><span class="tid">T9</span><span class="tname">批量操作 UI</span><span class="pbadge p1">P1</span><span class="wbadge w-ui">UI 窗口</span></div>
+      <div class="body">
+        <div class="row"><span class="k">目标</span><span>背包界面增加「多选模式」：长按/按钮进入多选，勾选多个格子后出现批量操作栏（丢弃/出售/使用）。</span></div>
+        <div class="row"><span class="k">要点</span><span>锁定物品在多选栏置灰不可选；操作前弹确认框；完成后退出多选并刷新。</span></div>
+        <div class="row"><span class="k">依赖</span><span>T8 服务层接口合入后再开工。</span></div>
+        <div class="row"><span class="k">涉及文件</span></div>
+        <div class="files"><div>scenes/ui/overlays/inventory/InventoryScreen.gd</div><div>scenes/ui/overlays/inventory/InventoryScreen.tscn</div><div>scenes/ui/components/item_slot/ItemSlot.gd（多选勾选态）</div></div>
+        <div class="row"><span class="k">验收标准</span><span>GATE1 零错误；手动验证：多选、批量丢弃/出售、锁定置灰、确认弹窗。</span></div>
+        <div class="row"><span class="k">派单命令</span></div>
+        <pre class="cmd">python tools/handoff.py issue --from 架构窗口 --to UI窗口 --title "T9 批量操作UI" --desc "背包多选模式 + 批量操作栏，锁定置灰，操作前确认" --files scenes/ui/overlays/inventory/InventoryScreen.gd scenes/ui/overlays/inventory/InventoryScreen.tscn scenes/ui/components/item_slot/ItemSlot.gd --verify "GATE1 零错误；手动验证多选与批量操作" --followup "T8 服务层已合入"</pre>
+      </div>
+    </div>
+
+    <div class="task">
+      <div class="head"><span class="tid">T10</span><span class="tname">仓库/储物箱 · 服务层</span><span class="pbadge p1">P1</span><span class="wbadge w-backpack">背包窗口</span></div>
+      <div class="body">
+        <div class="row"><span class="k">目标</span><span>新建 <code>services/inventory/stash_service.gd</code>，独立存储空间，支持存取、扩容、跨场景保留（随存档）。</span></div>
+        <div class="row"><span class="k">要点</span><span>复用 <code>ItemInstance</code> 与堆叠逻辑；接口：<code>store(iid, count)</code> / <code>withdraw(iid, count)</code> / <code>list()</code> / <code>get_capacity()</code>；容量上限可配置。</span></div>
+        <div class="row"><span class="k">涉及文件</span></div>
+        <div class="files"><div>services/inventory/stash_service.gd（新建）</div><div>tests/unit/test_stash_service.gd（新建单测）</div></div>
+        <div class="row"><span class="k">验收标准</span><span>GATE1 零错误；GATE2 新增 stash 单测全绿；存取/堆叠/跨场景保留正确。</span></div>
+        <div class="row"><span class="k">派单命令</span></div>
+        <pre class="cmd">python tools/handoff.py issue --from 架构窗口 --to 背包窗口 --title "T10 仓库/储物箱服务层" --desc "新建 stash_service.gd，独立存储空间，存取/扩容/跨场景保留，随存档持久化" --files services/inventory/stash_service.gd tests/unit/test_stash_service.gd --verify "GATE1 零错误；GATE2 stash 单测全绿"</pre>
+      </div>
+    </div>
+
+    <div class="task">
+      <div class="head"><span class="tid">T11</span><span class="tname">仓库/储物箱 UI</span><span class="pbadge p1">P1</span><span class="wbadge w-ui">UI 窗口</span></div>
+      <div class="body">
+        <div class="row"><span class="k">目标</span><span>仓库界面（双栏：背包⇄仓库），支持拖拽/点击转移、容量显示、扩容入口。</span></div>
+        <div class="row"><span class="k">要点</span><span>复用 ItemSlot 与拖拽信号 <code>slot_drop</code>；仓库满提示；锁定物品不可移入仓库。</span></div>
+        <div class="row"><span class="k">依赖</span><span>T10 服务层合入后再开工。</span></div>
+        <div class="row"><span class="k">涉及文件</span></div>
+        <div class="files"><div>scenes/ui/overlays/stash/StashScreen.gd（新建）</div><div>scenes/ui/overlays/stash/StashScreen.tscn（新建）</div><div>core/ui/ui_manager.gd（注册新界面）</div></div>
+        <div class="row"><span class="k">验收标准</span><span>GATE1 零错误；手动验证：存取/转移/容量显示/满仓提示。</span></div>
+        <div class="row"><span class="k">派单命令</span></div>
+        <pre class="cmd">python tools/handoff.py issue --from 架构窗口 --to UI窗口 --title "T11 仓库/储物箱UI" --desc "新建 StashScreen 双栏界面，背包⇄仓库转移，复用 ItemSlot 拖拽" --files scenes/ui/overlays/stash/StashScreen.gd scenes/ui/overlays/stash/StashScreen.tscn core/ui/ui_manager.gd --verify "GATE1 零错误；手动验证存取与转移" --followup "T10 服务层已合入"</pre>
+      </div>
+    </div>
+
+    <div class="task">
+      <div class="head"><span class="tid">T12</span><span class="tname">耐久度与修理</span><span class="pbadge p1">P1</span><span class="wbadge w-backpack">背包窗口</span>＋<span class="wbadge w-ui">UI 窗口</span></div>
+      <div class="body">
+        <div class="row"><span class="k">目标</span><span>装备增加耐久字段（当前/上限），低耐久警示，支持修理（NPC/道具）结算。</span></div>
+        <div class="row"><span class="k">要点</span><span>服务层：<code>get_durability(iid)</code> / <code>damage_durability(iid, n)</code> / <code>repair(iid)</code>，随存档持久化；UI 层：Tooltip 与槽位显示耐久条、低耐久变色。</span></div>
+        <div class="row"><span class="k">涉及文件</span></div>
+        <div class="files"><div>services/inventory/inventory_service.gd（耐久字段）</div><div>scenes/ui/overlays/inventory/InventoryScreen.gd（耐久条）</div><div>scenes/ui/components/item_slot/ItemSlot.gd（耐久显示）</div><div>tests/unit/test_inventory_service.gd（耐久单测）</div></div>
+        <div class="row"><span class="k">验收标准</span><span>GATE1 零错误；GATE2 耐久单测全绿；手动验证耐久条与修理结算。</span></div>
+        <div class="row"><span class="k">派单命令</span></div>
+        <pre class="cmd">python tools/handoff.py issue --from 架构窗口 --to 背包窗口 --title "T12 耐久度服务层" --desc "装备耐久字段 + damage/repair 接口，随存档持久化" --files services/inventory/inventory_service.gd tests/unit/test_inventory_service.gd --verify "GATE1 零错误；GATE2 耐久单测全绿"</pre>
+        <pre class="cmd">python tools/handoff.py issue --from 架构窗口 --to UI窗口 --title "T12b 耐久度UI" --desc "Tooltip/槽位显示耐久条，低耐久变色警示" --files scenes/ui/overlays/inventory/InventoryScreen.gd scenes/ui/components/item_slot/ItemSlot.gd --verify "GATE1 零错误；手动验证耐久显示" --followup "T12 服务层已合入"</pre>
+      </div>
+    </div>
+  </section>  <section id="p2">
+    <h2><span class="no">伍</span>P2 任务：增强版（T13–T17）</h2>
+
+    <div class="task">
+      <div class="head"><span class="tid">T13</span><span class="tname">背包扩容</span><span class="pbadge p2">P2</span><span class="wbadge w-backpack">背包窗口</span>＋<span class="wbadge w-ui">UI 窗口</span></div>
+      <div class="body">
+        <div class="row"><span class="k">目标</span><span>背包容量可扩容（购买/任务解锁），支持行囊/锦囊道具增加容量。</span></div>
+        <div class="row"><span class="k">要点</span><span>服务层：<code>expand_capacity(bag_name, n)</code> / <code>get_capacity()</code> 支持动态上限，随存档持久化；UI 层：容量显示 + 扩容入口。</span></div>
+        <div class="row"><span class="k">涉及文件</span></div>
+        <div class="files"><div>services/inventory/inventory_service.gd（动态容量）</div><div>scenes/ui/overlays/inventory/InventoryScreen.gd（容量/扩容入口）</div><div>tests/unit/test_inventory_service.gd（扩容单测）</div></div>
+        <div class="row"><span class="k">验收标准</span><span>GATE1 零错误；GATE2 扩容单测全绿；手动验证扩容后可用槽位增加。</span></div>
+        <div class="row"><span class="k">派单命令</span></div>
+        <pre class="cmd">python tools/handoff.py issue --from 架构窗口 --to 背包窗口 --title "T13 背包扩容服务层" --desc "inventory_service 支持动态容量 expand_capacity/get_capacity，随存档持久化" --files services/inventory/inventory_service.gd tests/unit/test_inventory_service.gd --verify "GATE1 零错误；GATE2 扩容单测全绿"</pre>
+      </div>
+    </div>
+
+    <div class="task">
+      <div class="head"><span class="tid">T14</span><span class="tname">自定义排序/收藏夹</span><span class="pbadge p2">P2</span><span class="wbadge w-backpack">背包窗口</span>＋<span class="wbadge w-ui">UI 窗口</span></div>
+      <div class="body">
+        <div class="row"><span class="k">目标</span><span>玩家自定义排序规则（字段/升降序），收藏分组置顶。</span></div>
+        <div class="row"><span class="k">要点</span><span>服务层：<code>set_sort_rule(rule)</code> / <code>get_sort_rule()</code> 持久化；收藏复用锁定/收藏字段置顶；UI 层：排序规则选择器。</span></div>
+        <div class="row"><span class="k">涉及文件</span></div>
+        <div class="files"><div>services/inventory/inventory_service.gd（排序规则）</div><div>scenes/ui/overlays/inventory/InventoryScreen.gd（规则选择器）</div><div>tests/unit/test_inventory_service.gd（规则单测）</div></div>
+        <div class="row"><span class="k">验收标准</span><span>GATE1 零错误；GATE2 规则单测全绿；手动验证自定义排序与收藏置顶。</span></div>
+        <div class="row"><span class="k">派单命令</span></div>
+        <pre class="cmd">python tools/handoff.py issue --from 架构窗口 --to 背包窗口 --title "T14 自定义排序/收藏夹服务层" --desc "inventory_service 支持自定义排序规则与收藏置顶，持久化" --files services/inventory/inventory_service.gd tests/unit/test_inventory_service.gd --verify "GATE1 零错误；GATE2 规则单测全绿"</pre>
+      </div>
+    </div>
+
+    <div class="task">
+      <div class="head"><span class="tid">T15</span><span class="tname">物品图鉴/收集册</span><span class="pbadge p2">P2</span><span class="wbadge w-backpack">背包窗口</span>＋<span class="wbadge w-ui">UI 窗口</span></div>
+      <div class="body">
+        <div class="row"><span class="k">目标</span><span>新建 <code>services/inventory/codex_service.gd</code>，记录已见/已收集物品，收集进度统计与奖励。</span></div>
+        <div class="row"><span class="k">要点</span><span>服务层：<code>record_seen(item_id)</code> / <code>record_collected(item_id)</code> / <code>get_progress()</code>，随存档持久化；UI 层：图鉴界面按分类浏览。</span></div>
+        <div class="row"><span class="k">涉及文件</span></div>
+        <div class="files"><div>services/inventory/codex_service.gd（新建）</div><div>tests/unit/test_codex_service.gd（新建单测）</div><div>scenes/ui/overlays/codex/CodexScreen.gd（新建）</div><div>scenes/ui/overlays/codex/CodexScreen.tscn（新建）</div></div>
+        <div class="row"><span class="k">验收标准</span><span>GATE1 零错误；GATE2 codex 单测全绿；手动验证图鉴进度统计。</span></div>
+        <div class="row"><span class="k">派单命令</span></div>
+        <pre class="cmd">python tools/handoff.py issue --from 架构窗口 --to 背包窗口 --title "T15 物品图鉴服务层" --desc "新建 codex_service.gd，已见/已收集统计与进度，随存档持久化" --files services/inventory/codex_service.gd tests/unit/test_codex_service.gd --verify "GATE1 零错误；GATE2 codex 单测全绿"</pre>
+      </div>
+    </div>
+
+    <div class="task">
+      <div class="head"><span class="tid">T16</span><span class="tname">快捷栏配置</span><span class="pbadge p2">P2</span><span class="wbadge w-ui">UI 窗口</span></div>
+      <div class="body">
+        <div class="row"><span class="k">目标</span><span>快捷栏（1–8 数字键）快速使用丹药/暗器，战斗中可用。</span></div>
+        <div class="row"><span class="k">要点</span><span>配置持久化；战斗中调用 <code>use_item()</code>（注意：战斗中禁用药的约束——仅允许战斗前配置，战斗中仅可对允许类目使用）；空槽提示。</span></div>
+        <div class="row"><span class="k">涉及文件</span></div>
+        <div class="files"><div>scenes/ui/overlays/hotbar/Hotbar.gd（新建）</div><div>scenes/ui/overlays/hotbar/Hotbar.tscn（新建）</div><div>scenes/ui/overlays/inventory/InventoryScreen.gd（配置入口）</div></div>
+        <div class="row"><span class="k">验收标准</span><span>GATE1 零错误；手动验证：配置、热键使用、战斗内行为符合约束。</span></div>
+        <div class="row"><span class="k">派单命令</span></div>
+        <pre class="cmd">python tools/handoff.py issue --from 架构窗口 --to UI窗口 --title "T16 快捷栏配置" --desc "新建 Hotbar 快捷栏，1-8 热键快速使用，配置持久化，遵守战斗中用药约束" --files scenes/ui/overlays/hotbar/Hotbar.gd scenes/ui/overlays/hotbar/Hotbar.tscn scenes/ui/overlays/inventory/InventoryScreen.gd --verify "GATE1 零错误；手动验证配置与热键使用"</pre>
+      </div>
+    </div>
+
+    <div class="task">
+      <div class="head"><span class="tid">T17</span><span class="tname">自动整理规则</span><span class="pbadge p2">P2</span><span class="wbadge w-backpack">背包窗口</span>＋<span class="wbadge w-ui">UI 窗口</span></div>
+      <div class="body">
+        <div class="row"><span class="k">目标</span><span>玩家预设规则（如「丹药自动归类到丹药袋」「低品质自动分解」），整理时自动执行。</span></div>
+        <div class="row"><span class="k">要点</span><span>服务层：<code>set_auto_rules(rules)</code> / <code>apply_auto_rules()</code> 在 <code>organize()</code> 内联动；UI 层：规则编辑面板。</span></div>
+        <div class="row"><span class="k">涉及文件</span></div>
+        <div class="files"><div>services/inventory/inventory_service.gd（规则执行）</div><div>scenes/ui/overlays/inventory/InventoryScreen.gd（规则面板）</div><div>tests/unit/test_inventory_service.gd（规则单测）</div></div>
+        <div class="row"><span class="k">验收标准</span><span>GATE1 零错误；GATE2 规则单测全绿；手动验证自动归类/分解。</span></div>
+        <div class="row"><span class="k">派单命令</span></div>
+        <pre class="cmd">python tools/handoff.py issue --from 架构窗口 --to 背包窗口 --title "T17 自动整理规则服务层" --desc "inventory_service 支持预设自动整理规则，organize 时联动执行" --files services/inventory/inventory_service.gd tests/unit/test_inventory_service.gd --verify "GATE1 零错误；GATE2 规则单测全绿"</pre>
+      </div>
+    </div>
+  </section>  <section id="workflow">
+    <h2><span class="no">陆</span>派单流程与验收纪律</h2>
+
+    <h3>6.1 派单节奏</h3>
+    <div class="flow">
+      <span class="step">P0：T1 → T2 → T3 → T4</span><span class="arrow">→</span>
+      <span class="step">P1：T5 → T6 → T7 → T8 → T9 → T10 → T11 → T12</span><span class="arrow">→</span>
+      <span class="step">P2：T13 → T14 → T15 → T16 → T17</span>
+    </div>
+    <p>服务层单（背包窗口）与 UI 单（UI 窗口）可并行推进；但 <strong>T3 依赖 T1/T2、T9 依赖 T8、T11 依赖 T10</strong>，UI 单必须等服务层接口合入后再开工，避免接口对不上返工。</p>
+
+    <h3>6.2 双闸门验收（所有任务通用）</h3>
+    <div class="callout green"><span class="t">GATE1：</span>godot --headless --path "D:/武侠游戏" --quit 零 SCRIPT/PARSE/COMPILE ERROR</div>
+    <div class="callout green"><span class="t">GATE2：</span>godot --headless --path "D:/武侠游戏" res://tests/unit/run_all.tscn 零 ✗ 且失败 0</div>
+    <p>任一闸门失败立即停手报告，禁止带红合入。GATE2 契约测试只做「声明存在 + 参数个数一致」的纯契约校验，绝不 emit EventBus 信号。</p>
+
+    <h3>6.3 提交纪律</h3>
+    <p>各窗口不自行 git commit/push，改完后过双闸门，用 <code>python tools/commit_queue.py add --window &lt;窗口名&gt; --message "..." --files &lt;具体文件&gt;</code> 入队，由 PM/AI-UI/AI-PM 统一 flush 提交。提交 message 带 [集成] 前缀，精确指定文件，禁止 <code>-A</code>。</p>
+
+    <h3>6.4 派单命令速查</h3>
+    <pre class="cmd"># 派单（架构窗口 → 责任窗口）
+python tools/handoff.py issue --from 架构窗口 --to 背包窗口 --title "T1 ..." --desc "..." --files 文件1 文件2 --verify "GATE1 零错误；GATE2 单测全绿" --followup "后续依赖动作"
+
+# 查看派给本窗口的待办
+python tools/handoff.py scan --window 背包窗口
+
+# 全局任务状态
+python tools/handoff.py dashboard</pre>
+
+    <h3>6.5 责任窗口与主权边界</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>责任窗口</th><th>负责文件</th><th>注意事项</th></tr></thead>
+        <tbody>
+          <tr><td><span class="wbadge w-backpack">背包窗口</span></td><td><code>services/inventory/*</code>、<code>tests/unit/test_inventory_service.gd</code> 等</td><td>服务层接口与单测；不碰 UI 主权代码</td></tr>
+          <tr><td><span class="wbadge w-ui">UI 窗口</span></td><td><code>scenes/ui/overlays/inventory/*</code>、<code>scenes/ui/components/item_slot/*</code> 等</td><td>界面与交互；不碰服务层主权代码</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>同一文件同一时刻只归一个任务；.tscn 禁止自动合并，冲突时以一版为基准手动重改并本地验证能正常加载。</p>
+  </section>
+
+  <footer>
+    <p>背包系统派单任务书 · 由《单机游戏背包系统设计落地参考》拆解生成 · 17 个任务 / P0×4 / P1×8 / P2×5 · 服务层与 UI 层双线并行，双闸门验收。</p>
+  </footer>
+</article>
+</body>
+</html>

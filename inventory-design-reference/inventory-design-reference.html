@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>单机游戏背包系统设计落地参考 · 武侠 RPG</title>
+
+  <style>
+    @font-face {
+      font-family: 'CrimsonPro';
+      src: url('./_shared/fonts/CrimsonPro-Regular.ttf') format('truetype');
+      font-weight: 400;
+    }
+    @font-face {
+      font-family: 'CrimsonPro';
+      src: url('./_shared/fonts/CrimsonPro-Bold.ttf') format('truetype');
+      font-weight: 700;
+    }
+    @font-face {
+      font-family: 'CrimsonPro';
+      src: url('./_shared/fonts/CrimsonPro-Italic.ttf') format('truetype');
+      font-weight: 400;
+      font-style: italic;
+    }
+    @font-face {
+      font-family: 'InstrumentSans';
+      src: url('./_shared/fonts/InstrumentSans-Regular.ttf') format('truetype');
+      font-weight: 400;
+    }
+    @font-face {
+      font-family: 'InstrumentSans';
+      src: url('./_shared/fonts/InstrumentSans-Bold.ttf') format('truetype');
+      font-weight: 700;
+    }
+    @font-face {
+      font-family: 'JetBrainsMono';
+      src: url('./_shared/fonts/JetBrainsMono-Regular.ttf') format('truetype');
+      font-weight: 400;
+    }
+    @font-face {
+      font-family: 'JetBrainsMono';
+      src: url('./_shared/fonts/JetBrainsMono-Bold.ttf') format('truetype');
+      font-weight: 700;
+    }
+  </style>
+
+  <style>
+    :root {
+      --bg: #f7f2e7;
+      --bg2: #efe6d3;
+      --bg3: #e6d9bf;
+      --ink: #2b2620;
+      --muted: #7a6f5f;
+      --rule: #d8cdb8;
+      --accent: #8c2f1f;
+      --accent-soft: #a8543f;
+      --accent2: #3d5a3c;
+      --gold: #a8842c;
+      --white: #ffffff;
+      --font: 'InstrumentSans', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      --font-head: 'CrimsonPro', 'Songti SC', 'SimSun', serif;
+      --font-mono: 'JetBrainsMono', 'Consolas', monospace;
+      --max: 960px;
+      --shadow: 0 2px 10px rgba(43,38,32,0.08);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; scroll-behavior: smooth; }
+    body {
+      font-family: var(--font);
+      color: var(--ink);
+      background:
+        radial-gradient(ellipse at 20% 0%, rgba(164,132,44,0.06), transparent 50%),
+        radial-gradient(ellipse at 80% 100%, rgba(61,90,60,0.06), transparent 50%),
+        var(--bg);
+      line-height: 1.75;
+      padding: 0;
+    }
+
+    article.page { max-width: var(--max); margin: 0 auto; padding: 0 1.5rem 4rem; }
+
+    /* ===== Cover ===== */
+    header.cover {
+      position: relative;
+      margin: 0 -1.5rem 3rem;
+      padding: 5rem 2rem 4rem;
+      text-align: center;
+      color: #f5efe2;
+      overflow: hidden;
+      background: linear-gradient(180deg, rgba(20,16,12,0.55), rgba(20,16,12,0.72));
+    }
+    header.cover .hero {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      object-fit: cover; z-index: -1;
+    }
+    header.cover .kicker {
+      display: inline-block;
+      font-size: 0.85rem; letter-spacing: 0.35em; text-transform: uppercase;
+      color: #d9c9a3; border: 1px solid rgba(217,201,163,0.5);
+      padding: 0.35rem 1.1rem; border-radius: 999px; margin-bottom: 1.4rem;
+    }
+    header.cover h1 {
+      font-family: var(--font-head);
+      font-size: clamp(1.9rem, 4.5vw, 3rem);
+      font-weight: 700; letter-spacing: 0.06em; line-height: 1.3;
+      text-shadow: 0 2px 12px rgba(0,0,0,0.5);
+    }
+    header.cover .sub {
+      margin-top: 1rem; font-size: 1.05rem; color: #e6dcc6;
+      max-width: 640px; margin-left: auto; margin-right: auto;
+    }
+    header.cover .meta {
+      margin-top: 1.6rem; font-size: 0.82rem; color: #c9bda2; letter-spacing: 0.08em;
+    }
+
+    /* ===== Section headings ===== */
+    section { margin-top: 3.5rem; }
+    h2 {
+      font-family: var(--font-head);
+      font-size: 1.7rem; font-weight: 700; color: var(--ink);
+      display: flex; align-items: baseline; gap: 0.8rem;
+      padding-bottom: 0.6rem; margin-bottom: 1.4rem;
+      border-bottom: 2px solid var(--accent);
+    }
+    h2 .no {
+      font-family: var(--font-mono); font-size: 1rem; color: var(--accent);
+      letter-spacing: 0.05em; white-space: nowrap;
+    }
+    h3 {
+      font-family: var(--font-head);
+      font-size: 1.22rem; font-weight: 700; color: var(--accent2);
+      margin: 2rem 0 0.8rem;
+      padding-left: 0.7rem; border-left: 3px solid var(--accent2);
+    }
+    h4 { font-size: 1.02rem; font-weight: 700; margin: 1.4rem 0 0.5rem; color: var(--ink); }
+
+    p { margin: 0.7rem 0; }
+    strong { font-weight: 700; }
+    mark.key { background: linear-gradient(transparent 55%, #e8d9a8 55%); padding: 0 0.15em; color: inherit; }
+    .lead { font-size: 1.06rem; color: #4a4238; }
+
+    ul, ol { margin: 0.6rem 0 0.6rem 1.4rem; }
+    li { margin: 0.35rem 0; }
+
+    /* ===== Callout ===== */
+    .callout {
+      background: var(--bg2); border-left: 4px solid var(--accent);
+      padding: 1.1rem 1.3rem; border-radius: 0 8px 8px 0; margin: 1.4rem 0;
+      box-shadow: var(--shadow);
+    }
+    .callout .t { font-weight: 700; color: var(--accent); }
+    .callout.green { border-left-color: var(--accent2); }
+    .callout.green .t { color: var(--accent2); }
+    .callout.gold { border-left-color: var(--gold); }
+    .callout.gold .t { color: var(--gold); }
+
+    /* ===== Cards / grid ===== */
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.2rem 0; }
+    .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1.2rem 0; }
+    .card {
+      background: var(--white); border: 1px solid var(--rule); border-radius: 10px;
+      padding: 1.1rem 1.2rem; box-shadow: var(--shadow);
+    }
+    .card h4 { margin-top: 0; color: var(--accent); }
+    .card .tag {
+      display: inline-block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em;
+      padding: 0.15rem 0.55rem; border-radius: 999px; margin-bottom: 0.5rem;
+      background: var(--bg2); color: var(--accent);
+    }
+
+    /* ===== Tables ===== */
+    .table-wrap { overflow-x: auto; margin: 1.2rem 0; border-radius: 8px; box-shadow: var(--shadow); }
+    table { width: 100%; border-collapse: collapse; background: var(--white); font-size: 0.92rem; }
+    thead th {
+      background: var(--ink); color: #f5efe2; text-align: left;
+      padding: 0.65rem 0.9rem; font-weight: 700; white-space: nowrap;
+    }
+    tbody td { padding: 0.6rem 0.9rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
+    tbody tr:nth-child(even) { background: #faf6ec; }
+    tbody tr:hover { background: #f3ead6; }
+
+    .pbadge {
+      display: inline-block; font-size: 0.72rem; font-weight: 700;
+      padding: 0.1rem 0.5rem; border-radius: 4px; color: #fff; white-space: nowrap;
+    }
+    .p0 { background: #8c2f1f; }
+    .p1 { background: #a8842c; }
+    .p2 { background: #7a6f5f; }
+
+    /* ===== Rarity chips ===== */
+    .rarity { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.8rem 0; }
+    .rchip {
+      padding: 0.35rem 0.9rem; border-radius: 6px; font-size: 0.85rem; font-weight: 700;
+      color: #fff; box-shadow: var(--shadow);
+    }
+    .r-white { background: #b8b4ab; }
+    .r-green { background: #4a7c4f; }
+    .r-blue { background: #3b6ea5; }
+    .r-purple { background: #7b4a9e; }
+    .r-orange { background: #c96a2b; }
+    .r-gold { background: #a8842c; }
+
+    /* ===== Diagrams ===== */
+    figure.diagram {
+      background: var(--white); border: 1px solid var(--rule); border-radius: 10px;
+      padding: 1.2rem; margin: 1.4rem 0; box-shadow: var(--shadow);
+    }
+    figure.diagram .mermaid { display: flex; justify-content: center; }
+    figure.diagram figcaption {
+      text-align: center; font-size: 0.82rem; color: var(--muted); margin-top: 0.6rem;
+    }
+    .chart-box { width: 100%; height: 360px; }
+
+    /* ===== Flow steps ===== */
+    .flow { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; margin: 1rem 0; }
+    .flow .step {
+      background: var(--white); border: 1px solid var(--rule); border-radius: 8px;
+      padding: 0.5rem 0.9rem; font-size: 0.88rem; box-shadow: var(--shadow);
+    }
+    .flow .arrow { color: var(--accent); font-weight: 700; }
+
+    /* ===== Metric stats ===== */
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin: 1.4rem 0; }
+    .stat {
+      background: var(--white); border: 1px solid var(--rule); border-radius: 10px;
+      text-align: center; padding: 1.1rem 0.5rem; box-shadow: var(--shadow);
+    }
+    .stat .num { font-family: var(--font-head); font-size: 1.9rem; font-weight: 700; color: var(--accent); }
+    .stat .lbl { font-size: 0.8rem; color: var(--muted); margin-top: 0.2rem; }
+
+    /* ===== Checklist ===== */
+    .checklist { list-style: none; margin-left: 0; }
+    .checklist li { padding-left: 1.6rem; position: relative; }
+    .checklist li::before {
+      content: "✔"; position: absolute; left: 0; color: var(--accent2); font-weight: 700;
+    }
+
+    /* ===== Footer ===== */
+    footer { margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--rule); }
+    footer .sources h2 { border-bottom: none; margin-bottom: 0.8rem; font-size: 1.2rem; }
+    footer .sources ol { font-size: 0.85rem; color: var(--muted); }
+
+    /* ===== Responsive ===== */
+    @media (max-width: 720px) {
+      .grid2, .grid3 { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      header.cover { padding: 3.5rem 1.2rem 3rem; }
+    }
+  </style>
+</head>
+<body>
+  <article class="page">
+
+    <!-- ================= COVER ================= -->
+    <header class="cover">
+      <img class="hero" src="./assets/hero_2560x1440.jpg" alt="武侠风背包系统封面插画">
+      <div class="kicker">Game Design Reference · 游戏设计参考</div>
+      <h1>单机游戏背包系统设计落地参考</h1>
+      <p class="sub">从大厂机制、UI 美工到每个具体子功能——面向武侠 RPG 的完整落地参考</p>
+      <div class="meta">调研对象：暗黑破坏神 · 上古卷轴 · 巫师 · 塞尔达 · 原神 · 艾尔登法环 · 星露谷 · 赛博朋克 2077 等 16+ 款作品</div>
+    </header>
+
+    <!-- ================= CH1 核心结论 ================= -->
+    <section id="ch1">
+      <h2><span class="no">壹</span>核心结论：大厂背包的四条设计主线</h2>
+      <p class="lead">扒完各大厂作品后可以提炼出一个共性：<strong>背包不是"仓库"，而是一台"决策器"</strong>。它的存在不是为了让你装下一切，而是让"带什么、留什么、扔什么"成为有意义的游戏决策。所有大厂设计都围绕下面四条主线展开。</p>
+
+      <div class="callout">
+        <span class="t">核心结论：</span>大厂背包设计遵循"<mark class="key">限制制造决策，分类降低认知，对比加速判断，整理减少痛苦</mark>"四条主线。
+      </div>
+
+      <div class="grid2">
+        <div class="card">
+          <span class="tag">主线一</span>
+          <h4>限制制造决策</h4>
+          <p>容量永远有限（重量/格子/网格），逼玩家在"带什么"上做取舍。代表：<strong>《上古卷轴》重量制</strong>、<strong>《暗黑破坏神》网格制</strong>、<strong>《塞尔达》格子制</strong>。限制本身就是玩法——取舍产生价值。</p>
+        </div>
+        <div class="card">
+          <span class="tag">主线二</span>
+          <h4>分类降低认知</h4>
+          <p>用分类页签、稀有度色阶、图标规范，把"扫描背包找东西"的认知成本降到最低。代表：<strong>《原神》分类页签</strong>、<strong>《暗黑》稀有度配色</strong>。玩家 0.5 秒内应能定位物品大类。</p>
+        </div>
+        <div class="card">
+          <span class="tag">主线三</span>
+          <h4>对比加速判断</h4>
+          <p>装备对比、属性增减高亮（绿↑红↓）、词条高亮，让"换不换"的判断在界面内完成，不用来回切换。代表：<strong>《巫师3》</strong>、<strong>《赛博朋克2077》</strong>。</p>
+        </div>
+        <div class="card">
+          <span class="tag">主线四</span>
+          <h4>整理减少痛苦</h4>
+          <p>一键整理、自动堆叠、排序、筛选、搜索，把"整理背包"这件玩家最讨厌的事的成本压到最低。代表：<strong>《暗黑4》</strong>、<strong>SkyUI</strong>、<strong>《星露谷》</strong>。</p>
+        </div>
+      </div>
+
+      <p>四条主线对应到落地时的四个设计问题：<strong>容量怎么算？分类怎么分？对比怎么做？整理怎么省？</strong>下面四章逐一拆解。</p>
+    </section>
+
+    <!-- ================= CH2 容量机制 ================= -->
+    <section id="ch2">
+      <h2><span class="no">贰</span>背包容量机制：四种主流范式</h2>
+      <p class="lead">容量机制决定了玩家"能带多少、怎么带"，是背包系统的地基。大厂主要采用四种范式，各有取舍。</p>
+
+      <div class="grid2">
+        <div class="card">
+          <h4>① 重量制</h4>
+          <p><strong>代表：</strong>《上古卷轴5》·《巫师3》·《辐射》</p>
+          <p><strong>机制：</strong>每件物品有重量，总重量有上限（如天际 300 负重）。</p>
+          <p><strong>优点：</strong>拟真、数值灵活，可用技能/装备动态扩容；<strong>缺点：</strong>玩家需心算负重，UI 反馈弱，后期"捡垃圾"焦虑重。</p>
+        </div>
+        <div class="card">
+          <h4>② 格子制</h4>
+          <p><strong>代表：</strong>《塞尔达：旷野之息》·《王国之泪》</p>
+          <p><strong>机制：</strong>每类物品固定一个格位，同类无限堆叠，格位数有限。</p>
+          <p><strong>优点：</strong>极简、零整理成本；<strong>缺点：</strong>容量由"物品种类数"决定，种类一多就爆格。</p>
+        </div>
+        <div class="card">
+          <h4>③ 网格/形状制</h4>
+          <p><strong>代表：</strong>《暗黑破坏神》系列·《生化危机》·《逃离塔科夫》</p>
+          <p><strong>机制：</strong>物品占网格形状（Tetris 式），需旋转摆放。</p>
+          <p><strong>优点：</strong>空间感强、有策略性、大件小件视觉差异明显；<strong>缺点：</strong>整理成本最高，新手门槛高。</p>
+        </div>
+        <div class="card">
+          <h4>④ 槽位+堆叠制</h4>
+          <p><strong>代表：</strong>《原神》·《星穹铁道》· 主流手游</p>
+          <p><strong>机制：</strong>每类物品一个槽位，可堆叠，有堆叠上限与总槽位上限。</p>
+          <p><strong>优点：</strong>UI 简洁、易上手、适合手柄/触屏；<strong>缺点：</strong>数值膨胀后需频繁扩容。</p>
+        </div>
+      </div>
+
+      <figure class="diagram">
+        <div class="mermaid">
+flowchart LR
+    A["容量机制选型"] --> B["重量制<br/>拟真 · 心算成本高"]
+    A --> C["格子制<br/>极简 · 种类受限"]
+    A --> D["网格制<br/>策略 · 整理痛苦"]
+    A --> E["槽位+堆叠制<br/>易上手 · 主流"]
+    E --> F["★ 武侠RPG 推荐<br/>槽位+堆叠 为主"]
+    D -.可选.-> F
+        </div>
+        <figcaption>图 1：四种容量范式与武侠 RPG 推荐选型</figcaption>
+      </figure>
+
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>维度</th><th>重量制</th><th>格子制</th><th>网格制</th><th>槽位+堆叠</th></tr></thead>
+        <tbody>
+          <tr><td><strong>代表作品</strong></td><td>天际 / 巫师3</td><td>塞尔达 BOTW</td><td>暗黑 / 生化危机</td><td>原神 / 星穹铁道</td></tr>
+          <tr><td><strong>容量单位</strong></td><td>重量数值</td><td>格位数</td><td>网格面积</td><td>槽位数 × 堆叠上限</td></tr>
+          <tr><td><strong>整理成本</strong></td><td>中</td><td>极低</td><td>高</td><td>低</td></tr>
+          <tr><td><strong>策略深度</strong></td><td>中</td><td>低</td><td>高</td><td>中</td></tr>
+          <tr><td><strong>上手门槛</strong></td><td>中</td><td>低</td><td>高</td><td>低</td></tr>
+          <tr><td><strong>武侠适配度</strong></td><td>★★☆</td><td>★★☆</td><td>★★★（可做锦囊格）</td><td>★★★★★</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <div class="callout green">
+        <span class="t">落地建议：</span>武侠 RPG 以<strong>槽位+堆叠制</strong>为主（丹药、材料、秘籍天然适合堆叠），可选叠加<strong>少量网格元素</strong>（如"行囊锦囊"特殊扩容道具、大件武器占 2 格），兼顾易上手与武侠"行囊"的沉浸感。
+      </div>
+    </section>
+
+    <!-- ================= CH3 分类与稀有度 ================= -->
+    <section id="ch3">
+      <h2><span class="no">叁</span>物品分类与稀有度体系</h2>
+      <p class="lead">分类降低认知的第一步，是把物品按"用途"而非"来源"归类。大厂分类高度趋同，武侠语境下可做本土化映射。</p>
+
+      <h3>3.1 分类体系（大厂通用 → 武侠映射）</h3>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>大厂通用分类</th><th>武侠 RPG 映射</th><th>堆叠</th><th>典型物品</th></tr></thead>
+        <tbody>
+          <tr><td>武器</td><td><strong>兵器</strong></td><td>否</td><td>刀、剑、枪、棍、暗器</td></tr>
+          <tr><td>防具</td><td><strong>防具 / 内甲</strong></td><td>否</td><td>护甲、内甲、靴、饰品</td></tr>
+          <tr><td>消耗品</td><td><strong>丹药 / 灵药</strong></td><td>是（上限 99）</td><td>金疮药、回气丹、解毒丹</td></tr>
+          <tr><td>材料</td><td><strong>锻造 / 炼丹材料</strong></td><td>是（上限 999）</td><td>玄铁、朱砂、百年灵芝</td></tr>
+          <tr><td>技能书</td><td><strong>秘籍 / 功法</strong></td><td>是（同种叠）</td><td>《易筋经》《独孤九剑》残卷</td></tr>
+          <tr><td>任务物品</td><td><strong>信物 / 任务道具</strong></td><td>否</td><td>令牌、密信、掌门信物</td></tr>
+          <tr><td>杂物</td><td><strong>杂物 / 杂物</strong></td><td>是</td><td>银两、酒、棋谱</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <h3>3.2 稀有度色阶</h3>
+      <p>稀有度色是背包里信息密度最高、玩家最先感知的视觉元素。各厂色阶大同小异，核心是<strong>颜色必须全局一致</strong>（掉落、背包、商店、装备栏同一套色）。</p>
+
+      <div class="rarity">
+        <span class="rchip r-white">白 · 凡品</span>
+        <span class="rchip r-green">绿 · 良品</span>
+        <span class="rchip r-blue">蓝 · 上品</span>
+        <span class="rchip r-purple">紫 · 珍品</span>
+        <span class="rchip r-orange">橙 · 绝品</span>
+        <span class="rchip r-gold">金 · 神品</span>
+      </div>
+
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>游戏</th><th>色阶（低→高）</th><th>备注</th></tr></thead>
+        <tbody>
+          <tr><td>《暗黑破坏神》</td><td>白 → 蓝 → 黄 → 橙 → 绿（套装）</td><td>绿为套装专属色</td></tr>
+          <tr><td>《原神》</td><td>白 → 绿 → 蓝 → 紫 → 金</td><td>五星金，四星紫</td></tr>
+          <tr><td>《巫师3》</td><td>白 → 绿 → 蓝 → 紫 → 橙</td><td>遗物级橙色</td></tr>
+          <tr><td>《魔兽世界》</td><td>灰 → 白 → 绿 → 蓝 → 紫 → 橙 → 金</td><td>灰为垃圾</td></tr>
+          <tr><td><strong>武侠 RPG 建议</strong></td><td>白 → 绿 → 蓝 → 紫 → 橙 → 金</td><td>凡品→良品→上品→珍品→绝品→神品</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <div class="callout gold">
+        <span class="t">武侠适配：</span>稀有度命名贴合武侠语境——<strong>凡品、良品、上品、珍品、绝品、神品</strong>；颜色可微调为中式色系（如"珍品"用黛青、"绝品"用鎏金），但<strong>必须保持全局唯一映射</strong>，避免玩家认知混乱。
+      </div>
+    </section>
+
+    <!-- ================= CH4 UI 布局范式 ================= -->
+    <section id="ch4">
+      <h2><span class="no">肆</span>UI 布局范式：四种主流 + 武侠推荐</h2>
+      <p class="lead">布局决定了玩家"怎么找东西"。大厂主流是四种范式，武侠 RPG 推荐三栏混合布局。</p>
+
+      <div class="grid2">
+        <div class="card">
+          <h4>① 网格布局</h4>
+          <p><strong>代表：</strong>《暗黑》·《POE》</p>
+          <p>大图标网格，一屏看最多物品，适合大量掉落快速浏览；信息密度高但详情需点开。</p>
+        </div>
+        <div class="card">
+          <h4>② 列表布局</h4>
+          <p><strong>代表：</strong>《天际》·SkyUI</p>
+          <p>单列列表 + 右侧详情，信息密度高，适合属性复杂的 RPG；滚动成本高。</p>
+        </div>
+        <div class="card">
+          <h4>③ 混合布局</h4>
+          <p><strong>代表：</strong>《巫师3》·《赛博朋克2077》</p>
+          <p>左分类 + 中列表 + 右详情/对比，三栏协同，信息最全，是 3A 主流。</p>
+        </div>
+        <div class="card">
+          <h4>④ 环形快捷菜单</h4>
+          <p><strong>代表：</strong>《艾尔登法环》· 魂系</p>
+          <p>非主背包，用于战斗中快速切换道具/法术；强调即时性，弱化管理。</p>
+        </div>
+      </div>
+
+      <figure class="diagram">
+        <div class="mermaid">
+flowchart LR
+    subgraph LEFT["左侧 · 分类导航"]
+        T1["兵器"] --- T2["防具"] --- T3["丹药"] --- T4["材料"] --- T5["秘籍"] --- T6["任务/杂物"]
+    end
+    subgraph MID["中间 · 物品区"]
+        M1["网格 / 列表<br/>图标 + 名称 + 数量 + 稀有度色"]
+    end
+    subgraph RIGHT["右侧 · 详情 / 装备预览"]
+        R1["物品详情 Tooltip<br/>属性 · 词条 · 描述"]
+        R2["与已装备对比<br/>绿↑ / 红↓"]
+        R3["角色装备预览"]
+    end
+    LEFT --> MID --> RIGHT
+        </div>
+        <figcaption>图 2：武侠 RPG 背包推荐界面布局结构（左分类 · 中物品 · 右详情）</figcaption>
+      </figure>
+
+      <div class="callout green">
+        <span class="t">落地建议：</span>采用<strong>三栏混合布局</strong>——左栏分类页签（兵器/防具/丹药/材料/秘籍/任务），中栏物品列表（图标+名称+数量+稀有度色），右栏详情与装备对比。这套结构同时兼容手柄（左右键切栏）与键鼠（直接点击），是 3A 验证过的成熟方案。
+      </div>
+    </section>
+
+    <!-- ================= CH5 界面美工 ================= -->
+    <section id="ch5">
+      <h2><span class="no">伍</span>界面美工：信息层级与武侠风适配</h2>
+      <p class="lead">美工不是"好看"，而是<strong>让信息层级一眼可读</strong>。大厂图标与界面遵循一套可复用的规范。</p>
+
+      <h3>5.1 大厂通用美工原则</h3>
+      <ul class="checklist">
+        <li><strong>信息优先级：</strong>稀有度色 &gt; 图标 &gt; 名称 &gt; 数量 &gt; 描述。玩家视线按此顺序扫过。</li>
+        <li><strong>图标规范：</strong>统一视角（3/4 俯视或正面）、统一描边、统一背景色块（稀有度底色）。</li>
+        <li><strong>Tooltip 密度：</strong>属性数值用等宽字体对齐，词条用颜色区分（增益绿/减益红）。</li>
+        <li><strong>状态可视化：</strong>装备中/已锁定/新获得/耐久低，用角标与图标叠加表达，不占额外文字。</li>
+        <li><strong>对比高亮：</strong>与已装备对比时，提升属性绿色↑、下降红色↓，一眼可判。</li>
+      </ul>
+
+      <h3>5.2 武侠风视觉适配</h3>
+      <div class="grid3">
+        <div class="card">
+          <h4>背景与质感</h4>
+          <p>宣纸/水墨纹理底，卷轴式边框，云纹/回纹装饰线。整体低饱和、留白多，突出物品本身。</p>
+        </div>
+        <div class="card">
+          <h4>字体</h4>
+          <p>标题用书法体（如颜体/行楷），正文用宋体/楷体。稀有度名可用印章式红章点缀。</p>
+        </div>
+        <div class="card">
+          <h4>图标风格</h4>
+          <p>水墨工笔风：丹药用葫芦/丹丸，秘籍用卷轴，兵器用剪影。统一描边与底色块。</p>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>元素</th><th>大厂通用做法</th><th>武侠风落地</th></tr></thead>
+        <tbody>
+          <tr><td>背景</td><td>深色半透明面板</td><td>宣纸米白 + 水墨纹理</td></tr>
+          <tr><td>边框</td><td>细线/描边</td><td>卷轴边、云纹、回纹</td></tr>
+          <tr><td>标题字体</td><td>无衬线粗体</td><td>书法体（行楷/颜体）</td></tr>
+          <tr><td>稀有度色</td><td>白绿蓝紫橙金</td><td>同色阶 + 中式命名（凡/良/上/珍/绝/神）</td></tr>
+          <tr><td>图标</td><td>统一视角 + 稀有度底色</td><td>水墨工笔 + 统一描边</td></tr>
+          <tr><td>装饰</td><td>极简</td><td>印章、水墨晕染、留白</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </section>
+
+    <!-- ================= CH6 子功能清单 ================= -->
+    <section id="ch6">
+      <h2><span class="no">陆</span>子功能清单：从 P0 到 P2 的落地优先级</h2>
+      <p class="lead">把大厂背包拆成一个个可落地的子功能，按"没有它玩家会骂"到"有它体验更好"排优先级。P0 是 MVP 必须，P1 是完整版，P2 是锦上添花。</p>
+
+      <div class="stats">
+        <div class="stat"><div class="num">10</div><div class="lbl">P0 必须功能</div></div>
+        <div class="stat"><div class="num">6</div><div class="lbl">P1 重要功能</div></div>
+        <div class="stat"><div class="num">5</div><div class="lbl">P2 增强功能</div></div>
+        <div class="stat"><div class="num">21</div><div class="lbl">子功能总数</div></div>
+      </div>
+
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>子功能</th><th>实现要点</th><th>参考游戏</th><th>优先级</th></tr></thead>
+        <tbody>
+          <tr><td><strong>排序</strong></td><td>类型→稀有度→等级/名称；支持自定义排序</td><td>D4、SkyUI、星露谷</td><td><span class="pbadge p0">P0</span></td></tr>
+          <tr><td><strong>筛选/过滤</strong></td><td>类型/稀有度/属性/状态多维组合过滤</td><td>原神、赛博朋克、D4</td><td><span class="pbadge p0">P0</span></td></tr>
+          <tr><td><strong>搜索</strong></td><td>名称关键字、模糊匹配、叠加筛选</td><td>SkyUI、D4</td><td><span class="pbadge p0">P0</span></td></tr>
+          <tr><td><strong>装备对比</strong></td><td>与已装备逐项对比，绿↑红↓高亮</td><td>巫师3、赛博朋克</td><td><span class="pbadge p0">P0</span></td></tr>
+          <tr><td><strong>快速装备/使用</strong></td><td>点击即装备/使用，右键快捷操作</td><td>全主流</td><td><span class="pbadge p0">P0</span></td></tr>
+          <tr><td><strong>物品详情 Tooltip</strong></td><td>属性/词条/描述/来源，等宽对齐数值</td><td>全主流</td><td><span class="pbadge p0">P0</span></td></tr>
+          <tr><td><strong>一键整理</strong></td><td>自动堆叠同类、压实空槽、按规则排序</td><td>D4、星露谷</td><td><span class="pbadge p0">P0</span></td></tr>
+          <tr><td><strong>堆叠与数量显示</strong></td><td>堆叠上限、数量角标、满格提示</td><td>原神</td><td><span class="pbadge p0">P0</span></td></tr>
+          <tr><td><strong>丢弃/出售</strong></td><td>确认弹窗、批量丢弃、出售估价</td><td>全主流</td><td><span class="pbadge p0">P0</span></td></tr>
+          <tr><td><strong>分类页签</strong></td><td>兵器/防具/丹药/材料/秘籍/任务</td><td>原神、巫师3</td><td><span class="pbadge p0">P0</span></td></tr>
+          <tr><td>仓库/储物箱</td><td>独立存储空间，可扩容，跨场景保留</td><td>暗黑、巫师3</td><td><span class="pbadge p1">P1</span></td></tr>
+          <tr><td>耐久度与修理</td><td>耐久条、低耐久警示、修理 NPC/道具</td><td>巫师3、天际</td><td><span class="pbadge p1">P1</span></td></tr>
+          <tr><td>物品锁定/收藏</td><td>锁定防误卖误丢，收藏置顶</td><td>原神、D4</td><td><span class="pbadge p1">P1</span></td></tr>
+          <tr><td>批量操作</td><td>批量出售/分解/使用，多选模式</td><td>D4、POE</td><td><span class="pbadge p1">P1</span></td></tr>
+          <tr><td>新物品标记</td><td>NEW 角标，查看后消失</td><td>原神、巫师3</td><td><span class="pbadge p1">P1</span></td></tr>
+          <tr><td>物品来源提示</td><td>Tooltip 标注掉落/任务/商店来源</td><td>D4、原神</td><td><span class="pbadge p1">P1</span></td></tr>
+          <tr><td>自定义排序/收藏夹</td><td>玩家自定义排序规则与收藏分组</td><td>SkyUI</td><td><span class="pbadge p2">P2</span></td></tr>
+          <tr><td>物品图鉴/收集册</td><td>已见/已收集统计，收集奖励</td><td>原神、星露谷</td><td><span class="pbadge p2">P2</span></td></tr>
+          <tr><td>快捷栏配置</td><td>战斗中快速使用丹药/暗器</td><td>艾尔登法环</td><td><span class="pbadge p2">P2</span></td></tr>
+          <tr><td>背包扩容</td><td>购买/任务解锁扩容，行囊锦囊道具</td><td>塞尔达、暗黑</td><td><span class="pbadge p2">P2</span></td></tr>
+          <tr><td>自动整理规则</td><td>按玩家预设规则自动归类/分解</td><td>POE 过滤器</td><td><span class="pbadge p2">P2</span></td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <figure class="diagram">
+        <div class="chart-box" id="chart-priority"></div>
+        <figcaption>图 3：子功能优先级分布（P0 必须 / P1 重要 / P2 增强）</figcaption>
+      </figure>
+    </section>
+
+    <!-- ================= CH7 武侠落地建议 ================= -->
+    <section id="ch7">
+      <h2><span class="no">柒</span>武侠 RPG 落地建议与分阶段路线</h2>
+      <p class="lead">把大厂经验落到本项目（Godot 武侠 RPG），需要与现有系统对接。以下是关键对接点与分阶段落地路线。</p>
+
+      <h3>7.1 与现有系统的对接点</h3>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>背包子功能</th><th>对接现有模块</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td>丹药使用（buff）</td><td><code>PlayerState.time_buffs</code></td><td>增益丹药按系统时钟记录属性/数值/到期时间戳，到期自动失效</td></tr>
+          <tr><td>异常状态清除</td><td><code>PlayerState.clear_status()</code></td><td>未处于异常状态返回 NOT_AFFLICTED 且不消耗物品</td></tr>
+          <tr><td>战斗中用药限制</td><td>战斗场景守卫</td><td>战斗中禁止使用消耗品，仅战斗前背包提前使用，返回 NOT_ALLOWED_IN_BATTLE</td></tr>
+          <tr><td>一键整理</td><td><code>inventory_service.organize()</code></td><td>自动堆叠同类、压实空槽、按名称→类型→稀有度排序，锁定实例不参与合并</td></tr>
+          <tr><td>物品图标</td><td><code>UIManager.get_icon/has_icon</code></td><td>从 resources/icons/{enemies,npc}/&lt;id&gt;.png 获取，缺图回退阵营色块</td></tr>
+          <tr><td>装备属性</td><td><code>combat_core.gd</code> 数值模型</td><td>装备对比需读取根属性→面板属性→判定属性三层数值</td></tr>
+          <tr><td>物品配置</td><td><code>skills.json</code> / 物品配置表</td><td>秘籍、丹药、材料的字段定义与稀有度、堆叠上限</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <h3>7.2 分阶段落地路线</h3>
+      <div class="flow">
+        <span class="step"><strong>MVP（P0）</strong><br/>分类页签 + 列表 + 详情<br/>堆叠 + 排序 + 一键整理<br/>丢弃/出售 + 快速使用</span>
+        <span class="arrow">→</span>
+        <span class="step"><strong>完整版（P1）</strong><br/>装备对比 + 筛选/搜索<br/>仓库 + 锁定 + 批量操作<br/>NEW 标记 + 耐久修理</span>
+        <span class="arrow">→</span>
+        <span class="step"><strong>增强版（P2）</strong><br/>图鉴 + 快捷栏 + 扩容<br/>自定义排序 + 自动整理规则</span>
+      </div>
+
+      <div class="callout">
+        <span class="t">落地原则：</span>先做"能装、能看、能用、能整理"的 P0 闭环，再逐步叠加。每个子功能落地前先确认与现有 <code>inventory_service</code>、<code>PlayerState</code>、<code>UIManager</code> 的接口契约，避免重复造轮子。
+      </div>
+
+      <h3>7.3 武侠特色子功能（差异化亮点）</h3>
+      <ul>
+        <li><strong>秘籍研读：</strong>秘籍类物品可"研读"消耗，习得功法/招式，与 skills.json 功法系统打通。</li>
+        <li><strong>炼丹/锻造：</strong>材料类物品进入合成界面，产出丹药/装备，材料堆叠上限高（999）。</li>
+        <li><strong>行囊锦囊：</strong>特殊扩容道具，以"锦囊/储物袋"形式解锁额外格位，贴合武侠设定。</li>
+        <li><strong>信物系统：</strong>任务信物自动收纳到独立页签，不占主背包空间，避免任务物品挤占。</li>
+        <li><strong>酒与棋谱：</strong>杂物类可加入"品鉴/对弈"小玩法，让杂物也有存在价值。</li>
+      </ul>
+    </section>
+
+    <!-- ================= FOOTER ================= -->
+    <footer>
+      <div class="sources">
+        <h2>参考来源</h2>
+        <ol>
+          <li>《暗黑破坏神》系列背包/网格/稀有度设计（暴雪）</li>
+          <li>《上古卷轴5：天际》重量制与 SkyUI 列表布局（Bethesda）</li>
+          <li>《巫师3：狂猎》三栏混合布局与装备对比（CD Projekt Red）</li>
+          <li>《塞尔达传说：旷野之息/王国之泪》格子制容量（任天堂）</li>
+          <li>《原神》槽位+堆叠制与分类页签（米哈游）</li>
+          <li>《艾尔登法环》环形快捷菜单（FromSoftware）</li>
+          <li>《星露谷物语》一键整理与图鉴（ConcernedApe）</li>
+          <li>《赛博朋克2077》装备对比与筛选（CD Projekt Red）</li>
+          <li>《流放之路》《逃离塔科夫》网格制与过滤器（GGG / Battlestate）</li>
+        </ol>
+      </div>
+    </footer>
+  </article>
+
+  <script src="./_shared/js/echarts.min.js"></script>
+  <script src="./_shared/js/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
+
+    const chart = echarts.init(document.getElementById('chart-priority'));
+    chart.setOption({
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+      grid: { left: 60, right: 30, top: 30, bottom: 40 },
+      xAxis: { type: 'category', data: ['P0 必须', 'P1 重要', 'P2 增强'], axisLabel: { fontSize: 13 } },
+      yAxis: { type: 'value', name: '子功能数', minInterval: 1 },
+      series: [{
+        type: 'bar',
+        data: [
+          { value: 10, itemStyle: { color: '#8c2f1f' } },
+          { value: 6, itemStyle: { color: '#a8842c' } },
+          { value: 5, itemStyle: { color: '#7a6f5f' } }
+        ],
+        barWidth: 70,
+        label: { show: true, position: 'top', fontSize: 15, fontWeight: 700 }
+      }]
+    });
+    window.addEventListener('resize', () => chart.resize());
+  </script>
+</body>
+</html>

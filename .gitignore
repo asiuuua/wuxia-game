@@ -61,3 +61,4 @@ _jpg_backup/
 
 # ===== AI 上下文导出产物（tools/export_ai_context.py 生成，喂外部 AI 用；体积大且可随时重生成，不进版本库）=====
 _ai_export/
+_trash_2026-09-04/

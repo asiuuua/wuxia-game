@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>对话编辑器结构对比 · 工作室 vs 大厂</title>
+<style>
+  :root{
+    --ink:#2b2b33; --muted:#6b6b76; --line:#e3e3ea; --bg:#f7f7fa; --card:#fff;
+    --acc:#7c3aed; --acc2:#0e7490; --good:#16a34a; --warn:#d97706; --bad:#dc2626;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Microsoft YaHei","PingFang SC",sans-serif;color:var(--ink);background:var(--bg);line-height:1.7}
+  .wrap{max-width:980px;margin:0 auto;padding:32px 20px 60px}
+  h1{font-size:26px;border-bottom:3px solid var(--acc);padding-bottom:10px}
+  h2{font-size:20px;margin-top:36px;color:var(--acc)}
+  h3{font-size:16px;margin-top:22px}
+  .sub{color:var(--muted);font-size:14px;margin-top:6px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin:14px 0;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+  code{background:#eef0f4;padding:1px 5px;border-radius:4px;font-family:Consolas,monospace;font-size:13px}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14px}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:#efe9ff;color:var(--acc)}
+  tr:nth-child(even) td{background:#fbfaff}
+  .tag{display:inline-block;padding:1px 8px;border-radius:12px;font-size:12px;font-weight:600;margin-right:4px}
+  .tag.studio{background:#e0f2fe;color:var(--acc2)}
+  .tag.big{background:#fce7f3;color:#be185d}
+  .badge-good{color:var(--good);font-weight:700}
+  .badge-gap{color:var(--warn);font-weight:700}
+  .note{background:#fff8ec;border-left:4px solid var(--warn);padding:10px 14px;border-radius:6px;font-size:14px}
+  .json{background:#232530;color:#d7dae3;padding:14px;border-radius:8px;overflow:auto;font-family:Consolas,monospace;font-size:12.5px;line-height:1.5}
+  .json .k{color:#8fd0ff}.json .s{color:#b9e6a8}.json .c{color:#6b7280}
+  ul{margin:8px 0;padding-left:22px}
+  li{margin:4px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>对话编辑器结构对比 · 工作室 vs 大厂</h1>
+<div class="sub">实地核查工作室源码（<code>tools/desktop_studio</code>）后的真实对比 &nbsp;·&nbsp; 更新于 2026-09-03</div>
+
+<div class="card">
+<b>一句话结论：</b>工作室里的「剧情对话」编辑器，与拉瑞安 / CDPR / 贝塞斯达那一代大厂对话编辑器是<em>同根同源</em>——都是「数据表驱动 + 台词分片 + 懒加载」；但在<b>编辑方式（表单 vs 可视化节点图）</b>和<b>分支能力（单向 next_id 串流 vs 多出口+条件门）</b>上，差了一个时代。
+</div>
+
+<h2>一、先确认：工作室确实有这个编辑器</h2>
+<ul>
+  <li><b>入口</b>：工作室 Web 首页顶部页签「<b>剧情对话</b>」（<code>data-tab="dialog"</code>）。</li>
+  <li><b>后端 API</b>：`/api/dialog`、`/api/dialog/&lt;id&gt;`，验证已真实存在。</li>
+  <li><b>数据落点</b>：`data/configs/npcs/dialogs/` —— 一个 KB 级索引 `_index.json` + 每段对话一个分片 `shards/&lt;dialog_id&gt;.json`。</li>
+  <li><b>引擎读取</b>：`ConfigManager` 启动只读索引，`get_dialog` 按需懒加载分片、闲置自动卸载、pin 保护进行中对话——<b>多区域大文本量的核心答案，工作室早就具备了</b>。</li>
+</ul>
+
+<h2>二、工作室编辑器的真实结构（我扒出来的）</h2>
+<h3>2.1 数据模型：台词靠 `next_id` 串成线性对话</h3>
+<div class="json"><span class="c">// 分片文件 demo_npc.json（真实样例）</span>
+{
+  <span class="k">"id"</span>: <span class="s">"demo_npc"</span>,
+  <span class="k">"lines"</span>: [
+    { <span class="k">"id"</span>:<span class="s">"dg_1"</span>, <span class="k">"speaker_id"</span>:<span class="s">"demo_npc"</span>, <span class="k">"text"</span>:<span class="s">"玉佩被野狗叼走了…"</span>, <span class="k">"next_id"</span>:<span class="s">"dg_2"</span>, <span class="k">"trigger_events"</span>:[<span class="s">"sfx_beggar"</span>] },
+    { <span class="k">"id"</span>:<span class="s">"dg_2"</span>, <span class="k">"speaker_name"</span>:<span class="s">"李十五"</span>, <span class="k">"speaker_id"</span>:<span class="s">"player"</span>, <span class="k">"text"</span>:<span class="s">"区区野狗…"</span>, <span class="k">"next_id"</span>:<span class="s">"dg_3"</span> },
+    <span class="c">…</span>
+    { <span class="k">"id"</span>:<span class="s">"dg_4"</span>, <span class="k">"text"</span>:<span class="s">"包在在下身上。"</span>, <span class="k">"next_id"</span>:<span class="s">""</span> }  <span class="c">// 空 = 对话结束</span>
+  ]
+}</div>
+<ul>
+  <li>一条台词一句话；下一句用 <code>next_id</code> 指向。</li>
+  <li>主角的对白用 <code>speaker_id="player"</code> 标记；木头配音、音效等用 <code>trigger_events</code> 触发。</li>
+  <li><b>关键局限：</b><code>next_id</code> 是<b>单向单指针</b>——一句说完只能走唯一的"下一句"，<b>不能一个分叉口弹出多个选项</b>。</li>
+</ul>
+
+<h3>2.2 编辑器形态：三栏表单式</h3>
+<div class="json"><span class="c">// 界面说明（index.html 提示原文）</span>
+"左侧选一个对话 → 中间选一句台词 → 右侧编辑。台词按 next_id 串成对话树（空=结束）"</div>
+<ul>
+  <li>左侧 = 对话列表；中间 = 这部对话的台词清单；右侧 = 编辑当前台词的字段。</li>
+  <li>属于<b>"表格+表单"式编辑器</b>：填字段、点保存，不走"拖节点连箭头"。</li>
+</ul>
+
+<h3>2.3 工作室自带的"地基保障"（很扎实）</h3>
+<ul>
+  <li>💾 <b>安全模式</b>：删台词/对话默认进<b>回收站</b>，可找回，不是直接删。</li>
+  <li>🛡️ <b>路径穿越防护</b>：对话 id 白名单（仅字母/数字/下划线/短横线），防把 id 拼进路径被注入。</li>
+  <li>🔗 <b>引用检查</b>：保存 NPC 时若 <code>dialog_id</code> 在对话表找不到，会提示"该 NPC 可能没台词"。</li>
+  <li>⚠️ <b>改唯一ID确认</b>：警告"其它表引用的旧 ID 不会自动更新"。</li>
+  <li>🔁 <b>改动即时生效</b>：改的是项目<b>源码数据目录</b>，在编辑器里跑项目立即看到效果。</li>
+</ul>
+
+<h2>三、大厂编辑器的结构（拉瑞安 / CDPR / 贝塞斯达）</h2>
+<h3>3.1 数据模型：节点图 / 任务阶段表 / QuestGraph</h3>
+<ul>
+  <li><b>神界原罪·博德之门3</b>：对话是一张<b>节点图</b>——一个节点=几句台词，从节点伸<b>多条边</b>，每条边就是玩家"选项"。</li>
+  <li><b>巫师3 / 赛博朋克2077</b>：任务流程图（QuestGraph），节点=触发/打斗/选择/结局，节点间可<b>条件连线</b>。</li>
+  <li><b>老滚/辐射</b>：任务=多个<b>阶段(Stage)</b>，每阶段含目标+一组条件，阶段间按条件推进。</li>
+</ul>
+<h3>3.2 编辑器形态：可视化拖拽图</h3>
+<ul>
+  <li>在画布上<b>拖节点、拉箭头</b>连关系，节点上有条件插座。</li>
+  <li>连线接口"对不上类型就当场报红"（像 USB 反向插不进），<b>编辑器本身就是类型检查器</b>。</li>
+</ul>
+<h3>3.3 大厂超越工作室的三板斧</h3>
+<ol>
+  <li><b>多出口分支</b>：一个分叉口能弹<b>多个选项</b>，每条边带一个<b>条件门</b>，读全局 flag 决定走哪条。</li>
+  <li><b>读写状态</b>：节点能<b>写 flag</b>（记好感、记选择），也能<b>读 flag</b> 做分支——这是多结局的根。</li>
+  <li><b>工业管线</b>：台词文本独立成 key（多语言）、内容与代码分仓库、编成二进制快存。</li>
+</ol>
+
+<h2>四、逐维度对照表</h2>
+<table>
+  <tr><th style="width:22%">维度</th><th style="width:39%"><span class="tag studio">工作室</span>现状</th><th style="width:39%"><span class="tag big">大厂</span>层级</th></tr>
+  <tr><td><b>编辑方式</b></td><td>三栏表单式，填字段</td><td>可视化拖拽节点图</td></tr>
+  <tr><td><b>分支能力</b></td><td class="badge-gap">next_id 单向串流，一句只能接一句</td><td>多出口选项 + 每个出口一个条件门</td></tr>
+  <tr><td><b>条件引擎</b></td><td class="badge-gap">无条件字段，只有 trigger_events（发射副作用）</td><td>每个节点/边可读 flag 打分支配</td></tr>
+  <tr><td><b>状态读写</b></td><td>依赖对话外媒介（事件/查询系统）间接影响</td><td>节点内直接读写好感、flag、选择记录</td></tr>
+  <tr><td><b>文本与逻辑</b></td><td>文本内嵌在 lines 里</td><td>文本 key 化，逻辑与本地化分离</td></tr>
+  <tr><td><b>数据表驱动</b></td><td class="badge-good">完全表驱动 ✅</td><td>完全表驱动（同理念）</td></tr>
+  <tr><td><b>分片懒加载</b></td><td class="badge-good">索引常驻 + 分片现取现用 ✅</td><td>同样有，且二进制化更快</td></tr>
+  <tr><td><b>安全回退</b></td><td class="badge-good">回收站 / 安全模式 / 防穿越 / 引用检查 ✅</td><td>编辑器内插接即错</td></tr>
+  <tr><td><b>调试面板</b></td><td>靠日志 / 外部查</td><td>游戏内任务图/状态上帝视角</td></tr>
+</table>
+
+<h2>五、对我们工作室的实在结论</h2>
+<div class="card">
+<h3>① 差距到底在哪？两个字：<span style="color:var(--warn)">分支</span>与<span style="color:var(--warn)">形态</span></h3>
+<ul>
+  <li><b>分支</b>：现在的 <code>next_id</code> 是"一条路走到底"，<b>装不下"选帮乞丐 / 不帮"这种岔路口</b>；而大厂的多出口+条件门是专门干这个的。这是最实质的短板。</li>
+  <li><b>形态</b>：表单式编辑够用，但分支一多，<b>表单反而不如节点图直观</b>——这是我们未来当内容量上来后在"编辑体验"上要考虑的第二件事。</li>
+</ul>
+<h3>② 哪些已经做得比想象中好（不用改）</h3>
+<ul>
+  <li>分片懒加载 + 闲置卸载 —— 大世界海量对白的底座，<b>已经具备</b>。</li>
+  <li>表驱动 + 索引常驻 —— 核心理念与大厂一致。</li>
+  <li>安全回退 / 防穿越 / 引用检查 —— 工程护栏很到位。</li>
+</ul>
+<h3>③ 最小改动就能补上"分支"这一刀（建议路线）</h3>
+<ul>
+  <li><b>低配增补</b>：给台词行增加 <code>choices</code> 字段（一个选项数组，每项=显示文本+跳转 next_id+可选条件），让一个分叉口能弹多个选项——数据结构从"单向链表"升级成"树/图"，<b>向后兼容，旧台词零改动</b>。</li>
+  <li><b>条件门</b>：选择项加 <code>require</code>（读 flag/好感）+ <code>then_set</code>（写 flag），即前面聊过的"扳道岔"引擎。</li>
+  <li><b>编辑器</b>：在现有「剧情对话」页签里给台词行加一个"选项编辑区"，先不追求拖拽图，把多选项 + 条件填出来即可。</li>
+</ul>
+<div class="note">💡 判断：现在我们内容量还不大，<b>不必一步到位上"拖拽节点图"大厂神器</b>；先把「多选项 + 条件门」补进现有表单，性价比最高，且完全朝着大厂的正确方向。</div>
+</div>
+
+</div>
+</body>
+</html>
