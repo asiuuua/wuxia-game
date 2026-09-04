@@ -6,6 +6,8 @@ extends TestBase
 
 # 强制优先加载基类，确保 class_name HudDraggablePanel 在子类解析前注册
 # （测试运行器按 preload 顺序解析，HudDraggablePanel 若不先入则子类 extends 报「找不到基类」）
+# UILayout 同此处预加载：状态卡缩放断言依赖 hud_layout.json 读取，需确保该类已注册。
+const UILayout = preload("res://core/ui_layout.gd")
 const HudDraggablePanel = preload("res://scenes/ui/overlays/hud/hud_draggable_panel.gd")
 const Hud = preload("res://scenes/ui/overlays/hud/Hud.gd")
 const StatusCardPanel = preload("res://scenes/ui/overlays/hud/status_card_panel.gd")
@@ -48,13 +50,17 @@ func test_skill_bar_has_six_slots() -> void:
 	expect(p.get_child(0).get_child_count() == 6, "技能栏应有 6 个槽位，实际 %d" % p.get_child(0).get_child_count())
 	p.free()
 
-func test_status_card_is_visual_scaled_to_two_thirds() -> void:
-	# 设计变更（2026-08-31）：取消 0.667 缩放，改用真实尺寸便于拖拽定位（见 quest_track_panel.gd 注释）。
-	# 故状态卡 scale 保持 1.0（不缩放），此处断言与现行实现一致。
+func test_status_card_scale_follows_ui_layout() -> void:
+	# 状态卡缩放现已由工作室 data/configs/ui/hud_layout.json 驱动（status_card 默认 0.69），
+	# 玩家可在游戏内拖右下角手柄缩放并存 user:// 偏好（见 hud_draggable_panel.gd _apply_scale）。
+	# 旧断言硬编码 1.0 已过时——这里改为与 UILayout 读取的当前默认缩放对齐，验证「配置驱动生效」而非固定值。
 	var p := StatusCardPanelScene.instantiate()
 	p._ready()
-	expect(is_equal_approx(p.scale.x, 1.0), "状态卡 scale.x 应为 1.0（2026-08-31 起取消缩放），实际 %f" % p.scale.x)
-	expect(is_equal_approx(p.scale.y, 1.0), "状态卡 scale.y 应为 1.0（2026-08-31 起取消缩放），实际 %f" % p.scale.y)
+	var expect_scale: float = UILayout.hud_default_scale("status_card", 1.0)
+	expect(is_equal_approx(p.scale.x, expect_scale),
+		"状态卡 scale.x 应对齐 hud_layout.json 默认（%f），实际 %f" % [expect_scale, p.scale.x])
+	expect(is_equal_approx(p.scale.y, expect_scale),
+		"状态卡 scale.y 应对齐 hud_layout.json 默认（%f），实际 %f" % [expect_scale, p.scale.y])
 	expect(p.pivot_offset == Vector2.ZERO, "状态卡 pivot_offset 应锚左上 Vector2.ZERO")
 	p.free()
 
@@ -82,14 +88,20 @@ func test_quest_track_default_below_status_card() -> void:
 
 func test_quest_track_clamps_to_screen() -> void:
 	# 用户需求：可随意拖动，但不可脱离屏幕
+	# 注：面板 scale 由 hud_layout.json 配置（quest_track 默认 0.71），_clamp_to_screen 用含缩放后的
+	#  get_global_rect() 计算可放量上限（保证缩放后整块面板仍在屏内）——断言同样基于 global rect，
+	# 而非未缩放的 p.size，二者才能自洽。
 	var p := QuestTrackPanelScene.instantiate()
 	p._ready()
 	p.global_position = Vector2(99999, 99999)
 	p._clamp_to_screen()
-	expect(p.global_position.x <= 1920 - p.size.x + 1.0, "应夹在屏幕右边界内，实际 x=%f" % p.global_position.x)
-	expect(p.global_position.y <= 1080 - p.size.y + 1.0, "应夹在屏幕下边界内，实际 y=%f" % p.global_position.y)
-	expect(p.global_position.x >= -1.0, "不应脱离屏幕左")
-	expect(p.global_position.y >= -1.0, "不应脱离屏幕上")
+	var gr: Rect2 = p.get_global_rect()   # p 为动态类型，需显式标注，避免 := 无法推断
+	expect(gr.position.x <= 1920.0 - gr.size.x + 1.0,
+		"应夹在屏幕右边界内，实际 x=%f（面板 global 宽 %.0f）" % [gr.position.x, gr.size.x])
+	expect(gr.position.y <= 1080.0 - gr.size.y + 1.0,
+		"应夹在屏幕下边界内，实际 y=%f（面板 global 高 %.0f）" % [gr.position.y, gr.size.y])
+	expect(gr.position.x >= -1.0, "不应脱离屏幕左")
+	expect(gr.position.y >= -1.0, "不应脱离屏幕上")
 	p.free()
 
 func test_quest_track_persists_position() -> void:
