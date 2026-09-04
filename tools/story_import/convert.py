@@ -243,12 +243,14 @@ def main():
     enemy_rows = load_csv("敌人模板.csv")
     item_rows = load_csv("物品模板.csv")
 
-    # NPC
-    npc_data = read_json("npcs/town_npcs.json")
+    # NPC —— 【P0-3 停双写 2026-09-04】town_npcs.json 已迁移至区域表并只读留档，
+    # 导入落点改为 regions/newbie_village/npcs.json（与工作室 npc_* 默认落新手村一致），
+    # 旧全局表任何工具不得再写。
+    npc_data = read_json(os.path.join("regions", "newbie_village", "npcs.json"))
     if "npcs" not in npc_data:
         npc_data["npcs"] = []
     n = merge(npc_data["npcs"], build_npcs(npc_rows))
-    write_json("npcs/town_npcs.json", npc_data)
+    write_json(os.path.join("regions", "newbie_village", "npcs.json"), npc_data)
     print("[人物] 新增 %d 个 NPC（含对话）" % n)
 
     # Quest

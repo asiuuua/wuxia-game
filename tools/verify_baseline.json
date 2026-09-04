@@ -1,0 +1,10 @@
+{
+  "_doc": "verify_all.py GATE3 已知存量违规基线（仿 audit_signal_baseline.json 基线模式：只拦新增不追旧账）。条目=违规行 file:line 前缀。修复一处就删一条；新增违规不在基线内会被 GATE3 拦截。现状：matte 抠图 SpriteFrames .tres 属合法美术资源（禁 .tres 铁律针对配置数据，此处为校验器已知误伤），DialogOverlay 的 matte_00001.png 为帧纹理回退路径。",
+  "gate3_known": [
+    "res://core/combat_entity_pool.gd:23",
+    "res://scenes/gameplay/battle/battle_entity.gd:54",
+    "res://scenes/gameplay/battle/tactical_battle_scene.gd:161",
+    "res://scenes/gameplay/town/TownScene.gd:27",
+    "res://scenes/ui/overlays/dialog/DialogOverlay.gd:79"
+  ]
+}

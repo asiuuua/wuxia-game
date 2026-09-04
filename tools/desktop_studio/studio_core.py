@@ -2813,7 +2813,7 @@ if __name__ == "__main__":
     os.makedirs(os.path.join(d, "data", "configs", "npcs"), exist_ok=True)
     os.makedirs(os.path.join(d, "data", "configs", "npcs", "dialogs", "shards"), exist_ok=True)
     os.makedirs(os.path.join(d, "data", "configs", "bond"), exist_ok=True)
-    json.dump({"npcs": []}, open(os.path.join(d, "data", "configs", "npcs", "town_npcs.json"), "w", encoding="utf-8"))
+    json.dump({"npcs": []}, open(os.path.join(d, "data", "configs", "npcs", "town_npcs.json"), "w", encoding="utf-8"))  # verify-allow: town_npcs（自检夹具造临时工程，非生产写）
     json.dump({"shards": {}}, open(os.path.join(d, "data", "configs", "npcs", "dialogs", "_index.json"), "w", encoding="utf-8"))
     json.dump({}, open(os.path.join(d, "data", "configs", "bond", "celebrations.json"), "w", encoding="utf-8"))
     for name, ok, msg in self_test(d):
