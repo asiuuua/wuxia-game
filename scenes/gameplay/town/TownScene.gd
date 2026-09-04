@@ -9,6 +9,9 @@ class_name TownScene
 
 const UIPalette = preload("res://core/constants/ui_theme.gd")
 
+## 本场景归属的区域 ID（P1 统一真源：与 regions/_map_index.json 里 scene_path 指向本场景的条目一致）
+const REGION_ID := "newbie_village"
+
 const MOVE_SPEED := 200.0
 const PLAYER_SCENE_H := 175.0  # 玩家在场景里的目标高度（像素）— 白背景视频重抠版（matte_clean），用户要求缩一半看效果（350→175）
 const NPC_SCENE_H := 140.0     # NPC 同
@@ -235,8 +238,14 @@ func _build_world() -> void:
 	UIManager.mount_hud(hud)
 
 func _spawn_npcs() -> void:
+	# P1 统一区域真源（2026-09-04）：本场景 = 注册表里 newbie_village 的 scene_path，
+	# 只生成属于本区域的 NPC（按区域表 npc 条目的 scene 字段过滤）。
+	# 修复：此前 get_all_npc_ids() 全量生成，迷烟镇 NPC 也会出现在起始城镇（区域不设防）。
+	# 旧全局表条目（无 scene 字段，town_npcs.json 遗留）默认归属本场景，向后兼容。
 	for npc_id in ConfigManager.get_all_npc_ids():
 		var data: Dictionary = ConfigManager.get_npc(npc_id)
+		if str(data.get("scene", REGION_ID)) != REGION_ID:
+			continue
 		var sprite_path: String = data.get("sprite", "")
 		var node: Node2D
 		if sprite_path != "" and ResourceLoader.exists(sprite_path):

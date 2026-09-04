@@ -17,7 +17,7 @@ const UICenterUtils = preload("res://scenes/ui/ui_center_utils.gd")
 # 响应式锚点（派单 23a9d0b92b83）：面板设计尺寸，小视口自动内缩防溢出/错位
 const MAP_PANEL_SIZE := Vector2(560, 480)
 
-# 区域枢纽总览：区域列表来自 data/configs/world/regions.json（填表模式，ConfigManager 读取），不再硬编码
+# 区域枢纽总览：区域列表来自唯一注册表 data/configs/regions/_map_index.json（P1 统一真源，ConfigManager 读取），不再硬编码
 
 @onready var _title: Label = $Panel/Margin/VLayout/Title
 @onready var _area: Label = $Panel/Margin/VLayout/Area

@@ -4,7 +4,7 @@
     "res://core/combat_entity_pool.gd:23",
     "res://scenes/gameplay/battle/battle_entity.gd:54",
     "res://scenes/gameplay/battle/tactical_battle_scene.gd:161",
-    "res://scenes/gameplay/town/TownScene.gd:27",
+    "res://scenes/gameplay/town/TownScene.gd:30",
     "res://scenes/ui/overlays/dialog/DialogOverlay.gd:79"
   ]
 }

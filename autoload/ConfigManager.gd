@@ -576,20 +576,45 @@ func get_battle_layout(layout_id: String) -> Dictionary:
 		return {}
 	return _load_json("res://data/configs/battles/grids/%s.json" % layout_id)
 
-# === 世界区域（填表模式：data/configs/world/regions.json）===
-# 共享地基增量（只增不改）：新增 get_region / get_all_region_ids / get_region_connections。
+# === 世界区域（P1 统一真源 2026-09-04：唯一注册表 regions/_map_index.json）===
+# 区域ID = 世界传送ID = 内容分片ID，三处同一概念。原 world/regions.json 已并入注册表并删除。
+# API 只增不改：get_region / get_all_region_ids / get_region_connections 签名与语义不变。
 var _regions: Dictionary = {}
 var _regions_loaded: bool = false
+var _registry_cache: Array = []      # 注册表 regions 数组缓存（世界视图与内容合并共用一次读取）
+var _registry_read: bool = false
+
+## 读唯一注册表（缓存一次，两个加载器共用）
+func _registry_entries() -> Array:
+	if _registry_read:
+		return _registry_cache
+	_registry_read = true
+	var map: Dictionary = _load_json(REGION_MAP_INDEX)
+	_registry_cache = map.get("regions", [])
+	if _registry_cache.is_empty():
+		_record_error("区域注册表缺失或为空: %s" % REGION_MAP_INDEX)
+	return _registry_cache
 
 func _ensure_regions() -> void:
 	if _regions_loaded:
 		return
-	_regions = _load_json("res://data/configs/world/regions.json")
-	# 剔除 _ 开头的元数据键（如 _doc），仅保留真实区域
-	for k in _regions.keys():
-		if k.begins_with("_"):
-			_regions.erase(k)
 	_regions_loaded = true
+	for entry in _registry_entries():
+		if not (entry is Dictionary):
+			_record_error("区域注册表存在非法条目（非对象），已跳过")
+			continue
+		var rid := String(entry.get("region_id", ""))
+		if rid == "":
+			_record_error("区域注册表存在缺 region_id 的条目，已跳过")
+			continue
+		if _regions.has(rid):
+			_record_error("区域 %s 重复注册，后者覆盖" % rid)
+		_regions[rid] = {
+			"name": String(entry.get("name", rid)),
+			"scene_path": String(entry.get("scene_path", "")),
+			"type": String(entry.get("type", "world")),
+			"connections": entry.get("connections", []),
+		}
 
 ## 取单个区域配置：{"name","scene_path","type","connections"}；不存在返回空字典
 func get_region(id: String) -> Dictionary:
@@ -611,9 +636,10 @@ func get_region_connections(id: String) -> Array[String]:
 	out.assign(c)
 	return out
 
-# === 区域配置仓库（region 剧情骨架 · 纯增量）===
-# 把 regions/ 下各区域的 npc/quest/item/battle/enemy 合并进全局查询表；
-# 区域对白登记进 _dialog_index，复用已有"分片懒加载 + 闲置卸载 + pin"机制。
+# === 区域内容仓库（region 剧情骨架 · 与世界视图同源同一注册表）===
+# 注册表条目带 index_file 的区域才有内容分片（regions/<rid>/），其 npc/quest/item/
+# battle/enemy 并入全局查询表；对白登记进 _dialog_index 复用"分片懒加载"机制。
+# 禁止"先加载全局、区域后覆盖"以外的隐式优先级；全局旧表（town_npcs.json）已只读留档为空。
 var _region_index: Dictionary = {}   # region_id -> index.json 元信息
 var _region_loaded: bool = false
 
@@ -621,15 +647,18 @@ func _load_regions() -> void:
 	if _region_loaded:
 		return
 	_region_loaded = true
-	var map: Dictionary = _load_json(REGION_MAP_INDEX)
-	for r in map.get("regions", []):
-		if not (r is Dictionary) or not r.has("region_id"):
-			_record_error("区域总索引存在非法条目，已跳过")
+	for entry in _registry_entries():
+		if not (entry is Dictionary):
+			continue   # 非法条目已在 _ensure_regions 记录错误
+		var rid: String = str(entry.get("region_id", ""))
+		if rid == "":
 			continue
-		var rid: String = str(r["region_id"])
-		var idx: Dictionary = _load_json(_region_path(rid, "index.json"))
+		var idx_file := String(entry.get("index_file", ""))
+		if idx_file == "":
+			continue   # 世界型区域：无内容分片，纯传送节点
+		var idx: Dictionary = _load_json(idx_file)
 		if idx.is_empty():
-			_record_error("区域 %s 缺失 index.json 点名册，跳过该区域" % rid)
+			_record_error("区域 %s 缺失 index.json 点名册（%s），跳过该区域" % [rid, idx_file])
 			continue
 		if _region_index.has(rid):
 			_record_error("区域 %s 重复定义，后者覆盖" % rid)
