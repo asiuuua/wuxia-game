@@ -53,3 +53,10 @@
 
 ## 当前 open 派单
 - (2026-09-02 结缘窗口对账) 结缘相关两项已闭环：178267684159(休息推进天数，结缘源窗 close，生产驱动 948d146 已落地) / acf2246fd5f2(propose 聘礼锁定，UI 修+结缘对账确认) 均已 done/closed；BondRomanceScreen debug 按钮已清。战斗→town 掉血崩(old fed3f00da584)在板亦已 [closed]。
+
+## 架构整改收官（2026-09-04，P0-P5 全部完成）
+- **一键验证铁律**：提交前 `python tools/verify_all.py` 六门禁（headless零错/单测全绿/工程规范基线/预设红线/双写防线/引用校验）；GATE1 自愈重建类缓存。
+- **新增 Core 原语**：ConditionService（core/condition.gd，统一条件 DSL + GameFacts 适配器）、CommandDispatcher（core/command_dispatcher.gd，"cmd:arg" 注册表路由）。新增条件/命令/目标/奖励类型=注册 handler+写数据，不改核心服务。
+- **真源裁定**：区域唯一注册表=regions/_map_index.json v2（区域ID=传送ID=分片ID）；NPC 唯一真源=regions/<rid>/npcs.json；好感唯一真源=BondService；town_npcs.json/world regions.json 已退役。任务链驱动：prerequisites 前置门 + then_set 回写。
+- **引用反查**：`python tools/ref_index.py --who <id>` 查被谁引用；悬空引用 GATE6 阻断。
+- 坑：新 class_name 必须 --import 重建缓存；Git Bash 中文 pathspec 用目录级 add 绕过；Godot 缺 USERPROFILE/APPDATA 时 user:// 变相对路径（verify_all 已根治）。
