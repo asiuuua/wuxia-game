@@ -87,9 +87,7 @@ func _objective_give_item(state: QuestState, obj: Dictionary, event: Dictionary)
 	if item == "" or str(event.get("item_id", "")) != item:
 		return
 	var need := int(obj.get("need_count", obj.get("need", 1)))
-	var have := 0
-	if GameManager != null and GameManager.inventory_service != null and GameManager.inventory_service.has_method("get_item_count"):
-		have = int(GameManager.inventory_service.get_item_count(item))
+	var have := _facts.item_count(item)
 	_sync_progress(state, obj, mini(have, need))
 
 ## 绝对值进度同步（give_item 类目标随持有量增减；battle 类走 _progress 增量）
@@ -196,26 +194,20 @@ func turn_in(quest_id: String) -> bool:
 	EventBus.notify_quest_track_changed.emit()
 	return true
 
-# ---- 内置奖励处理器（P3-c：与 _reward_handlers 注册表配对）----
+# ---- 内置奖励处理器（P3-c 注册表配对；P5 去定位器：经 GameFacts 适配器，不再直取 GameManager）----
 func _reward_exp(value: Variant, _quest_id: String) -> void:
-	if int(value) > 0 and GameManager != null and GameManager.player_state != null:
-		GameManager.player_state.gain_exp(int(value))
+	_facts.gain_exp(int(value))
 
 func _reward_silver(value: Variant, _quest_id: String) -> void:
-	if int(value) > 0 and GameManager != null and GameManager.player_state != null:
-		GameManager.player_state.silver += int(value)
+	_facts.add_silver(int(value))
 
 func _reward_items(value: Variant, quest_id: String) -> void:
-	if GameManager == null or GameManager.inventory_service == null:
-		return
 	for item_reward in value:
-		GameManager.inventory_service.add_item(str(item_reward.get("item_id", "")), int(item_reward.get("count", 1)), "quest:%s" % quest_id)
+		_facts.add_item(str(item_reward.get("item_id", "")), int(item_reward.get("count", 1)), "quest:%s" % quest_id)
 
 func _reward_abilities(value: Variant, _quest_id: String) -> void:
-	if GameManager == null or GameManager.ability_service == null:
-		return
 	for ability_id in value:
-		GameManager.ability_service.learn(str(ability_id))
+		_facts.learn_ability(str(ability_id))
 
 func get_tracked() -> Array[QuestState]:
 	var out: Array[QuestState] = []

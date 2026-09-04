@@ -38,3 +38,23 @@ func item_count(item_id: String) -> int:
 	if GameManager != null and GameManager.inventory_service != null and GameManager.inventory_service.has_method("get_item_count"):
 		return int(GameManager.inventory_service.get_item_count(item_id))
 	return 0
+
+# ---------- 写入侧（P5 去服务定位器·quest 域示范 2026-09-04） ----------
+# quest_service 的奖励/目标处理统一经本适配器，不再直取 GameManager.*；
+# 其余域（战斗/背包/…）按同模式分批跟进。空安全降级：服务未装配时静默跳过。
+
+func gain_exp(amount: int) -> void:
+	if amount > 0 and GameManager != null and GameManager.player_state != null:
+		GameManager.player_state.gain_exp(amount)
+
+func add_silver(amount: int) -> void:
+	if amount > 0 and GameManager != null and GameManager.player_state != null:
+		GameManager.player_state.silver += amount
+
+func add_item(item_id: String, count: int, source: String) -> void:
+	if item_id != "" and GameManager != null and GameManager.inventory_service != null:
+		GameManager.inventory_service.add_item(item_id, count, source)
+
+func learn_ability(ability_id: String) -> void:
+	if ability_id != "" and GameManager != null and GameManager.ability_service != null:
+		GameManager.ability_service.learn(ability_id)

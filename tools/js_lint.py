@@ -10,6 +10,7 @@ js_lint.py — index.html 内联脚本语法门禁（第三阶段·代码审查�
 """
 import os
 import re
+import glob
 import sys
 import subprocess
 import tempfile
@@ -44,9 +45,6 @@ def main() -> int:
         return 0
     html = open(TARGET, encoding="utf-8", errors="replace").read()
     blocks = extract_scripts(html)
-    if not blocks:
-        print("GATE9 ⚠ index.html 未发现内联脚本，跳过")
-        return 0
     failures = 0
     for idx, start_line, code in blocks:
         with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False, encoding="utf-8") as tf:
@@ -62,10 +60,23 @@ def main() -> int:
                     print("      " + ln.strip())
         finally:
             os.unlink(tmp)
+    # 第三阶段拆分（2026-09-04）：外置 js/*.js 同样逐个校验
+    js_dir = os.path.join(ROOT, "tools", "desktop_studio", "js")
+    ext_files = sorted(glob.glob(os.path.join(js_dir, "*.js"))) if os.path.isdir(js_dir) else []
+    for fp in ext_files:
+        p = subprocess.run([NODE, "--check", fp], capture_output=True, text=True, errors="replace")
+        if p.returncode != 0:
+            failures += 1
+            first_err = (p.stderr or "").strip().splitlines()
+            print("   ✗ 外置脚本 %s 语法错误：" % os.path.basename(fp))
+            for ln in first_err[:3]:
+                print("      " + ln.strip())
+    total = len(blocks) + len(ext_files)
     if failures:
-        print("GATE9 ✗ JS 语法门禁：%d/%d 块内联脚本语法错误（node --check）" % (failures, len(blocks)))
+        print("GATE9 ✗ JS 语法门禁：%d/%d 个脚本语法错误（node --check）" % (failures, total))
         return 1
-    print("GATE9 ✓ JS 语法门禁：%d 块内联脚本全部通过 node --check" % len(blocks))
+    print("GATE9 ✓ JS 语法门禁：%d 个脚本全部通过 node --check（内联 %d + 外置 %d）"
+          % (total, len(blocks), len(ext_files)))
     return 0
 
 

@@ -400,6 +400,14 @@ class Handler(BaseHTTPRequestHandler):
         if path in ("/", "/index.html"):
             self._serve_file("index.html", "text/html; charset=utf-8")
             return
+        if path.startswith("/js/") and path.endswith(".js"):
+            # 静态 JS（第三阶段拆分）：白名单式校验——仅允许 js/ 下单层 .js 文件名，防目录穿越
+            name = path[len("/js/"):]
+            if re.fullmatch(r"[A-Za-z0-9_\-]+\.js", name) and os.path.exists(os.path.join(MODULE_DIR, "js", name)):
+                self._serve_file(os.path.join("js", name), "application/javascript; charset=utf-8")
+            else:
+                _send_json(self, {"error": "file missing"}, 404)
+            return
         parts = [p for p in path.strip("/").split("/") if p]
         if path == "/api/settings":
             return _send_json(self, core.load_settings())
