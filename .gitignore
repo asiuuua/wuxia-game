@@ -58,3 +58,6 @@ _jpg_backup/
 
 # ===== 临时验证/调试产物（根目录 _*.html 等，纯一次性产物）=====
 /_*.html
+
+# ===== AI 上下文导出产物（tools/export_ai_context.py 生成，喂外部 AI 用；体积大且可随时重生成，不进版本库）=====
+_ai_export/
