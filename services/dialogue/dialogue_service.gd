@@ -23,6 +23,9 @@ var _parsed_cache: Dictionary = {}
 const COND_TTL_MS := 1000
 var _cond_cache: Dictionary = {}   # key -> {"ts":int, "val":bool}
 
+# ---- 统一条件求值器（P3）：core/condition.gd + 游戏事实适配器，懒初始化 ----
+var _condition_service: ConditionService = null
+
 # ---- 运行时会话状态（仅本次对话有效，不进存档）----
 var _npc_id: String = ""
 var _dialog_id: String = ""
@@ -286,17 +289,10 @@ func _check_condition(cond: Variant) -> bool:
 func _cond_key(cond: Dictionary) -> String:
 	return "%s|%s|%s" % [cond.get("kind", ""), str(cond.get("arg", "")), _npc_id]
 
-## 实际条件求值（拆出便于缓存）
+## 实际条件求值（拆出便于缓存）。P3 统一 2026-09-04：委托 core/condition.gd
+## ConditionService（三套方言归一）；对话老格式 kind 原生支持，favor 缺省用会话 NPC；
+## 无法求值时保持对话老语义=恒真（unknown_true=true）。
 func _eval_condition(cond: Dictionary) -> bool:
-	var kind: String = cond.get("kind", "")
-	var arg = cond.get("arg", null)
-	match kind:
-		"quest_active":
-			return GameManager.quest_service.is_active(String(arg)) if GameManager.quest_service else false
-		"has_item":
-			return GameManager.inventory_service.get_item_count(String(arg)) > 0 if GameManager.inventory_service else false
-		"favor":
-			var need: int = int(arg)
-			return GameManager.bond_service.get_affection(_npc_id) >= need if GameManager.bond_service else false
-		_:
-			return true
+	if _condition_service == null:
+		_condition_service = ConditionService.new(GameFacts.new())
+	return _condition_service.evaluate(cond, _npc_id, true)

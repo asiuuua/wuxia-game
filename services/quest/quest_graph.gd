@@ -104,7 +104,12 @@ func evaluate_condition(cond, store: RefCounted = null) -> bool:
 func get_log() -> Array:
 	return _log
 
-# ---------- 条件 DSL ----------
+# ---------- 条件 DSL（P3 统一 2026-09-04：委托 core/condition.gd ConditionService）----------
+# 本图只保留 Bool/空 兼容特判；方言归一与求值全部在 ConditionService（顶层键格式
+# flag/favor/progress 原生保留为存量兼容，新内容推荐 kind 风格）。unknown 语义保持
+# 任务图老语义：无法求值判否（strict=false）。
+var _cond_eval: ConditionService = ConditionService.new()
+
 func _cond(cond) -> bool:
 	if cond is bool:
 		return cond
@@ -112,44 +117,8 @@ func _cond(cond) -> bool:
 		return true
 	if not (cond is Dictionary):
 		return true
-	var c: Dictionary = cond
-	if c.is_empty():
-		return true
-	if c.has("all"):
-		for sub in c["all"]:
-			if not _cond(sub):
-				return false
-		return true
-	if c.has("any"):
-		for sub in c["any"]:
-			if _cond(sub):
-				return true
-		return false
-	if c.has("not"):
-		return not _cond(c["not"])
-	if c.has("flag"):
-		var k: String = str(c["flag"])
-		var got = _store.get_flag(k, c.get("def", null))
-		if c.has("eq"):
-			return str(got) == str(c["eq"])
-		if c.has("ne"):
-			return str(got) != str(c["ne"])
-		return bool(got)
-	if c.has("favor"):
-		var v: float = _store.get_favor(str(c["favor"]))
-		if c.has("gte"):
-			return v >= float(c["gte"])
-		if c.has("lte"):
-			return v <= float(c["lte"])
-		if c.has("eq"):
-			return v == float(c["eq"])
-		return v != 0.0
-	if c.has("progress"):
-		var p: int = _store.get_progress(str(c["progress"]))
-		if c.has("gte"):
-			return p >= int(c["gte"])
-		return p >= 1
-	return false
+	_cond_eval.facts = _store   # 每次求值对齐当前图的 store（测试可逐 run 注入内存存储）
+	return _cond_eval.evaluate(cond, "", false)
 
 # ---------- 副作用 ops ----------
 func _apply(ops) -> void:

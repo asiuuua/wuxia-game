@@ -9,11 +9,22 @@ var active_quests: Dictionary = {}     # quest_id -> QuestState
 var completed_quests: Dictionary = {}
 var tracked_ids: Array[String] = []
 
+# ---- P3 统一条件（2026-09-04）：前置/回写走 core/condition.gd + GameFacts ----
+var _facts: GameFacts = GameFacts.new()
+var _condition_service: ConditionService = ConditionService.new(_facts)
+
 func can_accept(quest_id: String) -> bool:
 	if not ConfigManager.has_quest(quest_id):
 		return false
 	if active_quests.has(quest_id) or completed_quests.has(quest_id):
 		return false
+	# P3 统一条件：任务定义可携带 prerequisites 键值对（区域任务链驱动），
+	# 编译为统一 DSL 求值；无法求值/不满足一律不可接（fail-closed 门禁语义）。
+	var data: Dictionary = ConfigManager.get_quest(quest_id)
+	var prereq: Dictionary = data.get("prerequisites", {})
+	if not prereq.is_empty():
+		if not _condition_service.evaluate(ConditionService.compile_keyvalue(prereq), "", false):
+			return false
 	return true
 
 func accept(quest_id: String) -> bool:
@@ -95,6 +106,11 @@ func turn_in(quest_id: String) -> bool:
 		return false
 	var data: Dictionary = ConfigManager.get_quest(quest_id)
 	state.status = QuestEnums.QuestStatus.TURNED_IN
+	# P3 统一条件：then_set 完成回写（区域任务链驱动，如 nv_flag_maiden_helped /
+	# plot_advance=to_misty_town）。键值全量写入 GameState 全局旗标，随存档持久化。
+	var then_set: Dictionary = data.get("then_set", {})
+	for k in then_set.keys():
+		_facts.set_flag(String(k), then_set[k])
 	var rewards: Dictionary = data.get("rewards", {})
 	if rewards.get("exp", 0) > 0:
 		GameManager.player_state.gain_exp(rewards["exp"])
