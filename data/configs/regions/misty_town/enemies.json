@@ -1,0 +1,14 @@
+{
+  "version": "1.0.0",
+  "enemies": [
+    {
+      "id": "mt_enemy_wolf",
+      "name": "野狼",
+      "lvl": 4,
+      "attack": 11,
+      "defense": 2,
+      "speed": 10,
+      "max_hp": 70
+    }
+  ]
+}

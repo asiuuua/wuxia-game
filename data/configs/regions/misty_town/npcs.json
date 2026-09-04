@@ -1,0 +1,25 @@
+{
+  "version": "1.0.0",
+  "npcs": [
+    {
+      "id": "mt_npc_priest",
+      "name": "古庙住持",
+      "scene": "misty_town",
+      "pos_x": 300,
+      "pos_y": 140,
+      "dialog_id": "mt_dialog_priest",
+      "quest_id": "mt_quest_deliver",
+      "battle_id": ""
+    },
+    {
+      "id": "mt_npc_tailor",
+      "name": "金记铺掌柜",
+      "scene": "misty_town",
+      "pos_x": 180,
+      "pos_y": 220,
+      "dialog_id": "",
+      "quest_id": "",
+      "battle_id": ""
+    }
+  ]
+}

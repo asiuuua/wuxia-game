@@ -1,0 +1,21 @@
+{
+  "version": "1.0.0",
+  "dialog_id": "nv_dialog_maiden",
+  "_doc": "本段对白分片：村口姑娘吴巧娘。用到时现取，写完闲置自动卸载。lines 里 choices 即‘对话扳道岔’。",
+  "lines": [
+    {
+      "speaker": "nv_npc_maiden",
+      "text": "客官你是外地来的罢？这几日山贼夜袭，吓得我们不敢出门。",
+      "choices": [
+        {
+          "text": "我帮你守着。",
+          "effects": ["quest_accept:nv_quest_guard", "set_flag:nv_flag_offer_help"]
+        },
+        {
+          "text": "再说。",
+          "effects": []
+        }
+      ]
+    }
+  ]
+}

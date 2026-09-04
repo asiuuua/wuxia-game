@@ -1,0 +1,11 @@
+{
+  "version": "1.0.0",
+  "items": [
+    {
+      "id": "mt_item_night_pearl",
+      "name": "夜明珠",
+      "type": "material",
+      "desc": "古庙供奉的宝珠，镇乱后住持赠你以酬谢"
+    }
+  ]
+}

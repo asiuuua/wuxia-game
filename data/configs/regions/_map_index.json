@@ -1,0 +1,16 @@
+{
+  "version": "1.0.0",
+  "_doc": "武侠世界·区域总索引：一口气列出所有区域及其 index 文件。新增一个区域 = 在此登记 + 建对应文件夹。",
+  "regions": [
+    {
+      "region_id": "newbie_village",
+      "display_name": "新手村",
+      "index_file": "res://data/configs/regions/newbie_village/index.json"
+    },
+    {
+      "region_id": "misty_town",
+      "display_name": "迷烟镇",
+      "index_file": "res://data/configs/regions/misty_town/index.json"
+    }
+  ]
+}

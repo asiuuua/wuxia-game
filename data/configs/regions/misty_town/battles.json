@@ -1,0 +1,12 @@
+{
+  "version": "1.0.0",
+  "battles": [
+    {
+      "id": "mt_battle_wolf",
+      "name": "镇外野狼",
+      "enemy_ids": ["mt_enemy_wolf"],
+      "turn_mode": "atb",
+      "rewards": { "exp": 200, "items": [] }
+    }
+  ]
+}

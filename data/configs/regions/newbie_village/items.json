@@ -1,0 +1,18 @@
+{
+  "version": "1.0.0",
+  "_doc": "本区域道具池。任务/战斗通过 need_item / item_id 引用这里。",
+  "items": [
+    {
+      "id": "nv_item_hairpin",
+      "name": "祖传玉簪",
+      "type": "key",
+      "desc": "吴巧娘的嫁妆之物，需送往迷烟镇金记铺"
+    },
+    {
+      "id": "nv_item_wine",
+      "name": "女儿红",
+      "type": "material",
+      "desc": "村里自酿老酒，守村庆功与送礼皆可"
+    }
+  ]
+}

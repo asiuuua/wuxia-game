@@ -1,0 +1,12 @@
+{
+  "version": "1.0.0",
+  "dialog_id": "nv_dialog_elder",
+  "_doc": "老猎户赵老爹。守村成功后，指引你接下送玉簪任务。",
+  "lines": [
+    {
+      "speaker": "nv_npc_elder",
+      "text": "好小子，山贼被你打跑了！吴巧娘那玉簪是她娘留给她的，说是要送到迷烟镇金记铺，你路上帮她捎去罢。",
+      "effects": ["set_flag:nv_flag_guard_praised"]
+    }
+  ]
+}

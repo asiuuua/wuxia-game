@@ -1,0 +1,39 @@
+{
+  "version": "1.0.0",
+  "_doc": "战斗数值换算表（阶段A · 对标逸剑风云决三层模型）。所有换算系数集中于本表，代码只读取不硬编码。derive_mode 默认 flat：未启用五维派生时，战斗保持原有扁平六属性行为，零回归。",
+  "derive_mode": "flat",
+  "five_attr_weights": {
+    "_doc": "五维根属性 -> 面板属性换算系数；参考逸剑风云决并保留本地归一化。rate 字段为 0-1 概率小数（0.081 = 8.1%）。",
+    "tizhi": { "max_hp": 62.0 },
+    "yu":    { "defense": 0.6, "max_hp": 16.95 },
+    "jin":   { "min_attack": 0.17, "max_attack": 1.41 },
+    "min":   { "crit_rate": 0.081, "min_attack": 0.9 },
+    "shi":   { "max_attack": 0.9, "accuity_rate": 0.035 }
+  },
+  "judgment": {
+    "_doc": "判定属性上限与暴击倍率（阶段B 判定升级时启用，阶段A 仅存档）。",
+    "crit_rate_cap": 0.8,
+    "accuity_rate_cap": 0.4,
+    "direct_crit_bonus": 0.2,
+    "direct_accuity_bonus": 0.1,
+    "crit_damage_mult": 1.4,
+    "crit_heal_mult": 1.5,
+    "accuity_damage_mult": 1.25
+  },
+  "defense": {
+    "_doc": "防御软上限公式 reduction = 1 - K/(K+有效防御)，替代线性 -def*0.5，防后期数值膨胀。",
+    "soft_cap_k": 60
+  },
+  "weapon_range": {
+    "_doc": "武器提供的外攻区间占位（min/max 相对基础），阶段B 填充内容时使用。",
+    "min_ratio": 0.4,
+    "max_ratio": 1.0
+  },
+  "growth": {
+    "_doc": "全流程量级曲线（阶段D 调参用）：HP(lv)=hp_base*hp_growth^(lv-1)，ATK 同理。",
+    "hp_base": 150.0,
+    "hp_growth": 1.10,
+    "atk_base": 10.0,
+    "atk_growth": 1.12
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "version": "1.0.0",
+  "quests": [
+    {
+      "id": "mt_quest_deliver",
+      "name": "镇外古庙除狼",
+      "type": "main",
+      "prerequisites": { "nv_flag_maiden_helped": true },
+      "objectives": [
+        { "id": "defeat", "desc": "击退古庙外的野狼", "target_battle": "mt_battle_wolf", "need": 1 }
+      ],
+      "then_set": { "mt_flag_temple_cleared": true },
+      "rewards": { "exp": 200, "items": [ { "item_id": "mt_item_night_pearl", "count": 1 } ] }
+    }
+  ]
+}

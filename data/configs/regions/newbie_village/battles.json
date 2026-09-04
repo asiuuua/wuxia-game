@@ -1,0 +1,13 @@
+{
+  "version": "1.0.0",
+  "_doc": "本区域战斗配料单。enemy_ids 去本区 enemies.json 查，grid 喂给共用棋盘。",
+  "battles": [
+    {
+      "id": "nv_battle_bandit",
+      "name": "山贼夜袭",
+      "enemy_ids": ["nv_enemy_bandit_001", "nv_enemy_bandit_002"],
+      "turn_mode": "atb",
+      "rewards": { "exp": 120, "items": [ { "item_id": "nv_item_wine", "count": 2 } ] }
+    }
+  ]
+}

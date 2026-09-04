@@ -1,0 +1,155 @@
+{
+  "version": "1.0.0",
+  "_doc": "本区域 NPC（演员表）。谁站在哪、碰他能钩哪条线。dialog_id/quest_id/battle_id 为空表示无勾挂。",
+  "npcs": [
+    {
+      "id": "nv_npc_chief",
+      "name": "村长",
+      "scene": "newbie_village",
+      "pos_x": 220,
+      "pos_y": 160,
+      "dialog_id": "",
+      "quest_id": "",
+      "battle_id": ""
+    },
+    {
+      "id": "nv_npc_maiden",
+      "name": "村口姑娘吴巧娘",
+      "scene": "newbie_village",
+      "pos_x": 60,
+      "pos_y": 200,
+      "dialog_id": "nv_dialog_maiden",
+      "quest_id": "nv_quest_guard",
+      "battle_id": ""
+    },
+    {
+      "id": "nv_npc_elder",
+      "name": "老猎户赵老爹",
+      "scene": "newbie_village",
+      "pos_x": 420,
+      "pos_y": 260,
+      "dialog_id": "nv_dialog_elder",
+      "quest_id": "nv_quest_help_maiden",
+      "battle_id": "nv_battle_bandit"
+    },
+    {
+      "id": "npc_village_chief",
+      "name": "",
+      "sprite": "",
+      "portrait": "",
+      "dialog_id": "",
+      "quest_id": "",
+      "battle_id": "",
+      "pos_x": 0,
+      "pos_y": 0,
+      "half_body_portrait": "",
+      "portrait_type": "static",
+      "portrait_skeleton": "",
+      "portrait_frames": [],
+      "scene": "newbie_village"
+    },
+    {
+      "id": "demo_npc",
+      "name": "村口老乞丐",
+      "pos_x": 420,
+      "pos_y": 260,
+      "sprite": "res://assets/characters/beggar.png",
+      "portrait": "res://assets/characters/beggar_face.png",
+      "dialog_id": "demo_npc",
+      "quest_id": "demo_quest",
+      "battle_id": "demo_battle",
+      "half_body_portrait": "res://assets/characters/half_body/demo_npc.png",
+      "scene": "newbie_village"
+    },
+    {
+      "id": "npc_bandit",
+      "name": "山贼",
+      "pos_x": 700,
+      "pos_y": 100,
+      "sprite": "res://assets/characters/player.png",
+      "portrait": "res://assets/characters/village_chief_face.png",
+      "dialog_id": "npc_bandit",
+      "quest_id": "q_bandit_001",
+      "battle_id": "battle_bandit_001",
+      "half_body_portrait": "res://assets/characters/half_body/npc_bandit.png",
+      "scene": "newbie_village"
+    },
+    {
+      "id": "npc_hunter",
+      "name": "猎户",
+      "pos_x": 320,
+      "pos_y": 320,
+      "sprite": "res://assets/characters/player.png",
+      "dialog_id": "npc_hunter",
+      "quest_id": "q_wolf_001",
+      "battle_id": "battle_wolf_001",
+      "half_body_portrait": "res://assets/characters/half_body/npc_hunter.png",
+      "scene": "newbie_village"
+    },
+    {
+      "id": "npc_sect_elder",
+      "name": "青云剑宗长老",
+      "pos_x": 600,
+      "pos_y": 330,
+      "sprite": "res://assets/characters/player.png",
+      "dialog_id": "npc_sect_elder",
+      "quest_id": "q_sect_join_001",
+      "battle_id": "battle_sect_trials",
+      "half_body_portrait": "res://assets/characters/half_body/npc_sect_elder.png",
+      "scene": "newbie_village"
+    },
+    {
+      "id": "npc_merchant",
+      "name": "货郎",
+      "pos_x": 480,
+      "pos_y": 170,
+      "sprite": "res://assets/characters/player.png",
+      "dialog_id": "npc_merchant",
+      "half_body_portrait": "res://assets/characters/half_body/npc_merchant.png",
+      "scene": "newbie_village"
+    },
+    {
+      "id": "tactical_demo_master",
+      "name": "战棋教头",
+      "pos_x": 540,
+      "pos_y": 250,
+      "sprite": "",
+      "portrait": "",
+      "dialog_id": "tactical_demo_master",
+      "battle_id": "",
+      "half_body_portrait": "res://assets/characters/half_body/tactical_demo_master.png",
+      "scene": "newbie_village"
+    },
+    {
+      "id": "event_demo_npc",
+      "name": "事件演示仙",
+      "pos_x": 150,
+      "pos_y": 350,
+      "sprite": "res://assets/characters/player.png",
+      "portrait": "res://assets/characters/village_chief_face.png",
+      "dialog_id": "dlg_event_demo",
+      "half_body_portrait": "res://assets/characters/half_body/event_demo_npc.png",
+      "scene": "newbie_village"
+    },
+    {
+      "id": "npc_liu_ruyan",
+      "name": "柳如烟",
+      "pos_x": 250,
+      "pos_y": 220,
+      "sprite": "res://assets/characters/npc_liu_ruyan.png",
+      "dialog_id": "npc_liu_ruyan",
+      "half_body_portrait": "res://assets/characters/half_body/npc_liu_ruyan.png",
+      "scene": "newbie_village"
+    },
+    {
+      "id": "npc_mu_wanqing",
+      "name": "慕晚晴",
+      "pos_x": 350,
+      "pos_y": 150,
+      "sprite": "res://assets/characters/npc_mu_wanqing.png",
+      "dialog_id": "npc_mu_wanqing",
+      "half_body_portrait": "res://assets/characters/half_body/npc_mu_wanqing.png",
+      "scene": "newbie_village"
+    }
+  ]
+}

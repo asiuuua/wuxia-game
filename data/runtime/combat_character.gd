@@ -29,6 +29,16 @@ var crit_damage: float = 1.5
 var hit_rate: float = 0.95
 var dodge_rate: float = 0.05
 
+# ── 阶段A 数值派生（对标逸剑三层模型：五维根属性→面板属性）──
+# flat：min==max==attack、accuity=0，保持历史扁平行为；five_attr：由 five_attrs+attribute_table 换算派生。
+# 未调用 apply_derive_panel() 前 _derive_applied=false，effective_attack_min/max 一律退回 attack，零回归。
+var derive_mode: String = "flat"
+var five_attrs: Dictionary = {}   # 五维根属性 {tizhi, yu, jin, min, shi}
+var min_attack: int = 0           # 攻击区间下限
+var max_attack: int = 0           # 攻击区间上限
+var accuity_rate: float = 0.0     # 会意率/% 精准贯通（阶段B 判定用）
+var _derive_applied: bool = false
+
 var cooldowns: Dictionary = {}   # skill_id -> 剩余冷却回合
 var status_effects: Array[StatusEffect] = []   # 当前挂载状态
 var ai_kit: Array = []            # 敌人 AI 技能包（M3）：[{id, weight, condition}]；玩家恒为空
@@ -108,6 +118,55 @@ func effective_dodge_rate() -> float:
 ## 集气速率（ATB）：speed 基础 + 状态修正，M2 顺序条据此排序
 func effective_charge_rate() -> float:
 	return max(1.0, speed + _status_total("speed", StatusEffect.MODE_FLAT)) * (1.0 + _status_total("speed", StatusEffect.MODE_PCT) / 100.0)
+
+# ─────────── 阶段A 派生管线（flat 默认，零回归）───────────
+
+## 五维根属性→某面板换算系数（weights=attribute_table 整表；缺失返回 default）
+func _weight(weights: Dictionary, attr: String, panel: String, fallback: float = 0.0) -> float:
+	var node: Dictionary = weights.get("five_attr_weights", {}).get(attr, {})
+	return float(node.get(panel, fallback))
+
+## 接入 derive_mode 派生管线。
+## - flat（默认）：min=max=attack、accuity=0，不动 hp/defense，历史行为完全不变；
+## - five_attr：由 five_attrs 五维 + attribute_table 系数换算 max_hp/defense/min-max_attack/crit_rate/accuity_rate。
+## weights 缺省时从 ConfigManager 读取整表（配置驱动，零硬编码）。
+func apply_derive_panel(weights: Dictionary = {}) -> void:
+	if weights.is_empty():
+		weights = ConfigManager.get_combat_attr()
+	derive_mode = String(weights.get("derive_mode", "flat"))
+	if derive_mode == "flat":
+		min_attack = attack
+		max_attack = attack
+		accuity_rate = 0.0
+	else:
+		var tizhi: float = float(five_attrs.get("tizhi", 0.0))
+		var yu: float = float(five_attrs.get("yu", 0.0))
+		var jin: float = float(five_attrs.get("jin", 0.0))
+		var minzhi: float = float(five_attrs.get("min", 0.0))
+		var shi: float = float(five_attrs.get("shi", 0.0))
+		max_hp = int(max_hp + tizhi * _weight(weights, "tizhi", "max_hp", 62.0) + yu * _weight(weights, "yu", "max_hp", 16.95))
+		defense = int(defense + yu * _weight(weights, "yu", "defense", 0.6))
+		min_attack = int(max(1.0, attack + jin * _weight(weights, "jin", "min_attack", 0.17) + minzhi * _weight(weights, "min", "min_attack", 0.9)))
+		max_attack = int(max(min_attack, attack + jin * _weight(weights, "jin", "max_attack", 1.41) + shi * _weight(weights, "shi", "max_attack", 0.9)))
+		crit_rate = clampf(crit_rate + minzhi * _weight(weights, "min", "crit_rate", 0.081), 0.0, 0.8)
+		accuity_rate = clampf(shi * _weight(weights, "shi", "accuity_rate", 0.035), 0.0, 0.4)
+		if hp > max_hp:
+			hp = max_hp
+	_derive_applied = true
+
+## 攻击区间下限（含状态修正）；未派生时退回 attack（兼容旧构建路径）
+func effective_attack_min() -> int:
+	var base: int = min_attack if _derive_applied else attack
+	return int(max(1, base + _status_total("attack", StatusEffect.MODE_FLAT)) * (1.0 + _status_total("attack", StatusEffect.MODE_PCT) / 100.0))
+
+## 攻击区间上限（含状态修正）；未派生时退回 attack
+func effective_attack_max() -> int:
+	var base: int = max(max_attack, min_attack) if _derive_applied else attack
+	return int(max(1, base + _status_total("attack", StatusEffect.MODE_FLAT)) * (1.0 + _status_total("attack", StatusEffect.MODE_PCT) / 100.0))
+
+## 本回合攻击取值（区间内平取；阶段B 接入擦伤/精准命中随机判定时替换）
+func effective_attack_roll() -> int:
+	return effective_attack_max()
 
 func is_alive() -> bool:
 	return not is_dead and not is_downed
