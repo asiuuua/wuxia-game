@@ -5,7 +5,14 @@
 extends Node
 # 注：autoload 脚本不能写 class_name X 与 autoload 同名，会与单例冲突报错（已删除）
 
-const SAVE_VERSION := "1.0.0"
+const SAVE_VERSION := "1.1.0"   # 1.1.0(2026-09-04)：新增 last_region_id（读档恢复所在区域）
+
+# 版本迁移链（第二阶段·代码审查报告整改）：老版本存档按序迁移到当前版本。
+# 迁移步骤签名：func(data: Dictionary) -> Dictionary（原地补字段/改结构，返回处理后的 data）。
+# 新增不兼容变更时：SAVE_VERSION 升版 + 在此追加一步迁移，绝不破坏老档。
+var _migrations: Array = [
+	# {"from": "1.0.0", "step": Callable}
+]
 const SAVE_DIR := "user://saves/"
 const MAX_SLOTS := 6   # 手动存档槽位上限（存档选择界面按槽位渲染）
 const TMP_SUFFIX := ".tmp"   # 原子写临时文件后缀
@@ -193,6 +200,9 @@ func _load_from_path(path: String, slot: int) -> bool:
 			GameLogger.error("SaveManager", "回退后仍无法解析，读档中止: %s" % path)
 			return false
 	_check_version(data)
+	if not _migrate_if_needed(data):
+		GameLogger.error("SaveManager", "存档版本高于当前 %s，拒绝读档（防止新版数据被旧逻辑损坏）: %s" % [SAVE_VERSION, path])
+		return false
 	for saveable in _saveables:
 		var key: String = saveable.get_save_key()
 		if data.has(key):
@@ -200,16 +210,55 @@ func _load_from_path(path: String, slot: int) -> bool:
 	EventBus.game_loaded.emit(slot)
 	return true
 
-## 版本校验：MVP 阶段只警告不阻断（尚无迁移逻辑，阻断会让所有老存档失效）
+## 版本校验：仅记日志（真正迁移决策在 _migrate_if_needed）
 func _check_version(data: Dictionary) -> void:
 	var meta: Dictionary = data.get("meta", {})
 	var v: String = meta.get("save_version", "")
 	if v == SAVE_VERSION:
 		return
 	if v == "":
-		GameLogger.warn("SaveManager", "存档缺少版本号，按当前版本 %s 解析（可能不兼容）" % SAVE_VERSION)
+		GameLogger.warn("SaveManager", "存档缺少版本号，按 1.0.0 遗留档处理")
 		return
-	GameLogger.warn("SaveManager", "存档版本 %s 与当前 %s 不一致，可能存在兼容问题" % [v, SAVE_VERSION])
+	GameLogger.warn("SaveManager", "存档版本 %s 与当前 %s 不一致" % [v, SAVE_VERSION])
+
+## 版本迁移（第二阶段·代码审查报告整改）：老档按迁移链逐步升级；更新版本拒绝读档。
+## 返回 false = 无法安全读档（调用方中止）。
+func _migrate_if_needed(data: Dictionary) -> bool:
+	if not data.has("meta") or not (data["meta"] is Dictionary):
+		data["meta"] = {}
+	var meta: Dictionary = data["meta"]
+	var v: String = str(meta.get("save_version", ""))
+	if v == SAVE_VERSION:
+		return true
+	if v != "" and _version_gt(v, SAVE_VERSION):
+		return false   # 未来版本的档：拒绝，防旧逻辑写坏新数据
+	# 无版本号 = 1.0.0 遗留档；或已知老版本 → 依次走迁移链
+	var known: Array[String] = ["1.0.0"]
+	known.append(SAVE_VERSION)
+	var from_idx := 0 if v == "" else known.find(v)
+	if from_idx < 0:
+		GameLogger.warn("SaveManager", "未知存档版本 %s，按当前版本尽力解析" % v)
+		meta["save_version"] = SAVE_VERSION
+		return true
+	# 1.0.0 → 1.1.0 无破坏性结构变化（last_region_id 由 GameState.load 默认值兜底）；
+	# 未来步骤在此追加：for step in _migrations: data = step.step.call(data)
+	for m in _migrations:
+		if m.get("from", "") == v and m.get("step") is Callable:
+			data = m["step"].call(data)
+	meta["save_version"] = SAVE_VERSION
+	GameLogger.info("SaveManager", "存档已迁移：%s → %s" % [v if v != "" else "1.0.0(遗留)", SAVE_VERSION])
+	return true
+
+## 简易语义化版本比较：a > b
+func _version_gt(a: String, b: String) -> bool:
+	var pa := a.split(".")
+	var pb := b.split(".")
+	for i in range(3):
+		var ai := int(pa[i]) if i < pa.size() else 0
+		var bi := int(pb[i]) if i < pb.size() else 0
+		if ai != bi:
+			return ai > bi
+	return false
 
 ## 从 .bak 恢复主档；成功返回 true
 func _restore_from_backup(path: String) -> bool:

@@ -212,8 +212,20 @@ def gate6_ref_index():
     return ok
 
 
+def gate7_studio_smoke():
+    """GATE7：工作室编辑流程冒烟（编辑写入→区域表→读回闭环，全程临时目录）。"""
+    out, code = _run([sys.executable, os.path.join(HERE, "studio_smoke.py")])
+    for ln in out.splitlines():
+        if "✗" in ln or "✓" in ln:
+            print("   " + ln.strip())
+    ok = code == 0
+    print("  GATE7 %s（工作室编辑闭环冒烟）" % ("✓ 通过" if ok else "✗ 未过"))
+    return ok
+
+
 GATES = {1: gate1_quit_check, 2: gate2_unit_tests, 3: gate3_project_validate,
-         4: gate4_preset_redline, 5: gate5_no_dual_write, 6: gate6_ref_index}
+         4: gate4_preset_redline, 5: gate5_no_dual_write, 6: gate6_ref_index,
+         7: gate7_studio_smoke}
 
 
 def main():

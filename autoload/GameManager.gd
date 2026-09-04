@@ -288,15 +288,18 @@ func start_new_game() -> void:
 	WeatherTimeService.reset()
 	_sync_day_baseline()
 	_equip_starting_abilities()
-	current_region_id = "newbie_village"
+	set_current_region("newbie_village")
 	_deferred_change_scene(PathConstants.SCENE_TOWN)
 
 ## 读取存档并进入游戏（主菜单"继续江湖路"调用，M2 新增）
 func load_game(slot: int) -> void:
 	ResourceManager.reclaim_all()
 	if SaveManager.load_from_slot(slot):
-		current_region_id = "newbie_village"
-		_deferred_change_scene(PathConstants.SCENE_TOWN)
+		# 存档迁移整改：恢复存档时所在区域（1.1.0+ 记录 last_region_id），而非固定回起始城镇
+		var rid := GameState.get_last_region()
+		set_current_region(rid)
+		var scene_path: String = String(ConfigManager.get_region(rid).get("scene_path", ""))
+		_deferred_change_scene(scene_path if not scene_path.is_empty() else PathConstants.SCENE_TOWN)
 	else:
 		GameLogger.warn("GameManager", "读取存档失败: slot=%d" % slot)
 
@@ -394,8 +397,14 @@ func return_to_safe_point() -> void:
 	# 当前所有安全点都映射到城镇场景；marker 预留给后续扩展（客栈/营地等不同场景）
 	GameLogger.info("GameManager", "回安全点: %s" % sp.get("marker", "town"))
 	ResourceManager.reclaim_all()
-	current_region_id = "newbie_village"
+	set_current_region("newbie_village")
 	_deferred_change_scene(PathConstants.SCENE_TOWN)
+
+## 统一区域切换入口（P4 整改）：改内存态同时写穿 GameState（随存档持久化），
+## 防止"内存里在迷烟镇、存档里还是起始城镇"的真源分裂。
+func set_current_region(rid: String) -> void:
+	current_region_id = rid
+	GameState.set_last_region(rid)
 
 ## 区域传送（填表模式）：查 regions.json 取 scene_path 切场景；scene_path 为空=尚未实装，飘字提示不卡死
 func goto_region(id: String) -> void:
@@ -411,7 +420,7 @@ func goto_region(id: String) -> void:
 		return
 	GameLogger.info("GameManager", "传送至区域: %s (%s)" % [id, scene_path])
 	ResourceManager.reclaim_all()
-	current_region_id = id
+	set_current_region(id)
 	current_map_id = id
 	_preload_adjacent_regions(id)
 	_async_change_scene(scene_path)
