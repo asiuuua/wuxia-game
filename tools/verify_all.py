@@ -1,22 +1,22 @@
 # -*- coding: utf-8 -*-
 """
-verify_all.py — 一键验证入口（架构整改 P0-c 落地）
-================================================
+verify_all.py — 一键验证入口（架构整改 P0-c 落地；逐步扩容至八门禁）
+================================================================
 把「证明没踩坏游戏」的全部门禁串成一条命令，任何窗口/任何人改动代码或数据后必须全绿：
 
-  GATE1  headless --quit 零 SCRIPT/PARSE/COMPILE 错误
+  GATE1  headless --quit 零 SCRIPT/PARSE/COMPILE 错误（自愈：新 class 自动 --import 重建缓存）
   GATE2  tests/unit/run_all.tscn 单元套件（零 ✗ 且 失败 M=0）
   GATE3  validate_project.gd 工程规范（JSON 全可解析 / 禁 .tres / 无硬编码数据路径 / class_name 规范）
   GATE4  战斗预设红线：data/configs/battles/grids/preset_*.json 存在性校验
-         （绝不动 preset_* 铁律的机器兜底；历史上若整目录被删，这里会拦）
-  GATE5  双写防线：town_npcs.json 已只读留档，tools/、addons/、scenes/、services/ 下的
-         .gd/.py 代码不得再出现对它的写入意图（读写留档注释除外）
-  GATE6  引用校验：tools/ref_index.py 全量校验数据 ID 引用（NPC→对话/任务/战斗、
-         任务目标/奖励、对话图跳转等），悬空引用直接阻断
+  GATE5  双写防线：town_npcs.json 只读留档，代码不得再写它
+  GATE6  引用校验：ref_index.py 全量数据 ID 引用（悬空即拦）
+  GATE7  工作室编辑流程冒烟：写入→区域表→读回闭环（临时目录）
+  GATE8  工程结构兜底：核心目录/关键文件消失即拦（data/ 被外部 AI 工具误删事故的复盘产物）
+  GATE9  JS 语法门禁：index.html 内联脚本逐块 node --check（防整页脚本失效回归）
 
 用法（Windows，任意终端）：
   python tools/verify_all.py            # 跑全部门禁
-  python tools/verify_all.py --gate 1   # 只跑某一门（1/2/3/4）
+  python tools/verify_all.py --gate 1   # 只跑某一门（1-9）
 
 退出码：0 = 全绿；1 = 有门禁未过（提交/合并前必须为 0）。
 
@@ -223,9 +223,62 @@ def gate7_studio_smoke():
     return ok
 
 
+def gate4_preset_redline():
+    """GATE4：战斗预设红线兜底——preset_*.json 不得整体消失（误删即拦）。"""
+    grids = os.path.join(ROOT, "data", "configs", "battles", "grids")
+    presets = sorted(glob.glob(os.path.join(grids, "preset_*.json")))
+    problems = []
+    if not presets:
+        problems.append("data/configs/battles/grids/ 下已无任何 preset_*.json（疑似整目录被误删）")
+    for fp in presets:
+        try:
+            with open(fp, encoding="utf-8") as f:
+                d = json.load(f)
+            if not isinstance(d, dict) or "width" not in d or "height" not in d:
+                problems.append(os.path.basename(fp) + " 缺 width/height 字段")
+        except Exception as e:
+            problems.append(os.path.basename(fp) + " 解析失败: " + str(e))
+    for ln in problems:
+        print("   ✗ " + ln)
+    ok = not problems
+    print("  GATE4 %s（战棋预设 %d 个在位且结构合法）" % ("✓ 通过" if ok else "✗ 未过", len(presets)))
+    return ok
+
+
+def gate8_structure():
+    """GATE8：工程结构兜底（2026-09-04 data/ 被外部 AI 工具整体删除的事故复盘产物）。
+    核心目录/关键文件消失即拦——任何工具再误删，下一次 verify_all 立刻暴露。"""
+    must_dirs = ["autoload", "core", "data", "services", "scenes", "tests", "tools"]
+    must_files = ["project.godot", "data/configs/regions/_map_index.json", "tools/verify_all.py"]
+    problems = []
+    for d in must_dirs:
+        if not os.path.isdir(os.path.join(ROOT, d)):
+            problems.append("核心目录缺失: %s/（疑似被外部工具误删，git checkout -- %s 可恢复）" % (d, d))
+    for f in must_files:
+        if not os.path.isfile(os.path.join(ROOT, f)):
+            problems.append("关键文件缺失: %s" % f)
+    for ln in problems:
+        print("   ✗ " + ln)
+    ok = not problems
+    print("  GATE8 %s（工程结构完整性：%d 目录 + %d 关键文件）" % ("✓ 通过" if ok else "✗ 未过",
+                                                              len(must_dirs), len(must_files)))
+    return ok
+
+
+def gate9_js_lint():
+    """GATE9：index.html 内联脚本语法门禁（node --check 逐块校验，防整页脚本失效）。"""
+    out, code = _run([sys.executable, os.path.join(HERE, "js_lint.py")])
+    for ln in out.splitlines():
+        if "✗" in ln or "✓" in ln or "⚠" in ln:
+            print("   " + ln.strip())
+    ok = code == 0
+    print("  GATE9 %s（JS 语法门禁）" % ("✓ 通过" if ok else "✗ 未过"))
+    return ok
+
+
 GATES = {1: gate1_quit_check, 2: gate2_unit_tests, 3: gate3_project_validate,
          4: gate4_preset_redline, 5: gate5_no_dual_write, 6: gate6_ref_index,
-         7: gate7_studio_smoke}
+         7: gate7_studio_smoke, 8: gate8_structure, 9: gate9_js_lint}
 
 
 def main():
@@ -233,13 +286,13 @@ def main():
         print("找不到 Godot console：%s（可用环境变量 GODOT 指定路径）" % GODOT)
         return 1
     pick = [int(a) for a in sys.argv[sys.argv.index("--gate") + 1:]] if "--gate" in sys.argv else sorted(GATES)
-    print("══════ verify_all · 项目一键验证 ══════")
+    print("══════ verify_all · 项目一键验证（八门禁+JS 语法门禁） ══════")
     print("  工程: %s\n  Godot: %s" % (ROOT, GODOT))
     all_ok = True
     for g in pick:
         fn = GATES.get(g)
         if fn is None:
-            print("未知门禁编号: %s（可用 1-4）" % g)
+            print("未知门禁编号: %s（可用 1-9）" % g)
             return 1
         print("── GATE%d ──" % g)
         try:
