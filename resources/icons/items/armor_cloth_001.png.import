@@ -3,15 +3,16 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://d0weq2yub06c4"
-path="res://.godot/imported/armor_cloth_001.png-196631e3e9b835c2992ef9ed670b6d5a.ctex"
+path.s3tc="res://.godot/imported/armor_cloth_001.png-196631e3e9b835c2992ef9ed670b6d5a.s3tc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
 }
 
 [deps]
 
 source_file="res://resources/icons/items/armor_cloth_001.png"
-dest_files=["res://.godot/imported/armor_cloth_001.png-196631e3e9b835c2992ef9ed670b6d5a.ctex"]
+dest_files=["res://.godot/imported/armor_cloth_001.png-196631e3e9b835c2992ef9ed670b6d5a.s3tc.ctex"]
 
 [params]
 
@@ -36,5 +37,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=2048
 detect_3d/compress_to=1

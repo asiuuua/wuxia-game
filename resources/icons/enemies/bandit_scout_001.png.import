@@ -3,15 +3,16 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://c8r87kckidj8u"
-path="res://.godot/imported/bandit_scout_001.png-ef8bf732ab1be302c67bf8a61af58b2f.ctex"
+path.s3tc="res://.godot/imported/bandit_scout_001.png-ef8bf732ab1be302c67bf8a61af58b2f.s3tc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
 }
 
 [deps]
 
 source_file="res://resources/icons/enemies/bandit_scout_001.png"
-dest_files=["res://.godot/imported/bandit_scout_001.png-ef8bf732ab1be302c67bf8a61af58b2f.ctex"]
+dest_files=["res://.godot/imported/bandit_scout_001.png-ef8bf732ab1be302c67bf8a61af58b2f.s3tc.ctex"]
 
 [params]
 
@@ -36,5 +37,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=2048
 detect_3d/compress_to=1

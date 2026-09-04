@@ -3,15 +3,16 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://er4ja5p7omxl"
-path="res://.godot/imported/pill_heal_jinchan_001.png-b0f505f43707495a09ee039d76960522.ctex"
+path.s3tc="res://.godot/imported/pill_heal_jinchan_001.png-b0f505f43707495a09ee039d76960522.s3tc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
 }
 
 [deps]
 
 source_file="res://resources/icons/items/pill_heal_jinchan_001.png"
-dest_files=["res://.godot/imported/pill_heal_jinchan_001.png-b0f505f43707495a09ee039d76960522.ctex"]
+dest_files=["res://.godot/imported/pill_heal_jinchan_001.png-b0f505f43707495a09ee039d76960522.s3tc.ctex"]
 
 [params]
 
@@ -36,5 +37,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=2048
 detect_3d/compress_to=1

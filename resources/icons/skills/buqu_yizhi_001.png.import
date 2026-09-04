@@ -3,15 +3,16 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bnenn37xrx8cq"
-path="res://.godot/imported/buqu_yizhi_001.png-f90f85ff631acc0ffb64862d3a495d36.ctex"
+path.s3tc="res://.godot/imported/buqu_yizhi_001.png-f90f85ff631acc0ffb64862d3a495d36.s3tc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
 }
 
 [deps]
 
 source_file="res://resources/icons/skills/buqu_yizhi_001.png"
-dest_files=["res://.godot/imported/buqu_yizhi_001.png-f90f85ff631acc0ffb64862d3a495d36.ctex"]
+dest_files=["res://.godot/imported/buqu_yizhi_001.png-f90f85ff631acc0ffb64862d3a495d36.s3tc.ctex"]
 
 [params]
 
@@ -36,5 +37,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=2048
 detect_3d/compress_to=1
