@@ -1,0 +1,85 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scenes/ui/components/rank_select_dialog/RankSelectDialog.gd" id="1_scr"]
+
+[sub_resource type="StyleBoxFlat" id="1_glass"]
+bg_color = Color(0.071, 0.078, 0.11, 0.62)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.2)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_left = 14
+corner_radius_bottom_right = 14
+shadow_size = 16
+shadow_offset = Vector2(0, 6)
+shadow_color = Color(0, 0, 0, 0.55)
+content_margin_left = 1
+content_margin_right = 1
+content_margin_top = 1
+content_margin_bottom = 1
+
+[node name="RankSelectDialog" type="Control"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_scr")
+
+[node name="Dim" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0, 0, 0, 0.5)
+
+[node name="Panel" type="Panel" parent="."]
+layout_mode = 1
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -280.0
+offset_top = -260.0
+offset_right = 280.0
+offset_bottom = 260.0
+size = Vector2(560, 520)
+theme_override_styles/panel = SubResource("1_glass")
+
+[node name="Margin" type="MarginContainer" parent="Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="VLayout" type="VBoxContainer" parent="Panel/Margin"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="Panel/Margin/VLayout"]
+layout_mode = 2
+text = "设置名分"
+
+[node name="BodyAnchor" type="ScrollContainer" parent="Panel/Margin/VLayout"]
+layout_mode = 2
+size_flags_vertical = 3
+size_flags_horizontal = 3
+
+[node name="Grid" type="GridContainer" parent="Panel/Margin/VLayout/BodyAnchor"]
+layout_mode = 2
+columns = 3
+size_flags_horizontal = 3
+theme_override_constants/h_separation = 10
+theme_override_constants/v_separation = 10
+
+[node name="Close" type="Button" parent="Panel/Margin/VLayout"]
+layout_mode = 2
+text = "取消"
