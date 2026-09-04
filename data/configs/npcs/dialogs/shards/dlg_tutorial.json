@@ -3,12 +3,14 @@
   "lines": [
     {
       "id": "tut_1",
+      "speaker_id": "demo_npc",
       "speaker_name": "神秘老者",
       "text": "少侠初入江湖，可知刀光剑影皆由气血内力驱使？",
       "next_id": "tut_2",
       "trigger_events": [
         "sfx_elder_appear"
-      ]
+      ],
+      "options": []
     },
     {
       "id": "tut_2",
