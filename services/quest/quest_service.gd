@@ -47,14 +47,84 @@ func _on_combat_finished(combat_id: String, victory: bool, _escaped: bool, _snap
 	if victory:
 		_advance_on_victory(combat_id)
 
-## 战斗胜利后推进匹配该战斗的任务目标
+# ---- P3-c 目标/奖励 handler 注册表（2026-09-04）：新增目标/奖励类型 = 注册一个
+# handler，不改本服务核心（整改路线 P3 验收标准）。类型推断：obj 显式 type 优先，
+# 否则 target_battle→battle、need_item→give_item（存量数据零迁移）。
+var _objective_handlers: Dictionary = {}   # type -> Callable(state, obj, event: Dictionary)
+var _reward_handlers: Dictionary = {}      # key -> Callable(value, quest_id)
+
+func _init() -> void:
+	register_objective_handler("battle", _objective_battle)
+	register_objective_handler("give_item", _objective_give_item)
+	register_reward_handler("exp", _reward_exp)
+	register_reward_handler("silver", _reward_silver)
+	register_reward_handler("items", _reward_items)
+	register_reward_handler("abilities", _reward_abilities)
+
+func register_objective_handler(type: String, handler: Callable) -> void:
+	_objective_handlers[type] = handler
+
+func register_reward_handler(key: String, handler: Callable) -> void:
+	_reward_handlers[key] = handler
+
+func _objective_type(obj: Dictionary) -> String:
+	var t := str(obj.get("type", ""))
+	if t != "":
+		return t
+	if obj.has("target_battle"):
+		return "battle"
+	if obj.has("need_item"):
+		return "give_item"
+	return ""
+
+# ---- 内置目标处理器 ----
+func _objective_battle(state: QuestState, obj: Dictionary, event: Dictionary) -> void:
+	if str(obj.get("target_battle", "")) == str(event.get("battle_id", "")):
+		_progress(state, obj, 1)
+
+func _objective_give_item(state: QuestState, obj: Dictionary, event: Dictionary) -> void:
+	var item := str(obj.get("need_item", ""))
+	if item == "" or str(event.get("item_id", "")) != item:
+		return
+	var need := int(obj.get("need_count", obj.get("need", 1)))
+	var have := 0
+	if GameManager != null and GameManager.inventory_service != null and GameManager.inventory_service.has_method("get_item_count"):
+		have = int(GameManager.inventory_service.get_item_count(item))
+	_sync_progress(state, obj, mini(have, need))
+
+## 绝对值进度同步（give_item 类目标随持有量增减；battle 类走 _progress 增量）
+func _sync_progress(state: QuestState, obj: Dictionary, absolute: int) -> void:
+	var obj_id := String(obj.get("id", ""))
+	if obj_id == "" or state.is_objective_completed(obj_id):
+		return
+	state.objectives_progress[obj_id] = absolute
+	EventBus.quest_objective_updated.emit(state.quest_id, obj_id, absolute)
+	if absolute >= int(obj.get("need_count", obj.get("need", 1))):
+		state.objectives_completed[obj_id] = true
+		EventBus.quest_objective_completed.emit(state.quest_id, obj_id)
+		if state.are_all_required_objectives_completed([]):
+			_complete(state)
+
+## 事件路由入口：目标推进统一走 handler 注册表（战斗胜利 / 物品变动均汇入）
 func _advance_on_victory(battle_id: String) -> void:
 	for qid in active_quests.keys():
 		var state: QuestState = active_quests[qid]
 		var data: Dictionary = ConfigManager.get_quest(qid)
 		for obj in data.get("objectives", []):
-			if obj.get("target_battle", "") == battle_id:
-				_progress(state, obj, 1)
+			_dispatch_objective(state, obj, {"battle_id": battle_id, "victory": true})
+
+## 库存变动事件回调（GameManager 装配时连接 inventory_item_added；give_item 目标消费）
+func _on_inventory_added(item_id: String, _count: int) -> void:
+	for qid in active_quests.keys():
+		var state: QuestState = active_quests[qid]
+		var data: Dictionary = ConfigManager.get_quest(qid)
+		for obj in data.get("objectives", []):
+			_dispatch_objective(state, obj, {"item_id": item_id})
+
+func _dispatch_objective(state: QuestState, obj: Dictionary, event: Dictionary) -> void:
+	var h: Callable = _objective_handlers.get(_objective_type(obj), Callable())
+	if h.is_valid():
+		h.call(state, obj, event)
 
 ## 返回进行中任务 ID 列表（供 SaveValidator 遍历校验）
 func get_active_quest_ids() -> Array[String]:
@@ -112,20 +182,40 @@ func turn_in(quest_id: String) -> bool:
 	for k in then_set.keys():
 		_facts.set_flag(String(k), then_set[k])
 	var rewards: Dictionary = data.get("rewards", {})
-	if rewards.get("exp", 0) > 0:
-		GameManager.player_state.gain_exp(rewards["exp"])
-	if rewards.get("silver", 0) > 0:
-		GameManager.player_state.silver += rewards["silver"]
-	for item_reward in rewards.get("items", []):
-		GameManager.inventory_service.add_item(item_reward.get("item_id", ""), item_reward.get("count", 1), "quest:%s" % quest_id)
-	for ability_reward in rewards.get("abilities", []):
-		GameManager.ability_service.learn(ability_reward)
+	# P3-c 奖励数据驱动分发：rewards 键 -> 注册表 handler（新奖励类型=注册，不改本函数）
+	for key in rewards.keys():
+		var h: Callable = _reward_handlers.get(String(key), Callable())
+		if h.is_valid():
+			h.call(rewards[key], quest_id)
+		else:
+			push_warning("[Quest] 未知奖励类型: %s（quest=%s）" % [key, quest_id])
 	active_quests.erase(quest_id)
 	completed_quests[quest_id] = state
 	tracked_ids.erase(quest_id)
 	EventBus.quest_turned_in.emit(quest_id)
 	EventBus.notify_quest_track_changed.emit()
 	return true
+
+# ---- 内置奖励处理器（P3-c：与 _reward_handlers 注册表配对）----
+func _reward_exp(value: Variant, _quest_id: String) -> void:
+	if int(value) > 0 and GameManager != null and GameManager.player_state != null:
+		GameManager.player_state.gain_exp(int(value))
+
+func _reward_silver(value: Variant, _quest_id: String) -> void:
+	if int(value) > 0 and GameManager != null and GameManager.player_state != null:
+		GameManager.player_state.silver += int(value)
+
+func _reward_items(value: Variant, quest_id: String) -> void:
+	if GameManager == null or GameManager.inventory_service == null:
+		return
+	for item_reward in value:
+		GameManager.inventory_service.add_item(str(item_reward.get("item_id", "")), int(item_reward.get("count", 1)), "quest:%s" % quest_id)
+
+func _reward_abilities(value: Variant, _quest_id: String) -> void:
+	if GameManager == null or GameManager.ability_service == null:
+		return
+	for ability_id in value:
+		GameManager.ability_service.learn(str(ability_id))
 
 func get_tracked() -> Array[QuestState]:
 	var out: Array[QuestState] = []

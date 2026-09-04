@@ -11,6 +11,8 @@ verify_all.py — 一键验证入口（架构整改 P0-c 落地）
          （绝不动 preset_* 铁律的机器兜底；历史上若整目录被删，这里会拦）
   GATE5  双写防线：town_npcs.json 已只读留档，tools/、addons/、scenes/、services/ 下的
          .gd/.py 代码不得再出现对它的写入意图（读写留档注释除外）
+  GATE6  引用校验：tools/ref_index.py 全量校验数据 ID 引用（NPC→对话/任务/战斗、
+         任务目标/奖励、对话图跳转等），悬空引用直接阻断
 
 用法（Windows，任意终端）：
   python tools/verify_all.py            # 跑全部门禁
@@ -61,11 +63,21 @@ def _godot(args):
 
 
 def gate1_quit_check():
-    """GATE1：--quit 健康检查，零硬错误。"""
+    """GATE1：--quit 健康检查，零硬错误。
+    自愈：新增 class_name 后全局类缓存（.godot/global_script_class_cache.cfg）需
+    --import 重建（--quit 不重建），缺 env 又会生成相对 user:// 垃圾目录——
+    故检测到「Could not find type」时自动带正确 env 跑一次 --import 再复检。"""
     out, _ = _godot(["--headless", "--path", ROOT, "--quit"])
     bad = [ln for ln in out.splitlines()
            if ("SCRIPT ERROR" in ln or "Parse Error" in ln or "Compile Error" in ln
                or "Could not parse" in ln)]
+    if any("Could not find type" in ln for ln in bad):
+        print("   ⚠ 检测到新 class_name 未入全局类缓存，自动 --import 重建后复检…")
+        _godot(["--headless", "--path", ROOT, "--import"])
+        out, _ = _godot(["--headless", "--path", ROOT, "--quit"])
+        bad = [ln for ln in out.splitlines()
+               if ("SCRIPT ERROR" in ln or "Parse Error" in ln or "Compile Error" in ln
+                   or "Could not parse" in ln)]
     for ln in bad[:10]:
         print("   " + ln.strip())
     ok = not bad
@@ -189,8 +201,19 @@ def gate5_no_dual_write():
     return ok
 
 
+def gate6_ref_index():
+    """GATE6：数据引用校验（tools/ref_index.py）——悬空 ID 引用阻断提交。"""
+    out, code = _run([sys.executable, os.path.join(HERE, "ref_index.py")])
+    for ln in out.splitlines():
+        if "✗" in ln or "⚠" in ln or "结论" in ln or "实体定义" in ln or "引用总数" in ln:
+            print("   " + ln.strip())
+    ok = code == 0
+    print("  GATE6 %s（数据 ID 引用全量校验）" % ("✓ 通过" if ok else "✗ 未过"))
+    return ok
+
+
 GATES = {1: gate1_quit_check, 2: gate2_unit_tests, 3: gate3_project_validate,
-         4: gate4_preset_redline, 5: gate5_no_dual_write}
+         4: gate4_preset_redline, 5: gate5_no_dual_write, 6: gate6_ref_index}
 
 
 def main():

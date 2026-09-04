@@ -33,11 +33,18 @@ func has_flag(key: String) -> bool:
 		return GameState.has_global_flag(key)
 	return _mem.has(key)
 
-# ---------- 好感（对某 NPC 的数值关系，落到 global_flags 命名空间） ----------
+# ---------- 好感（P4 状态所有权 2026-09-04：唯一真源 = BondService） ----------
+## 全局模式下委托 GameManager.bond_service（好感随 bond 存档持久化、带好感事件/等级联动）；
+## 服务未装配时回退旧 favor: 旗标写（安全降级不崩）。内存模式（测试）行为不变。
 func get_favor(npc_id: String) -> float:
+	if _use_game_state and GameManager != null and GameManager.bond_service != null and GameManager.bond_service.has_method("get_affection"):
+		return float(GameManager.bond_service.get_affection(npc_id))
 	return float(get_flag(FAVID_PREFIX + npc_id, 0.0))
 
 func add_favor(npc_id: String, delta: float) -> void:
+	if _use_game_state and GameManager != null and GameManager.bond_service != null and GameManager.bond_service.has_method("add_affection"):
+		GameManager.bond_service.add_affection(npc_id, int(delta))
+		return
 	set_flag(FAVID_PREFIX + npc_id, get_favor(npc_id) + delta)
 
 # ---------- 任务进度 ----------

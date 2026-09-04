@@ -209,6 +209,7 @@ func _ready() -> void:
 	_register_saveables()
 	# 战斗结束 → 任务系统推进目标（事件闭环，替代原先战斗直调任务的反模式）
 	EventBus.combat_finished.connect(quest_service._on_combat_finished)
+	EventBus.inventory_item_added.connect(quest_service._on_inventory_added)   # P3-c：give_item 类目标推进
 	# 指令接线：任务/对话发出 cmd_start_combat 后自动开战（解耦战斗入口，消除空壳）
 	EventBus.cmd_start_combat.connect(_on_cmd_start_combat)
 	# 对话事件演出：到达某行 trigger_events 经 EventBus 派发，由执行器演出音效/震屏/接任务

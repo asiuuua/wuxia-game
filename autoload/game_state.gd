@@ -56,14 +56,9 @@ func get_unit_faction(unit_id: String) -> int:
 		return 0
 	return _unit_runtime[unit_id].get("faction", 0)
 
-func set_unit_affinity(unit_id: String, affinity: float) -> void:
-	_ensure_unit(unit_id)
-	_unit_runtime[unit_id]["affinity"] = affinity
-
-func get_unit_affinity(unit_id: String) -> float:
-	if not _unit_runtime.has(unit_id):
-		return 0.0
-	return _unit_runtime[unit_id].get("affinity", 0.0)
+# P4 状态所有权（2026-09-04）：unit affinity 已删除——好感唯一真源 = BondService
+# （services/bond/bond_service.gd 的 affections 表）；此处原 set/get_unit_affinity
+# 全工程零调用方，属第三重真源死代码，归一并清除。
 
 # ===================== 难度 =====================
 func set_difficulty(value: int) -> void:
@@ -156,5 +151,4 @@ func _ensure_unit(unit_id: String) -> void:
 		_unit_runtime[unit_id] = {
 			"status": UnitStatus.ALIVE,
 			"faction": 0,
-			"affinity": 0.0,
 		}
