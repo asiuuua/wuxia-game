@@ -15,15 +15,30 @@ func after_each() -> void:
 	if _saveables_touched:
 		SaveManager._saveables = _saved_saveables
 		_saveables_touched = false
+	# SV-2 登记制用例隔离过白名单 → 统一在此恢复（防用例间污染）
+	if _registry_touched:
+		SaveManager._registry_whitelist = _saved_whitelist
+		SaveManager._module_versions = _saved_module_versions
+		_registry_touched = false
 
 var _saved_saveables: Array = []
 var _saveables_touched := false
+var _saved_whitelist: Dictionary = {}
+var _saved_module_versions: Dictionary = {}
+var _registry_touched := false
 
-## 隔离 SaveManager 注册表（拓扑/缺 key 用例专用）：备份→清空，after_each 统一恢复
+## 隔离 SaveManager 注册表（拓扑/缺 key/SV-2 用例专用）：备份→清空，after_each 统一恢复。
+## 白名单/模块版本表一并隔离：fake 键不受生产登记表拦截，注入版本表不泄漏到其他用例。
 func _isolate_saveables() -> void:
 	_saved_saveables = SaveManager._saveables.duplicate()
 	_saveables_touched = true
 	SaveManager._saveables.clear()
+	if not _registry_touched:
+		_saved_whitelist = SaveManager._registry_whitelist.duplicate()
+		_saved_module_versions = SaveManager._module_versions.duplicate()
+		_registry_touched = true
+	SaveManager._registry_whitelist = {}
+	SaveManager._module_versions = {}
 
 # === SV-4/P-S2（P0 漏修补课）：注册期 key 撞车必须拒绝 ===
 func test_register_duplicate_key_refused() -> void:
@@ -106,6 +121,7 @@ class _FakeSave extends ISaveable:
 	var key: String = ""
 	var deps: Array[String] = []
 	var load_log: Array = []   # 共享引用：由用例注入，load() 时记录调用顺序
+	var last_payload: Dictionary = {}   # SV-2 用例：记录最近一次 load 收到的解包后载荷
 	func _init(k: String, d: Array[String] = [], log_ref: Array = []) -> void:
 		key = k
 		deps = d
@@ -118,6 +134,7 @@ class _FakeSave extends ISaveable:
 		return {"v": key}
 	func load(data: Dictionary) -> void:
 		load_log.append(key)
+		last_payload = data
 
 func test_meta_has_five_fields() -> void:
 	var d := SaveManager._build_save_data("命名测试")
@@ -160,3 +177,82 @@ func test_tampered_save_refused() -> void:
 	f.close()
 	# SV-1：checksum 不一致 → .bak 抢救链；探针槽无 .bak → 拒读（禁静默尽力解析）
 	expect(not SaveManager.load_from_slot(PROBE_SLOT), "checksum 不一致且无 .bak → 应拒读")
+
+# === SV-2 二段式 Body：写端每模块键包 {schema_version, data} ===
+func test_body_two_phase_wrap() -> void:
+	var d := SaveManager._build_save_data()
+	var module_keys := 0
+	for k in d:
+		if k == "meta":
+			continue
+		module_keys += 1
+		var wrapped_v: Variant = d[k]
+		if not expect(wrapped_v is Dictionary, "模块键 %s 应为包装 Dictionary" % k):
+			continue
+		var wrapped: Dictionary = wrapped_v
+		expect(str(wrapped.get("schema_version", "")) == SaveManager.MODULE_SCHEMA_VERSION,
+			"模块键 %s 应带当前模块版本 %s（实际 %s）" % [k, SaveManager.MODULE_SCHEMA_VERSION, str(wrapped.get("schema_version", ""))])
+		expect(wrapped.get("data", null) is Dictionary, "模块键 %s 的 data 应为 Dictionary" % k)
+	expect(module_keys >= 12, "真实装配下 Body 应含 12 个模块键（实际 %d）" % module_keys)
+
+# === SV-2 读端：legacy 裸载荷兜底兼容（1.2.0 前老档漏网形态） ===
+func test_legacy_module_payload_compat() -> void:
+	expect(SaveManager._resolve_module_payload("any_key", {"v": 1}) is Dictionary
+		and (SaveManager._resolve_module_payload("any_key", {"v": 1}) as Dictionary).get("v", 0) == 1,
+		"legacy 裸载荷应原样透传（1.0.0 渐进兼容）")
+
+# === SV-2 读端：未来模块版本拒读 + 缺 data 拒读 + 非 Dictionary 拒读 ===
+func test_bad_module_payloads_refused() -> void:
+	expect(SaveManager._resolve_module_payload("any_key", {"schema_version": "9.9.9", "data": {}}) == null,
+		"模块 schema_version 高于当前应拒读（防新档被旧逻辑写坏）")
+	expect(SaveManager._resolve_module_payload("any_key", {"schema_version": "1.0.0"}) == null,
+		"二段式载荷缺 data 应拒读")
+	expect(SaveManager._resolve_module_payload("any_key", "not_a_dict") == null,
+		"载荷非 Dictionary 应拒读")
+
+# === SV-2 模块迁移链：模块升版后，低位版本沿 register_module_migration 注册表升级，断链拒读 ===
+func test_module_migration_chain() -> void:
+	_isolate_saveables()
+	SaveManager._module_versions["fake_m"] = "1.1.0"   # 模拟模块 fake_m 已升版至 1.1.0
+	var step := func(carried: Dictionary) -> Dictionary:
+		var d: Dictionary = carried["data"]
+		d["migrated"] = true
+		return {"data": d}
+	var ok: bool = SaveManager.register_module_migration({
+		"key": "fake_m", "from": "1.0.0", "to": "1.1.0", "step": step,
+	})
+	expect(ok, "合法模块迁移条目应登记成功")
+	var out_v: Variant = SaveManager._resolve_module_payload("fake_m", {"schema_version": "1.0.0", "data": {"v": 1}})
+	expect(out_v is Dictionary and (out_v as Dictionary).get("migrated", false) == true and int((out_v as Dictionary).get("v", 0)) == 1,
+		"1.0.0 模块载荷应沿链升到 1.1.0 且数据保留（实际 %s）" % [out_v])
+	expect(SaveManager._resolve_module_payload("fake_m", {"schema_version": "1.0.5", "data": {}}) == null,
+		"断链版本（无 1.0.5 迁移步骤）应拒读")
+
+# === SV-2 端到端：1.1.0 老档（裸键+无 checksum）走「checksum放行→迁移包装→分发解包」全链读回 ===
+func test_legacy_1_1_0_save_end_to_end() -> void:
+	_isolate_saveables()
+	var log: Array = []
+	var mod_a := _FakeSave.new("legacy_a", [], log)
+	SaveManager.register_saveable(mod_a)
+	SaveManager._registry_whitelist["legacy_a"] = true
+	# 1.1.0 形态：裸键载荷、meta 无 checksum（当时还没有）、版本号 1.1.0
+	var save_data := {
+		"meta": {"save_version": "1.1.0", "timestamp": 1750000000},
+		"legacy_a": {"hp": 88, "bag": ["nv_item_hairpin"]},
+	}
+	var path := SaveManager.SAVE_DIR + "save_%d.json" % PROBE_SLOT
+	expect(SaveManager._write_json(path, save_data, PROBE_SLOT), "1.1.0 老档探针写入应成功")
+	expect(SaveManager.load_from_slot(PROBE_SLOT), "1.1.0 老档应经迁移链成功读回")
+	expect(mod_a.last_payload.get("hp", 0) == 88 and (mod_a.last_payload.get("bag", []) as Array).size() == 1,
+		"解包后载荷应原样抵达模块（数据零丢失，实际 %s）" % [mod_a.last_payload])
+
+# === SV-2 登记制：白名单在而键未登记 → 拒注册（禁私自扩键） ===
+func test_unregistered_key_refused() -> void:
+	_isolate_saveables()
+	SaveManager._registry_whitelist = {"known_a": true}
+	SaveManager.register_saveable(_FakeSave.new("known_a", [], []))
+	expect(SaveManager.get_saveable_count() == 1, "已登记 key 应注册成功")
+	SaveManager.register_saveable(_FakeSave.new("known_a", [], []))
+	expect(SaveManager.get_saveable_count() == 1, "同 key 二次注册应被撞车检查拦下")
+	SaveManager.register_saveable(_FakeSave.new("unknown_z", [], []))
+	expect(SaveManager.get_saveable_count() == 1, "未登记 key 应被拒绝注册（SV-2 禁私自扩键）")

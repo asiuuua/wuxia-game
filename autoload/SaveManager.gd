@@ -5,21 +5,51 @@
 extends Node
 # 注：autoload 脚本不能写 class_name X 与 autoload 同名，会与单例冲突报错（已删除）
 
-const SAVE_VERSION := "1.1.0"   # 1.1.0(2026-09-04)：新增 last_region_id（读档恢复所在区域）
+const SAVE_VERSION := "1.2.0"   # 1.2.0(2026-09-06)：SV-2 二段式 Body——每模块键包 {schema_version, data}，模块版本独立演进
 const BASE_SAVE_VERSION := "1.0.0"   # 无版本号遗留档的推定起点（SV-3 注册表推导基点）
 
-# 版本迁移链显式注册表（13 图 SV-3 / 宪法 §32）：老版本存档按序迁移到当前版本。
+# 模块级 schema 版本起点（13 图 SV-2）：Body 每键 = {"schema_version": ..., "data": {...}}。
+# 模块字段变更 = 该模块升版 + register_module_migration 登记步骤 + golden 对，不再牵动全局 SAVE_VERSION。
+const MODULE_SCHEMA_VERSION := "1.0.0"
+
+# 模块当前版本覆盖表（SV-2）：未来某模块升版时在此登记 key→新 SemVer；
+# 写端据此打戳、读端据此判「未来/低位版本」。空 = 全部模块处于起点版。
+var _module_versions: Dictionary = {}
+
+# 存档 Body 键登记制（SV-2「新模块入档必须先在本表登记 DataContract，禁私自扩键」）：
+# 白名单来自 docs/contract/save_body_registry.json（tools/golden/gen_save_body_registry 场景 dump 真实注册清单产出，人审入库）。
+# register_saveable 时校验：白名单非空且 key 未登记 → 拒绝注册（FATAL 留痕）。载入失败 → 空表跳过校验（ERROR 留痕，结构问题由 GATE/CI 兜底）。
+var _registry_whitelist: Dictionary = {}
+
+# 模块级迁移链注册表（SV-2）：{ "key": str, "from": SemVer, "to": SemVer, "step": Callable }。
+# 与全局 SAVE_VERSION 链分层：顶层结构变更走 register_migration（动 SAVE_VERSION）；
+# 单模块字段变更走 register_module_migration（只动该键 schema_version）。
+var _module_migrations: Array = []
+
+# 全局存档版本迁移链显式注册表（13 图 SV-3 / 宪法 §32）：老版本存档按序迁移到当前版本。
 # 步骤签名：{ "from": SemVer, "to": SemVer, "step": Callable }，step 为 func(data)->Dictionary。
 # 已知版本链由注册表自动推导（禁手写 known 数组，P-S6 收口）；未知版本一律拒读（P-S3）。
-# 新增不兼容变更时：SAVE_VERSION 升版 + register_migration 登记一步 + golden 对（SV-R03）。
 var _migrations: Array = []
 
 var _content_version_cache: String = ""   # content_version 进程内缓存（P-S5，见 _content_version）
 
 func _ready() -> void:
 	_seed_builtin_migrations()
+	_load_body_registry()
 
-## 内置历史迁移登记（13 图 DoD 3：1.0.0→1.1.0 补正式注册步骤，禁止零登记豁免）。
+## 1.1.0 → 1.2.0：SV-2 二段式 Body——把全部裸键包成 {"schema_version": "1.0.0", "data": 值}。
+## 存档文件顶层只有 meta + 模块键，模块值恒为 save() 产出的 Dictionary（ISaveable 接口约束）；
+## 仅包装「值为 Dictionary 且无 schema_version」的键，防御手工改档的异常形态。
+func _migrate_1_1_0_to_1_2_0(data: Dictionary) -> Dictionary:
+	for k in data:
+		if k == "meta":
+			continue
+		var v: Variant = data[k]
+		if v is Dictionary and not (v as Dictionary).has("schema_version"):
+			data[k] = {"schema_version": MODULE_SCHEMA_VERSION, "data": v}
+	return data
+
+## 内置历史迁移登记（13 图 DoD 3：每步必登记，禁止零登记豁免）。
 ## 外部补丁迁移经 PatchManager → register_migration 接线（P-S1 修复）。
 func _seed_builtin_migrations() -> void:
 	register_migration({
@@ -27,6 +57,106 @@ func _seed_builtin_migrations() -> void:
 		"to": "1.1.0",
 		"step": Callable(self, "_migrate_1_0_0_to_1_1_0"),
 	})
+	register_migration({
+		"from": "1.1.0",
+		"to": "1.2.0",
+		"step": Callable(self, "_migrate_1_1_0_to_1_2_0"),
+	})
+
+## 载入 Body 键登记表（SV-2 登记制机器化）：docs/contract/save_body_registry.json
+## 由 tools/golden/gen_save_body_registry 场景 dump 真实注册清单产出（人审入库）。
+## 载入失败 → 空表 + ERROR 留痕，校验跳过（结构问题由 GATE/CI 兜底，不在运行时把玩家锁死）。
+func _load_body_registry() -> void:
+	_registry_whitelist.clear()
+	if not FileAccess.file_exists("res://docs/contract/save_body_registry.json"):
+		GameLogger.error("SaveManager", "存档 Body 登记表缺失（res://docs/contract/save_body_registry.json），扩键校验跳过")
+		return
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://docs/contract/save_body_registry.json"))
+	if not (parsed is Dictionary):
+		GameLogger.error("SaveManager", "存档 Body 登记表解析失败，扩键校验跳过")
+		return
+	var modules: Variant = (parsed as Dictionary).get("modules", {})
+	if not (modules is Dictionary):
+		GameLogger.error("SaveManager", "存档 Body 登记表缺 modules 段，扩键校验跳过")
+		return
+	for k in modules:
+		_registry_whitelist[str(k)] = true
+	GameLogger.info("SaveManager", "存档 Body 登记表已载入：%d 键（SV-2 禁私自扩键）" % _registry_whitelist.size())
+
+## 模块级迁移登记口（SV-2）：{ "key", "from", "to", "step:Callable" }。
+## 未来某模块字段变更升 schema_version 时，在此登记一步（配 golden 对）。
+func register_module_migration(entry: Dictionary) -> bool:
+	var key: String = str(entry.get("key", ""))
+	var from_v: String = str(entry.get("from", ""))
+	var to_v: String = str(entry.get("to", ""))
+	var step: Variant = entry.get("step", null)
+	if key == "" or from_v == "" or to_v == "" or not (step is Callable):
+		GameLogger.error("SaveManager", "register_module_migration 拒绝非法条目（需 key/from/to/step:Callable）: %s" % [entry])
+		return false
+	for m in _module_migrations:
+		if str(m.get("key", "")) == key and str(m.get("from", "")) == from_v:
+			GameLogger.warn("SaveManager", "模块迁移步骤重复登记，跳过: %s %s -> %s" % [key, from_v, to_v])
+			return true
+	_module_migrations.append({"key": key, "from": from_v, "to": to_v, "step": step})
+	GameLogger.info("SaveManager", "已登记模块迁移步骤: %s %s -> %s" % [key, from_v, to_v])
+	return true
+
+## 模块当前 schema 版本：覆盖表登记值优先，缺省 = MODULE_SCHEMA_VERSION 起点版
+func _module_current_version(key: String) -> String:
+	return str(_module_versions.get(key, MODULE_SCHEMA_VERSION))
+
+## 解析单模块键载荷（SV-2 读端）：
+## - 二段式 {"schema_version", "data"}：版本==当前 → 取 data；版本更高 → null（未来模块拒读）；
+##   版本更低 → 沿模块迁移链升到当前，断链 = null（未知模块版本拒读，P-S3 同精神）。
+## - legacy 裸键（1.2.0 前老档，理论上已被全局迁移包装；此处兜底）→ 原样透传 + 一次性通报。
+## - 非 Dictionary / 包装缺 data / data 非 Dictionary → null（调用方拒读整档）。
+## 返回 null = 无法安全解析（调用方中止读档，禁静默尽力解析）。
+func _resolve_module_payload(key: String, raw: Variant) -> Variant:
+	if not (raw is Dictionary):
+		GameLogger.error("SaveManager", "模块键 %s 载荷非 Dictionary，拒绝读档（SV-2）" % key)
+		return null
+	var dict: Dictionary = raw
+	if dict.has("schema_version"):
+		var mv: String = str(dict.get("schema_version", ""))
+		var payload: Variant = dict.get("data", null)
+		if not (payload is Dictionary):
+			GameLogger.error("SaveManager", "模块键 %s 二段式载荷缺 data Dictionary，拒绝读档（SV-2）" % key)
+			return null
+		var cur: String = _module_current_version(key)
+		if mv == cur:
+			return payload
+		if _version_gt(mv, cur):
+			GameLogger.error("SaveManager", "模块 %s schema_version %s 高于当前 %s，拒绝读档（防新档被旧逻辑写坏，SV-2）" % [key, mv, cur])
+			return null
+		# 低位版本：沿模块迁移链升级（注册表链走，断链即拒）
+		var guard := 0
+		while mv != cur:
+			var step: Dictionary = {}
+			for m in _module_migrations:
+				if str(m.get("key", "")) == key and str(m.get("from", "")) == mv:
+					step = m
+					break
+			if step.is_empty() or not (step.get("step") is Callable):
+				GameLogger.error("SaveManager", "模块 %s schema_version %s 无迁移步骤（当前 %s），拒绝读档（SV-2/P-S3 同精神）" % [key, mv, cur])
+				return null
+			var carried: Dictionary = {"data": payload}
+			var out: Variant = (step["step"] as Callable).call(carried)
+			if not (out is Dictionary) or not (out as Dictionary).get("data", null) is Dictionary:
+				GameLogger.error("SaveManager", "模块 %s 迁移步骤 %s->%s 产出非法，拒绝读档" % [key, mv, str(step.get("to", ""))])
+				return null
+			payload = (out as Dictionary)["data"]
+			mv = str(step.get("to", ""))
+			guard += 1
+			if guard > 32:
+				GameLogger.error("SaveManager", "模块 %s 迁移链异常（超 32 步未抵达 %s），拒绝读档" % [key, cur])
+				return null
+		return payload
+	# legacy 裸键兜底：1.2.0 前老档未经全局迁移包装的漏网形态（正常不应到达此处）
+	GameLogger.warn("SaveManager", "模块键 %s 为 legacy 裸载荷（无 schema_version 包装），按 1.0.0 兼容读取（SV-2 渐进口径）" % key)
+	return dict
+
+
+## 公开迁移登记口（13 图 SV-3 显式注册表 / P-S1 死接线修复，Phase1 落地）：
 
 ## 1.0.0 → 1.1.0：新增 last_region_id（读档恢复所在区域）。
 ## 老档 game_state 缺该字段时补起始区域默认值（与 GameState.load 兜底同口径）；
@@ -72,6 +202,11 @@ func register_saveable(saveable: ISaveable) -> void:
 	if _saveables.has(saveable):
 		return
 	var key: String = saveable.get_save_key()
+	# SV-2 登记制：白名单已载入且 key 未登记 → 拒绝注册（禁私自扩键；新模块先登记 save_body_registry.json）
+	if not _registry_whitelist.is_empty() and not _registry_whitelist.has(key):
+		GameLogger.error("SaveManager", "存档 key %s 未在 Body 登记表（docs/contract/save_body_registry.json）登记，拒绝注册（SV-2 禁私自扩键）" % key)
+		push_error("[Save] 未登记存档 key: %s" % key)
+		return
 	for existing in _saveables:
 		if existing.get_save_key() == key:
 			GameLogger.error("SaveManager", "存档 key 撞车，拒绝注册（SV-4/P-S2 注册期 FATAL）: key=%s 新对象=%s 与已有=%s 冲突" % [key, saveable, existing])
@@ -207,7 +342,12 @@ func delete_save(slot: int) -> bool:
 func _read_summary(slot: int, path: String, is_auto: bool) -> Dictionary:
 	var data: Dictionary = _load_json(path)
 	var meta: Dictionary = data.get("meta", {})
-	var ps: Dictionary = data.get("player", {})
+	# SV-2：player 键已二段式包装（{"schema_version", "data"}）——摘要读取走轻量解包
+	# （摘要只读不迁移；老档裸键形态原样可用，两种形态都兼容）
+	var ps_raw: Variant = data.get("player", {})
+	if ps_raw is Dictionary and (ps_raw as Dictionary).has("schema_version") and (ps_raw as Dictionary).get("data", null) is Dictionary:
+		ps_raw = (ps_raw as Dictionary)["data"]
+	var ps: Dictionary = ps_raw if ps_raw is Dictionary else {}
 	var unix_time: int = int(meta.get("timestamp", 0))
 	return {
 		"slot": slot,
@@ -309,7 +449,12 @@ func _load_from_path(path: String, slot: int) -> bool:
 		by_key[s.get_save_key()] = s
 	for key in order:
 		if data.has(key):
-			by_key[key].load(data[key])
+			# SV-2 读端：二段式解包 + 模块 schema_version 核对（未来/未知版本拒读，legacy 兜底）
+			var resolved: Variant = _resolve_module_payload(key, data[key])
+			if resolved == null:
+				GameLogger.error("SaveManager", "模块 %s 载荷解析失败，读档中止: %s" % [key, path])
+				return false
+			by_key[key].load(resolved as Dictionary)
 	EventBus.game_loaded.emit(slot)
 	return true
 
@@ -448,7 +593,8 @@ func _build_save_data(custom_name: String = "") -> Dictionary:
 	var body: Dictionary = {}
 	for saveable in _saveables:
 		var key: String = saveable.get_save_key()
-		body[key] = saveable.save()
+		# SV-2 二段式：每模块键包 {"schema_version", "data"}，模块版本独立演进
+		body[key] = {"schema_version": _module_current_version(key), "data": saveable.save()}
 	var meta := {
 		"save_version": SAVE_VERSION,
 		"game_version": str(ProjectSettings.get_setting("application/config/version", "")),

@@ -1,0 +1,36 @@
+{
+	"game_state": {
+		"difficulty": 1,
+		"global_flags": {
+			"nv_wolf_defeated": true
+		},
+		"last_region_id": "newbie_village",
+		"last_safe_point": {
+			"marker": "town",
+			"text_id": "safe_town"
+		},
+		"quest_phase": 1,
+		"unit_runtime": {
+
+		},
+		"xiaozhang_collateral": []
+	},
+	"meta": {
+		"custom_name": "golden样本",
+		"game_version": "0.5.0",
+		"save_version": "1.1.0",
+		"timestamp": 1750000000
+	},
+	"player": {
+		"hp": 88,
+		"level": 3,
+		"mp": 30,
+		"player_name": "golden侠",
+		"silver": 250
+	},
+	"world_time": {
+		"day": 4,
+		"hour": 15,
+		"minute": 30
+	}
+}

@@ -54,15 +54,38 @@ func test_unknown_version_not_stamped() -> void:
 	expect(str(data["meta"]["save_version"]) == "0.9.9", "拒读后版本号应保持原样，不被盖章")
 
 # === SV-R03：每条迁移步骤必带 Input/Expected golden 对（生产器 tools/golden/ 产出，人审冻结） ===
+## 对名动态跟随当前 SAVE_VERSION（migrate_<from>_to_<SAVE_VERSION>）；历史对永不删除供审计。
+## 两对覆盖：1.0.0 遗留档走完整链 / 1.1.0 中间版本走尾部链（SV-2 批次起含二段式包装迁移）。
 func test_migration_golden_pair() -> void:
+	_run_golden_pair("1_0_0")
+	_run_golden_pair("1_1_0")
+
+func _run_golden_pair(from_seg: String) -> void:
+	var stem := "migrate_%s_to_%s" % [from_seg, SaveManager.SAVE_VERSION]
 	var input_v: Variant = JSON.parse_string(
-		FileAccess.get_file_as_string("res://tests/golden/migrations/migrate_1_0_0_to_1_1_0.input.json"))
+		FileAccess.get_file_as_string("res://tests/golden/migrations/%s.input.json" % stem))
 	var expected_v: Variant = JSON.parse_string(
-		FileAccess.get_file_as_string("res://tests/golden/migrations/migrate_1_0_0_to_1_1_0.expected.json"))
-	if not expect(input_v is Dictionary and expected_v is Dictionary, "golden 夹具应存在且可解析"):
+		FileAccess.get_file_as_string("res://tests/golden/migrations/%s.expected.json" % stem))
+	if not expect(input_v is Dictionary and expected_v is Dictionary, "golden 夹具 %s 应存在且可解析" % stem):
 		return
 	var migrated: Dictionary = input_v
 	var expected: Dictionary = expected_v
-	expect(SaveManager._migrate_if_needed(migrated), "golden input 应沿注册表迁移成功")
+	expect(SaveManager._migrate_if_needed(migrated), "golden input（%s）应沿注册表迁移成功" % from_seg)
 	# JSON.stringify 默认键排序，两侧字符串比较与键序无关
-	expect(JSON.stringify(migrated) == JSON.stringify(expected), "迁移结果应与 golden expected 完全一致")
+	expect(JSON.stringify(migrated) == JSON.stringify(expected), "迁移结果应与 golden expected 完全一致（%s）" % stem)
+
+# === SV-2 二段式 Body：迁移后模块键应带 {schema_version, data} 包装（1.2.0 起格式） ===
+func test_migration_wraps_module_payloads() -> void:
+	var input_v: Variant = JSON.parse_string(
+		FileAccess.get_file_as_string("res://tests/golden/migrations/migrate_1_1_0_to_%s.input.json" % SaveManager.SAVE_VERSION))
+	if not expect(input_v is Dictionary, "1.1.0 golden input 应存在且可解析"):
+		return
+	var migrated: Dictionary = input_v
+	expect(SaveManager._migrate_if_needed(migrated), "1.1.0 input 应迁移成功")
+	var player_v: Variant = migrated.get("player", null)
+	if not expect(player_v is Dictionary and (player_v as Dictionary).has("schema_version"), "迁移后 player 键应为二段式包装"):
+		return
+	var wrapped: Dictionary = player_v
+	expect(str(wrapped["schema_version"]) == SaveManager.MODULE_SCHEMA_VERSION, "包装 schema_version 应为模块起点版")
+	expect((wrapped as Dictionary).get("data", null) is Dictionary and ((wrapped["data"] as Dictionary).has("player_name")),
+		"包装 data 应保留原模块字段（player_name 可回读）")

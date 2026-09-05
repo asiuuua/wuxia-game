@@ -1,0 +1,136 @@
+{
+	"_doc": "存档 Body 键登记表（13 图 SV-2 DataContract）。SaveManager._load_body_registry 启动载入：register_saveable 时键不在 modules 即拒注册（禁私自扩键）。生产器=tools/golden/gen_save_body_registry.tscn（dump 真实注册清单，start_new_game 初始态）；fields 为 dump 时点顶层字段，条件字段以 Owner 模块代码为准；新增/变更模块须重跑重产并 diff 入审。",
+	"modules": {
+		"ability": {
+			"fields": [
+				"equipped",
+				"learned"
+			],
+			"owner": "AbilityService(services/ability)",
+			"schema_version": "1.0.0"
+		},
+		"bond": {
+			"fields": [
+				"affections",
+				"fired",
+				"gift_count",
+				"levels",
+				"log"
+			],
+			"owner": "BondService(services/bond)",
+			"schema_version": "1.0.0"
+		},
+		"equipment": {
+			"fields": [
+				"slots"
+			],
+			"owner": "EquipmentService(services/equipment)",
+			"schema_version": "1.0.0"
+		},
+		"game_state": {
+			"fields": [
+				"difficulty",
+				"global_flags",
+				"last_region_id",
+				"last_safe_point",
+				"quest_phase",
+				"unit_runtime",
+				"xiaozhang_collateral"
+			],
+			"owner": "GameState(autoload, save_bridge)",
+			"schema_version": "1.0.0"
+		},
+		"inventory": {
+			"fields": [
+				"main",
+				"material",
+				"next_iid",
+				"quest",
+				"weight"
+			],
+			"owner": "InventoryService(services/inventory)",
+			"schema_version": "1.0.0"
+		},
+		"master": {
+			"fields": [
+				"apprentices",
+				"masters"
+			],
+			"owner": "MasterService(services/bond)",
+			"schema_version": "1.0.0"
+		},
+		"player": {
+			"fields": [
+				"age",
+				"agility",
+				"companion_ids",
+				"constitution",
+				"copper",
+				"debt",
+				"exp_to_next",
+				"experience",
+				"focus",
+				"gender",
+				"gold",
+				"hp",
+				"level",
+				"luck",
+				"max_hp",
+				"max_mp",
+				"mp",
+				"player_name",
+				"silver",
+				"strength",
+				"time_buffs",
+				"wisdom"
+			],
+			"owner": "PlayerState(data/runtime)",
+			"schema_version": "1.0.0"
+		},
+		"quest": {
+			"fields": [
+				"active",
+				"completed",
+				"tracked"
+			],
+			"owner": "QuestService(services/quest)",
+			"schema_version": "1.0.0"
+		},
+		"romance": {
+			"fields": [
+				"celebration_quotas",
+				"children",
+				"spouses"
+			],
+			"owner": "RomanceService(services/bond)",
+			"schema_version": "1.0.0"
+		},
+		"sect": {
+			"fields": [
+				"current_sect_id",
+				"rank",
+				"reputation"
+			],
+			"owner": "SectService(services/sect)",
+			"schema_version": "1.0.0"
+		},
+		"sworn": {
+			"fields": [
+				"sworn_brothers"
+			],
+			"owner": "SwornService(services/bond)",
+			"schema_version": "1.0.0"
+		},
+		"world_time": {
+			"fields": [
+				"day",
+				"season",
+				"time_of_day",
+				"weather"
+			],
+			"owner": "WorldTimeState(data/runtime, weather_time_service 注册)",
+			"schema_version": "1.0.0"
+		}
+	},
+	"schema_version": "1.0.0"
+}
