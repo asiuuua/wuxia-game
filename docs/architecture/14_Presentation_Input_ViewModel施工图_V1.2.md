@@ -1,6 +1,6 @@
 # 14 Presentation / Input / ViewModel 施工图 V1.2
 
-> 状态：FROZEN CANDIDATE（待用户批准升 FROZEN）
+> 状态：FROZEN（2026-09-06 用户批准；可依此实施）
 > 真源：宪法 §31/§32/§92/§97/§100（PROJECT_CONSTITUTION_V1.2.md L1680-1692 / L2097-2107 / L4080-4104 / L4194-4207 / L4240-4251）、01 图 §31 Layer 06 Presentation（L681-689）
 > 前序：02 Kernel（Command/Query 契约）· 03 Contract（S-6）· 04 测试（LN GATE 双命名空间）· 11 AB-4/AB-5 · 12 QD-2/QD-6 · 13 SV-5/SV-6
 > 铁律：本文档只冻结契约与迁移映射，**批准前不写任何实现代码**（01§104 CONTRACT BEFORE IMPLEMENTATION）。

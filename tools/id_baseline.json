@@ -1,0 +1,1412 @@
+{
+  "_doc": "ID 存量违例基线（16 图 CP-2b，2026-09-06 冻结）。扫描口径：data/configs 递归（排除 ui/ 与 _retired_ids.json），取键 id / *_id 的值与 skills / *_ids 数组元素，正则 = 03 §3.3 冻结式（ADR-0002 裁决前现状 C）。纪律：基线外零容忍、基线内只减不增（修一个删一条）。",
+  "frozen_at": "2026-09-06",
+  "pattern": "^(npc|dlg|quest|item|abil|stat|enemy|battle|region|shop|recipe|sect|flag)_[a-z0-9][a-z0-9_]*$",
+  "exempt": [
+    "player"
+  ],
+  "total": 280,
+  "note_20260905": "蓝图扫描口径为 202 处/36 文件（含更多引用面）；本基线为可复扫口径，以本文件为准继续只减不增。",
+  "violations": [
+    {
+      "file": "data/configs/abilities/status_effects.json",
+      "line": 109,
+      "id": "buqu"
+    },
+    {
+      "file": "data/configs/abilities/status_effects.json",
+      "line": 28,
+      "id": "gushou"
+    },
+    {
+      "file": "data/configs/abilities/status_effects.json",
+      "line": 85,
+      "id": "huti"
+    },
+    {
+      "file": "data/configs/abilities/status_effects.json",
+      "line": 97,
+      "id": "jingci"
+    },
+    {
+      "file": "data/configs/abilities/status_effects.json",
+      "line": 74,
+      "id": "jixing"
+    },
+    {
+      "file": "data/configs/abilities/status_effects.json",
+      "line": 63,
+      "id": "juqi"
+    },
+    {
+      "file": "data/configs/abilities/status_effects.json",
+      "line": 5,
+      "id": "pojia"
+    },
+    {
+      "file": "data/configs/abilities/status_effects.json",
+      "line": 17,
+      "id": "qianggong"
+    },
+    {
+      "file": "data/configs/abilities/status_effects.json",
+      "line": 51,
+      "id": "zhongdu"
+    },
+    {
+      "file": "data/configs/abilities/status_effects.json",
+      "line": 39,
+      "id": "zhuoshao"
+    },
+    {
+      "file": "data/configs/alchemy/recipes.json",
+      "line": 7,
+      "id": "material_herb_001"
+    },
+    {
+      "file": "data/configs/alchemy/recipes.json",
+      "line": 15,
+      "id": "material_root_001"
+    },
+    {
+      "file": "data/configs/alchemy/recipes.json",
+      "line": 8,
+      "id": "pill_heal_xiaohuan_001"
+    },
+    {
+      "file": "data/configs/alchemy/recipes.json",
+      "line": 16,
+      "id": "pill_mp_huixue_001"
+    },
+    {
+      "file": "data/configs/bond/relations.json",
+      "line": 126,
+      "id": "ev_master_teach_ready_001"
+    },
+    {
+      "file": "data/configs/bond/relations.json",
+      "line": 27,
+      "id": "ev_su_friendly_001"
+    },
+    {
+      "file": "data/configs/bond/relations.json",
+      "line": 36,
+      "id": "ev_su_loved_001"
+    },
+    {
+      "file": "data/configs/bond/relations.json",
+      "line": 168,
+      "id": "ev_ying_warm_001"
+    },
+    {
+      "file": "data/configs/bond/relations.json",
+      "line": 84,
+      "id": "ev_zhang_sworn_ready_001"
+    },
+    {
+      "file": "data/configs/dialogs/dialogue_events.json",
+      "line": 11,
+      "id": "demo_quest"
+    },
+    {
+      "file": "data/configs/difficulty/difficulty_table.json",
+      "line": 24,
+      "id": ""
+    },
+    {
+      "file": "data/configs/difficulty/difficulty_table.json",
+      "line": 5,
+      "id": "EASY"
+    },
+    {
+      "file": "data/configs/difficulty/difficulty_table.json",
+      "line": 49,
+      "id": "HARD"
+    },
+    {
+      "file": "data/configs/difficulty/difficulty_table.json",
+      "line": 97,
+      "id": "HELL"
+    },
+    {
+      "file": "data/configs/difficulty/difficulty_table.json",
+      "line": 73,
+      "id": "NIGHTMARE"
+    },
+    {
+      "file": "data/configs/difficulty/difficulty_table.json",
+      "line": 27,
+      "id": "NORMAL"
+    },
+    {
+      "file": "data/configs/difficulty/difficulty_table.json",
+      "line": 92,
+      "id": "cg_bully_extort"
+    },
+    {
+      "file": "data/configs/difficulty/difficulty_table.json",
+      "line": 68,
+      "id": "cg_lizhang_ransom"
+    },
+    {
+      "file": "data/configs/difficulty/difficulty_table.json",
+      "line": 7,
+      "id": "diff_easy_desc"
+    },
+    {
+      "file": "data/configs/difficulty/difficulty_table.json",
+      "line": 6,
+      "id": "diff_easy_name"
+    },
+    {
+      "file": "data/configs/difficulty/difficulty_table.json",
+      "line": 51,
+      "id": "diff_hard_desc"
+    },
+    {
+      "file": "data/configs/difficulty/difficulty_table.json",
+      "line": 50,
+      "id": "diff_hard_name"
+    },
+    {
+      "file": "data/configs/difficulty/difficulty_table.json",
+      "line": 99,
+      "id": "diff_hell_desc"
+    },
+    {
+      "file": "data/configs/difficulty/difficulty_table.json",
+      "line": 98,
+      "id": "diff_hell_name"
+    },
+    {
+      "file": "data/configs/difficulty/difficulty_table.json",
+      "line": 75,
+      "id": "diff_nightmare_desc"
+    },
+    {
+      "file": "data/configs/difficulty/difficulty_table.json",
+      "line": 74,
+      "id": "diff_nightmare_name"
+    },
+    {
+      "file": "data/configs/difficulty/difficulty_table.json",
+      "line": 29,
+      "id": "diff_normal_desc"
+    },
+    {
+      "file": "data/configs/difficulty/difficulty_table.json",
+      "line": 28,
+      "id": "diff_normal_name"
+    },
+    {
+      "file": "data/configs/forge/recipes.json",
+      "line": 5,
+      "id": "forge_iron_sword"
+    },
+    {
+      "file": "data/configs/forge/recipes.json",
+      "line": 7,
+      "id": "material_iron_001"
+    },
+    {
+      "file": "data/configs/forge/recipes.json",
+      "line": 8,
+      "id": "weapon_sword_iron_001"
+    },
+    {
+      "file": "data/configs/items/equipment.json",
+      "line": 11,
+      "id": "acc_bell_001"
+    },
+    {
+      "file": "data/configs/items/equipment.json",
+      "line": 18,
+      "id": "acc_changming_001"
+    },
+    {
+      "file": "data/configs/items/equipment.json",
+      "line": 7,
+      "id": "acc_jade_001"
+    },
+    {
+      "file": "data/configs/items/equipment.json",
+      "line": 17,
+      "id": "acc_lingpai_001"
+    },
+    {
+      "file": "data/configs/items/equipment.json",
+      "line": 12,
+      "id": "acc_pendant_001"
+    },
+    {
+      "file": "data/configs/items/equipment.json",
+      "line": 8,
+      "id": "acc_ring_001"
+    },
+    {
+      "file": "data/configs/items/equipment.json",
+      "line": 10,
+      "id": "armor_chain_001"
+    },
+    {
+      "file": "data/configs/items/equipment.json",
+      "line": 4,
+      "id": "armor_cloth_001"
+    },
+    {
+      "file": "data/configs/items/equipment.json",
+      "line": 6,
+      "id": "armor_iron_001"
+    },
+    {
+      "file": "data/configs/items/equipment.json",
+      "line": 15,
+      "id": "armor_jinzhong_001"
+    },
+    {
+      "file": "data/configs/items/equipment.json",
+      "line": 5,
+      "id": "armor_leather_001"
+    },
+    {
+      "file": "data/configs/items/equipment.json",
+      "line": 14,
+      "id": "armor_ruanrui_001"
+    },
+    {
+      "file": "data/configs/items/equipment.json",
+      "line": 9,
+      "id": "armor_silk_001"
+    },
+    {
+      "file": "data/configs/items/equipment.json",
+      "line": 16,
+      "id": "armor_suoyi_001"
+    },
+    {
+      "file": "data/configs/items/equipment.json",
+      "line": 13,
+      "id": "armor_yexing_001"
+    },
+    {
+      "file": "data/configs/items/materials.json",
+      "line": 45,
+      "id": "demo_item_jade"
+    },
+    {
+      "file": "data/configs/items/materials.json",
+      "line": 95,
+      "id": "material_bone_001"
+    },
+    {
+      "file": "data/configs/items/materials.json",
+      "line": 25,
+      "id": "material_fur_001"
+    },
+    {
+      "file": "data/configs/items/materials.json",
+      "line": 119,
+      "id": "material_guducao_001"
+    },
+    {
+      "file": "data/configs/items/materials.json",
+      "line": 115,
+      "id": "material_hantie_001"
+    },
+    {
+      "file": "data/configs/items/materials.json",
+      "line": 5,
+      "id": "material_herb_001"
+    },
+    {
+      "file": "data/configs/items/materials.json",
+      "line": 75,
+      "id": "material_herb_qing_001"
+    },
+    {
+      "file": "data/configs/items/materials.json",
+      "line": 35,
+      "id": "material_ore_001"
+    },
+    {
+      "file": "data/configs/items/materials.json",
+      "line": 55,
+      "id": "material_ore_copper_001"
+    },
+    {
+      "file": "data/configs/items/materials.json",
+      "line": 65,
+      "id": "material_ore_silver_001"
+    },
+    {
+      "file": "data/configs/items/materials.json",
+      "line": 105,
+      "id": "material_pelt_wolf_001"
+    },
+    {
+      "file": "data/configs/items/materials.json",
+      "line": 117,
+      "id": "material_renshen_001"
+    },
+    {
+      "file": "data/configs/items/materials.json",
+      "line": 15,
+      "id": "material_root_001"
+    },
+    {
+      "file": "data/configs/items/materials.json",
+      "line": 85,
+      "id": "material_silk_raw_001"
+    },
+    {
+      "file": "data/configs/items/materials.json",
+      "line": 116,
+      "id": "material_tiansi_001"
+    },
+    {
+      "file": "data/configs/items/materials.json",
+      "line": 120,
+      "id": "material_xiaoshi_001"
+    },
+    {
+      "file": "data/configs/items/materials.json",
+      "line": 114,
+      "id": "material_xuantie_001"
+    },
+    {
+      "file": "data/configs/items/materials.json",
+      "line": 118,
+      "id": "material_xuelian_001"
+    },
+    {
+      "file": "data/configs/items/pills.json",
+      "line": 17,
+      "id": "pill_buff_gongli_001"
+    },
+    {
+      "file": "data/configs/items/pills.json",
+      "line": 18,
+      "id": "pill_buff_jingang_001"
+    },
+    {
+      "file": "data/configs/items/pills.json",
+      "line": 19,
+      "id": "pill_buff_longhu_001"
+    },
+    {
+      "file": "data/configs/items/pills.json",
+      "line": 16,
+      "id": "pill_buff_xiaoli_001"
+    },
+    {
+      "file": "data/configs/items/pills.json",
+      "line": 20,
+      "id": "pill_cure_jiedu_001"
+    },
+    {
+      "file": "data/configs/items/pills.json",
+      "line": 6,
+      "id": "pill_heal_dahuang_001"
+    },
+    {
+      "file": "data/configs/items/pills.json",
+      "line": 9,
+      "id": "pill_heal_dahuang_002"
+    },
+    {
+      "file": "data/configs/items/pills.json",
+      "line": 7,
+      "id": "pill_heal_jinchan_001"
+    },
+    {
+      "file": "data/configs/items/pills.json",
+      "line": 4,
+      "id": "pill_heal_xiaohuan_001"
+    },
+    {
+      "file": "data/configs/items/pills.json",
+      "line": 10,
+      "id": "pill_heal_yujin_001"
+    },
+    {
+      "file": "data/configs/items/pills.json",
+      "line": 12,
+      "id": "pill_heiyu_001"
+    },
+    {
+      "file": "data/configs/items/pills.json",
+      "line": 11,
+      "id": "pill_jiuhua_001"
+    },
+    {
+      "file": "data/configs/items/pills.json",
+      "line": 5,
+      "id": "pill_mp_huixue_001"
+    },
+    {
+      "file": "data/configs/items/pills.json",
+      "line": 8,
+      "id": "pill_mp_jingqi_001"
+    },
+    {
+      "file": "data/configs/items/pills.json",
+      "line": 15,
+      "id": "pill_wubao_001"
+    },
+    {
+      "file": "data/configs/items/pills.json",
+      "line": 13,
+      "id": "pill_xuming_001"
+    },
+    {
+      "file": "data/configs/items/pills.json",
+      "line": 14,
+      "id": "pill_zuixian_001"
+    },
+    {
+      "file": "data/configs/items/weapons.json",
+      "line": 22,
+      "id": "weapon_anqi_dusha_001"
+    },
+    {
+      "file": "data/configs/items/weapons.json",
+      "line": 21,
+      "id": "weapon_anqi_feihuang_001"
+    },
+    {
+      "file": "data/configs/items/weapons.json",
+      "line": 20,
+      "id": "weapon_anqi_xiuli_001"
+    },
+    {
+      "file": "data/configs/items/weapons.json",
+      "line": 5,
+      "id": "weapon_blade_iron_001"
+    },
+    {
+      "file": "data/configs/items/weapons.json",
+      "line": 9,
+      "id": "weapon_blade_steel_001"
+    },
+    {
+      "file": "data/configs/items/weapons.json",
+      "line": 14,
+      "id": "weapon_blade_yanling_001"
+    },
+    {
+      "file": "data/configs/items/weapons.json",
+      "line": 18,
+      "id": "weapon_chui_liuxing_001"
+    },
+    {
+      "file": "data/configs/items/weapons.json",
+      "line": 19,
+      "id": "weapon_ci_emei_001"
+    },
+    {
+      "file": "data/configs/items/weapons.json",
+      "line": 17,
+      "id": "weapon_huan_shuang_001"
+    },
+    {
+      "file": "data/configs/items/weapons.json",
+      "line": 7,
+      "id": "weapon_spear_001"
+    },
+    {
+      "file": "data/configs/items/weapons.json",
+      "line": 15,
+      "id": "weapon_spear_lihua_001"
+    },
+    {
+      "file": "data/configs/items/weapons.json",
+      "line": 10,
+      "id": "weapon_spear_steel_001"
+    },
+    {
+      "file": "data/configs/items/weapons.json",
+      "line": 16,
+      "id": "weapon_staff_goubang_001"
+    },
+    {
+      "file": "data/configs/items/weapons.json",
+      "line": 12,
+      "id": "weapon_staff_taomu_001"
+    },
+    {
+      "file": "data/configs/items/weapons.json",
+      "line": 8,
+      "id": "weapon_sword_bronze_001"
+    },
+    {
+      "file": "data/configs/items/weapons.json",
+      "line": 4,
+      "id": "weapon_sword_iron_001"
+    },
+    {
+      "file": "data/configs/items/weapons.json",
+      "line": 13,
+      "id": "weapon_sword_qingfeng_001"
+    },
+    {
+      "file": "data/configs/items/weapons.json",
+      "line": 11,
+      "id": "weapon_sword_silver_001"
+    },
+    {
+      "file": "data/configs/items/weapons.json",
+      "line": 6,
+      "id": "weapon_sword_steel_001"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/_index.json",
+      "line": 7,
+      "id": ""
+    },
+    {
+      "file": "data/configs/npcs/dialogs/_index.json",
+      "line": 25,
+      "id": "demo_npc"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/_index.json",
+      "line": 57,
+      "id": "event_demo_npc"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/_index.json",
+      "line": 50,
+      "id": "tactical_demo_master"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/demo_npc.json",
+      "line": 31,
+      "id": ""
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/demo_npc.json",
+      "line": 2,
+      "id": "demo_npc"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/demo_npc.json",
+      "line": 5,
+      "id": "dg_1"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/demo_npc.json",
+      "line": 8,
+      "id": "dg_2"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/demo_npc.json",
+      "line": 18,
+      "id": "dg_3"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/demo_npc.json",
+      "line": 24,
+      "id": "dg_4"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/dlg_event_demo.json",
+      "line": 51,
+      "id": ""
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/dlg_event_demo.json",
+      "line": 6,
+      "id": "ed_1"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/dlg_event_demo.json",
+      "line": 9,
+      "id": "ed_2"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/dlg_event_demo.json",
+      "line": 19,
+      "id": "ed_3"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/dlg_event_demo.json",
+      "line": 25,
+      "id": "ed_4"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/dlg_event_demo.json",
+      "line": 35,
+      "id": "ed_5"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/dlg_event_demo.json",
+      "line": 41,
+      "id": "ed_6"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/dlg_event_demo.json",
+      "line": 7,
+      "id": "event_demo_npc"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/dlg_sect.json",
+      "line": 21,
+      "id": ""
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/dlg_tutorial.json",
+      "line": 26,
+      "id": ""
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/dlg_tutorial.json",
+      "line": 6,
+      "id": "demo_npc"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/dlg_tutorial.json",
+      "line": 5,
+      "id": "tut_1"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/dlg_tutorial.json",
+      "line": 9,
+      "id": "tut_2"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/dlg_tutorial.json",
+      "line": 20,
+      "id": "tut_3"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/dlg_wolf.json",
+      "line": 21,
+      "id": ""
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/dlg_wolf.json",
+      "line": 5,
+      "id": "wolf_1"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/dlg_wolf.json",
+      "line": 8,
+      "id": "wolf_2"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/dlg_wolf.json",
+      "line": 15,
+      "id": "wolf_3"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/npc_bandit.json",
+      "line": 8,
+      "id": ""
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/npc_bandit.json",
+      "line": 5,
+      "id": "bd_1"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/npc_hunter.json",
+      "line": 15,
+      "id": ""
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/npc_hunter.json",
+      "line": 5,
+      "id": "hn_1"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/npc_hunter.json",
+      "line": 8,
+      "id": "hn_2"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/npc_liu_ruyan.json",
+      "line": 15,
+      "id": ""
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/npc_liu_ruyan.json",
+      "line": 5,
+      "id": "lry_1"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/npc_liu_ruyan.json",
+      "line": 8,
+      "id": "lry_2"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/npc_merchant.json",
+      "line": 15,
+      "id": ""
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/npc_merchant.json",
+      "line": 5,
+      "id": "mc_1"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/npc_merchant.json",
+      "line": 8,
+      "id": "mc_2"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/npc_mu_wanqing.json",
+      "line": 15,
+      "id": ""
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/npc_mu_wanqing.json",
+      "line": 5,
+      "id": "mwq_1"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/npc_mu_wanqing.json",
+      "line": 8,
+      "id": "mwq_2"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/npc_sect_elder.json",
+      "line": 15,
+      "id": ""
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/npc_sect_elder.json",
+      "line": 5,
+      "id": "se_1"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/npc_sect_elder.json",
+      "line": 8,
+      "id": "se_2"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/npc_village_chief.json",
+      "line": 14,
+      "id": ""
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/npc_village_chief.json",
+      "line": 5,
+      "id": "vc_1"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/npc_village_chief.json",
+      "line": 8,
+      "id": "vc_2"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/npc_village_chief.json",
+      "line": 39,
+      "id": "vc_3"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/npc_village_chief.json",
+      "line": 30,
+      "id": "vc_no"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/npc_village_chief.json",
+      "line": 22,
+      "id": "vc_toast"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/npc_village_chief.json",
+      "line": 18,
+      "id": "vc_yes"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/tactical_demo_master.json",
+      "line": 24,
+      "id": ""
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/tactical_demo_master.json",
+      "line": 2,
+      "id": "tactical_demo_master"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/tactical_demo_master.json",
+      "line": 5,
+      "id": "td_1"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/tactical_demo_master.json",
+      "line": 8,
+      "id": "td_2"
+    },
+    {
+      "file": "data/configs/npcs/dialogs/shards/tactical_demo_master.json",
+      "line": 18,
+      "id": "td_3"
+    },
+    {
+      "file": "data/configs/npcs/enemies.json",
+      "line": 107,
+      "id": "ally_sworder_001"
+    },
+    {
+      "file": "data/configs/npcs/enemies.json",
+      "line": 5,
+      "id": "bandit_001"
+    },
+    {
+      "file": "data/configs/npcs/enemies.json",
+      "line": 21,
+      "id": "bandit_002"
+    },
+    {
+      "file": "data/configs/npcs/enemies.json",
+      "line": 93,
+      "id": "bandit_fanatic_001"
+    },
+    {
+      "file": "data/configs/npcs/enemies.json",
+      "line": 67,
+      "id": "bandit_scout_001"
+    },
+    {
+      "file": "data/configs/npcs/enemies.json",
+      "line": 78,
+      "id": "bandit_warden_001"
+    },
+    {
+      "file": "data/configs/npcs/enemies.json",
+      "line": 27,
+      "id": "blade_duanshui_001"
+    },
+    {
+      "file": "data/configs/npcs/enemies.json",
+      "line": 100,
+      "id": "buqu_yizhi_001"
+    },
+    {
+      "file": "data/configs/npcs/enemies.json",
+      "line": 42,
+      "id": "demo_enemy"
+    },
+    {
+      "file": "data/configs/npcs/enemies.json",
+      "line": 50,
+      "id": "demo_item_jade"
+    },
+    {
+      "file": "data/configs/npcs/enemies.json",
+      "line": 85,
+      "id": "huti_zhenqi_001"
+    },
+    {
+      "file": "data/configs/npcs/enemies.json",
+      "line": 86,
+      "id": "jingci_huwei_001"
+    },
+    {
+      "file": "data/configs/npcs/enemies.json",
+      "line": 74,
+      "id": "material_ore_001"
+    },
+    {
+      "file": "data/configs/npcs/enemies.json",
+      "line": 15,
+      "id": "pill_heal_xiaohuan_001"
+    },
+    {
+      "file": "data/configs/npcs/enemies.json",
+      "line": 72,
+      "id": "qinggong_tiyun_001"
+    },
+    {
+      "file": "data/configs/npcs/enemies.json",
+      "line": 11,
+      "id": "sword_qingsong_001"
+    },
+    {
+      "file": "data/configs/npcs/enemies.json",
+      "line": 32,
+      "id": "weapon_sword_iron_001"
+    },
+    {
+      "file": "data/configs/npcs/enemies.json",
+      "line": 56,
+      "id": "wolf_001"
+    },
+    {
+      "file": "data/configs/npcs/enemies.json",
+      "line": 28,
+      "id": "xinfa_ningshen_001"
+    },
+    {
+      "file": "data/configs/quests/quests.json",
+      "line": 11,
+      "id": "defeat"
+    },
+    {
+      "file": "data/configs/quests/quests.json",
+      "line": 45,
+      "id": "demo_item_jade"
+    },
+    {
+      "file": "data/configs/quests/quests.json",
+      "line": 28,
+      "id": "demo_quest"
+    },
+    {
+      "file": "data/configs/quests/quests.json",
+      "line": 34,
+      "id": "obj1"
+    },
+    {
+      "file": "data/configs/quests/quests.json",
+      "line": 21,
+      "id": "pill_heal_xiaohuan_001"
+    },
+    {
+      "file": "data/configs/quests/quests.json",
+      "line": 5,
+      "id": "q_bandit_001"
+    },
+    {
+      "file": "data/configs/quests/quests.json",
+      "line": 62,
+      "id": "q_sect_join_001"
+    },
+    {
+      "file": "data/configs/quests/quests.json",
+      "line": 52,
+      "id": "q_wolf_001"
+    },
+    {
+      "file": "data/configs/quests/quests.json",
+      "line": 72,
+      "id": "weapon_blade_iron_001"
+    },
+    {
+      "file": "data/configs/regions/_map_index.json",
+      "line": 10,
+      "id": "misty_town"
+    },
+    {
+      "file": "data/configs/regions/_map_index.json",
+      "line": 6,
+      "id": "newbie_village"
+    },
+    {
+      "file": "data/configs/regions/misty_town/battles.json",
+      "line": 5,
+      "id": "mt_battle_wolf"
+    },
+    {
+      "file": "data/configs/regions/misty_town/battles.json",
+      "line": 7,
+      "id": "mt_enemy_wolf"
+    },
+    {
+      "file": "data/configs/regions/misty_town/dialogs/mt_dialog_priest.json",
+      "line": 7,
+      "id": "l1"
+    },
+    {
+      "file": "data/configs/regions/misty_town/dialogs/mt_dialog_priest.json",
+      "line": 3,
+      "id": "mt_dialog_priest"
+    },
+    {
+      "file": "data/configs/regions/misty_town/dialogs/mt_dialog_priest.json",
+      "line": 8,
+      "id": "mt_npc_priest"
+    },
+    {
+      "file": "data/configs/regions/misty_town/dialogs/mt_dialog_priest.json",
+      "line": 13,
+      "id": "opt_accept"
+    },
+    {
+      "file": "data/configs/regions/misty_town/dialogs/mt_dialog_priest.json",
+      "line": 18,
+      "id": "opt_think"
+    },
+    {
+      "file": "data/configs/regions/misty_town/enemies.json",
+      "line": 5,
+      "id": "mt_enemy_wolf"
+    },
+    {
+      "file": "data/configs/regions/misty_town/index.json",
+      "line": 3,
+      "id": "misty_town"
+    },
+    {
+      "file": "data/configs/regions/misty_town/items.json",
+      "line": 5,
+      "id": "mt_item_night_pearl"
+    },
+    {
+      "file": "data/configs/regions/misty_town/npcs.json",
+      "line": 12,
+      "id": ""
+    },
+    {
+      "file": "data/configs/regions/misty_town/npcs.json",
+      "line": 10,
+      "id": "mt_dialog_priest"
+    },
+    {
+      "file": "data/configs/regions/misty_town/npcs.json",
+      "line": 5,
+      "id": "mt_npc_priest"
+    },
+    {
+      "file": "data/configs/regions/misty_town/npcs.json",
+      "line": 15,
+      "id": "mt_npc_tailor"
+    },
+    {
+      "file": "data/configs/regions/misty_town/npcs.json",
+      "line": 11,
+      "id": "mt_quest_deliver"
+    },
+    {
+      "file": "data/configs/regions/misty_town/quests.json",
+      "line": 10,
+      "id": "defeat"
+    },
+    {
+      "file": "data/configs/regions/misty_town/quests.json",
+      "line": 13,
+      "id": "mt_item_night_pearl"
+    },
+    {
+      "file": "data/configs/regions/misty_town/quests.json",
+      "line": 5,
+      "id": "mt_quest_deliver"
+    },
+    {
+      "file": "data/configs/regions/newbie_village/battles.json",
+      "line": 6,
+      "id": "nv_battle_bandit"
+    },
+    {
+      "file": "data/configs/regions/newbie_village/battles.json",
+      "line": 8,
+      "id": "nv_enemy_bandit_001"
+    },
+    {
+      "file": "data/configs/regions/newbie_village/battles.json",
+      "line": 8,
+      "id": "nv_enemy_bandit_002"
+    },
+    {
+      "file": "data/configs/regions/newbie_village/battles.json",
+      "line": 10,
+      "id": "nv_item_wine"
+    },
+    {
+      "file": "data/configs/regions/newbie_village/dialogs/nv_dialog_elder.json",
+      "line": 7,
+      "id": "l1"
+    },
+    {
+      "file": "data/configs/regions/newbie_village/dialogs/nv_dialog_elder.json",
+      "line": 3,
+      "id": "nv_dialog_elder"
+    },
+    {
+      "file": "data/configs/regions/newbie_village/dialogs/nv_dialog_elder.json",
+      "line": 8,
+      "id": "nv_npc_elder"
+    },
+    {
+      "file": "data/configs/regions/newbie_village/dialogs/nv_dialog_maiden.json",
+      "line": 7,
+      "id": "l1"
+    },
+    {
+      "file": "data/configs/regions/newbie_village/dialogs/nv_dialog_maiden.json",
+      "line": 3,
+      "id": "nv_dialog_maiden"
+    },
+    {
+      "file": "data/configs/regions/newbie_village/dialogs/nv_dialog_maiden.json",
+      "line": 8,
+      "id": "nv_npc_maiden"
+    },
+    {
+      "file": "data/configs/regions/newbie_village/dialogs/nv_dialog_maiden.json",
+      "line": 13,
+      "id": "opt_help"
+    },
+    {
+      "file": "data/configs/regions/newbie_village/dialogs/nv_dialog_maiden.json",
+      "line": 18,
+      "id": "opt_later"
+    },
+    {
+      "file": "data/configs/regions/newbie_village/enemies.json",
+      "line": 6,
+      "id": "nv_enemy_bandit_001"
+    },
+    {
+      "file": "data/configs/regions/newbie_village/enemies.json",
+      "line": 15,
+      "id": "nv_enemy_bandit_002"
+    },
+    {
+      "file": "data/configs/regions/newbie_village/index.json",
+      "line": 3,
+      "id": "newbie_village"
+    },
+    {
+      "file": "data/configs/regions/newbie_village/items.json",
+      "line": 6,
+      "id": "nv_item_hairpin"
+    },
+    {
+      "file": "data/configs/regions/newbie_village/items.json",
+      "line": 12,
+      "id": "nv_item_wine"
+    },
+    {
+      "file": "data/configs/regions/newbie_village/npcs.json",
+      "line": 11,
+      "id": ""
+    },
+    {
+      "file": "data/configs/regions/newbie_village/npcs.json",
+      "line": 60,
+      "id": "demo_battle"
+    },
+    {
+      "file": "data/configs/regions/newbie_village/npcs.json",
+      "line": 52,
+      "id": "demo_npc"
+    },
+    {
+      "file": "data/configs/regions/newbie_village/npcs.json",
+      "line": 59,
+      "id": "demo_quest"
+    },
+    {
+      "file": "data/configs/regions/newbie_village/npcs.json",
+      "line": 124,
+      "id": "event_demo_npc"
+    },
+    {
+      "file": "data/configs/regions/newbie_village/npcs.json",
+      "line": 33,
+      "id": "nv_battle_bandit"
+    },
+    {
+      "file": "data/configs/regions/newbie_village/npcs.json",
+      "line": 31,
+      "id": "nv_dialog_elder"
+    },
+    {
+      "file": "data/configs/regions/newbie_village/npcs.json",
+      "line": 21,
+      "id": "nv_dialog_maiden"
+    },
+    {
+      "file": "data/configs/regions/newbie_village/npcs.json",
+      "line": 6,
+      "id": "nv_npc_chief"
+    },
+    {
+      "file": "data/configs/regions/newbie_village/npcs.json",
+      "line": 26,
+      "id": "nv_npc_elder"
+    },
+    {
+      "file": "data/configs/regions/newbie_village/npcs.json",
+      "line": 16,
+      "id": "nv_npc_maiden"
+    },
+    {
+      "file": "data/configs/regions/newbie_village/npcs.json",
+      "line": 22,
+      "id": "nv_quest_guard"
+    },
+    {
+      "file": "data/configs/regions/newbie_village/npcs.json",
+      "line": 32,
+      "id": "nv_quest_help_maiden"
+    },
+    {
+      "file": "data/configs/regions/newbie_village/npcs.json",
+      "line": 72,
+      "id": "q_bandit_001"
+    },
+    {
+      "file": "data/configs/regions/newbie_village/npcs.json",
+      "line": 96,
+      "id": "q_sect_join_001"
+    },
+    {
+      "file": "data/configs/regions/newbie_village/npcs.json",
+      "line": 84,
+      "id": "q_wolf_001"
+    },
+    {
+      "file": "data/configs/regions/newbie_village/npcs.json",
+      "line": 112,
+      "id": "tactical_demo_master"
+    },
+    {
+      "file": "data/configs/regions/newbie_village/quests.json",
+      "line": 10,
+      "id": "defend"
+    },
+    {
+      "file": "data/configs/regions/newbie_village/quests.json",
+      "line": 21,
+      "id": "give_item"
+    },
+    {
+      "file": "data/configs/regions/newbie_village/quests.json",
+      "line": 66,
+      "id": "good"
+    },
+    {
+      "file": "data/configs/regions/newbie_village/quests.json",
+      "line": 67,
+      "id": "neutral"
+    },
+    {
+      "file": "data/configs/regions/newbie_village/quests.json",
+      "line": 24,
+      "id": "nv_item_wine"
+    },
+    {
+      "file": "data/configs/regions/newbie_village/quests.json",
+      "line": 27,
+      "id": "nv_qg_demo"
+    },
+    {
+      "file": "data/configs/regions/newbie_village/quests.json",
+      "line": 6,
+      "id": "nv_quest_guard"
+    },
+    {
+      "file": "data/configs/regions/newbie_village/quests.json",
+      "line": 16,
+      "id": "nv_quest_help_maiden"
+    },
+    {
+      "file": "data/configs/scenes/battles.json",
+      "line": 8,
+      "id": "bandit_001"
+    },
+    {
+      "file": "data/configs/scenes/battles.json",
+      "line": 9,
+      "id": "bandit_002"
+    },
+    {
+      "file": "data/configs/scenes/battles.json",
+      "line": 61,
+      "id": "bandit_fanatic_001"
+    },
+    {
+      "file": "data/configs/scenes/battles.json",
+      "line": 60,
+      "id": "bandit_warden_001"
+    },
+    {
+      "file": "data/configs/scenes/battles.json",
+      "line": 35,
+      "id": "demo_battle"
+    },
+    {
+      "file": "data/configs/scenes/battles.json",
+      "line": 38,
+      "id": "demo_enemy"
+    },
+    {
+      "file": "data/configs/scenes/battles.json",
+      "line": 15,
+      "id": "tactical_ally_inject"
+    },
+    {
+      "file": "data/configs/scenes/battles.json",
+      "line": 67,
+      "id": "tactical_demo_001"
+    },
+    {
+      "file": "data/configs/scenes/battles.json",
+      "line": 126,
+      "id": "tactical_demo_party"
+    },
+    {
+      "file": "data/configs/scenes/battles.json",
+      "line": 101,
+      "id": "tactical_mapbound_001"
+    },
+    {
+      "file": "data/configs/scenes/battles.json",
+      "line": 114,
+      "id": "tactical_mapbound_002"
+    },
+    {
+      "file": "data/configs/scenes/battles.json",
+      "line": 86,
+      "id": "tactical_studio_preview"
+    },
+    {
+      "file": "data/configs/scenes/battles.json",
+      "line": 145,
+      "id": "tactical_test_riverside"
+    },
+    {
+      "file": "data/configs/scenes/battles.json",
+      "line": 162,
+      "id": "tactical_test_swarm"
+    },
+    {
+      "file": "data/configs/scenes/battles.json",
+      "line": 45,
+      "id": "wolf_001"
+    },
+    {
+      "file": "data/configs/shop/shops.json",
+      "line": 13,
+      "id": "armor_cloth_001"
+    },
+    {
+      "file": "data/configs/shop/shops.json",
+      "line": 25,
+      "id": "armor_iron_001"
+    },
+    {
+      "file": "data/configs/shop/shops.json",
+      "line": 12,
+      "id": "material_herb_001"
+    },
+    {
+      "file": "data/configs/shop/shops.json",
+      "line": 11,
+      "id": "pill_heal_dahuang_001"
+    },
+    {
+      "file": "data/configs/shop/shops.json",
+      "line": 10,
+      "id": "pill_heal_xiaohuan_001"
+    },
+    {
+      "file": "data/configs/shop/shops.json",
+      "line": 24,
+      "id": "weapon_spear_001"
+    },
+    {
+      "file": "data/configs/shop/shops.json",
+      "line": 22,
+      "id": "weapon_sword_iron_001"
+    },
+    {
+      "file": "data/configs/shop/shops.json",
+      "line": 23,
+      "id": "weapon_sword_steel_001"
+    }
+  ]
+}

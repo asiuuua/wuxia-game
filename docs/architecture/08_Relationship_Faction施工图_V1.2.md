@@ -2,7 +2,7 @@
 
 | 项 | 值 |
 |---|---|
-| 状态 | **FROZEN CANDIDATE**（待用户批准升 FROZEN） |
+| 状态 | **FROZEN**（2026-09-06 用户批准；可依此实施） |
 | 日期 | 2026-09-05 |
 | 上游 | 宪法 V1.2（§39 Relationship 边界 / §40~42 Romance·Marriage 边界 / §37 Memory 建议 / L2034-2053 Owner 表）→ 01 §48 Relationship·§55 Faction·§38 Owner 基线 → 02（EntityId/Command/Event）→ 04（Gate/双替）→ 05（Definition/ID 校验）→ 06（NPC Definition/Membership 挂点） |
 | 范围 | 冻结 8 件：RelationshipGraph 本体 / 十型统一 / 职责边界 / Faction 九件套 / Membership 契约 / 好感送礼事务化 / 读模型合规 / Save·联动 |

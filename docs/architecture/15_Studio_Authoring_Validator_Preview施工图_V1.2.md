@@ -1,6 +1,6 @@
 # 15 Studio / Authoring / Validator / Preview 施工图 V1.2
 
-> 状态：FROZEN CANDIDATE（待用户批准升 FROZEN）
+> 状态：FROZEN（2026-09-06 用户批准；可依此实施）
 > 真源：宪法 §67 Studio（L3694-3711）/ §68 Story Graph / §69 Dependency Graph（L3736-3747）/ §164 第五阶段（L5159-5166）/ §88 GATE16 Studio Smoke（L4037）；01 图 §79 Studio（L1239-1247）/ §80 Story Editor / §92 Architecture Validators（L1397-1406）/ §93 Forbidden API
 > 前序：03 Contract（ID 白名单/ref_index GATE6）· 04 测试（verify_all V2、arch_lint 七校验器、LN/物理双命名空间）· 05 Content Pipeline（Phase0 REPORT/manifest）· 13 SV-6（patch_history 域）· 14 PV（配置面/screens.json 校验/i18n 契约）
 > 铁律：本文档只冻结契约与迁移映射，**批准前不写任何实现代码**（01§104）。

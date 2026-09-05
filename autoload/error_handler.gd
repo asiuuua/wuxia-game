@@ -1,5 +1,5 @@
 # autoload/error_handler.gd
-# 全局错误兜底（规范 §4.2.3）：监听 game_error，按级别分级处理。
+# 全局错误兜底（13图SV域（旧§4.2.3编号已废））：监听 game_error，按级别分级处理。
 # FATAL 弹窗并退出；ERROR 记录日志 + 通知；WARN 仅记录。
 
 extends Node

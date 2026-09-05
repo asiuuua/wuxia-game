@@ -13,6 +13,26 @@ const SAVE_VERSION := "1.1.0"   # 1.1.0(2026-09-04)：新增 last_region_id（�
 var _migrations: Array = [
 	# {"from": "1.0.0", "step": Callable}
 ]
+
+
+## 公开迁移登记口（13 图 SV-3 显式注册表 / P-S1 死接线修复，Phase1 落地）：
+## 外部（如 PatchManager）按 { "from": SemVer, "to": SemVer, "step": Callable } 登记。
+## step 签名：func(data: Dictionary) -> Dictionary；非法条目拒绝并 ERROR（禁静默）。
+func register_migration(entry: Dictionary) -> bool:
+	var from_v: String = str(entry.get("from", ""))
+	var to_v: String = str(entry.get("to", ""))
+	var step: Variant = entry.get("step", null)
+	if from_v == "" or to_v == "" or not (step is Callable):
+		GameLogger.error("SaveManager", "register_migration 拒绝非法条目（需 from/to/step:Callable）: %s" % [entry])
+		return false
+	for m in _migrations:
+		if str(m.get("from", "")) == from_v and str(m.get("to", "")) == to_v:
+			GameLogger.warn("SaveManager", "迁移步骤重复登记，跳过: %s -> %s" % [from_v, to_v])
+			return true
+	_migrations.append({"from": from_v, "to": to_v, "step": step})
+	_migrations.sort_custom(func(a, b): return str(a.get("from", "")) < str(b.get("from", "")))
+	GameLogger.info("SaveManager", "已登记存档迁移步骤: %s -> %s" % [from_v, to_v])
+	return true
 const SAVE_DIR := "user://saves/"
 const MAX_SLOTS := 6   # 手动存档槽位上限（存档选择界面按槽位渲染）
 const TMP_SUFFIX := ".tmp"   # 原子写临时文件后缀

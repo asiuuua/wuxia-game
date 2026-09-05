@@ -2,7 +2,7 @@
 
 | 项 | 值 |
 |---|---|
-| 状态 | **FROZEN CANDIDATE**（待用户批准升 FROZEN） |
+| 状态 | **FROZEN**（2026-09-06 用户批准；可依此实施） |
 | 日期 | 2026-09-05 |
 | 上游 | 宪法 V1.2 → `01_总体架构施工图_V1.2.md`（§92/93/94/95/96/115~120/127/129）→ `02_Domain_Kernel`（K-R 矩阵）→ `03_Contract_Schema_DataContract`（C-R 矩阵） |
 | 下游 | Phase0（REPORT 测量）→ Phase1（Kernel 契约）→ Phase2（Transaction）逐阶段点亮本图门禁 |

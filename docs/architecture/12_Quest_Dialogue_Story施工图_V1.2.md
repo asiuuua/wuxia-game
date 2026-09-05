@@ -1,6 +1,6 @@
 # 12 Quest / Dialogue / Story 施工图 V1.2
 
-> 状态：**FROZEN CANDIDATE**（契约冻结候选，待用户批准升 FROZEN 后方可在该域实施）
+> 状态：**FROZEN**（2026-09-06 用户批准；可在该域实施）
 > 依据：宪法 0-C.15 / §171 / L677 回放要素 / L2034-2065 State Owner 表；01 §50 Quest、§51 Dialogue、§52 Story、§80 Story Editor、§110 VS-002；02 Condition·Effect·Command·ErrorCode 契约、O-1 开放问题；03 ID·SemVer·本地化·资产 ID 契约、Reference 环检测；04 Gate Registry；05 ShardCache·Index·C-3；06 _global_flags→World-Story、_quest_phase→CampaignState；07 TimeConsumer 消费注册制；08 ModifyRelationshipEffect；09 add_item 事务；10 EC-R11 货币 Mutation。
 > 冻结日期：2026-09-05。本域是 **P3 整改成果最集中**的域（统一条件 DSL / handler 注册表 / GameFacts 去定位器均已落地），本图职责：**condition 已归一，effect 也归一**。
 

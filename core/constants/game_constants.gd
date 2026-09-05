@@ -4,7 +4,6 @@
 extends RefCounted
 class_name GameConstants
 
-const SAVE_VERSION := "1.0.0"
 const MAX_PLAYER_LEVEL := 100
 const DEFAULT_START_SCENE := "town_001"
 const TARGET_FPS := 60

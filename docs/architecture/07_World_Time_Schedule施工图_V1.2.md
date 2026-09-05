@@ -2,7 +2,7 @@
 
 | 项 | 值 |
 |---|---|
-| 状态 | **FROZEN CANDIDATE**（待用户批准升 FROZEN） |
+| 状态 | **FROZEN**（2026-09-06 用户批准；可依此实施） |
 | 日期 | 2026-09-05 |
 | 上游 | 宪法 V1.2（0-C.15 四层 Scheduler / §79 Game Clock / §78 Deterministic Random / 0-F.6 VS-004 / §80 Debug 三级标签 / L677 回放记录）→ 01 §53 World·§54 Schedule·§67 World Simulation Scheduler·§112 VS-004 → 02（GameClock/RandomProvider/Command 事务）→ 04（双替/回放）→ 06（Materialize 触发权/schedule_ref 挂点） |
 | 范围 | 冻结 8 件：World State Owner / Time 契约 / Calendar / Weather / Schedule 四件套 / 推进事务化 / World Simulation Scheduler / Save·回放 |

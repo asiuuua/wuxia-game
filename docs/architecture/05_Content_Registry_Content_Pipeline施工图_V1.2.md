@@ -2,7 +2,7 @@
 
 | 项 | 值 |
 |---|---|
-| 状态 | **FROZEN CANDIDATE**（待用户批准升 FROZEN） |
+| 状态 | **FROZEN**（2026-09-06 用户批准；可依此实施） |
 | 日期 | 2026-09-05 |
 | 上游 | 宪法 V1.2 → 01 §44~47（Content ID / Registry / Index / Binding）·§98（Content Schema 属 Shared Foundation）·§104（CONTRACT BEFORE IMPLEMENTATION）→ 03 §6（Content Pack Contract 已冻结布局与 manifest，本图不重复冻结）→ 04（Gate Registry / arch_lint / LN 编号） |
 | 范围 | 用户指定冻结 8 件：Registry / Loader / Cache / Index / Validation / Package / Version / **DLC / Mod 基础** |

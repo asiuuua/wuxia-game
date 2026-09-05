@@ -2,7 +2,7 @@
 
 - **Document ID**：ARCH-03
 - **Version**：1.2
-- **Status**：**FROZEN CANDIDATE**（待架构 Owner 批准；批准前不得依此批量改数据）
+- **Status**：**FROZEN**（2026-09-06 架构 Owner 批准；可依此批量改数据）
 - **Authority**：01 总体架构施工图 V1.2（§41~§47 / §69~§71 / §127）
 - **对应施工阶段**：01 §128 **Phase A 收尾**（Contract Registry → 依赖规则 → Enforcement Matrix）
 - **冻结范围**：**Definition Contract / ID Contract / Reference Contract / Schema Version / Content Pack Contract / 基础序列化契约**

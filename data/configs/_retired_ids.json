@@ -1,0 +1,11 @@
+{
+  "_doc": "退役 ID 名单（16 图 CP-1 / 03 §3.3 落地）。I-1 永不复用的机器化数据源：任何内容 JSON 出现本名单内 ID = FATAL。校验器挂接 = 16 图 CP-5（Phase2）。",
+  "retired": [
+    {
+      "id": "npc_town_npcs",
+      "reason": "town_npcs.json 全局表数据源标识退役（16 图 CP-1b）；实体 id 未退役者以 regions 真源为准",
+      "retired_at": "2026-09-04",
+      "successor": ""
+    }
+  ]
+}

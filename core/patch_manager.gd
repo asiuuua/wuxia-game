@@ -1,5 +1,5 @@
 # core/patch_manager.gd
-# 单机补丁/热更新机制（规范 §4.7）：扫描 patches 目录，加载 pck 覆盖主包资源，
+# 单机补丁/热更新机制（18 图 RH 域；旧「规范 §4.7」编号已废）：扫描 patches 目录，加载 pck 覆盖主包资源，
 # 做版本校验并记录已应用补丁，可选触发存档迁移。注册为 Autoload 单例 PatchManager。
 # 注：autoload 脚本不写 class_name（与单例名冲突），通过全局单例名调用。
 
@@ -48,9 +48,13 @@ func _apply_patch(patch_name: String) -> bool:
 		if not ProjectSettings.load_resource_pack(pck_path, true):
 			GameLogger.error("Patch", "Failed to load patch PCK: %s" % pck_path)
 			return false
-	var migration_func: String = manifest.get("save_migration", "")
-	if migration_func != "" and SaveManager.has_method("register_migration"):
-		SaveManager.register_migration(migration_func)
+	# 存档迁移登记（13 图 SV-3/P-S1 修复）：不再 has_method 死探测；格式非法必须响报。
+	var migration_spec: Variant = manifest.get("save_migration", null)
+	if migration_spec != null:
+		if migration_spec is Dictionary:
+			SaveManager.register_migration(migration_spec)
+		else:
+			GameLogger.error("Patch", "manifest.save_migration 须为 SV-3 条目 {from,to,step:Callable}，已拒绝: %s" % patch_name)
 	_applied_patches.append(patch_name)
 	_save_patch_history()
 	GameLogger.info("Patch", "Applied patch: %s (version %s)" % [patch_name, manifest.get("version", "?")])

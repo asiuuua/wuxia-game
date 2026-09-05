@@ -2,7 +2,7 @@
 
 | 项 | 内容 |
 |---|---|
-| 状态 | **FROZEN CANDIDATE**（用户批准后升 FROZEN；批准前不写实现代码，01 §104） |
+| 状态 | **FROZEN**（2026-09-06 用户批准；可依此实施，01 §104） |
 | 上游 | 宪法 V1.2（**§31 Save架构** / **§32 Save Migration原则** / §30 反循环引用·巨大存档 / L6084 施工图必答「存档怎么挂」/ L6414 存档损坏事故不可取消审计回滚 / L2034-2065 State Owner 表 / §23A ADR-0005 Save与RuntimeState分离）→ 01（**§70 Save Architecture** / **§71 Save Migration** / §72 Event Log / §78 Definition·Runtime·Save·Capability 边界）→ 02（Transaction·Journal）→ 03（**§7 S-1~S-6 序列化契约**）→ 04（golden / 双替）→ 05（**VE-1/VE-2 content_fingerprint 进 SaveHeader** / CO-R09 / C-4 已裁）→ 06（SaveDTO 三切片·恢复顺序）→ 07（SR-1~3 / W-R12 GATE29 回放）→ 09（EA-1/2 装备实例入档 / ID-2 分配器水位）→ 12（QD-1 Branch 存档升级 / QD-6 死命令防线） |
 | 范围 | 冻结 7 件：SaveHeader 五字段 / SaveDTO 模块自版本 / 迁移链显式注册表 / 注册与加载契约 / 原子写冻结升级 / user:// 持久化域划分 / 读档分相 |
 | 编号命名空间 | 本图冻结契约与开放问题用 **SV-**；实锤缺陷 **P-S1~P-S12**；Enforcement **SV-R01~R12**。**撞号声明**：06 图 Save 小节局部编号 SV-1~SV-4 自本图起由本图接管，映射：06 SV-1 三切片→本图 SV-2、06 SV-2 迁移内聚→本图 SV-3、06 SV-3 恢复顺序→本图 SV-4/SV-7、06 SV-4 可回放→本图开放 SV-1（07 SR-2 承接）。07 图局部 SR-1~3 不受影响。 |

@@ -2,7 +2,7 @@
 
 | 项 | 值 |
 |---|---|
-| 状态 | **FROZEN CANDIDATE**（待用户批准升 FROZEN） |
+| 状态 | **FROZEN**（2026-09-06 用户批准；可依此实施） |
 | 日期 | 2026-09-05 |
 | 上游 | 宪法 V1.2 → 01 §34~38（Actor 架构 / Materialization / Player / NPC / State Ownership）·§54 Schedule·§66 Actor Scheduler·§113 VS-005 → 02（EntityId/Command 事务语义）→ 04（Gate Registry/双替）→ 05（ContentRegistry/Definition/ID 校验） |
 | 范围 | 冻结 8 件：Actor Carrier / Materialization / Player 四件套 / NPC 四态 / Actor Scheduler / State Owner 落位 / Save 关联 / Enforcement |

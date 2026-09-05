@@ -2,7 +2,7 @@
 
 - **Document ID**：ARCH-02
 - **Version**：1.2
-- **Status**：**FROZEN CANDIDATE**（待架构 Owner 批准后升为 `FROZEN`；批准前不得依此写实现代码）
+- **Status**：**FROZEN**（2026-09-06 架构 Owner 批准；可依此实施）
 - **Authority**：01 总体架构施工图 V1.2（`docs/architecture/01_总体架构施工图_V1.2.md`）
 - **Supersedes**：02 Domain Kernel V1.1（旧写法作废，**不得沿用**）
 - **Applies To**：Kernel / Execution / Domain / Application / Infrastructure / Presentation / Tests

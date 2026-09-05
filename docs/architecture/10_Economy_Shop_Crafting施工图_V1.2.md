@@ -1,6 +1,6 @@
 # 10 Economy / Shop / Crafting 施工图 V1.2
 
-> 状态：**FROZEN CANDIDATE**（契约冻结候选，待用户批准升 FROZEN 后方可在该域实施）
+> 状态：**FROZEN**（2026-09-06 用户批准；可在该域实施）
 > 依据：宪法 `PROJECT_CONSTITUTION_V1.2.md` 0-C.19 / 0-C.20 / §8 / §171；01 总体架构施工图 §59 Crafting、§60 Economy / Shop；02 ErrorCode·Transaction 契约；03 ID·Schema 契约；04 Gate Registry（LN 编号）；05 Pack 收编；07 Schedule·ShopRefresh；09 InventoryTransaction·TX 系列。
 > 冻结日期：2026-09-05。本图与 09 互为咬合：09 定「事务怎么走」，本图定「经济域里走什么」。
 

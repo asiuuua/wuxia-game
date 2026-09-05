@@ -1,6 +1,6 @@
 # 11 Ability / Combat / Combat AI 施工图 V1.2
 
-> 状态：**FROZEN CANDIDATE**（契约冻结候选，待用户批准升 FROZEN 后方可在该域实施）
+> 状态：**FROZEN**（2026-09-06 用户批准；可在该域实施）
 > 依据：宪法 0-C.15 / 0-C.19 / §171 / L2079 State Owner 表（CombatSession·CombatState·Combatant Runtime·CombatResult → Combat）/ §23A（ADR-0003 为什么 Combat 使用 CombatantSnapshot）；01 §61 Ability、§62 Combat、§63 Combat AI、§111 VS-003 Combat、§127 Gate 基线；02 ErrorCode·Transaction·Result；03 ID·Schema·本地化契约；04 Gate Registry；06 Actor Scheduler·State Owner；07 RNG Seed·TimeConsumer；09 InventoryTransaction。
 > 冻结日期：2026-09-05。本图为 **0-C 与确定性铁律的第三主战场**（战斗域已自带最强确定性底子，本图负责把散落在外的收进来）。
 

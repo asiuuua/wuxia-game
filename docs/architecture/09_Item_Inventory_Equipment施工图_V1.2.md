@@ -2,7 +2,7 @@
 
 | 项 | 值 |
 |---|---|
-| 状态 | **FROZEN CANDIDATE**（待用户批准升 FROZEN） |
+| 状态 | **FROZEN**（2026-09-06 用户批准；可依此实施） |
 | 日期 | 2026-09-05 |
 | 上游 | 宪法 V1.2（0-C.19 Purchase Golden Invariant / 0-C.20 事务测试矩阵 / L2058-2065 Owner 表）→ 01 §56 Item·§57 Inventory·§58 Equipment·§60 Shop 边界 → 02（Transaction 契约/EntityId）→ 04（Gate/双替）→ 05（Definition/校验）→ 06（iid 分配器） |
 | 范围 | 冻结 8 件：Item 三件套 / Inventory 容器契约 / Equipment 契约 / 装备实例身份入档 / 跨模块物品事务 / iid 分配统一 / flags·数值校验 / Enforcement |

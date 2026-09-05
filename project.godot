@@ -12,6 +12,7 @@ config_version=5
 
 config/name="武侠江湖"
 config/description="等距2.5D武侠RPG · 数据驱动 + 模块化 + 企业级分层架构"
+config/version="0.5.0"
 run/main_scene="res://scenes/bootstrap/Bootstrap.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 application/boot_splash/image="res://assets/ui/splash.png"
