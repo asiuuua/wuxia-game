@@ -724,3 +724,38 @@ func test_organize_skips_locked() -> void:
 	expect_eq(_service.get_used_slots(), 2, "锁定堆不应被合并，仍占 2 格")
 	expect(_service.is_item_locked(locked_iid), "锁定实例整理后仍在")
 	expect_eq(_service.get_item_count(PILL), 3, "总数应不变")
+
+## ===== P0：can_add_batch 聚合预检（多种物品竞争槽位/重量预算） =====
+
+func test_can_add_batch_competing_last_slot() -> void:
+	# 逐项 can_add 的盲区：主栏只剩最后 1 空槽时，两种物品各自 can_add 通过、
+	# 实际互斥 —— add_items 旧实现会「预检全过、半途溢出」。聚合预检应整体拒绝。
+	var ps: PlayerState = GameManager.player_state
+	if ps != null:
+		ps.strength = 1000   # 顶高负重，隔离重量只测槽位
+	for i in 29:
+		_service.add_item(WEAPON, 1, "test")   # 主栏 29/30，剩 1 空槽
+	var other := "weapon_blade_iron_001"   # 另一把武器（独立实例占新槽）
+	var items := [ { "item_id": PILL, "count": 1 }, { "item_id": other, "count": 1 } ]
+	expect(_service.can_add(PILL, 1), "PILL 单独 can_add 应通过（盲区复现）")
+	expect(_service.can_add(other, 1), "第二物品单独 can_add 应通过（盲区复现）")
+	expect(not _service.can_add_batch(items), "聚合预检应发现竞争最后空槽并整体拒绝")
+	var before_pill: int = _service.get_item_count(PILL)
+	expect(not _service.add_items(items, "test"), "add_items 应整体失败一个不加")
+	expect_eq(_service.get_item_count(PILL), before_pill, "失败时不加任何物品（原子）")
+	expect(_service.can_add_batch([ { "item_id": PILL, "count": 1 } ]), "单个物品仍应通过")
+
+func test_can_add_batch_weight_budget_cross_bag() -> void:
+	# 跨栏重量聚合：主栏武器(3.5/件) + 材料栏矿石(1.0/件) 各自 can_add 通过，
+	# 合计 79 超上限 75 应被聚合预检整体拒绝（逐项检查各自算各自的重量，是盲区）
+	var ps: PlayerState = GameManager.player_state
+	if ps != null:
+		ps.strength = 10   # 上限 = 50 + 10*2.5 = 75
+	var items := [
+		{ "item_id": WEAPON, "count": 14 },               # 49.0
+		{ "item_id": "material_ore_001", "count": 30 },   # 30.0 → 合计 79
+	]
+	expect(_service.can_add(WEAPON, 14), "武器单独应通过（盲区复现）")
+	expect(_service.can_add("material_ore_001", 30), "矿石单独应通过（盲区复现）")
+	expect(not _service.can_add_batch(items), "总重 79 超上限 75 应整体拒绝")
+	expect(_service.can_add_batch([ { "item_id": WEAPON, "count": 10 }, { "item_id": "material_ore_001", "count": 30 } ]), "总重 65 ≤ 75 应通过")

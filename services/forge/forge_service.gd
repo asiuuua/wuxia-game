@@ -35,18 +35,10 @@ func forge(recipe_id: String, count: int) -> int:
 		EventBus.notify_forge_failed.emit(recipe_id, "BAG_FULL")
 		return ForgeEnums.ForgeResult.FAIL_BAG_FULL
 
-	# 材料校验（count 倍；先全量校验通过再扣，避免扣一半失败）
-	if inv != null:
-		for inp in recipe.get("inputs", []):
-			var item_id: String = String(inp.get("item_id", ""))
-			if item_id == "":
-				continue
-			var need: int = int(inp.get("count", 1)) * count
-			if inv.get_item_count(item_id) < need:
-				EventBus.notify_forge_failed.emit(recipe_id, "MISSING_MATERIAL")
-				return ForgeEnums.ForgeResult.FAIL_MISSING_MATERIAL
-
-	# 扣除材料（原子扣料：预检已通过；用 try_consume 保持事务语义）
+	# 材料原子扣除（单一裁决，P0 修复）：try_consume 内部先按「非锁定可用量」全量校验、
+	# 再统一扣除，任一不足整体不扣并返回 false。
+	# 旧实现两个洞：① 校验用 get_item_count（含锁定实例）→ 锁定材料蒙混过关；
+	# ② try_consume 返回值被忽略 → 扣除失败照样走到产出 = 白拿产出。
 	if inv != null:
 		var mats: Array = []
 		for inp in recipe.get("inputs", []):
@@ -54,8 +46,9 @@ func forge(recipe_id: String, count: int) -> int:
 			if item_id == "":
 				continue
 			mats.append({ "item_id": item_id, "count": int(inp.get("count", 1)) * count })
-		if not mats.is_empty():
-			inv.try_consume(mats, "forge:%s" % recipe_id)
+		if not mats.is_empty() and not inv.try_consume(mats, "forge:%s" % recipe_id):
+			EventBus.notify_forge_failed.emit(recipe_id, "MISSING_MATERIAL")
+			return ForgeEnums.ForgeResult.FAIL_MISSING_MATERIAL
 
 	# 产出
 	if out_id != "" and inv != null:
@@ -65,6 +58,8 @@ func forge(recipe_id: String, count: int) -> int:
 	return ForgeEnums.ForgeResult.SUCCESS
 
 ## UI 用：材料与等级是否都满足（count 与 forge() 的批量数保持一致，默认 1）
+## 口径对齐 forge 主流程（try_consume 按非锁定可用量校验）：锁定材料实际不可消耗，
+## can_forge 若按含锁定的 get_item_count 判定会「按钮可点、实际失败」
 func can_forge(recipe_id: String, count: int = 1) -> bool:
 	var recipe: Dictionary = ConfigManager.get_forge_recipe(recipe_id)
 	if recipe.is_empty():
@@ -83,11 +78,11 @@ func can_forge(recipe_id: String, count: int = 1) -> bool:
 		if item_id == "":
 			continue
 		var need: int = int(inp.get("count", 1)) * count
-		if inv.get_item_count(item_id) < need:
+		if inv.get_unlocked_count(item_id) < need:
 			return false
 	return true
 
-## UI 用：把配方材料渲染成 "铁石 2/3" 形式
+## UI 用：把配方材料渲染成 "铁石 2/3" 形式（have 口径同 can_forge：非锁定可用量）
 func describe_inputs(recipe_id: String) -> String:
 	var recipe: Dictionary = ConfigManager.get_forge_recipe(recipe_id)
 	if recipe.is_empty():
@@ -98,7 +93,7 @@ func describe_inputs(recipe_id: String) -> String:
 		var item_id: String = String(inp.get("item_id", ""))
 		if item_id == "":
 			continue
-		var have: int = inv.get_item_count(item_id) if inv != null else 0
+		var have: int = inv.get_unlocked_count(item_id) if inv != null else 0
 		var need: int = int(inp.get("count", 1))
 		var nm: String = ConfigManager.get_item(item_id).get("name", item_id)
 		parts.append("%s %d/%d" % [nm, have, need])

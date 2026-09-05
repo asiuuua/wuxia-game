@@ -12,6 +12,7 @@ var tracked_ids: Array[String] = []
 # ---- P3 统一条件（2026-09-04）：前置/回写走 core/condition.gd + GameFacts ----
 var _facts: GameFacts = GameFacts.new()
 var _condition_service: ConditionService = ConditionService.new(_facts)
+var _retrying: bool = false   # retry_completed_turn_ins 防重入闸门
 
 func can_accept(quest_id: String) -> bool:
 	if not ConfigManager.has_quest(quest_id):
@@ -166,6 +167,9 @@ func _complete(state: QuestState) -> void:
 		turn_in(state.quest_id)
 
 ## 交付并发放奖励：经验 -> 玩家；物品 -> 背包；武学 -> 武学服务
+## P0 修复（满包不丢奖励）：发奖前先预检物品奖励能否全部装入；装不下则保持 COMPLETED
+## 状态与任务在册，什么都不发（奖励原子性：exp/silver/items 必须同批，避免补交时重发一部分），
+## 待背包腾出空间后由 retry_completed_turn_ins 自动补交。
 func turn_in(quest_id: String) -> bool:
 	if not active_quests.has(quest_id):
 		return false
@@ -173,13 +177,17 @@ func turn_in(quest_id: String) -> bool:
 	if state.status != QuestEnums.QuestStatus.COMPLETED:
 		return false
 	var data: Dictionary = ConfigManager.get_quest(quest_id)
+	var rewards: Dictionary = data.get("rewards", {})
+	if rewards.has("items") and not _facts.can_add_items(rewards["items"]):
+		push_warning("[Quest] 交付 %s 时背包空间不足，奖励暂缓发放（腾出空间后自动补交）" % quest_id)
+		EventBus.notify_quest_track_changed.emit()
+		return false
 	state.status = QuestEnums.QuestStatus.TURNED_IN
 	# P3 统一条件：then_set 完成回写（区域任务链驱动，如 nv_flag_maiden_helped /
 	# plot_advance=to_misty_town）。键值全量写入 GameState 全局旗标，随存档持久化。
 	var then_set: Dictionary = data.get("then_set", {})
 	for k in then_set.keys():
 		_facts.set_flag(String(k), then_set[k])
-	var rewards: Dictionary = data.get("rewards", {})
 	# P3-c 奖励数据驱动分发：rewards 键 -> 注册表 handler（新奖励类型=注册，不改本函数）
 	for key in rewards.keys():
 		var h: Callable = _reward_handlers.get(String(key), Callable())
@@ -193,6 +201,19 @@ func turn_in(quest_id: String) -> bool:
 	EventBus.quest_turned_in.emit(quest_id)
 	EventBus.notify_quest_track_changed.emit()
 	return true
+
+## 背包腾出空间后的自动补交：扫描仍处 COMPLETED 态的任务重试 turn_in。
+## 由 GameManager 连接 EventBus.inventory_item_removed 触发（丢弃/卖出/消耗等任何移除都触发）。
+## _retrying 防重入闸门：防未来行为变化引发移除事件连锁；keys() 为副本，turn_in 内 erase 安全。
+func retry_completed_turn_ins(_item_id: String = "", _count: int = 0) -> void:
+	if _retrying:
+		return
+	_retrying = true
+	for qid in active_quests.keys():
+		var st: QuestState = active_quests.get(qid)
+		if st != null and st.status == QuestEnums.QuestStatus.COMPLETED:
+			turn_in(qid)
+	_retrying = false
 
 # ---- 内置奖励处理器（P3-c 注册表配对；P5 去定位器：经 GameFacts 适配器，不再直取 GameManager）----
 func _reward_exp(value: Variant, _quest_id: String) -> void:

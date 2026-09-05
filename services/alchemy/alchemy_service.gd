@@ -37,6 +37,8 @@ func can_refine(recipe_id: String) -> bool:
 	if recipe.is_empty():
 		return false
 	for inp in recipe.get("inputs", []):
-		if GameManager.inventory_service.get_item_count(inp["item_id"]) < int(inp.get("count", 1)):
+		# 口径对齐 refine 主流程（try_consume 按非锁定可用量校验）：锁定材料实际不可消耗，
+		# can_refine 若按含锁定的 get_item_count 判定会「UI 提示可炼、实际失败」
+		if GameManager.inventory_service.get_unlocked_count(String(inp["item_id"])) < int(inp.get("count", 1)):
 			return false
 	return true

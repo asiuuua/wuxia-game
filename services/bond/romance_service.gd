@@ -218,16 +218,16 @@ func propose(npc_id: String) -> Dictionary:
 	# 校验「非锁定」可用数量是否足额（与 can_propose 共用 _dowry_satisfied，单一真源）
 	if not _dowry_satisfied(npc_id):
 		return {"ok": false, "reason": "DOWRY_MISSING", "stage": -1}
-	# 事务式扣除：逐项扣，任一失败则回滚已扣部分并拒绝，彻底杜绝白结婚。
-	var deducted: Array = []  # 记录已扣 [{item_id, count}] 用于回滚
+	# 事务式原子扣除（P0 修复）：try_consume 先按「非锁定可用量」全量校验、再统一扣除，
+	# 任一不足整体不扣 —— 旧实现逐项 remove_item_by_id + 手工回滚，而 remove_item_by_id
+	# 部分扣除也返回 true，存在少扣仍判成功的记账漂移隐患。
+	# 注意：无聘礼配置（dowry_required 空）时 mats 为空，try_consume 对空数组返回 false，
+	# 必须短路放行，否则无聘礼 NPC 求婚永远被拒（回归实录 2026-09-05）。
+	var mats: Array = []
 	for item_id in need.keys():
-		var req: int = int(need[item_id])
-		if GameManager.inventory_service.remove_item_by_id(item_id, req):
-			deducted.append({"item_id": item_id, "count": req})
-		else:
-			for d in deducted:
-				GameManager.inventory_service.add_item(String(d["item_id"]), int(d["count"]), "dowry_rollback")
-			return {"ok": false, "reason": "DOWRY_MISSING", "stage": -1}
+		mats.append({ "item_id": String(item_id), "count": int(need[item_id]) })
+	if not mats.is_empty() and not GameManager.inventory_service.try_consume(mats, "romance:dowry:%s" % npc_id):
+		return {"ok": false, "reason": "DOWRY_MISSING", "stage": -1}
 	var rec: Dictionary = {
 		"stage": BondEnums.RomanceStage.MARRIED,
 		"wed_day": int(Time.get_unix_time_from_system()),

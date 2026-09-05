@@ -19,6 +19,7 @@ func test_prerequisites_gate_blocks_and_opens() -> void:
 
 func test_full_village_chain_then_set_unlocks_next() -> void:
 	_cleanup_flags()
+	GameManager.inventory_service.reset()   # 自守清场：战斗奖励物品入库依赖背包空间（超重残留会延后交付）
 	var svc := QuestService.new()
 	expect(svc.accept("nv_quest_guard"), "守村任务应可接取")
 	# 模拟战斗胜利事件（守村目标 target_battle=nv_battle_bandit）

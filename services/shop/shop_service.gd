@@ -75,7 +75,11 @@ func buy(shop_id: String, item_id: String, count: int) -> int:
 		EventBus.notify_trade_failed.emit(shop_id, item_id, "BAG_FULL")
 		return ShopEnums.TradeResult.FAIL_BAG_FULL
 
-	ps.spend_money(total)
+	# P0 纪律修复：spend_money 返回值必须检查（不足拒扣）——预检后理论上不可达，但
+	# 忽略返回值一旦发生就是「钱没扣到货先给」；双保险不发货。
+	if not ps.spend_money(total):
+		EventBus.notify_trade_failed.emit(shop_id, item_id, "NO_MONEY")
+		return ShopEnums.TradeResult.FAIL_NO_MONEY
 	if not inv.add_item(item_id, count, "shop_buy"):
 		# 兜底回滚（预检后理论上不可达）：退款，保证资产守恒
 		ps.add_money(total)

@@ -77,6 +77,23 @@ func add_item(item_id: String, count: int, source: String = "") -> bool:
 func add_items(items: Array, source: String = "") -> bool:
 	if items.is_empty():
 		return false
+	# 事务预检（聚合版）：全部能装下才放行（add_item 是新增实例，不受锁定影响）。
+	# 逐项 can_add 会漏算「多种物品竞争最后空槽」（各自独立通过、实际互斥），
+	# 须按栏聚合一次校验（can_add_batch），否则预检全过、实际半途溢出。
+	if not can_add_batch(items):
+		return false
+	for entry in items:
+		add_item(String(entry.get("item_id", "")), int(entry.get("count", 1)), source)
+	return true
+
+## 批量聚合预检（纯计算）：items 数组整体能否全部装入（不改任何状态，不发光）
+## 语义契约：can_add_batch 通过 ⇒ 逐个 add_item 必然全部成功（add_items / 任务奖励预检走此接口）
+## 聚合规则：每种物品先吃同物实例堆叠余量，剩余按 ceil(remaining/max_stack) 折算新槽数，
+## 同栏共享空槽预算（空槽数按栏独立）；重量按正重量物品总增量一次性校验（零重物品不受限）。
+func can_add_batch(items: Array) -> bool:
+	if items.is_empty():
+		return true   # 空批次天然可装入（区别于 add_items 空输入=无效调用返回 false 的语义）
+	# 聚合 + 格式/存在性校验（与 add_items 同口径：非法条目整体失败）
 	var need_by_id: Dictionary = {}
 	for entry in items:
 		var item_id: String = String(entry.get("item_id", ""))
@@ -86,13 +103,59 @@ func add_items(items: Array, source: String = "") -> bool:
 		if not ConfigManager.has_item(item_id):
 			return false
 		need_by_id[item_id] = int(need_by_id.get(item_id, 0)) + need
-	# 事务预检：全部能装下才放行（add_item 是新增实例，不受锁定影响，故用 can_add 即可）
+	# 重量预算：正重量物品总增量 ≤ 剩余负重（已超重时剩余为负 → 任何正重增量都拒绝）
+	var extra_weight := 0.0
 	for item_id in need_by_id:
-		if not can_add(item_id, int(need_by_id[item_id])):
-			return false
-	for entry in items:
-		add_item(String(entry.get("item_id", "")), int(entry.get("count", 1)), source)
+		var unit_w: float = float(ConfigManager.get_item(item_id).get("weight", 0.0))
+		if unit_w > 0.0:
+			extra_weight += unit_w * float(int(need_by_id[item_id]))
+	if extra_weight > 0.0 and extra_weight > (get_max_weight() - current_weight):
+		return false
+	# 按栏聚合槽位需求：bag_key 0=主背包 1=材料箱 2=任务栏（与 _bag_for_item 归栏一致）
+	var need_by_bag: Dictionary = {}
+	for item_id in need_by_id:
+		var bag: Array = _bag_for_item(item_id)
+		var bag_key := 0
+		if bag == material_slots:
+			bag_key = 1
+		elif bag == quest_slots:
+			bag_key = 2
+		if not need_by_bag.has(bag_key):
+			need_by_bag[bag_key] = {}
+		var m: Dictionary = need_by_bag[bag_key]
+		m[item_id] = int(m.get(item_id, 0)) + int(need_by_id[item_id])
+	for bag_key in need_by_bag:
+		var bag := _bag_by_key(int(bag_key))
+		var empty := 0
+		for slot in bag:
+			if slot == null:
+				empty += 1
+		var per: Dictionary = need_by_bag[bag_key]
+		for item_id in per:
+			var remaining: int = int(per[item_id])
+			var max_stack: int = int(ConfigManager.get_item(item_id).get("max_stack", 1))
+			# 先吃同物实例堆叠余量（与 add_item 的 _stack_to_existing 先堆叠行为一致）
+			if max_stack > 1:
+				for inst in bag:
+					if remaining <= 0:
+						break
+					if inst != null and inst.item_id == item_id and int(inst.count) < max_stack:
+						remaining -= (max_stack - int(inst.count))
+			if remaining > 0:
+				var new_slots: int = int(ceil(float(remaining) / float(max_stack)))
+				if new_slots > empty:
+					return false
+				empty -= new_slots
 	return true
+
+func _bag_by_key(bag_key: int) -> Array:
+	match bag_key:
+		1:
+			return material_slots
+		2:
+			return quest_slots
+		_:
+			return main_slots
 
 ## 原样归还实例（P1-4 修复）：把已存在的 ItemInstance 重新入包，完整保留 instance_id / 耐久 / 来源 / 锁定，
 ## 不 mint 新 iid、不重置身份。装备系统卸下时应调此而非 add_item(item_id,1)（后者会生成新实例、丢失耐久与 iid）。

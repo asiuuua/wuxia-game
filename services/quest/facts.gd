@@ -49,7 +49,15 @@ func gain_exp(amount: int) -> void:
 
 func add_silver(amount: int) -> void:
 	if amount > 0 and GameManager != null and GameManager.player_state != null:
-		GameManager.player_state.silver += amount
+		# P0 修复：直改 silver 不发 player_money_changed 事件，UI 银两显示不同步；统一走 add_money
+		GameManager.player_state.add_money(amount)
+
+## 物品奖励能否全部装入（turn_in 前置预检用）。
+## 服务缺失时降级放行（与写入侧 add_item 静默跳过的降级口径一致，不制造新的卡死面）。
+func can_add_items(items: Array) -> bool:
+	if GameManager == null or GameManager.inventory_service == null:
+		return true
+	return GameManager.inventory_service.can_add_batch(items)
 
 func add_item(item_id: String, count: int, source: String) -> void:
 	if item_id != "" and GameManager != null and GameManager.inventory_service != null:

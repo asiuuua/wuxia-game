@@ -43,8 +43,8 @@ func equip(instance_id: String) -> bool:
 			# 原样归还旧装备（保留 iid/耐久），而非 add_item 重置身份
 			if not GameManager.inventory_service.add_instance(old_inst):
 				equipped[slot] = old_id
+				_equipped_inst[slot] = old_inst   # 回滚须连实例身份一并恢复（原 erase 会丢耐久/iid 归属）
 				GameManager.inventory_service.add_instance(inst)   # 回滚：新装备退回背包
-				_equipped_inst.erase(slot)
 				GameLogger.warn("Equipment", "卸下旧装备失败，已回滚: %s" % old_id)
 				return false
 			_equipped_inst.erase(slot)

@@ -24,6 +24,7 @@ func before_each() -> void:
 	_ps.init_default("李十五", 1)
 
 func after_each() -> void:
+	_inv.reset()   # 清尾：满包/换装用例残留物品会以超重状态污染后续套件（quest 链路交付回归实录）
 	_ps.strength = 10   # 复位力量，避免负重相关改动污染其他套件
 
 func _fill_main_bag() -> void:
