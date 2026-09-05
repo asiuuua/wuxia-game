@@ -1,11 +1,11 @@
 {
-  "_doc": "ID 存量违例基线（16 图 CP-2b，2026-09-06 冻结）。扫描口径：data/configs 递归（排除 ui/ 与 _retired_ids.json），取键 id / *_id 的值与 skills / *_ids 数组元素，正则 = 03 §3.3 冻结式（ADR-0002 裁决前现状 C）。纪律：基线外零容忍、基线内只减不增（修一个删一条）。",
+  "_doc": "ID 存量违例基线（16 图 CP-2b，2026-09-06 冻结）。扫描口径：data/configs 递归（排除 ui/ 与 _retired_ids.json），取键 id / *_id 的值与 skills / *_ids 数组元素，正则 = 03 §3.3 冻结式（ADR-0002 裁决前现状 C）。纪律：基线外零容忍、基线内只减不增（修一个删一条）。 2026-09-06 校正：剔除 17 条空串伪迹（基线生成时未过滤空值，dialog_id 等空串被误记为违例；空串非 ID 不构成违例），280→263。",
   "frozen_at": "2026-09-06",
   "pattern": "^(npc|dlg|quest|item|abil|stat|enemy|battle|region|shop|recipe|sect|flag)_[a-z0-9][a-z0-9_]*$",
   "exempt": [
     "player"
   ],
-  "total": 280,
+  "total": 263,
   "note_20260905": "蓝图扫描口径为 202 处/36 文件（含更多引用面）；本基线为可复扫口径，以本文件为准继续只减不增。",
   "violations": [
     {
@@ -107,11 +107,6 @@
       "file": "data/configs/dialogs/dialogue_events.json",
       "line": 11,
       "id": "demo_quest"
-    },
-    {
-      "file": "data/configs/difficulty/difficulty_table.json",
-      "line": 24,
-      "id": ""
     },
     {
       "file": "data/configs/difficulty/difficulty_table.json",
@@ -560,11 +555,6 @@
     },
     {
       "file": "data/configs/npcs/dialogs/_index.json",
-      "line": 7,
-      "id": ""
-    },
-    {
-      "file": "data/configs/npcs/dialogs/_index.json",
       "line": 25,
       "id": "demo_npc"
     },
@@ -577,11 +567,6 @@
       "file": "data/configs/npcs/dialogs/_index.json",
       "line": 50,
       "id": "tactical_demo_master"
-    },
-    {
-      "file": "data/configs/npcs/dialogs/shards/demo_npc.json",
-      "line": 31,
-      "id": ""
     },
     {
       "file": "data/configs/npcs/dialogs/shards/demo_npc.json",
@@ -607,11 +592,6 @@
       "file": "data/configs/npcs/dialogs/shards/demo_npc.json",
       "line": 24,
       "id": "dg_4"
-    },
-    {
-      "file": "data/configs/npcs/dialogs/shards/dlg_event_demo.json",
-      "line": 51,
-      "id": ""
     },
     {
       "file": "data/configs/npcs/dialogs/shards/dlg_event_demo.json",
@@ -649,16 +629,6 @@
       "id": "event_demo_npc"
     },
     {
-      "file": "data/configs/npcs/dialogs/shards/dlg_sect.json",
-      "line": 21,
-      "id": ""
-    },
-    {
-      "file": "data/configs/npcs/dialogs/shards/dlg_tutorial.json",
-      "line": 26,
-      "id": ""
-    },
-    {
       "file": "data/configs/npcs/dialogs/shards/dlg_tutorial.json",
       "line": 6,
       "id": "demo_npc"
@@ -680,11 +650,6 @@
     },
     {
       "file": "data/configs/npcs/dialogs/shards/dlg_wolf.json",
-      "line": 21,
-      "id": ""
-    },
-    {
-      "file": "data/configs/npcs/dialogs/shards/dlg_wolf.json",
       "line": 5,
       "id": "wolf_1"
     },
@@ -700,18 +665,8 @@
     },
     {
       "file": "data/configs/npcs/dialogs/shards/npc_bandit.json",
-      "line": 8,
-      "id": ""
-    },
-    {
-      "file": "data/configs/npcs/dialogs/shards/npc_bandit.json",
       "line": 5,
       "id": "bd_1"
-    },
-    {
-      "file": "data/configs/npcs/dialogs/shards/npc_hunter.json",
-      "line": 15,
-      "id": ""
     },
     {
       "file": "data/configs/npcs/dialogs/shards/npc_hunter.json",
@@ -725,11 +680,6 @@
     },
     {
       "file": "data/configs/npcs/dialogs/shards/npc_liu_ruyan.json",
-      "line": 15,
-      "id": ""
-    },
-    {
-      "file": "data/configs/npcs/dialogs/shards/npc_liu_ruyan.json",
       "line": 5,
       "id": "lry_1"
     },
@@ -737,11 +687,6 @@
       "file": "data/configs/npcs/dialogs/shards/npc_liu_ruyan.json",
       "line": 8,
       "id": "lry_2"
-    },
-    {
-      "file": "data/configs/npcs/dialogs/shards/npc_merchant.json",
-      "line": 15,
-      "id": ""
     },
     {
       "file": "data/configs/npcs/dialogs/shards/npc_merchant.json",
@@ -755,11 +700,6 @@
     },
     {
       "file": "data/configs/npcs/dialogs/shards/npc_mu_wanqing.json",
-      "line": 15,
-      "id": ""
-    },
-    {
-      "file": "data/configs/npcs/dialogs/shards/npc_mu_wanqing.json",
       "line": 5,
       "id": "mwq_1"
     },
@@ -770,11 +710,6 @@
     },
     {
       "file": "data/configs/npcs/dialogs/shards/npc_sect_elder.json",
-      "line": 15,
-      "id": ""
-    },
-    {
-      "file": "data/configs/npcs/dialogs/shards/npc_sect_elder.json",
       "line": 5,
       "id": "se_1"
     },
@@ -782,11 +717,6 @@
       "file": "data/configs/npcs/dialogs/shards/npc_sect_elder.json",
       "line": 8,
       "id": "se_2"
-    },
-    {
-      "file": "data/configs/npcs/dialogs/shards/npc_village_chief.json",
-      "line": 14,
-      "id": ""
     },
     {
       "file": "data/configs/npcs/dialogs/shards/npc_village_chief.json",
@@ -817,11 +747,6 @@
       "file": "data/configs/npcs/dialogs/shards/npc_village_chief.json",
       "line": 18,
       "id": "vc_yes"
-    },
-    {
-      "file": "data/configs/npcs/dialogs/shards/tactical_demo_master.json",
-      "line": 24,
-      "id": ""
     },
     {
       "file": "data/configs/npcs/dialogs/shards/tactical_demo_master.json",
@@ -1045,11 +970,6 @@
     },
     {
       "file": "data/configs/regions/misty_town/npcs.json",
-      "line": 12,
-      "id": ""
-    },
-    {
-      "file": "data/configs/regions/misty_town/npcs.json",
       "line": 10,
       "id": "mt_dialog_priest"
     },
@@ -1167,11 +1087,6 @@
       "file": "data/configs/regions/newbie_village/items.json",
       "line": 12,
       "id": "nv_item_wine"
-    },
-    {
-      "file": "data/configs/regions/newbie_village/npcs.json",
-      "line": 11,
-      "id": ""
     },
     {
       "file": "data/configs/regions/newbie_village/npcs.json",

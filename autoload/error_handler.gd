@@ -27,7 +27,7 @@ func _on_game_error(level: int, module: String, message: String) -> void:
 func _show_fatal_error(module: String, message: String) -> void:
 	var dialog: AcceptDialog = AcceptDialog.new()
 	dialog.title = "致命错误"
-	dialog.dialog_text = "模块: %s\n错误: %s\n\n游戏无法继续运行，建议回滚到最近的自动存档。" % [module, message]
+	dialog.dialog_text = "模块: %s\n错误: %s\n\n游戏无法继续运行，建议回滚到最近的自动存档。\n\n当前版本: v%s\n日志文件: %s（反馈时请附上此文件）" % [module, message, str(ProjectSettings.get_setting("application/config/version", "?")), ProjectSettings.globalize_path(GameLogger.LOG_FILE_PATH)]
 	dialog.confirmed.connect(_on_fatal_confirmed)
 	get_tree().root.add_child(dialog)
 	dialog.popup_centered()

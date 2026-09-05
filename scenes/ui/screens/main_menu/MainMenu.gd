@@ -14,7 +14,26 @@ const WuxiaMenuButton = preload("res://scenes/ui/components/wuxia_menu_button/Wu
 const WuxiaMenuButtonScene = preload("res://scenes/ui/components/wuxia_menu_button/WuxiaMenuButton.tscn")
 const UIBackground = preload("res://scenes/ui/components/ui_background/UIBackground.gd")
 
-const VERSION_TEXT := "v0.5.0 Build 20250827"
+## 版本显示（18图 RH-1：真源=ProjectSettings application/config/version；Build 日期由
+## build_release.py 写入 provenance.json 注入，禁手写日期；无 provenance=开发态显示 dev）
+static func _version_text() -> String:
+	var v: String = str(ProjectSettings.get_setting("application/config/version", "0.5.0"))
+	var prov: Dictionary = _load_provenance()
+	if prov.is_empty():
+		return "v%s dev" % v
+	var bid: String = str(prov.get("build_id", ""))
+	var build_date: String = bid.substr(1, 8) if bid.begins_with("b") and bid.length() >= 9 else "dev"
+	return "v%s Build %s" % [v, build_date]
+
+static func _load_provenance() -> Dictionary:
+	for p in [OS.get_executable_path().get_base_dir() + "/provenance.json", "res://provenance.json"]:
+		if FileAccess.file_exists(p):
+			var f: FileAccess = FileAccess.open(p, FileAccess.READ)
+			if f != null:
+				var parsed: Variant = JSON.parse_string(f.get_as_text())
+				if parsed is Dictionary:
+					return parsed
+	return {}
 const MENU_ITEMS := [
 	{"key": "new_game", "text": "menu_new_game", "sub": "NEW GAME", "icon_idx": 0, "shortcut": "N"},
 	{"key": "continue", "text": "menu_continue", "sub": "CONTINUE", "icon_idx": 1, "shortcut": "C"},
@@ -316,7 +335,7 @@ func _build_menu() -> void:
 # === 底部栏 ===
 func _build_bottom_bar() -> void:
 	var bl: Label = _bottom_left
-	bl.text = "%s  |  %s" % [VERSION_TEXT, tr("studio_name")]
+	bl.text = "%s  |  %s" % [_version_text(), tr("studio_name")]
 	bl.add_theme_font_size_override("font_size", UIPalette.FS_SMALL)
 	bl.add_theme_color_override("font_color", UIPalette.TEXT_SECONDARY)
 	add_content(bl)
@@ -451,7 +470,7 @@ func _editor_preview() -> void:
 		item.owner = null
 	var bl: Label = get_node_or_null("BottomLeft")
 	if bl != null:
-		bl.text = "%s  |  %s" % [VERSION_TEXT, tr("studio_name")]
+		bl.text = "%s  |  %s" % [_version_text(), tr("studio_name")]
 	var sb: Button = get_node_or_null("BottomRight/SettingsBtn")
 	if sb != null:
 		sb.text = tr("btn_settings")

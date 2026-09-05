@@ -1,5 +1,5 @@
 # core/utils/game_logger.gd
-# 统一日志工具（规范 §4.3）：替代散落的 print，控制台 + 文件双输出，支持日志轮转。
+# 统一日志工具（18图 RH-6 域；旧「规范 §4.3」编号已废）：控制台 + 文件双输出，支持日志轮转。
 # 使用约定：所有模块打日志统一走 GameLogger，禁止裸 print（见 docs/开发规范.md）。
 
 class_name GameLogger
@@ -9,8 +9,8 @@ enum Level { DEBUG, INFO, WARN, ERROR, FATAL }
 
 const LOG_TO_FILE: bool = true
 const LOG_FILE_PATH := "user://logs/game.log"
-const MAX_LOG_FILES: int = 5
-const MAX_LOG_SIZE: int = 10 * 1024 * 1024  # 10MB
+const MAX_LOG_FILES: int = 3
+const MAX_LOG_SIZE: int = 5 * 1024 * 1024  # 5MB（18图RH-2 开放问题推荐：单文件5MB×保留3个轮转）
 
 static var _log_file: FileAccess = null
 static var _current_level: int = Level.DEBUG
@@ -72,9 +72,25 @@ static func _write_header() -> void:
 	_log_file.store_line("Game Log - %s" % Time.get_date_string_from_system())
 	_log_file.store_line("Godot Version: %s" % Engine.get_version_info()["string"])
 	_log_file.store_line("Platform: %s" % OS.get_name())
+	var prov: Dictionary = _provenance()
+	if prov.is_empty():
+		_log_file.store_line("Build: dev（无 provenance.json，开发态）")
+	else:
+		_log_file.store_line("[Boot] build=%s game=%s save_schema=%s" % [str(prov.get("build_id", "?")), str(prov.get("game_version", "?")), str(prov.get("save_schema_version", "?"))])
 	_log_file.store_line(sep)
 
-## 保留最近 MAX_LOG_FILES 个日志：.1->.2->...->.4，当前->.1
+## provenance 读取（18图 RH-2：build_release.py 产物；exe 同级优先，开发态回退 res://）
+static func _provenance() -> Dictionary:
+	for p in [OS.get_executable_path().get_base_dir() + "/provenance.json", "res://provenance.json"]:
+		if FileAccess.file_exists(p):
+			var f: FileAccess = FileAccess.open(p, FileAccess.READ)
+			if f != null:
+				var parsed: Variant = JSON.parse_string(f.get_as_text())
+				if parsed is Dictionary:
+					return parsed
+	return {}
+
+## 保留最近 MAX_LOG_FILES 个日志（超限序号后移，当前->.1）
 static func _rotate_logs() -> void:
 	for i in range(MAX_LOG_FILES - 1, 0, -1):
 		var old_path: String

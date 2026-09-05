@@ -5,7 +5,6 @@
 extends Node
 class_name Bootstrap
 
-const BOOTSTRAP_VERSION := "1.0.0"
 
 # 图标解析引擎（scenes/ui 层，UI 窗口主权）。本组合根在运行时经 EventBus 把它注入 UIManager，
 # 以依赖反转消除"基础层 UIManager 静态依赖 scenes/ui"的唯一真实架构违例（2026-09-02 治理）。
@@ -89,7 +88,7 @@ func _init_game_services() -> void:
 	if GameManager.player_state == null:
 		GameLogger.error("Bootstrap", "player_state 未初始化")
 		return
-	GameLogger.info("Bootstrap", "游戏服务已就绪 (v%s)" % BOOTSTRAP_VERSION)
+	GameLogger.info("Bootstrap", "游戏服务已就绪 (v%s)" % str(ProjectSettings.get_setting("application/config/version", "?")))
 
 func _on_bootstrap_complete() -> void:
 	_is_bootstrapping = false

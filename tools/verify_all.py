@@ -202,13 +202,22 @@ def gate5_no_dual_write():
 
 
 def gate6_ref_index():
-    """GATE6：数据引用校验（tools/ref_index.py）——悬空 ID 引用阻断提交。"""
+    """GATE6：数据引用校验（tools/ref_index.py 悬空反查 + tools/id_validator.py ID 层三检）。"""
     out, code = _run([sys.executable, os.path.join(HERE, "ref_index.py")])
     for ln in out.splitlines():
         if "✗" in ln or "⚠" in ln or "结论" in ln or "实体定义" in ln or "引用总数" in ln:
             print("   " + ln.strip())
-    ok = code == 0
-    print("  GATE6 %s（数据 ID 引用全量校验）" % ("✓ 通过" if ok else "✗ 未过"))
+    ok1 = code == 0
+    # Phase2（16 图 CP-5 ID 层）：正则基线 CP-R01 / 退役名单 CP-R02 / 同域唯一 CP-R10
+    out2, code2 = _run([sys.executable, os.path.join(HERE, "id_validator.py")])
+    for ln in out2.splitlines():
+        s = ln.strip()
+        if s.startswith(("✗", "ℹ", "扫描值点")) or "结论" in s:
+            print("   " + s)
+    ok2 = code2 == 0
+    ok = ok1 and ok2
+    print("  GATE6 %s（数据 ID 引用：ref_index %s / id_validator %s）"
+          % ("✓ 通过" if ok else "✗ 未过", "✓" if ok1 else "✗", "✓" if ok2 else "✗"))
     return ok
 
 
