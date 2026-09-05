@@ -1,0 +1,344 @@
+{
+ "_doc": "EventBus 信号契约 registry 初版（04图 Q-1/T-2：由 GATE32 基线工具导出，Owner AI 抽审进行中；与 arch_linter GATE32 冻结同源，漂移即 GATE32 红）。",
+ "generated": "2026-09-06",
+ "signal_count": 84,
+ "signals": {
+  "ability_learned": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal ability_learned(ability_id: String)"
+  },
+  "ability_used": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal ability_used(ability_id: String, caster_id: String)"
+  },
+  "alchemy_failed": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal alchemy_failed(recipe_id: String, reason: String)"
+  },
+  "alchemy_refined": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal alchemy_refined(recipe_id: String, output_item_id: String, count: int)"
+  },
+  "bond_affection_changed": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal bond_affection_changed(npc_id: String, current: int, delta: int)"
+  },
+  "bond_affection_event_triggered": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal bond_affection_event_triggered(npc_id: String, event_id: String)"
+  },
+  "bond_affection_level_up": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal bond_affection_level_up(npc_id: String, new_level: int)"
+  },
+  "bond_apprentice_taken": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal bond_apprentice_taken(npc_id: String)"
+  },
+  "bond_child_born": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal bond_child_born(npc_id: String, child_id: String)"
+  },
+  "bond_gift_disliked": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal bond_gift_disliked(npc_id: String, item_id: String)"
+  },
+  "bond_gift_given": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal bond_gift_given(npc_id: String, item_id: String, affection_gain: int, reaction: int)"
+  },
+  "bond_master_set": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal bond_master_set(npc_id: String, role: int)"
+  },
+  "bond_relationship_changed": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal bond_relationship_changed()"
+  },
+  "bond_romance_formed": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal bond_romance_formed(npc_id: String, stage: int)"
+  },
+  "bond_special_portrait_unlocked": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal bond_special_portrait_unlocked(npc_id: String, total_unlocked: int)"
+  },
+  "bond_sworn_formed": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal bond_sworn_formed(npc_id: String, stage: int)"
+  },
+  "bond_wedding_started": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal bond_wedding_started(npc_id: String, wedding_type: int, scene_path: String)"
+  },
+  "bootstrap_completed": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal bootstrap_completed()"
+  },
+  "bootstrap_started": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal bootstrap_started(total_steps: int)"
+  },
+  "bootstrap_step_completed": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal bootstrap_step_completed(step_name: String, index: int)"
+  },
+  "bootstrap_step_started": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal bootstrap_step_started(step_name: String, index: int)"
+  },
+  "celebration_started": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal celebration_started(npc_id: String, cg_id: String)"
+  },
+  "cmd_set_difficulty": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal cmd_set_difficulty(difficulty_id: String, is_new_game: bool)"
+  },
+  "cmd_start_combat": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal cmd_start_combat(attacker_list: Array, defender_list: Array)"
+  },
+  "combat_ended": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal combat_ended(combat_id: String, result: int)"
+  },
+  "combat_finished": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal combat_finished(combat_id: String, victory: bool, escaped: bool, unit_snapshots: Array)"
+  },
+  "combat_skill_equipped": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal combat_skill_equipped(ability_id: String, slot: int)"
+  },
+  "combat_started": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal combat_started(combat_id: String)"
+  },
+  "dialogue_ended": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal dialogue_ended(dialogue_id: String)"
+  },
+  "dialogue_event_triggered": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal dialogue_event_triggered(event_key: String)"
+  },
+  "dialogue_started": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal dialogue_started(dialogue_id: String, npc_id: String)"
+  },
+  "equipment_changed": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal equipment_changed()"
+  },
+  "equipment_equipped": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal equipment_equipped(slot: String, item_id: String)"
+  },
+  "equipment_unequipped": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal equipment_unequipped(slot: String, item_id: String)"
+  },
+  "game_error": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal game_error(level: int, module: String, message: String)"
+  },
+  "game_loaded": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal game_loaded(slot: int)"
+  },
+  "game_saved": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal game_saved(slot: int)"
+  },
+  "game_started": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal game_started()"
+  },
+  "grid_highlight_update": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal grid_highlight_update(highlight_dict: Dictionary)"
+  },
+  "icon_provider_registered": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal icon_provider_registered(get_fn: Callable, has_fn: Callable)"
+  },
+  "inventory_add_overflow": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal inventory_add_overflow(item_id: String, lost_count: int)"
+  },
+  "inventory_item_added": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal inventory_item_added(item_id: String, count: int)"
+  },
+  "inventory_item_removed": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal inventory_item_removed(item_id: String, count: int)"
+  },
+  "inventory_weight_changed": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal inventory_weight_changed(current: float, max_weight: float)"
+  },
+  "item_used": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal item_used(item_id: String, effect: Dictionary)"
+  },
+  "notification_show": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal notification_show(text: String)"
+  },
+  "notify_defeat_cg": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal notify_defeat_cg(text_id: String)"
+  },
+  "notify_difficulty_change_rejected": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal notify_difficulty_change_rejected(difficulty_id: String)"
+  },
+  "notify_difficulty_changed": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal notify_difficulty_changed(new_difficulty_id: String)"
+  },
+  "notify_escape_fail": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal notify_escape_fail()"
+  },
+  "notify_escape_success": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal notify_escape_success()"
+  },
+  "notify_forge_completed": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal notify_forge_completed(recipe_id: String, output_item_id: String, count: int)"
+  },
+  "notify_forge_failed": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal notify_forge_failed(recipe_id: String, reason: String)"
+  },
+  "notify_player_party_wiped_out": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal notify_player_party_wiped_out()"
+  },
+  "notify_quest_track_changed": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal notify_quest_track_changed()"
+  },
+  "notify_sect_join_failed": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal notify_sect_join_failed(sect_id: String, reason: String)"
+  },
+  "notify_sect_joined": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal notify_sect_joined(sect_id: String)"
+  },
+  "notify_sect_rank_up": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal notify_sect_rank_up(sect_id: String, new_rank: int)"
+  },
+  "notify_sect_reputation_changed": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal notify_sect_reputation_changed(sect_id: String, new_reputation: int)"
+  },
+  "notify_skill_bar_changed": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal notify_skill_bar_changed()"
+  },
+  "notify_skill_cd_update": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal notify_skill_cd_update(skill_id: String, remain_time: float)"
+  },
+  "notify_trade_completed": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal notify_trade_completed(shop_id: String, item_id: String, count: int, is_buy: bool)"
+  },
+  "notify_trade_failed": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal notify_trade_failed(shop_id: String, item_id: String, reason: String)"
+  },
+  "patch_applied": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal patch_applied(patch_id: String, version: String)"
+  },
+  "player_died": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal player_died()"
+  },
+  "player_exp_changed": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal player_exp_changed(current: int, max_exp: int)"
+  },
+  "player_hp_changed": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal player_hp_changed(current: int, max_hp: int)"
+  },
+  "player_level_up": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal player_level_up(new_level: int)"
+  },
+  "player_money_changed": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal player_money_changed(silver: int, copper: int, gold: int)"
+  },
+  "player_mp_changed": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal player_mp_changed(current: int, max_mp: int)"
+  },
+  "player_stats_changed": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal player_stats_changed()"
+  },
+  "popup_close_requested": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal popup_close_requested(popup: Control)"
+  },
+  "quest_accepted": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal quest_accepted(quest_id: String)"
+  },
+  "quest_completed": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal quest_completed(quest_id: String)"
+  },
+  "quest_failed": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal quest_failed(quest_id: String, reason: String)"
+  },
+  "quest_objective_completed": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal quest_objective_completed(quest_id: String, objective_id: String)"
+  },
+  "quest_objective_updated": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal quest_objective_updated(quest_id: String, objective_id: String, progress: int)"
+  },
+  "quest_phase_changed": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal quest_phase_changed(phase: int)"
+  },
+  "quest_turned_in": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal quest_turned_in(quest_id: String)"
+  },
+  "scene_changed": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal scene_changed(scene_name: String)"
+  },
+  "ui_action_requested": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal ui_action_requested(action_id: String)"
+  },
+  "world_day_advanced": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal world_day_advanced(day: int)"
+  },
+  "world_time_changed": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal world_time_changed(day: int, time_of_day: float, season: int, weather: int)"
+  },
+  "world_weather_changed": {
+   "owner": "EventBus(待逐条归属抽审)",
+   "signature": "signal world_weather_changed(weather: int)"
+  }
+ },
+ "source": "tools/arch_linter_baseline.json#gate32_eventbus_signals"
+}

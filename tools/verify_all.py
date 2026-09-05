@@ -379,10 +379,21 @@ def gate32_foundation_freeze():
     return _arch_gate("GATE32")
 
 
+def gate41_arch_validators():
+    """GATE41：04图架构校验器组——dependency 禁引矩阵+环检测 / module_scope(Test Double 隔离) / test_* 命名 / state_owner REPORT。"""
+    out, code = _run([sys.executable, os.path.join(HERE, "arch_validators.py")])
+    for ln in out.splitlines():
+        s = ln.strip()
+        if s.startswith(("✗", "ℹ", "state_owner")) or "结论" in s:
+            print("   " + s)
+    return code == 0
+
+
 GATES = {1: gate1_quit_check, 2: gate2_unit_tests, 3: gate3_project_validate,
          4: gate4_preset_redline, 5: gate5_no_dual_write, 6: gate6_ref_index,
          7: gate7_studio_smoke, 8: gate8_structure, 9: gate9_js_lint,
-         21: gate21_type_policy, 22: gate22_forbidden_api, 32: gate32_foundation_freeze}
+         21: gate21_type_policy, 22: gate22_forbidden_api, 32: gate32_foundation_freeze,
+         41: gate41_arch_validators}
 
 
 def main():
