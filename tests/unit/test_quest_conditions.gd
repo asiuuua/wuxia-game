@@ -24,6 +24,7 @@ func test_full_village_chain_then_set_unlocks_next() -> void:
 	expect(svc.accept("nv_quest_guard"), "守村任务应可接取")
 	# 模拟战斗胜利事件（守村目标 target_battle=nv_battle_bandit）
 	svc._on_combat_finished("nv_battle_bandit", true, false, [])
+	svc._flush_events()   # QD-R07 分相：断言前冲刷事件队列
 	expect(not svc.is_active("nv_quest_guard"), "目标达成+auto_complete 应已交付")
 	expect(GameState.get_global_flag("nv_flag_guard_done") == true, "then_set 应回写 nv_flag_guard_done")
 	# 链式解锁：回写的旗标恰好是下一任务的前置
@@ -35,6 +36,7 @@ func test_wrong_battle_does_not_advance() -> void:
 	var svc := QuestService.new()
 	svc.accept("nv_quest_guard")
 	svc._on_combat_finished("__no_such_battle__", true, false, [])
+	svc._flush_events()   # QD-R07 分相：断言前冲刷事件队列
 	expect(svc.is_active("nv_quest_guard"), "不相关战斗不应推进/完成任务")
 	expect(GameState.get_global_flag("nv_flag_guard_done", false) != true, "无关战斗不应触发 then_set")
 	_cleanup_flags()

@@ -45,9 +45,10 @@ func accept(quest_id: String) -> bool:
 
 ## 战斗结束事件回调（订阅 EventBus.combat_finished，由 GameManager 连接）
 ## 战斗模块只发快照事件，本服务据此推进目标，不直接被战斗调用（蓝图铁律）
+## QD-R07 分相化（12 图 Phase2）：回调只入队，帧末 call_deferred 统一冲刷（禁回调内同步重入推进）
 func _on_combat_finished(combat_id: String, victory: bool, _escaped: bool, _snapshots: Array) -> void:
 	if victory:
-		_advance_on_victory(combat_id)
+		_enqueue_event({"type": "battle", "battle_id": combat_id})
 
 # ---- P3-c 目标/奖励 handler 注册表（2026-09-04）：新增目标/奖励类型 = 注册一个
 # handler，不改本服务核心（整改路线 P3 验收标准）。类型推断：obj 显式 type 优先，
@@ -114,7 +115,43 @@ func _advance_on_victory(battle_id: String) -> void:
 			_dispatch_objective(state, obj, {"battle_id": battle_id, "victory": true})
 
 ## 库存变动事件回调（GameManager 装配时连接 inventory_item_added；give_item 目标消费）
+## QD-R07 分相化：只入队（发奖触发的 add_item → 本回调 → 队列，与直接拾取同相消费）
 func _on_inventory_added(item_id: String, _count: int) -> void:
+	_enqueue_event({"type": "item", "item_id": item_id})
+
+# ---- QD-R07 分相队列（12 图 Phase2 / P-Q2 回调重入链根治） ----
+# P-Q2 链：_complete → auto_complete → turn_in → 奖励 add_item → inventory_item_added
+# → _on_inventory_added → 遍历全部任务推进——事件回调内同步重入，无分相/入队。
+# 拆相后：回调只入队；同帧稍后 call_deferred 统一冲刷；冲刷循环内新入队事件继续
+# 按序消费（完成→发奖→再推进链不递归、不丢事件）。消费顺序冻结（12 图）：
+# 先目标推进、后完成判定、最后奖励发放（即事件相 → 完成相 → 奖励相）。
+var _event_queue: Array = []   # 待消费事件（内部队列载荷，非信号；GATE21 不涉）
+var _flushing := false         # 冲刷闸门：正在冲刷中（嵌套调用弹回，事件留给外层循环）
+var _deferred_pending := false # deferred 已挂接（防重复挂；与 _flushing 语义分离——
+                               # 回归实录 2026-09-06：共用一标志时挂接期同步冲刷被误弹回）
+
+func _enqueue_event(ev: Dictionary) -> void:
+	_event_queue.append(ev)
+	if not _flushing and not _deferred_pending:
+		_deferred_pending = true
+		_flush_events.call_deferred()
+
+## 帧末冲刷：清空事件队列（同步可调，测试据此获得确定性）
+func _flush_events() -> void:
+	_deferred_pending = false
+	if _flushing:
+		return   # 重入防护：嵌套冲刷直接返回，事件由外层循环继续消费
+	_flushing = true
+	while not _event_queue.is_empty():
+		var ev: Dictionary = _event_queue.pop_front()
+		match str(ev.get("type", "")):
+			"battle":
+				_advance_on_victory(str(ev.get("battle_id", "")))
+			"item":
+				_consume_item_event(str(ev.get("item_id", "")))
+	_flushing = false
+
+func _consume_item_event(item_id: String) -> void:
 	for qid in active_quests.keys():
 		var state: QuestState = active_quests[qid]
 		var data: Dictionary = ConfigManager.get_quest(qid)
@@ -257,6 +294,8 @@ func reset() -> void:
 	active_quests.clear()
 	completed_quests.clear()
 	tracked_ids.clear()
+	_event_queue.clear()   # QD-R07：重置随队列清场（防跨局残留事件串推进）
+	_flushing = false
 	EventBus.notify_quest_track_changed.emit()
 
 func get_save_key() -> String:
@@ -272,6 +311,7 @@ func load(data: Dictionary) -> void:
 	active_quests.clear()
 	completed_quests.clear()
 	tracked_ids.clear()
+	_event_queue.clear()   # QD-R07：读档清事件队列（防旧局残留事件串进新状态）
 	for qid in data.get("active", {}):
 		var state := QuestState.new()
 		state.deserialize(data["active"][qid])
