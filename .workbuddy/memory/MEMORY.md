@@ -5,10 +5,11 @@
 - 真源：`docs/constitution/PROJECT_CONSTITUTION_V1.2.md`。优先级：宪法>架构>契约>施工图>任务卡>AI推断。
 - AI不是架构师：架构级变更一律 STOP→ACR→评审→ADR→分批迁移，禁推倒重写。ACR-0001 APPROVED(2026-09-06)。
 - 迁移=绞杀者分批：0测量→1 Kernel→2 事务根治(P0)→3 装配收敛(18 Autoload)→4 逐模块→5 基础设施；每Phase可停；§171收编不丢弃。
-- **进度**(2026-09-06)：P1完成+09/10/11事务根治+D-01~10全销项；**18图清单未落地项整批落地(本窗)**：13图SV-4/SV-6(强类型ISaveable+get_load_after拓扑加载+GameState存档桥+json_util原子写)、03图(ADR-0002二级正则+schema_guard C-R04/05+ADR-0004摘要+pack_manifest基座)、16图(CP-R06三同铁律+CP-R09测试资产冻结)、12图QD-R07(任务事件分相队列)、04图(GATE41架构校验器组+84信号registry+tests/doubles基座)。
+- **进度**(2026-09-06)：P1完成+09/10/11事务根治+D-01~10全销项(D-08派UI窗5b058773/D-09/10派架构文档窗7b739997)；**18图清单未落地项整批落地**：13图SV-4/SV-6+**SV-2二段式DTO(03afa3d,SAVE_VERSION1.2.0+Body键登记制save_body_registry.json+模块迁移链)**、03图(ADR-0002二级正则+schema_guard C-R04/05+ADR-0004摘要+pack_manifest基座)、16图(CP-R06三同铁律+CP-R09测试资产冻结)、12图QD-R07(任务事件分相队列)、04图(GATE41架构校验器组+84信号registry+tests/doubles基座)。
 
 ## 施工图序列 01→18（FROZEN；唯一真源=docs/architecture/NN_*.md）
-- 0-C事务主战场=09/10/11(完成)；13 SV-2二段式DTO待单独批；16 id_validator挂GATE06(基线234只减不增)；17 GATE40+落地；18 RH版本真源/Provenance八字段/Release Gate六项。
+- 0-C事务主战场=09/10/11(完成)；13图Phase2红线批全落(SV-1/2/3/4/6)；16 id_validator挂GATE06(基线234只减不增)；17 GATE40+落地；18 RH版本真源/Provenance八字段/Release Gate六项。
+- SV-2新纪律：新模块入档=先重跑tools/golden/gen_save_body_registry.tscn重产登记表(否则注册期拒)；模块字段变更=升_module_versions+register_module_migration+golden对，不再动SAVE_VERSION。
 - 门禁双命名空间(T-1追认)：文档LN=GATE01~32；物理槽1~9冻结；新槽GATE40+(40=性能基准,41=04图架构校验器组)；禁裸引物理号。GATE6=五检(ref_index/id_validator/schema_guard/pack_manifest/region三同)；GATE22/32=arch_linter(去注释指纹)。
 - 大图余量：02 kernel他窗在途(TransactionRuntime→GATE26/27/28)、05 ContentRegistry、06 Actor、08 Relationship、14表现、15 Studio、12 Effect注册表五类收编(QD-2)、装配收敛18 Autoload(需单独ADR)。
 
