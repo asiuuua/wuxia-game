@@ -315,9 +315,47 @@ def gate40_benchmarks():
     return ok
 
 
+_LINTER_CACHE = {}
+
+
+def _arch_linter_result():
+    """架构 Linter 结果缓存（GATE21/22/32 共享一次扫描，纯文本毫秒级）。"""
+    if not _LINTER_CACHE:
+        sys.path.insert(0, os.path.join(ROOT, "tools"))
+        import arch_linter
+        ok, report = arch_linter.run()
+        _LINTER_CACHE["ok"] = ok
+        _LINTER_CACHE["report"] = report
+    return _LINTER_CACHE["ok"], _LINTER_CACHE["report"]
+
+
+def _arch_gate(gate_tag):
+    ok, report = _arch_linter_result()
+    mine = [ln for ln in report if ln.strip().startswith(gate_tag)]
+    for ln in mine:
+        print(ln)
+    return (not any("✗" in ln for ln in mine)) and len(mine) > 0
+
+
+def gate21_type_policy():
+    """GATE21：GDScript Type Policy——禁 Dictionary/Array 裸信号载荷（0-B.12），存量退役禁新增（D-08/D-09）。"""
+    return _arch_gate("GATE21")
+
+
+def gate22_forbidden_api():
+    """GATE22：Forbidden API（01图 §93 按模块限制）——core 业务层禁 IO/JSON/随机/时间；services/autoload 禁系统时间直读与全局随机。"""
+    return _arch_gate("GATE22")
+
+
+def gate32_foundation_freeze():
+    """GATE32：Foundation Freeze Consistency——EventBus 信号声明集合与基线比对，增/删/改签名即拦。"""
+    return _arch_gate("GATE32")
+
+
 GATES = {1: gate1_quit_check, 2: gate2_unit_tests, 3: gate3_project_validate,
          4: gate4_preset_redline, 5: gate5_no_dual_write, 6: gate6_ref_index,
-         7: gate7_studio_smoke, 8: gate8_structure, 9: gate9_js_lint}
+         7: gate7_studio_smoke, 8: gate8_structure, 9: gate9_js_lint,
+         21: gate21_type_policy, 22: gate22_forbidden_api, 32: gate32_foundation_freeze}
 
 
 def main():
@@ -340,13 +378,13 @@ def main():
         print("══════ 结论：%s ══════" % ("全绿 ✓" if ok else "未过 ✗"))
         return 0 if ok else 1
     pick = [int(a) for a in sys.argv[sys.argv.index("--gate") + 1:]] if "--gate" in sys.argv else sorted(GATES)
-    print("══════ verify_all · 项目一键验证（八门禁+JS 语法门禁） ══════")
+    print("══════ verify_all · 项目一键验证（九门禁+架构Linter GATE21/22/32） ══════")
     print("  工程: %s\n  Godot: %s" % (ROOT, GODOT))
     all_ok = True
     for g in pick:
         fn = GATES.get(g)
         if fn is None:
-            print("未知门禁编号: %s（可用 1-9）" % g)
+            print("未知门禁编号: %s（可用 1-9 / 21 / 22 / 32）" % g)
             return 1
         print("── GATE%d ──" % g)
         try:

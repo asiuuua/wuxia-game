@@ -1,0 +1,172 @@
+{
+ "_notes": {
+  "gate21": "存量 Dictionary/Array 裸信号载荷（0-B.12）登记退役——禁新增同族，存量接线随 UI 主权改造收编",
+  "gate22-rand-表现层": "dialogue 镜头抖动为纯表现效果，不参与游戏逻辑确定性",
+  "gate22-time-合法豁免": "SaveManager 存档 timestamp / ConfigManager 报告生成时间为真实世界元数据，非业务时间语义",
+  "gate22-time-引擎引导": "combat_core seed_val 兜底种子为未指定 seed 时的引擎引导用途",
+  "gate22-time-待整改": "bond_service t / sworn_service sworn_day / inventory acquired_time 为业务字段读系统时间，应改游戏日（随 bond 域批次整改）"
+ },
+ "gate21_signals_dict_retired": [
+  {
+   "decl": "signal item_used(item_id: String, effect: Dictionary)",
+   "file": "autoload/EventBus.gd",
+   "line": 23
+  },
+  {
+   "decl": "signal grid_highlight_update(highlight_dict: Dictionary)",
+   "file": "autoload/EventBus.gd",
+   "line": 34
+  },
+  {
+   "decl": "signal combat_finished(combat_id: String, victory: bool, escaped: bool, unit_snapshots: Array)",
+   "file": "autoload/EventBus.gd",
+   "line": 39
+  },
+  {
+   "decl": "signal cmd_start_combat(attacker_list: Array, defender_list: Array)",
+   "file": "autoload/EventBus.gd",
+   "line": 44
+  },
+  {
+   "decl": "signal slot_drop(iid: String, data: Dictionary)",
+   "file": "scenes/ui/components/item_slot/ItemSlot.gd",
+   "line": 10
+  }
+ ],
+ "gate22_forbidden_api": [
+  {
+   "code": "f.store_line(\"【武侠江湖 配置校验报告】生成时间: \" + Time.get_datetime_string_from_system())",
+   "file": "autoload/ConfigManager.gd",
+   "gate": "GATE22-time",
+   "line": 511
+  },
+  {
+   "code": "\"timestamp\": Time.get_unix_time_from_system(),",
+   "file": "autoload/SaveManager.gd",
+   "gate": "GATE22-time",
+   "line": 406
+  },
+  {
+   "code": "\"t\": int(Time.get_unix_time_from_system()),",
+   "file": "services/bond/bond_service.gd",
+   "gate": "GATE22-time",
+   "line": 196
+  },
+  {
+   "code": "\"sworn_day\": int(Time.get_unix_time_from_system()),",
+   "file": "services/bond/sworn_service.gd",
+   "gate": "GATE22-time",
+   "line": 65
+  },
+  {
+   "code": "seed_val = int(Time.get_unix_time_from_system()) & 0x7FFFFFFF",
+   "file": "services/combat/combat_core.gd",
+   "gate": "GATE22-time",
+   "line": 23
+  },
+  {
+   "code": "cam.offset = base + Vector2(randf_range(-intensity, intensity), randf_range(-intensity, intensity)),",
+   "file": "services/dialogue/dialogue_event_executor.gd",
+   "gate": "GATE22-rand",
+   "line": 109
+  },
+  {
+   "code": "inst.acquired_time = int(Time.get_unix_time_from_system())",
+   "file": "services/inventory/inventory_service.gd",
+   "gate": "GATE22-time",
+   "line": 57
+  },
+  {
+   "code": "new_inst.acquired_time = int(Time.get_unix_time_from_system())",
+   "file": "services/inventory/inventory_service.gd",
+   "gate": "GATE22-time",
+   "line": 803
+  }
+ ],
+ "gate32_eventbus_signals": {
+  "ability_learned": "signal ability_learned(ability_id: String)",
+  "ability_used": "signal ability_used(ability_id: String, caster_id: String)",
+  "alchemy_failed": "signal alchemy_failed(recipe_id: String, reason: String)",
+  "alchemy_refined": "signal alchemy_refined(recipe_id: String, output_item_id: String, count: int)",
+  "bond_affection_changed": "signal bond_affection_changed(npc_id: String, current: int, delta: int)",
+  "bond_affection_event_triggered": "signal bond_affection_event_triggered(npc_id: String, event_id: String)",
+  "bond_affection_level_up": "signal bond_affection_level_up(npc_id: String, new_level: int)",
+  "bond_apprentice_taken": "signal bond_apprentice_taken(npc_id: String)",
+  "bond_child_born": "signal bond_child_born(npc_id: String, child_id: String)",
+  "bond_gift_disliked": "signal bond_gift_disliked(npc_id: String, item_id: String)",
+  "bond_gift_given": "signal bond_gift_given(npc_id: String, item_id: String, affection_gain: int, reaction: int)",
+  "bond_master_set": "signal bond_master_set(npc_id: String, role: int)",
+  "bond_relationship_changed": "signal bond_relationship_changed()",
+  "bond_romance_formed": "signal bond_romance_formed(npc_id: String, stage: int)",
+  "bond_special_portrait_unlocked": "signal bond_special_portrait_unlocked(npc_id: String, total_unlocked: int)",
+  "bond_sworn_formed": "signal bond_sworn_formed(npc_id: String, stage: int)",
+  "bond_wedding_started": "signal bond_wedding_started(npc_id: String, wedding_type: int, scene_path: String)",
+  "bootstrap_completed": "signal bootstrap_completed()",
+  "bootstrap_started": "signal bootstrap_started(total_steps: int)",
+  "bootstrap_step_completed": "signal bootstrap_step_completed(step_name: String, index: int)",
+  "bootstrap_step_started": "signal bootstrap_step_started(step_name: String, index: int)",
+  "celebration_started": "signal celebration_started(npc_id: String, cg_id: String)",
+  "cmd_set_difficulty": "signal cmd_set_difficulty(difficulty_id: String, is_new_game: bool)",
+  "cmd_start_combat": "signal cmd_start_combat(attacker_list: Array, defender_list: Array)",
+  "combat_ended": "signal combat_ended(combat_id: String, result: int)",
+  "combat_finished": "signal combat_finished(combat_id: String, victory: bool, escaped: bool, unit_snapshots: Array)",
+  "combat_skill_equipped": "signal combat_skill_equipped(ability_id: String, slot: int)",
+  "combat_started": "signal combat_started(combat_id: String)",
+  "dialogue_ended": "signal dialogue_ended(dialogue_id: String)",
+  "dialogue_event_triggered": "signal dialogue_event_triggered(event_key: String)",
+  "dialogue_started": "signal dialogue_started(dialogue_id: String, npc_id: String)",
+  "equipment_changed": "signal equipment_changed()",
+  "equipment_equipped": "signal equipment_equipped(slot: String, item_id: String)",
+  "equipment_unequipped": "signal equipment_unequipped(slot: String, item_id: String)",
+  "game_error": "signal game_error(level: int, module: String, message: String)",
+  "game_loaded": "signal game_loaded(slot: int)",
+  "game_saved": "signal game_saved(slot: int)",
+  "game_started": "signal game_started()",
+  "grid_highlight_update": "signal grid_highlight_update(highlight_dict: Dictionary)",
+  "icon_provider_registered": "signal icon_provider_registered(get_fn: Callable, has_fn: Callable)",
+  "inventory_add_overflow": "signal inventory_add_overflow(item_id: String, lost_count: int)",
+  "inventory_item_added": "signal inventory_item_added(item_id: String, count: int)",
+  "inventory_item_removed": "signal inventory_item_removed(item_id: String, count: int)",
+  "inventory_weight_changed": "signal inventory_weight_changed(current: float, max_weight: float)",
+  "item_used": "signal item_used(item_id: String, effect: Dictionary)",
+  "notification_show": "signal notification_show(text: String)",
+  "notify_defeat_cg": "signal notify_defeat_cg(text_id: String)",
+  "notify_difficulty_change_rejected": "signal notify_difficulty_change_rejected(difficulty_id: String)",
+  "notify_difficulty_changed": "signal notify_difficulty_changed(new_difficulty_id: String)",
+  "notify_escape_fail": "signal notify_escape_fail()",
+  "notify_escape_success": "signal notify_escape_success()",
+  "notify_forge_completed": "signal notify_forge_completed(recipe_id: String, output_item_id: String, count: int)",
+  "notify_forge_failed": "signal notify_forge_failed(recipe_id: String, reason: String)",
+  "notify_player_party_wiped_out": "signal notify_player_party_wiped_out()",
+  "notify_quest_track_changed": "signal notify_quest_track_changed()",
+  "notify_sect_join_failed": "signal notify_sect_join_failed(sect_id: String, reason: String)",
+  "notify_sect_joined": "signal notify_sect_joined(sect_id: String)",
+  "notify_sect_rank_up": "signal notify_sect_rank_up(sect_id: String, new_rank: int)",
+  "notify_sect_reputation_changed": "signal notify_sect_reputation_changed(sect_id: String, new_reputation: int)",
+  "notify_skill_bar_changed": "signal notify_skill_bar_changed()",
+  "notify_skill_cd_update": "signal notify_skill_cd_update(skill_id: String, remain_time: float)",
+  "notify_trade_completed": "signal notify_trade_completed(shop_id: String, item_id: String, count: int, is_buy: bool)",
+  "notify_trade_failed": "signal notify_trade_failed(shop_id: String, item_id: String, reason: String)",
+  "patch_applied": "signal patch_applied(patch_id: String, version: String)",
+  "player_died": "signal player_died()",
+  "player_exp_changed": "signal player_exp_changed(current: int, max_exp: int)",
+  "player_hp_changed": "signal player_hp_changed(current: int, max_hp: int)",
+  "player_level_up": "signal player_level_up(new_level: int)",
+  "player_money_changed": "signal player_money_changed(silver: int, copper: int, gold: int)",
+  "player_mp_changed": "signal player_mp_changed(current: int, max_mp: int)",
+  "player_stats_changed": "signal player_stats_changed()",
+  "popup_close_requested": "signal popup_close_requested(popup: Control)",
+  "quest_accepted": "signal quest_accepted(quest_id: String)",
+  "quest_completed": "signal quest_completed(quest_id: String)",
+  "quest_failed": "signal quest_failed(quest_id: String, reason: String)",
+  "quest_objective_completed": "signal quest_objective_completed(quest_id: String, objective_id: String)",
+  "quest_objective_updated": "signal quest_objective_updated(quest_id: String, objective_id: String, progress: int)",
+  "quest_phase_changed": "signal quest_phase_changed(phase: int)",
+  "quest_turned_in": "signal quest_turned_in(quest_id: String)",
+  "scene_changed": "signal scene_changed(scene_name: String)",
+  "ui_action_requested": "signal ui_action_requested(action_id: String)",
+  "world_day_advanced": "signal world_day_advanced(day: int)",
+  "world_time_changed": "signal world_time_changed(day: int, time_of_day: float, season: int, weather: int)",
+  "world_weather_changed": "signal world_weather_changed(weather: int)"
+ }
+}

@@ -20,7 +20,7 @@ signal inventory_weight_changed(current: float, max_weight: float)
 @warning_ignore("unused_signal")
 signal inventory_add_overflow(item_id: String, lost_count: int)   # 入包溢出：UI 据此提示"背包已满，损失X"
 @warning_ignore("unused_signal")
-signal item_used(item_id: String, effect: Dictionary)             # 使用消耗品生效：effect = {hp, mp}
+signal item_used(item_id: String, effect: Dictionary)             # 【RETIRED·0-B.12 违例·禁新增同族】使用消耗品生效：effect = {hp, mp}（GATE21 基线冻结，改造走 ItemUsedPayload 类）
 
 # === 战斗模块 ===
 @warning_ignore("unused_signal")
@@ -31,7 +31,7 @@ signal combat_ended(combat_id: String, result: int)
 # === 战术战棋网格（战斗窗口主权 · 共享地基纯追加） ===
 # 视图层（BattleGridNode/BattleEntity）订阅；逻辑层 CombatCore 产生，谁产生谁 emit
 @warning_ignore("unused_signal")
-signal grid_highlight_update(highlight_dict: Dictionary)   # 高亮刷新：{type:int -> Array[Vector2i]}（蓝/绿/红）
+signal grid_highlight_update(highlight_dict: Dictionary)   # 【RETIRED·0-B.12 违例·禁新增同族】高亮刷新：{type:int -> Array[Vector2i]}（GATE21 基线冻结，改造走 GridHighlightPayload 类）
 
 # === 蓝图中枢事件（严格区分 NOTIFY 通知 / CMD 指令） ===
 # NOTIFY：已发生事实，发出方不等待返回（战斗模块发完即结束）
