@@ -410,11 +410,12 @@ func try_escape() -> bool:
 		EventBus.notify_escape_fail.emit()
 		return false
 	var chance: float = clampf(0.5 + DifficultyManager.get_escape_bonus(), 0.05, 0.95)
-	var roll_ok: bool = false
-	if _core != null and _core.rng != null:
-		roll_ok = _core.rng.randf() < chance      # 走内核 SeededRNG，保证可复现（非全局 randf）
-	else:
-		roll_ok = randf() < chance
+	if _core == null or _core.rng == null:
+		# 17图 DoD-2：禁裸 randf 回退——RNG 缺失属环境异常，fail-safe 拒绝逃逸判定
+		push_error("[Combat] try_escape: 内核 SeededRNG 缺失，fail-safe 拒绝逃逸判定")
+		EventBus.notify_escape_fail.emit()
+		return false
+	var roll_ok: bool = _core.rng.randf() < chance      # 走内核 SeededRNG，保证可复现（非全局 randf）
 	if roll_ok:
 		_escaped = true
 		EventBus.notify_escape_success.emit()

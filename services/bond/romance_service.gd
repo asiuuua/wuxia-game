@@ -14,6 +14,8 @@ var spouses: Dictionary = {}          # npc_id -> {stage, wed_day, children: Arr
 var children: Dictionary = {}         # child_id -> {mother_id, born_day, name}
 # 欢庆每日配额（按 npc_id 独立，与配偶字典解耦：避免非配偶欢庆时误写进 spouses 污染配偶列表）
 var celebration_quotas: Dictionary = {}  # npc_id -> {day, quota, used}
+# 游戏日计数器（宪法 §79 禁系统时间；唯一时间源=advance_days(n) 喂入，随存档持久化）
+var _game_day: int = 0
 # BUG-21 修复：special_portraits.json 静态配置解析结果缓存，避免每次取立绘列表都重读盘解析
 var _special_portrait_cache: Dictionary = {}
 
@@ -230,7 +232,7 @@ func propose(npc_id: String) -> Dictionary:
 		return {"ok": false, "reason": "DOWRY_MISSING", "stage": -1}
 	var rec: Dictionary = {
 		"stage": BondEnums.RomanceStage.MARRIED,
-		"wed_day": int(Time.get_unix_time_from_system()),
+		"wed_day": _game_day,
 		"rank": BondEnums.default_rank_for_order(spouses.size()),
 		"children": [],
 		"pregnancy": {},
@@ -291,7 +293,7 @@ func debug_make_spouse(npc_id: String) -> void:
 		return
 	var rec: Dictionary = {
 		"stage": BondEnums.RomanceStage.MARRIED,
-		"wed_day": int(Time.get_unix_time_from_system()),
+		"wed_day": _game_day,
 		"rank": BondEnums.default_rank_for_order(spouses.size()),
 		"children": [],
 		"pregnancy": {},
@@ -380,7 +382,7 @@ func begin_intimacy(npc_id: String) -> Dictionary:
 	if not rec.get("pregnancy", {}).is_empty():
 		return {"ok": false, "reason": "ALREADY_PREGNANT"}
 	rec["pregnancy"] = {
-		"start_day": int(Time.get_unix_time_from_system()),
+		"start_day": _game_day,
 		"gestation_days": 300,
 		"progress": 0,
 	}
@@ -395,16 +397,19 @@ func begin_intimacy(npc_id: String) -> Dictionary:
 # 注：欢庆与子嗣(孕期)对接——欢庆不再阻断于孕期（保持"每天都可以点击"），但若配偶当前未孕，则本次欢庆会启动孕期（受孕）；
 # 孕期进行中的后续欢庆仍可每天点击并播 CG，只是不再重复受孕（与"怀胎十月"子嗣链一致）。受孕判定见 begin_celebration。
 
-## 自然日键（按系统时间按天取整）
+## 自然日键（游戏日计数器；宪法 §79 禁系统时间，唯一时间源=advance_days 喂入）
 func _day_key() -> int:
-	return int(Time.get_unix_time_from_system() / 86400)
+	return _game_day
 
 ## 确保当日配额已初始化（跨日则重置并随机 2~3）；配额独立存于 celebration_quotas，不污染 spouses
 func _ensure_celebration_quota(npc_id: String) -> Dictionary:
 	var cel: Dictionary = celebration_quotas.get(npc_id, {})
 	var dk: int = _day_key()
 	if int(cel.get("day", -1)) != dk:
-		cel = {"day": dk, "quota": randi_range(2, 3), "used": 0}
+		# 配额随机按日决定论（17图 DoD-1 禁裸随机）：同日同 NPC 永远同配额，可复现可单测
+		var q_rng := SeededRNG.new()
+		q_rng.configure(hash("romance_quota:v1:%d:%s" % [dk, npc_id]))
+		cel = {"day": dk, "quota": q_rng.randi_range(2, 3), "used": 0}
 	celebration_quotas[npc_id] = cel
 	return cel
 
@@ -432,9 +437,13 @@ func begin_celebration(npc_id: String) -> Dictionary:
 		var rec: Dictionary = spouses[npc_id]
 		if rec.get("pregnancy", {}).is_empty():
 			var chance: float = float(_romance_cfg(npc_id).get("conceive_chance", 1.0))
-			if randf() < chance:
+			# 受孕判定按日+序数决定论（17图 DoD-1 禁裸 randf）：seed=f(游戏日,NPC,本次欢庆序数)
+			# 同输入永远同结果——读档重放同操作序列结果一致，可复现可单测
+			var c_rng := SeededRNG.new()
+			c_rng.configure(hash("romance_conceive:v1:%d:%s:%d" % [_game_day, npc_id, int(cel.get("used", 0))]))
+			if c_rng.chance(chance):
 				rec["pregnancy"] = {
-					"start_day": int(Time.get_unix_time_from_system()),
+					"start_day": _game_day,
 					"gestation_days": 300,
 					"progress": 0,
 				}
@@ -584,24 +593,22 @@ func get_active_portrait(npc_id: String) -> String:
 
 func _special_portrait_cfg(npc_id: String) -> Dictionary:
 	if not FileAccess.file_exists(SPECIAL_PORTRAITS_PATH):
-		return {}
+		return {}   # 预留空表：文件尚未配置属合法状态，不告警
 	if not _special_portrait_cache.is_empty():
 		return _special_portrait_cache.get(npc_id, _special_portrait_cache.get("default", {}))
-	var f := FileAccess.open(SPECIAL_PORTRAITS_PATH, FileAccess.READ)
-	if f == null:
+	# 走 JSONUtil 统一加载（D-04：禁手写 FileAccess+JSON 静默吞错，读失败/解析失败 push_error 留痕）
+	var parsed: Dictionary = JSONUtil.load_json(SPECIAL_PORTRAITS_PATH)
+	if parsed.is_empty():
 		return {}
-	var parsed: Variant = JSON.parse_string(f.get_as_text())
-	f.close()
-	if parsed is Dictionary:
-		_special_portrait_cache = parsed
-		return parsed.get(npc_id, parsed.get("default", {}))
-	return {}
+	_special_portrait_cache = parsed
+	return parsed.get(npc_id, parsed.get("default", {}))
 
 # 推进游戏天数：孕期进度累加，满 gestation_days 则分娩；同时推进子嗣年龄（驱动成长阶段）。
 # 由 TimeService/休息动作喂天数
 func advance_days(n: int) -> void:
 	if n <= 0:
 		return
+	_game_day += n
 	# 子嗣年龄推进（出生后的累计天数，驱动婴儿→成年的成长阶段；先于受孕分娩，避免新生儿被同次加龄）
 	for cid in children.keys():
 		var c: Dictionary = children[cid]
@@ -624,7 +631,7 @@ func _birth(npc_id: String, rec: Dictionary) -> void:
 	var cid: String = "child_%s_%d" % [npc_id, children.size() + 1]
 	children[cid] = {
 		"mother_id": npc_id,
-		"born_day": int(Time.get_unix_time_from_system()),
+		"born_day": _game_day,
 		"name": "子嗣%d" % (children.size() + 1),
 		"age_days": 0,
 	}
@@ -641,14 +648,34 @@ func reset() -> void:
 	spouses.clear()
 	children.clear()
 	celebration_quotas.clear()   # 同步重置当日欢庆配额，避免跨测试/新游戏残留配额污染
+	_game_day = 0                # 同步归零游戏日计数器，避免跨测试/新游戏时间残留
+
+# === Query API（宪法 RULE 007/008：外部模块只许走契约接口，禁直读内部字典） ===
+## 返回配偶记录副本（无此配偶返回空字典）；副本防外部改写 Owner 内部状态
+func get_spouse_record(npc_id: String) -> Dictionary:
+	return spouses.get(npc_id, {}).duplicate(true)
+
+## 返回全部子嗣概要副本数组 [{child_id, name, mother_id, born_day}]（关系图/面板消费）
+func get_children_brief() -> Array:
+	var out: Array = []
+	for cid in children.keys():
+		var c: Dictionary = children[cid]
+		out.append({
+			"child_id": String(cid),
+			"name": String(c.get("name", "")),
+			"mother_id": String(c.get("mother_id", "")),
+			"born_day": int(c.get("born_day", 0)),
+		})
+	return out
 
 func get_save_key() -> String:
 	return "romance"
 
 func save() -> Dictionary:
-	return {"spouses": spouses.duplicate(true), "children": children.duplicate(true), "celebration_quotas": celebration_quotas.duplicate(true)}
+	return {"spouses": spouses.duplicate(true), "children": children.duplicate(true), "celebration_quotas": celebration_quotas.duplicate(true), "game_day": _game_day}
 
 func load(data: Dictionary) -> void:
 	spouses = data.get("spouses", {})
 	children = data.get("children", {})
 	celebration_quotas = data.get("celebration_quotas", {})
+	_game_day = int(data.get("game_day", 0))

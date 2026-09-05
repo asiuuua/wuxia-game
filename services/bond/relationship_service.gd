@@ -20,7 +20,7 @@ func get_relationship_graph() -> Dictionary:
 		nodes.append(_node_of(npc_id))
 	var spouses_out: Array = []
 	for npc_id in GameManager.romance_service.get_spouses():
-		var rec: Dictionary = GameManager.romance_service.spouses.get(npc_id, {})
+		var rec: Dictionary = GameManager.romance_service.get_spouse_record(npc_id)
 		spouses_out.append({
 			"npc_id": npc_id,
 			"name": _name_of(npc_id),
@@ -30,10 +30,9 @@ func get_relationship_graph() -> Dictionary:
 			"pregnant": GameManager.romance_service.is_pregnant(npc_id),
 		})
 	var children_out: Array = []
-	for cid in GameManager.romance_service.children.keys():
-		var c: Dictionary = GameManager.romance_service.children[cid]
+	for c in GameManager.romance_service.get_children_brief():
 		children_out.append({
-			"child_id": cid,
+			"child_id": String(c.get("child_id", "")),
 			"name": c.get("name", ""),
 			"mother_id": c.get("mother_id", ""),
 			"mother_name": _name_of(String(c.get("mother_id", ""))),
@@ -101,7 +100,7 @@ func get_marriageable_npc_ids() -> Array:
 func get_spouses_enriched() -> Array:
 	var out: Array = []
 	for npc_id in GameManager.romance_service.get_spouses():
-		var rec: Dictionary = GameManager.romance_service.spouses.get(npc_id, {})
+		var rec: Dictionary = GameManager.romance_service.get_spouse_record(npc_id)
 		out.append({
 			"npc_id": npc_id,
 			"name": _name_of(npc_id),
@@ -116,10 +115,9 @@ func get_spouses_enriched() -> Array:
 ## 返回全部子嗣的 enriched 列表
 func get_children() -> Array:
 	var out: Array = []
-	for cid in GameManager.romance_service.children.keys():
-		var c: Dictionary = GameManager.romance_service.children[cid]
+	for c in GameManager.romance_service.get_children_brief():
 		out.append({
-			"child_id": cid,
+			"child_id": String(c.get("child_id", "")),
 			"name": c.get("name", ""),
 			"mother_id": c.get("mother_id", ""),
 			"mother_name": _name_of(String(c.get("mother_id", ""))),

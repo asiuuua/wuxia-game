@@ -320,3 +320,48 @@ func test_child_growth_stage() -> void:
 	# 成年：再+1200（累计2035）
 	rs.advance_days(1200)
 	expect_eq(rs.get_child_stage(cid), BondEnums.ChildStage.ADULT, "满1800天应为成年")
+
+# === D-02/03 整改回归（全项目严苛审查报告 2026-09-06）：游戏日时间源 + 受孕决定论 ===
+
+# 宪法 §79：禁系统时间——wed_day/pregnancy.start_day/born_day 必须等于游戏日计数（非 unix 秒）
+func test_game_day_time_source() -> void:
+	var rs = GameManager.romance_service
+	GameManager.bond_service.set_affection("npc_su_waner", 100)
+	rs.propose("npc_su_waner")
+	var rec: Dictionary = rs.get_spouse_record("npc_su_waner")
+	expect_eq(int(rec.get("wed_day", -1)), 0, "婚日应为游戏日0（未推进过天数）")
+	rs.advance_days(7)
+	rs.begin_intimacy("npc_su_waner")
+	var preg: Dictionary = rs.get_spouse_record("npc_su_waner").get("pregnancy", {})
+	expect_eq(int(preg.get("start_day", -1)), 7, "受孕日应为游戏日7（非unix秒）")
+	rs.advance_days(300)  # 满孕期分娩（7+300=307）
+	var kids: Array = rs.get_children_of("npc_su_waner")
+	expect_eq(kids.size(), 1, "满孕期应出生1子")
+	var brief: Array = rs.get_children_brief()
+	expect_eq(int(brief[0].get("born_day", -1)), 307, "出生日应为分娩时游戏日307（非unix秒）")
+
+# _game_day 随存档往返持久化（读档后天数不回跳）
+func test_game_day_persists_in_save() -> void:
+	var rs = GameManager.romance_service
+	rs.advance_days(42)
+	var data: Dictionary = rs.save()
+	rs.reset()
+	rs.load(data)
+	GameManager.bond_service.set_affection("npc_su_waner", 100)
+	rs.debug_make_spouse("npc_su_waner")
+	rs.begin_intimacy("npc_su_waner")
+	var preg: Dictionary = rs.get_spouse_record("npc_su_waner").get("pregnancy", {})
+	expect_eq(int(preg.get("start_day", -1)), 42, "读档后受孕日应延续游戏日42")
+
+# 17图 DoD-1：受孕按日+序数决定论——同操作序列重放结果一致
+func test_conceive_deterministic_replay() -> void:
+	var rs = GameManager.romance_service
+	var results: Array = []
+	for _i in 2:
+		rs.reset()
+		GameManager.bond_service.reset()
+		GameManager.bond_service.set_affection("npc_su_waner", 100)
+		rs.propose("npc_su_waner")
+		var c: Dictionary = rs.begin_celebration("npc_su_waner")
+		results.append(bool(c.get("conceived", false)))
+	expect_eq(results[0], results[1], "同序列重放受孕结果应一致（决定论）")

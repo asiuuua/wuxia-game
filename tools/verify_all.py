@@ -86,18 +86,34 @@ def gate1_quit_check():
     return ok
 
 
-def gate2_unit_tests():
-    """GATE2：run_all 单元套件，判绿=✗计数为 0 且 失败 M=0。"""
-    out, _ = _godot(["--headless", "--path", ROOT, "res://tests/unit/run_all.tscn"])
+def _parse_gate2(out):
+    """解析 GATE2 输出 → (ok, total行, fails列表)。判绿=✗计数为 0 且 失败 M=0。"""
     lines = out.splitlines()
     fails = [ln.strip() for ln in lines if "✗" in ln]
     total = None
     for ln in lines:
         if "套件：通过" in ln:
             total = ln.strip()
+    ok = (not fails) and (total is not None) and ("失败 0" in total)
+    return ok, total, fails
+
+
+def gate2_unit_tests():
+    """GATE2：run_all 单元套件。D-07 防抖：首跑判红自动复跑一次排除 flaky
+    （GATE1 缓存自愈与 GATE2 起跑时序脆弱曾致同代码两跑结果不同，63+2=65 与 65+0=65）；
+    复跑全绿记 FLAKY-RECOVERED——判绿放行但打印告警留痕。"""
+    out, _ = _godot(["--headless", "--path", ROOT, "res://tests/unit/run_all.tscn"])
+    ok, total, fails = _parse_gate2(out)
+    if not ok:
+        print("  GATE2 首跑未过 → 自动复跑一次排除 flaky（D-07 防抖）...")
+        out2, _ = _godot(["--headless", "--path", ROOT, "res://tests/unit/run_all.tscn"])
+        ok2, total2, fails2 = _parse_gate2(out2)
+        if ok2:
+            print("  GATE2 ⚠ FLAKY-RECOVERED（首跑红→复跑绿，判绿放行；D-07 防抖留痕）")
+            return True
+        ok, total, fails = ok2, total2, fails2
     for ln in fails[:10]:
         print("   " + ln)
-    ok = (not fails) and (total is not None) and ("失败 0" in total)
     print("  GATE2 %s（%s；✗=%d）" % ("✓ 通过" if ok else "✗ 未过",
                                      total or "未见汇总行(框架未跑起来)", len(fails)))
     return ok
