@@ -898,6 +898,12 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/main_menu/assets/clear_icon":
             ok, m = core.main_menu_asset_clear_icon(int(body.get("idx", 0)))
             return _send_json(self, {"ok": ok, "msg": m})
+        if path == "/api/main_menu/icon_scales":
+            ok, m = core.main_menu_icon_scales_set(body.get("scales", {}) if isinstance(body.get("scales"), dict) else {})
+            return _send_json(self, {"ok": ok, "msg": m})
+        if path == "/api/main_menu/hover_shift":
+            ok, m = core.main_menu_hover_shift_set(body.get("x"), body.get("y"))
+            return _send_json(self, {"ok": ok, "msg": m})
         if path == "/api/battle_layout/save":
             lid = str(body.get("id", ""))
             ok, m = core.battle_layout_save(lid, body.get("data", {}) if isinstance(body.get("data"), dict) else body)

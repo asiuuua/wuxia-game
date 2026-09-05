@@ -40,6 +40,11 @@ const DEFAULT_ICON_PATHS := [
 var TITLE_LOGO_PATH: String = DEFAULT_TITLE_LOGO_PATH
 var BTN_HOVER_BG_PATH: String = DEFAULT_BTN_HOVER_BG_PATH
 var ICON_PATHS: Array = DEFAULT_ICON_PATHS.duplicate()
+# 5 个菜单按钮的显示缩放（1.0=100%，来自 main_menu_assets.json 的 icon_scales，工作室「菜单按钮显示尺寸」可调）
+var _icon_scales: Array = [1.0, 1.0, 1.0, 1.0, 1.0]
+# 悬停浮动位移（像素，来自 main_menu_assets.json 的 hover_shift_x / hover_shift_y，工作室「悬停浮动」可调）
+var _hover_shift_x: float = 5.0
+var _hover_shift_y: float = 3.0
 # 背景图上的压暗层透明度（保证标题/菜单文字可读）
 const BG_IMAGE_SCRIM := 0.55
 
@@ -79,6 +84,23 @@ func _load_assets_config() -> void:
 		ICON_PATHS = icons
 	else:
 		ICON_PATHS = DEFAULT_ICON_PATHS.duplicate()
+	var scales: Variant = data.get("icon_scales", null)
+	if scales is Array:
+		var tmp: Array = []
+		for i in 5:
+			var v: float = 1.0
+			if i < scales.size() and scales[i] != null:
+				v = float(scales[i])
+			tmp.append(clampf(v, 0.4, 1.6))
+		_icon_scales = tmp
+
+	# 悬停浮动位移（工作室「悬停浮动」设置；负 X=左移，Y=上浮像素）
+	var hx: Variant = data.get("hover_shift_x", 5.0)
+	if (hx is float or hx is int) and hx != null:
+		_hover_shift_x = clampf(float(hx), -15.0, 15.0)
+	var hy: Variant = data.get("hover_shift_y", 3.0)
+	if (hy is float or hy is int) and hy != null:
+		_hover_shift_y = clampf(float(hy), 0.0, 15.0)
 
 
 func _as_path(v: Variant, fallback: String) -> String:
@@ -282,6 +304,9 @@ func _build_menu() -> void:
 		var icon_path: String = ICON_PATHS[spec["icon_idx"]]
 		item.icon_normal = _load_texture(icon_path)
 		item.bg_hover = hover_bg
+		item.base_scale = _icon_scales[i] if i < _icon_scales.size() else 1.0
+		item.hover_shift_x = _hover_shift_x
+		item.hover_shift_y = _hover_shift_y
 		item.selected.connect(_on_item_selected.bind(i))
 		item.confirmed.connect(_on_confirm_selection.bind(i))
 		container.add_child(item)

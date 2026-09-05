@@ -8,5 +8,14 @@
     "res://assets/ui/main_menu/icon_4.png",
     "res://assets/ui/main_menu/icon_5.png"
   ],
-  "_doc": "主菜单（登录界面）资源路径映射。标题 Logo、按钮悬停墨迹底板、5 个菜单图标都在这里配置。工作室「登录界面 → 主菜单资源替换」可上传新图替换；游戏启动时 MainMenu.gd 会读取本配置。"
+  "icon_scales": [
+    0.5,
+    0.5,
+    0.5,
+    0.5,
+    0.5
+  ],
+  "hover_shift_x": 4.0,
+  "hover_shift_y": 2.0,
+  "_doc": "主菜单（登录界面）资源路径映射。标题 Logo、按钮悬停墨迹底板、5 个菜单图标、5 个按钮显示缩放（icon_scales，1=100%）、悬停浮动（hover_shift_x 负=左移/正=右移、hover_shift_y=上浮高度，像素）都在这里配置。工作室「登录界面 → 主菜单资源替换」可上传新图替换；「菜单按钮显示尺寸」可调显示大小；「悬停浮动」可调 hover 位移；游戏启动时 MainMenu.gd 会读取本配置。"
 }

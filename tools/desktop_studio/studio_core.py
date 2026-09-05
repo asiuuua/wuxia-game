@@ -1980,7 +1980,40 @@ _DEFAULT_MAIN_MENU_ASSETS = {
         "res://assets/ui/main_menu/icon_4.png",
         "res://assets/ui/main_menu/icon_5.png",
     ],
+    # 主菜单 5 个按钮的显示缩放（1.0=100%；0.97=缩小3% … 0.80=缩小20%）。统一/单独调节均写入此数组。
+    "icon_scales": [1.0, 1.0, 1.0, 1.0, 1.0],
+    # 悬停浮动位移（像素）：hover_shift_x 负值=左移、正值=右移；hover_shift_y=上浮高度（0=不浮）。
+    # 由工作室「悬停浮动」设置写入，游戏内 WuxiaMenuButton 读取后驱动图标与文字同步位移。
+    "hover_shift_x": 5.0,
+    "hover_shift_y": 3.0,
 }
+
+
+def _clamp_icon_scale(v):
+    """把缩放值规范到 [0.4, 1.6]（±60%），非法输入回退 1.0。"""
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return 1.0
+    return round(max(0.4, min(1.6, f)), 3)
+
+
+def _clamp_hover_shift_x(v):
+    """悬停水平位移规范到 [-15, 15]（负=左移，正=右移），非法输入回退 5.0。"""
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return 5.0
+    return round(max(-15.0, min(15.0, f)), 2)
+
+
+def _clamp_hover_shift_y(v):
+    """悬停上浮高度规范到 [0, 15]（0=不浮），非法输入回退 3.0。"""
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return 3.0
+    return round(max(0.0, min(15.0, f)), 2)
 
 
 def main_menu_assets_get():
@@ -1997,11 +2030,21 @@ def main_menu_assets_get():
                         data[k] = str(parsed[k])
                 if isinstance(parsed.get("icons"), list):
                     data["icons"] = [str(x) for x in parsed["icons"]]
+                if isinstance(parsed.get("icon_scales"), list):
+                    data["icon_scales"] = [_clamp_icon_scale(x) for x in parsed["icon_scales"]]
+                if "hover_shift_x" in parsed:
+                    data["hover_shift_x"] = _clamp_hover_shift_x(parsed["hover_shift_x"])
+                if "hover_shift_y" in parsed:
+                    data["hover_shift_y"] = _clamp_hover_shift_y(parsed["hover_shift_y"])
         except Exception:
             pass
     # 补齐图标数量到 5 个
     while len(data["icons"]) < 5:
         data["icons"].append(_DEFAULT_MAIN_MENU_ASSETS["icons"][len(data["icons"]) % 5])
+    # 补齐缩放数量到 5 个
+    while len(data["icon_scales"]) < 5:
+        data["icon_scales"].append(1.0)
+    data["icon_scales"] = data["icon_scales"][:5]
     return data
 
 
@@ -2016,11 +2059,49 @@ def main_menu_assets_update(paths):
             data[k] = str(paths[k])
     if "icons" in paths and isinstance(paths["icons"], list):
         data["icons"] = [str(x) for x in paths["icons"]]
-    data["_doc"] = "主菜单（登录界面）资源路径映射。标题 Logo、按钮悬停墨迹底板、5 个菜单图标都在这里配置。工作室「登录界面 → 主菜单资源替换」可上传新图替换；游戏启动时 MainMenu.gd 会读取本配置。"
+    if "icon_scales" in paths and isinstance(paths["icon_scales"], list):
+        data["icon_scales"] = [_clamp_icon_scale(x) for x in paths["icon_scales"]]
+    if "hover_shift_x" in paths:
+        data["hover_shift_x"] = _clamp_hover_shift_x(paths["hover_shift_x"])
+    if "hover_shift_y" in paths:
+        data["hover_shift_y"] = _clamp_hover_shift_y(paths["hover_shift_y"])
+    data["_doc"] = "主菜单（登录界面）资源路径映射。标题 Logo、按钮悬停墨迹底板、5 个菜单图标、5 个按钮显示缩放（icon_scales，1=100%）、悬停浮动（hover_shift_x 负=左移/正=右移、hover_shift_y=上浮高度，像素）都在这里配置。工作室「登录界面 → 主菜单资源替换」可上传新图替换；「菜单按钮显示尺寸」可调显示大小；「悬停浮动」可调 hover 位移；游戏启动时 MainMenu.gd 会读取本配置。"
     with open(p, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
     log_event("main_menu_assets", p, "更新主菜单资源映射")
     return True, "已保存主菜单资源映射"
+
+
+def main_menu_icon_scales_set(scales):
+    """设置主菜单 5 个按钮的显示缩放（统一或单独）。scales 为 dict：
+    {"all": 0.95} 统一调 5 个；{"1": 0.97, "3": 0.90} 单独调指定按钮（键 1~5）。"""
+    if not isinstance(scales, dict):
+        return False, "参数格式错误"
+    cfg = main_menu_assets_get()
+    cur = list(cfg.get("icon_scales") or [1.0] * 5)
+    if "all" in scales:
+        cur = [_clamp_icon_scale(scales["all"])] * 5
+    for k in ("1", "2", "3", "4", "5"):
+        if k in scales:
+            cur[int(k) - 1] = _clamp_icon_scale(scales[k])
+    cfg["icon_scales"] = cur
+    ok, m = main_menu_assets_update(cfg)
+    log_event("main_menu_icon_scales", _main_menu_assets_path(), "调整主菜单按钮显示尺寸 %s" % cur)
+    return ok, m
+
+
+def main_menu_hover_shift_set(x=None, y=None):
+    """设置主菜单按钮悬停浮动位移（像素）。x 可为 None（不改动）；y 可为 None（不改动）。
+    x 负值=左移、正值=右移；y=上浮高度（0=不浮）。"""
+    cfg = main_menu_assets_get()
+    if x is not None:
+        cfg["hover_shift_x"] = _clamp_hover_shift_x(x)
+    if y is not None:
+        cfg["hover_shift_y"] = _clamp_hover_shift_y(y)
+    ok, m = main_menu_assets_update(cfg)
+    log_event("main_menu_hover_shift", _main_menu_assets_path(),
+              "调整主菜单悬停浮动 x=%s y=%s" % (cfg["hover_shift_x"], cfg["hover_shift_y"]))
+    return ok, m
 
 
 def _main_menu_asset_key_to_field(key):

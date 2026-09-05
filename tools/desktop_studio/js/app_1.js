@@ -1162,6 +1162,8 @@ async function loginLoad(){
   await loginClarityLoad();
   await variantLoad();
   await mmAssetsLoad();
+  await mmIconScalesLoad();
+  await mmHoverShiftLoad();
 }
 
 // ---------- 登录背景布局（多设备实时预览） ----------
@@ -1769,6 +1771,97 @@ async function mmAssetClearIcon(key){
   const r=await A('POST','/api/main_menu/assets/clear_icon',{idx:idx});
   show('mmAssetsStat',(r&&r.msg)?r.msg:(r&&r.ok?'已恢复':'失败'),!!(r&&r.ok));
   if(r&&r.ok)mmAssetsLoad();
+}
+
+// ---------- 主菜单按钮显示尺寸（统一 / 单独缩放，预设档位） ----------
+const MM_ICON_SCALE_PRESETS=[
+  {v:1.60,label:'放大60%'},
+  {v:1.50,label:'放大50%'},
+  {v:1.40,label:'放大40%'},
+  {v:1.30,label:'放大30%'},
+  {v:1.20,label:'放大20%'},
+  {v:1.15,label:'放大15%'},
+  {v:1.00,label:'100%（原样）'},
+  {v:0.85,label:'缩小15%'},
+  {v:0.80,label:'缩小20%'},
+  {v:0.70,label:'缩小30%'},
+  {v:0.60,label:'缩小40%'},
+  {v:0.50,label:'缩小50%'},
+  {v:0.40,label:'缩小60%'}
+];
+const MM_ICON_NAMES=['开始游戏','继续游戏','设置','额外内容','退出游戏'];
+async function mmIconScalesLoad(){
+  const box=document.getElementById('mmIconScaleBox'); if(!box)return;
+  box.innerHTML='';
+  let d=null;
+  try{ d=await A('GET','/api/main_menu/assets'); }
+  catch(e){ box.innerHTML='<div class="status bad">读取失败：'+e+'</div>'; return; }
+  const scales=(d&&d.icon_scales)||[1,1,1,1,1];
+  // 统一调节
+  const uni=document.createElement('div');
+  uni.style.cssText='padding:10px;background:var(--panel2);border:1px solid var(--line);border-radius:8px';
+  uni.innerHTML='<div style="color:var(--muted);margin-bottom:6px">🎯 统一调节（5 个图标一起变，文字不动）</div><div style="display:flex;flex-wrap:wrap;gap:6px">'+
+    MM_ICON_SCALE_PRESETS.map(p=>'<button class="act'+(p.v===scales[0]&&scales.every(s=>s===scales[0])?'':' sec')+'" onclick="mmIconScaleApply(\'all\','+p.v+')">'+p.label+'</button>').join('')+
+    '</div>';
+  box.appendChild(uni);
+  // 单独调节
+  scales.forEach((s,i)=>{
+    const row=document.createElement('div');
+    row.style.cssText='padding:10px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap';
+    row.innerHTML='<div style="width:150px;color:var(--muted)">图标 '+(i+1)+' · '+MM_ICON_NAMES[i]+'</div>'+
+      '<div style="min-width:78px;font-weight:600">当前 '+Math.round(s*100)+'%</div>'+
+      '<div style="display:flex;flex-wrap:wrap;gap:6px">'+
+      MM_ICON_SCALE_PRESETS.map(p=>'<button class="act'+(p.v===s?'':' sec')+'" onclick="mmIconScaleApply(\''+(i+1)+'\','+p.v+')">'+p.label+'</button>').join('')+
+      '</div>';
+    box.appendChild(row);
+  });
+}
+async function mmIconScaleApply(scope,v){
+  const body={scales:{}};
+  if(scope==='all') body.scales.all=v; else body.scales[scope]=v;
+  const r=await A('POST','/api/main_menu/icon_scales',body);
+  show('mmIconScaleStat',(r&&r.msg)?r.msg:(r&&r.ok?'已保存':'保存失败'),!!(r&&r.ok));
+  if(r&&r.ok)mmIconScalesLoad();
+}
+
+// ---------- 主菜单按钮悬停浮动（上浮高度 / 左右位移） ----------
+async function mmHoverShiftLoad(){
+  const box=document.getElementById('mmHoverShiftBox'); if(!box)return;
+  box.innerHTML='';
+  let d=null;
+  try{ d=await A('GET','/api/main_menu/assets'); }
+  catch(e){ box.innerHTML='<div class="status bad">读取失败：'+e+'</div>'; return; }
+  const x=(d&&typeof d.hover_shift_x==='number')?d.hover_shift_x:5.0;
+  const y=(d&&typeof d.hover_shift_y==='number')?d.hover_shift_y:3.0;
+  const panel=document.createElement('div');
+  panel.style.cssText='padding:10px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;display:flex;flex-direction:column;gap:14px';
+  panel.innerHTML=
+    '<div style="display:flex;align-items:center;gap:10px"><label style="width:110px;color:var(--muted)">↑ 上浮高度</label>'+
+      '<input id="mmHoverY" type="range" min="0" max="15" step="1" value="'+y+'" style="flex:1">'+
+      '<span id="mmHoverYVal" style="min-width:64px;font-weight:600;text-align:right">'+y+' px</span></div>'+
+    '<div style="display:flex;align-items:center;gap:10px"><label style="width:110px;color:var(--muted)">↔ 左右位移</label>'+
+      '<input id="mmHoverX" type="range" min="-15" max="15" step="1" value="'+x+'" style="flex:1">'+
+      '<span id="mmHoverXVal" style="min-width:64px;font-weight:600;text-align:right">'+x+' px</span></div>'+
+    '<div class="hint" style="margin:0">左右位移：最左(－15)=明显左移，中间(0)=不左右移，最右(＋15)=明显右移。上升高度 0=完全不浮。</div>'+
+    '<div class="btns" style="margin:0"><button class="act" onclick="mmHoverShiftApply()">保存浮动设置</button>'+
+      '<button class="act sec" onclick="mmHoverShiftReset()">恢复默认(右5/上3)</button></div>';
+  box.appendChild(panel);
+  const yEl=document.getElementById('mmHoverY'), xEl=document.getElementById('mmHoverX');
+  const yVal=document.getElementById('mmHoverYVal'), xVal=document.getElementById('mmHoverXVal');
+  yEl.addEventListener('input',()=>{ yVal.textContent=yEl.value+' px'; });
+  xEl.addEventListener('input',()=>{ xVal.textContent=xEl.value+' px'; });
+}
+async function mmHoverShiftApply(){
+  const x=parseFloat(document.getElementById('mmHoverX').value);
+  const y=parseFloat(document.getElementById('mmHoverY').value);
+  const r=await A('POST','/api/main_menu/hover_shift',{x:x,y:y});
+  show('mmHoverShiftStat',(r&&r.msg)?r.msg:(r&&r.ok?'已保存':'保存失败'),!!(r&&r.ok));
+  if(r&&r.ok)mmHoverShiftLoad();
+}
+async function mmHoverShiftReset(){
+  const r=await A('POST','/api/main_menu/hover_shift',{x:5.0,y:3.0});
+  show('mmHoverShiftStat',(r&&r.msg)?r.msg:(r&&r.ok?'已恢复默认':'保存失败'),!!(r&&r.ok));
+  if(r&&r.ok)mmHoverShiftLoad();
 }
 
 // ---------- 战棋布局编辑器 ----------
