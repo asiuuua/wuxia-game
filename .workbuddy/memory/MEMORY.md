@@ -5,7 +5,7 @@
 - 真源：`docs/constitution/PROJECT_CONSTITUTION_V1.2.md`。优先级：宪法>架构>契约>施工图>任务卡>AI推断。
 - AI不是架构师：架构级变更一律 STOP→ACR→影响分析→评审→ADR→分批迁移，禁推倒重写。ACR-0001 APPROVED（2026-09-06 用户开工指令）。
 - 迁移=绞杀者分批：0测量→1 Kernel→2 事务根治(扣钱不发货P0)→3 装配收敛(18 Autoload)→4 逐模块→5 基础设施；每Phase可停。§171 资产收编不丢弃。
-- **施工已开工**(2026-09-06)：Phase1五项+Phase2收官(版本真源·provenance·弹窗·日志5MBx3·出包·id_validator挂GATE06基线263)，0cbc1ca起全绿；凭据APPROVAL_2026-09-06。
+- **施工已开工**(2026-09-06)：Phase1五项+Phase2收官(版本真源·provenance·弹窗·日志5MBx3·出包·id_validator挂GATE06基线263)；主战场09/10/11事务根治完成60d8ea6(can_add_batch聚合预检/forge单一裁决/turn_in暂缓+腾格补交)全绿。
 
 ## 施工图序列 01→18（全部 FROZEN，2026-09-06 用户批准）
 - 已整体冻结，可依图实施；各图含 Enforcement X-R 矩阵(E0=0)。**详细契约/实锤/开放问题以 docs/architecture/NN_*.md 为唯一真源**，此处只留索引：
@@ -23,7 +23,7 @@ autoload→core→data→services(RefCounted)→scenes→resources/tests/tools�
 Color()满4参；typed Array禁`as Array[String]`；mini/maxi仅2参；闭包按值捕获值类型；外部配置JSON.new()+parse!=OK；mouse_filter反直觉STOP=0拦截/PASS=1/IGNORE=2穿透(装饰节点必须IGNORE)；pre-commit三道门禁：0a拦吞点击·0b信号基线只拦新增·0c警告非阻断。
 
 ## Godot 本机验证铁律
-console版；双闸门：①`--headless --path "D:/武侠游戏" --quit` 零SCRIPT/PARSE/COMPILE ERROR ②`tests/unit/run_all.tscn` 零✗且失败M==0。ROOT用Windows风格；验证前必commit；.godot缺失=全崩；新class_name须--import重建；USERPROFILE已由verify_all根治。
+console版；双闸门：①`--headless --path "D:/武侠游戏" --quit` 零SCRIPT/PARSE/COMPILE ERROR ②`tests/unit/run_all.tscn` 零✗且失败M==0。ROOT用Windows风格；验证前必commit；.godot缺失=全崩；新class_name须--import重建。
 
 ## 纹理压缩
 出厂mode=0；tscn_assets.py写死mode=2 + compress_textures.py改0→2；取像素用Image.load_png_from_buffer禁对压缩纹理get_pixel。
@@ -35,10 +35,10 @@ console版；双闸门：①`--headless --path "D:/武侠游戏" --quit` 零SCRI
 `python tools/verify_all.py` 六门禁(GATE1自愈缓存)。ConditionService+CommandDispatcher已落地。真源裁定：区域=regions/_map_index.json v2、NPC=regions/<rid>/npcs.json、好感=BondService；town_npcs.json退役。GATE6=ref_index悬空反查+id_validator三检。
 
 ## 工作室工具（tools/desktop_studio）
-源码模式=日常用法：双击studio_launcher.bat即时生效无需重打包。开发完必须释放：kill测试服务/工作树不留混合改动/收尾前启动验证；版本不对→`git checkout HEAD -- tools/desktop_studio/`。平台=连接器非容器，经验反哺留存git。详见 skill `desktop-studio-exe-rebuild`。
+源码模式=日常用法：双击studio_launcher.bat即时生效。开发完必须释放：kill测试服务/工作树不留混合改动/收尾前启动验证；版本不对→`git checkout HEAD -- tools/desktop_studio/`。平台=连接器非容器，详见 skill desktop-studio-exe-rebuild。
 
 ## Git LFS 与远端（2026-09-02）
 4个runtime大图(~14.6MB)转LFS；git-lfs在PortableGit mingw64/bin。远端唯一=GitHub origin(git@github.com:asiuuua/wuxia-game.git)，Gitee remote已删(云端旧仓待网页手删·旧token已吊销2026-09-05·仓库名已改中文「武侠游戏」)；master含宪法+01~18+Phase1~2落地。严禁 `git stash -u`。
 
 ## UI/B路线
-全量.tscn化收官2026-08-31(screens.json 23项)；主菜单hover_shift经studio后台调写main_menu_assets.json；用户5水墨图标在assets/ui/main_menu/。
+全量.tscn化收官(screens.json 23项)；主菜单hover_shift经studio调写main_menu_assets.json；5水墨图标在assets/ui/main_menu/。
