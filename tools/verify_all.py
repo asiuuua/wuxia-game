@@ -245,10 +245,18 @@ def gate6_ref_index():
         if s.startswith(("✗", "  manifest")) or "结论" in s or rel_ok(s):
             print("   " + s)
     ok4 = code4 == 0
-    ok = ok1 and ok2 and ok3 and ok4
-    print("  GATE6 %s（数据 ID 引用：ref_index %s / id_validator %s / schema_guard %s / pack_manifest %s）"
+    # 16 图 CP-R06：三同铁律（_map_index ↔ 分片目录 ↔ 传送点 一致性）
+    out5, code5 = _run([sys.executable, os.path.join(HERE, "region_validator.py")])
+    for ln in out5.splitlines():
+        s = ln.strip()
+        if s.startswith(("✗", "ℹ", "注册区域")) or "结论" in s:
+            print("   " + s)
+    ok5 = code5 == 0
+    ok = ok1 and ok2 and ok3 and ok4 and ok5
+    print("  GATE6 %s（数据 ID 引用：ref_index %s / id_validator %s / schema_guard %s / pack_manifest %s / region 三同 %s）"
           % ("✓ 通过" if ok else "✗ 未过",
-             "✓" if ok1 else "✗", "✓" if ok2 else "✗", "✓" if ok3 else "✗", "✓" if ok4 else "✗"))
+             "✓" if ok1 else "✗", "✓" if ok2 else "✗", "✓" if ok3 else "✗",
+             "✓" if ok4 else "✗", "✓" if ok5 else "✗"))
     return ok
 
 

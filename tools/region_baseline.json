@@ -1,0 +1,13 @@
+{
+ "empty_shell": [
+  "region_sect_gate",
+  "region_market",
+  "region_frontier",
+  "region_isle",
+  "region_secret",
+  "region_underworld",
+  "region_desert",
+  "region_snow"
+ ],
+ "_doc": "CP-R06 空壳区域基线（前瞻登记分片未建）。Phase3~4 每生产一个区域分片即删除一条，只减不增；名单外新空壳 = GATE06 FATAL。"
+}

@@ -153,6 +153,11 @@ def main():
             violations.append(("CP-R10", rel, val,
                                "分片内行 id 重复 %d 次（导航表将互相覆盖）" % ids.count(val)))
 
+    # CP-R09（16 图）：生产真源内测试资产（demo/tactical 前缀家族）——基线冻结禁新增
+    # （CP-R01 基线外零容忍即拦截新增）；目录隔离完成后基线清零（DoD 7：生产真源内测试资产计数=0）。
+    test_asset = {val for _rel, val in seen if re.match(r"^(demo|tactical)_", val)}
+    print("  CP-R09 测试资产计数: %d（demo/tactical 家族，只减不增，目录隔离后清零）" % len(test_asset))
+
     print("id_validator · 16图CP-5 ID层校验（GATE06）")
     print("  扫描值点: %d | 基线: %d | 退役名单: %d" % (len(seen), len(baseline_set), len(retired)))
     for n in notes:
