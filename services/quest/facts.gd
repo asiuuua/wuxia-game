@@ -4,8 +4,10 @@
 # ConditionService（纯求值器，不反向依赖服务层）。
 # 接口：get_flag(key,def) / get_favor(npc) / get_progress(quest) / quest_active(id) / item_count(id)
 # 全部带空安全降级：服务未装配时返回中性值（不崩，与"安全降级"铁律一致）。
+# 命名备注（2026-09-06）：kernel 冻结名 GameFacts 归 core/kernel/condition/game_facts.gd
+# （02 图 §6 @abstract 契约）；本适配器改名 ServiceGameFacts，Phase D 升级为实现该契约。
 
-class_name GameFacts
+class_name ServiceGameFacts
 extends RefCounted
 
 # ---------- flag / favor / progress：走 GameState 全局旗标（存档唯一真源） ----------

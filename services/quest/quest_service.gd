@@ -9,8 +9,9 @@ var active_quests: Dictionary = {}     # quest_id -> QuestState
 var completed_quests: Dictionary = {}
 var tracked_ids: Array[String] = []
 
-# ---- P3 统一条件（2026-09-04）：前置/回写走 core/condition.gd + GameFacts ----
-var _facts: GameFacts = GameFacts.new()
+# ---- P3 统一条件（2026-09-04）：前置/回写走 core/condition.gd + ServiceGameFacts ----
+# （2026-09-06：原 GameFacts 适配器改名 ServiceGameFacts，kernel 冻结名 GameFacts 归 core/kernel/）
+var _facts: ServiceGameFacts = ServiceGameFacts.new()
 var _condition_service: ConditionService = ConditionService.new(_facts)
 var _retrying: bool = false   # retry_completed_turn_ins 防重入闸门
 
@@ -215,7 +216,7 @@ func retry_completed_turn_ins(_item_id: String = "", _count: int = 0) -> void:
 			turn_in(qid)
 	_retrying = false
 
-# ---- 内置奖励处理器（P3-c 注册表配对；P5 去定位器：经 GameFacts 适配器，不再直取 GameManager）----
+# ---- 内置奖励处理器（P3-c 注册表配对；P5 去定位器：经 ServiceGameFacts 适配器，不再直取 GameManager）----
 func _reward_exp(value: Variant, _quest_id: String) -> void:
 	_facts.gain_exp(int(value))
 

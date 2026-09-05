@@ -20,7 +20,8 @@
 # 依赖纪律：本类是纯求值器，**不 import 任何上层**。事实查询走鸭子类型 facts 对象：
 #   get_flag(key,def) / get_favor(npc) / get_progress(quest) / quest_active(id) / item_count(id)
 #   —— 方法缺失时该类叶子按 unknown_true 降级（安全不崩）。游戏侧适配器见
-#   services/quest/facts.gd（GameFacts）；quest_graph 直接传入其 FlagStore（前三方法即够）。
+#   services/quest/facts.gd（ServiceGameFacts；kernel 冻结名 GameFacts 归 core/kernel/ 契约）；
+#   quest_graph 直接传入其 FlagStore（前三方法即够）。
 
 class_name ConditionService
 extends RefCounted

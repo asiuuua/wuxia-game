@@ -294,5 +294,5 @@ func _cond_key(cond: Dictionary) -> String:
 ## 无法求值时保持对话老语义=恒真（unknown_true=true）。
 func _eval_condition(cond: Dictionary) -> bool:
 	if _condition_service == null:
-		_condition_service = ConditionService.new(GameFacts.new())
+		_condition_service = ConditionService.new(ServiceGameFacts.new())
 	return _condition_service.evaluate(cond, _npc_id, true)

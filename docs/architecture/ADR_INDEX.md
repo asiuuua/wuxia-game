@@ -28,6 +28,10 @@ Repository 选型 / Combat 使用 CombatantSnapshot / Marriage·Children 结构 
 - **patch manifest 与迁移 Callable 的域边界（13/18 图张力）**：manifest 为数据面，只载 `from/to` 元数据；Callable 迁移步骤居代码注册表（`SaveManager._migrations`），补丁安装时按注册表链走并对账 `save_version`。Phase1 已冻结 manifest `save_migration` 旧字符串格式拒收改 ERROR 响报（更改日志 2026-09-06）。
 - **forge_iron_sword（10 图 P-E7）处置**：`forge` 前缀违 03 白名单正则 + `material_iron_001` 悬空（materials.json 无定义，配方恒 `can_forge=false`，测试已锚定该行为）。按 10 图 EC-R07 既定路线 **Phase4 随 GATE07 基线统一迁移 `recipe_` 域**；迁移时同步：①清存量引用后再登记 `_retired_ids.json`（CP-R02 无基线豁免，存量未清即登记 = GATE6 即时红）；②随 Recipe schema 统一决定补铁料定义或改配方产出。基线冻结制下现状维持，不提前改内容。
 - **GATE2 flaky 防抖（04 图 D-07）**：首跑红自动复跑一次，FLAKY-RECOVERED 判绿留痕（6a45c99 已落地）。
+- **Kernel 契约临时落位 `core/kernel/`（2026-09-06 Phase B 骨架批）**：02 图目录图的顶层 `kernel/`（ACR-0001 写 `domain/kernel/`）在目录收敛（Phase 5，同 ADR-0003 延后原则）前临时落于 `core/kernel/`——arch_linter GATE22 扫描 `core/` 即自动覆盖 Kernel 禁 API（K-R01~R05/R10），13 子目录划分按冻结清单原样保留。
+- **MutationContext 最小形态（2026-09-06）**：02 图 §6 Effect 契约引用 MutationContext 但全文未定义；落地时在 `kernel/transaction/` 补最小数据面（transaction_id + `register()` 单调分配 sequence + records），Journal 持久化/恢复/逆序回放仍属 Execution Runtime（02 图 §7 分界铁律）；Runtime 实施时如有出入按 ACR 升版。
+- **GameFacts 撞名处置（2026-09-06）**：kernel 冻结名 `GameFacts`（@abstract：get_int/get_bool/get_entity_id）独占；存量 `services/quest/facts.gd` 适配器改名 `ServiceGameFacts`（纯改名零行为变化），Phase D 升级为实现 kernel 契约（02 图 §15 迁移映射）。
+- **TransactionContext 内部推进接口 + 构造补全（2026-09-06）**：§7.1 契约仅含 getter；为使状态机可测、Runtime 可推进，补下划线内部接口 `_begin/_mark_committed/_mark_rolled_back/_mark_recovery_required`（合法迁移：PENDING→RUNNING→{COMMITTED,ROLLED_BACK,RECOVERY_REQUIRED}、ROLLED_BACK→RECOVERY_REQUIRED，非法迁移拒绝返回 false）——非公共契约，不违反 K-R09；Query/DomainEvent/Result 子类按 Command 模式补最小 `_init` 构造。O-4 的 Transaction Test 拆两步：契约层（15 项）随骨架落地，01 §118 十一路失败路径随 TransactionRuntime 批次（GATE26/27/28 物理化条件届时成熟）。
 
 ## 5. 关联
 
