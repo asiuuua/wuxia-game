@@ -67,8 +67,16 @@ def scan_signals_dict():
     return hits
 
 
+def _code_part(ln: str) -> str:
+    """剥离行内注释（与 GATE21/GATE32 同口径）：注释里提到禁 API 名不触发误报。
+    回归实录 2026-09-06：02 图 Kernel 施工文件（game_clock/random_provider）的
+    铁律注释行含 Time.get_*/randf( 等字样被整行匹配误伤。"""
+    return re.sub(r"#.*$", "", ln).rstrip()
+
+
 def scan_forbidden_api():
-    """GATE22: 三段——core 业务层禁 API / services+autoload 禁系统时间 / services 禁全局随机"""
+    """GATE22: 三段——core 业务层禁 API / services+autoload 禁系统时间 / services 禁全局随机
+    （匹配与指纹均用去注释代码：真实代码违例照拦，注释提及不禁）"""
     hits = []
     for rel in _gd_files():
         body = _read(rel)
@@ -77,23 +85,27 @@ def scan_forbidden_api():
             if rel in CORE_WHITELIST or rel.startswith(CORE_UTILS_PREFIX):
                 continue
             for i, ln in enumerate(body.splitlines(), 1):
-                if RE_CORE_FORBIDDEN.search(ln):
-                    hits.append({"gate": "GATE22-core", "file": rel, "line": i, "code": ln.strip()[:110]})
+                code = _code_part(ln)
+                if RE_CORE_FORBIDDEN.search(code):
+                    hits.append({"gate": "GATE22-core", "file": rel, "line": i, "code": code[:110]})
         # services/+autoload/：禁系统时间直读（§79）
         if rel.startswith("services/") or rel.startswith("autoload/"):
             for i, ln in enumerate(body.splitlines(), 1):
-                if RE_SYS_TIME.search(ln):
-                    hits.append({"gate": "GATE22-time", "file": rel, "line": i, "code": ln.strip()[:110]})
+                code = _code_part(ln)
+                if RE_SYS_TIME.search(code):
+                    hits.append({"gate": "GATE22-time", "file": rel, "line": i, "code": code[:110]})
             # 时间域禁全局随机（07图 W-R01：weather_time_service 必经 RandomProvider/决定论）
             if rel == "autoload/weather_time_service.gd":
                 for i, ln in enumerate(body.splitlines(), 1):
-                    if RE_GLOBAL_RAND.search(ln):
-                        hits.append({"gate": "GATE22-wrand", "file": rel, "line": i, "code": ln.strip()[:110]})
+                    code = _code_part(ln)
+                    if RE_GLOBAL_RAND.search(code):
+                        hits.append({"gate": "GATE22-wrand", "file": rel, "line": i, "code": code[:110]})
         # services/：禁全局随机（§78，SeededRNG 实例方法调用不命中）
         if rel.startswith("services/"):
             for i, ln in enumerate(body.splitlines(), 1):
-                if RE_GLOBAL_RAND.search(ln):
-                    hits.append({"gate": "GATE22-rand", "file": rel, "line": i, "code": ln.strip()[:110]})
+                code = _code_part(ln)
+                if RE_GLOBAL_RAND.search(code):
+                    hits.append({"gate": "GATE22-rand", "file": rel, "line": i, "code": code[:110]})
     return hits
 
 

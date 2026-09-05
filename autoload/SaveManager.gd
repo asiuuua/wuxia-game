@@ -63,11 +63,12 @@ const MAX_SLOTS := 6   # 手动存档槽位上限（存档选择界面按槽位�
 const TMP_SUFFIX := ".tmp"   # 原子写临时文件后缀
 const BAK_SUFFIX := ".bak"   # 覆盖前的上一份存档备份后缀
 
-var _saveables: Array = []   # 实现了 get_save_key()/save()/load() 的对象
+var _saveables: Array = []   # 实现 ISaveable 的对象（SV-4/P-S11 鸭子探测退役：强类型签名收口）
 
 ## 注册可存档对象。SV-4/P-S2（P0 漏修补课 2026-09-06）：注册期 key 撞车即拒绝并报错，
 ## 不给玩家留「后注册者覆盖先注册者存档数据」的静默丢失窗口。
-func register_saveable(saveable: Variant) -> void:
+## SV-4/P-S11：签名强类型收 ISaveable（鸭子探测退役），无 get_save_key/save/load 的对象编译期即拒。
+func register_saveable(saveable: ISaveable) -> void:
 	if _saveables.has(saveable):
 		return
 	var key: String = saveable.get_save_key()
@@ -77,6 +78,39 @@ func register_saveable(saveable: Variant) -> void:
 			push_error("[Save] 存档 key 撞车: %s" % key)
 			return
 	_saveables.append(saveable)
+
+
+## 读档加载顺序（13图 SV-4/P-S4）：按 get_load_after() 依赖拓扑排序（Kahn），
+## 禁隐式注册顺序依赖；存在依赖环 = 注册错误，返回空数组（调用方拒读）。
+func _topo_load_order() -> Array:
+	var by_key := {}
+	for s in _saveables:
+		by_key[s.get_save_key()] = s
+	var indeg := {}
+	var dependents := {}   # dep_key -> [依赖它的 key 列表]
+	for key in by_key:
+		var deps: Array[String] = by_key[key].get_load_after()
+		indeg[key] = deps.size()
+		for d in deps:
+			if not dependents.has(d):
+				dependents[d] = []
+			dependents[d].append(key)
+	var queue: Array = []
+	for key in indeg:
+		if int(indeg[key]) == 0:
+			queue.append(key)
+	var order: Array = []
+	while not queue.is_empty():
+		var k: String = queue.pop_front()
+		order.append(k)
+		for nxt in dependents.get(k, []):
+			indeg[nxt] = int(indeg[nxt]) - 1
+			if int(indeg[nxt]) == 0:
+				queue.append(nxt)
+	if order.size() != by_key.size():
+		GameLogger.error("SaveManager", "存档模块加载依赖存在环，拓扑排序失败（SV-4/P-S4 FATAL）")
+		return []
+	return order
 
 ## 已注册的可存档对象数量（Bootstrap 启动序列查询）
 func get_saveable_count() -> int:
@@ -256,10 +290,26 @@ func _load_from_path(path: String, slot: int) -> bool:
 	if not _migrate_if_needed(data):
 		GameLogger.error("SaveManager", "存档版本高于当前 %s，拒绝读档（防止新版数据被旧逻辑损坏）: %s" % [SAVE_VERSION, path])
 		return false
-	for saveable in _saveables:
-		var key: String = saveable.get_save_key()
+	# 13图 SV-4 收口：①P-S4 加载顺序=依赖拓扑排序（equipment 等消费 player 的模块保证后加载）；
+	# ②P-S12 已注册但档内缺 key 的模块 WARNING（老档新模块默认值兜底属预期，禁静默）。
+	# 拓扑失败（依赖环）= 注册期错误，拒绝读档防状态错乱。
+	var order: Array = _topo_load_order()
+	if order.is_empty() and not _saveables.is_empty():
+		GameLogger.error("SaveManager", "拓扑排序失败，读档中止: %s" % path)
+		return false
+	var missing: Array = []
+	for s in _saveables:
+		var rkey: String = s.get_save_key()
+		if not data.has(rkey):
+			missing.append(rkey)
+	if not missing.is_empty():
+		GameLogger.warn("SaveManager", "读档缺 key（老档新模块，按默认值兜底）: %s" % ", ".join(missing))
+	var by_key := {}
+	for s in _saveables:
+		by_key[s.get_save_key()] = s
+	for key in order:
 		if data.has(key):
-			saveable.load(data[key])
+			by_key[key].load(data[key])
 	EventBus.game_loaded.emit(slot)
 	return true
 

@@ -128,6 +128,10 @@ func _add_bonus(ps: PlayerState, item_id: String) -> void:
 func get_save_key() -> String:
 	return "equipment"
 
+## 读档依赖（13图 SV-4/P-S4）：load 内重算加成需读 player_state，必须晚于 player 模块恢复
+func get_load_after() -> Array[String]:
+	return ["player"]
+
 func save() -> Dictionary:
 	return {"slots": equipped.duplicate()}
 

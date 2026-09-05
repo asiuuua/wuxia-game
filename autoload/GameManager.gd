@@ -272,7 +272,8 @@ func _register_saveables() -> void:
 	SaveManager.register_saveable(sworn_service)
 	SaveManager.register_saveable(master_service)
 	# GameState 是全局状态中枢，作为存档序列化唯一来源之一
-	SaveManager.register_saveable(GameState)
+	# SV-4/P-S11：GameState 为 autoload Node 无法直接挂 ISaveable，经存档桥强类型注册
+	SaveManager.register_saveable(GameState.save_bridge())
 
 ## 新游戏：重置全部状态并装配初始武学（规范 §4 学习）
 func start_new_game() -> void:

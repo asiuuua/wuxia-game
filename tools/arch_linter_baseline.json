@@ -35,25 +35,25 @@
  ],
  "gate22_forbidden_api": [
   {
-   "code": "f.store_line(\"【武侠江湖 配置校验报告】生成时间: \" + Time.get_datetime_string_from_system())",
+   "code": "\t\tf.store_line(\"【武侠江湖 配置校验报告】生成时间: \" + Time.get_datetime_string_from_system())",
    "file": "autoload/ConfigManager.gd",
    "gate": "GATE22-time",
    "line": 511
   },
   {
-   "code": "\"timestamp\": Time.get_unix_time_from_system(),",
+   "code": "\t\t\"timestamp\": Time.get_unix_time_from_system(),",
    "file": "autoload/SaveManager.gd",
    "gate": "GATE22-time",
-   "line": 406
+   "line": 456
   },
   {
-   "code": "seed_val = int(Time.get_unix_time_from_system()) & 0x7FFFFFFF",
+   "code": "\t\tseed_val = int(Time.get_unix_time_from_system()) & 0x7FFFFFFF",
    "file": "services/combat/combat_core.gd",
    "gate": "GATE22-time",
    "line": 23
   },
   {
-   "code": "cam.offset = base + Vector2(randf_range(-intensity, intensity), randf_range(-intensity, intensity)),",
+   "code": "\t\t\tcam.offset = base + Vector2(randf_range(-intensity, intensity), randf_range(-intensity, intensity)),",
    "file": "services/dialogue/dialogue_event_executor.gd",
    "gate": "GATE22-rand",
    "line": 109

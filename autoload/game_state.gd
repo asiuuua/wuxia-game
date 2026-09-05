@@ -116,6 +116,28 @@ func apply_combat_snapshot(unit_snapshots: Array) -> void:
 		set_unit_status(uid, int(snap.get("status", UnitStatus.ALIVE)))
 
 # ===================== 存档接口（SaveManager 调用） =====================
+# SV-4/P-S11 强类型收口：GameState 为 autoload Node，GDScript 单继承无法直接挂
+# ISaveable（RefCounted 系）；经内部桥对象委托实现接口契约，存档 key 不变（"game_state"），
+# 存档格式零迁移。外部注册一律走 save_bridge()（见 GameManager._register_saveables）。
+class _SaveBridge extends ISaveable:
+	var _owner   # GameState 本体（untyped 动态委托，避免 Node 未知成员编译警告）
+	func _init(o) -> void:
+		_owner = o
+	func get_save_key() -> String:
+		return _owner.get_save_key()
+	func save() -> Dictionary:
+		return _owner.save()
+	func load(data: Dictionary) -> void:
+		_owner.load(data)
+
+var _save_bridge: ISaveable = null
+
+## 存档桥访问器（SV-4/P-S11）：懒创建，进程内幂等
+func save_bridge() -> ISaveable:
+	if _save_bridge == null:
+		_save_bridge = _SaveBridge.new(self)
+	return _save_bridge
+
 func get_save_key() -> String:
 	return "game_state"
 
