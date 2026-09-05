@@ -161,6 +161,8 @@
 
 ## 7. 开放问题（AI 不自决，待用户/ADR 裁决）
 
+> **【已追认 2026-09-06】** 用户整批复核：以下 ST-1~ST-4 全部按推荐执行（本节保留原文供审计）。
+
 - **ST-1【Authoring 数据落位时机】** 推荐：维持 05 图 ADR-0003 裁决（data/configs → content/definitions 延 Phase5）；ST-2 DataSink 抽象先行，落位切换只是换根路径，工作室写路径零改动。不在 15 图内提前搬目录。
 - **ST-2【compress_textures 双份合并方向】** 推荐：`tools/compress_textures.py`（223 行全功能版）为唯一真源；desktop_studio/111 行版退役——其职责已被 tscn_assets.py「第一层保险」+ 顶层版「第二层保险」覆盖，工作室如有独立调用点改为 `sys.path` 引顶层版。合并前先 diff 确认 111 行版无独有逻辑（本图已 diff 头部，合并时全量确认）。
 - **ST-3【Studio 12 件套缺口排期】** 推荐：Phase5 前不新增编辑器（宪法 §164 定第五阶段）；当前优先把地基打牢（ST-2 DataSink + ST-6 注册表）；Story Graph 八节点（01 §80）与 Dependency Graph 届时基于 03/05 图 Definition/Registry 建。现状等价物标注：Reference Inspector ≈ `ref_index.py --who`、Validation ≈ GATE 群、Build ≈ 发行打包链。

@@ -173,6 +173,8 @@
 
 ## 7. 开放问题（AI 不自决，待用户/ADR 裁决）
 
+> **【已追认 2026-09-06】** 用户整批复核：以下 PV-1~PV-4 全部按推荐执行（本节保留原文供审计）。
+
 - **PV-1【ViewModel 落位与引入节奏】** 推荐：RefCounted 对象随屏落 `scenes/ui/<screen>/viewmodel_*.gd`（不建统一目录，跟屏走）；Phase4 从 HUD 四面板 + InventoryScreen 起步（P-V3 耦合最深处），其余屏幕「改哪屏带哪屏」；不引第三方 MVVM 框架（YAGNI）。
 - **PV-2【UI-toggle 是否 Command 化】** 推荐：不化。开关面板是 UI 内部事务，Command 化徒增一层空转；但 `_toggle_overlay` 收口 `UIManager.toggle_screen()`（PV-2 分级第 3 类）必须做。业务操作（含菜单里 start_battle）一律 Command。
 - **PV-3【core 层 4 个表现辅助归属】** 推荐：Phase3 一并迁出——`ui_layout.gd`/`ui_theme.gd` → `scenes/ui/theme/`（UIPalette 消费方全在 UI 层，preload 无方向问题）；`combat_event_renderer/entity_pool` 随 PV-3 落 scenes 演出段（11 图 AB-4 推荐一致）。迁移零行为变化，纯挪文件改 preload 路径。

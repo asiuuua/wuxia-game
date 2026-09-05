@@ -177,6 +177,8 @@
 
 ## 8. 开放问题（需用户 / ADR 裁决，AI 不自决）
 
+> **【已追认 2026-09-06】** 用户整批复核：以下 QD-1~QD-4 全部按推荐执行（QD-2 与 02 O-1 联动：对话行内命令同批归入 ScriptDirective）。本节保留原文供审计。
+
 - **QD-1 Effect 注册表宿主**：Quest/Dialogue 域本地注册表（现 handler 模式扩容为域级 EffectRegistry，**推荐**——绞杀者零迁移）vs 02 Kernel 全局 EffectRegistry（跨域共享但要动 Kernel 冻结契约）。推荐理由：五类 Effect 的 handler 本就分布各域（Reward 在 Quest、Presentation 在表现层），域内注册 + 02 契约约束签名即可，无需 Kernel 新增全局单例。
 - **QD-2 行内命令字符串协议归宿**：保留 `"quest_accept:xxx"` 字符串 DSL 作内容书写格式 + 执行映射 Effect（**推荐**——内容侧可读性好、工作室剧情台已按此产出）vs 改结构化 JSON effects 对象。**与 02 O-1（command_dispatcher 字符串路由）联动裁决**：若 O-1 定 ScriptDirective，对话行内命令同批归入。
 - **QD-3 quest_phase 迁移时机**：随 06 State Owner 六行 Phase2/Phase3 迁（**推荐随 Phase3 装配收敛**，GameState 收编同批）vs Phase4 单独迁。

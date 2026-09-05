@@ -178,6 +178,8 @@
 
 ## 8. 开放问题（需用户 / ADR 裁决，AI 不自决）
 
+> **【已追认 2026-09-06】** 用户整批复核：以下 AB-1~AB-4 全部按推荐执行；**跨图登记条目按建议落地**——宪法 §23A 预占题不占号，统一登记表 `docs/architecture/ADR_INDEX.md` 已建立，新 ADR 自 0005 顺延。本节保留原文供审计。
+
 - **AB-1（ADR）实时 ATB 评估**：现 ATB 仍为回合离散（按集气速率排序出回合序列）；若未来做真·实时 ATB（集气满即插队行动），Command Pipeline 语义需重审——**推荐 YAGNI**：冻结回合离散模型，实时制挂 Phase5+ 评估，本图契约不预设。
 - **AB-2 AIProfile 难度分层**：低难度 AI 降智（权重偏向低伤招/目标策略随机化）是否本期实装——**推荐只留 AIProfile 接口**，难度→Profile 映射 Phase4+。
 - **AB-3 敌友模板分离**：友军/同伴现复用 enemies.json 模板——**推荐新建 units.json 战斗模板域（battle 域 ID）**，enemies.json 回归纯敌方；旧 allies 字段读兼容。

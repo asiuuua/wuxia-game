@@ -823,6 +823,8 @@ class_name RandomProvider extends RefCounted
 
 ## 16. 开放问题（必须 ACR / ADR 裁决，不得 AI 自行决定）
 
+> **【已追认 2026-09-06】** 用户整批复核：以下 O-1~O-4 全部按推荐/倾向执行（ADR 级条目见 `ADR_INDEX.md`；本表保留原文供审计）。
+
 | ID | 问题 | 冲突点 | 需要的决策 |
 |---|---|---|---|
 | **O-1** | 现有 `core/command_dispatcher.gd` 是 `"cmd:arg"` **字符串路由**，与 Kernel 的**强类型 Command** 语义不同 | 二者都叫「Command」，但一个是脚本字符串指令（对话/演出用），一个是事务化意图 | **ADR 裁决**：是①合并为一套（字符串→强类型 Command 适配层）、还是②保留两套并明确命名边界（如脚本指令改名 `ScriptDirective`，避免术语混淆）。**倾向②**，避免 LLM/演出链路被事务化拖重 |

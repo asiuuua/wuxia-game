@@ -228,6 +228,8 @@ application/content/indexes/  # 12 张 ContentIndex（Build 期生成）
 
 ## 14. 开放问题（必须 ADR 裁决，AI 不得自决）
 
+> **【已追认 2026-09-06】** 用户整批复核：以下 C-1~C-4 全部按倾向执行（本表保留原文供审计）。
+
 | # | 问题 | 倾向 |
 |---|---|---|
 | C-1 | Registry 归属与 Autoload 过渡：Application 层 RefCounted 为目标，Phase3 前临时驻 ConfigManager autoload 位 | 按本图执行（01 §45 未指定宿主；Phase3 装配收敛本就迁移 autoload） |

@@ -5,7 +5,7 @@
 - 真源：`docs/constitution/PROJECT_CONSTITUTION_V1.2.md`。优先级：宪法>架构>契约>施工图>任务卡>AI推断。
 - AI不是架构师：架构级变更一律 STOP→ACR→评审→ADR→分批迁移，禁推倒重写。ACR-0001 APPROVED(2026-09-06)。
 - 迁移=绞杀者分批：0测量→1 Kernel→2 事务根治(P0)→3 装配收敛(18 Autoload)→4 逐模块→5 基础设施；每Phase可停；§171收编不丢弃。
-- **施工已开工**(2026-09-06)：Phase1五项+Phase2收官(版本真源/provenance/出包/id_validator基线263)；09/10/11事务根治60d8ea6；**P1完成**：13图SV-3(P-S3拒读/P-S5五字段checksum归一化/P-S6注册表+golden生产器)+P-S2补课(key撞车拒注册)+17图GATE40+(--tier performance+基线save1.8/combat0.09/boot815ms±50%+build_release强制)。
+- **施工已开工**(2026-09-06)：Phase1五项+Phase2收官(版本真源/provenance/出包/id_validator基线263)；09/10/11事务根治60d8ea6；**P1完成**(13图SV-3拒读/checksum/迁移注册表+golden、P-S2补课、17图GATE40+基准三件套)；审查整改D-02~07已落地6a45c99。
 
 ## 施工图序列 01→18（全部 FROZEN，2026-09-06 用户批准）
 - 已整体冻结，可依图实施；各图含 Enforcement X-R 矩阵(E0=0)。**详细契约/实锤/开放问题以 docs/architecture/NN_*.md 为唯一真源**，此处只留索引：
@@ -13,8 +13,8 @@
 - 跨图要点：0-C事务主战场=09/10/11(已完成)；13 SV-3 Phase2已落地(golden生产器tools/golden/)；16 id_validator挂GATE06(基线263只减不增)；17 GATE40+已落地；18 RH管版本真源/export_presets缺失/Provenance八字段/Release Gate六项/兼容等级声明制。
 - 门禁双命名空间(04§2冻结待T-1追认)：文档LN=宪法§88 GATE01~20∪01§127 GATE21~32；verify_all物理槽1~9+hook 0a/b/c冻结；新物理槽GATE40+；禁裸引物理号。
 
-## 待用户/ADR裁决(AI不自决·推荐见各图§7)
-04-T1双命名空间追认；02 O-1~4；03 ADR-0002 ID格式(推C)·0003目录延Phase5·0004维持.gd，另宪法§23A预占ADR与之撞车待统一登记表；05 C-1~4；06 AC-1~4；07 WT-1~4；08 RF-1~4；09 IE-1~4；10 EC-1~4；11 AB-1~4；12 QD-1~4；13 SV-1~4；14 PV-1~4；15 ST-1~4；16 CP-1~4；17 SBP-1~4；18 RH-4安卓待裁(RH-1版本/RH-2日志轮转/RH-3死常量已执行)。
+## 裁决状态（2026-09-06 用户整批追认「按各图§7推荐」）
+02~18 全部开放问题已追认（逐图批注，原文保留）；04-T1双命名空间追认。ADR-0002=C基线+06AC-1扩展B(nv/mt区域前缀白名单+敌人补enemy_)+16CP-2联动(裸名区域升region_*)，nv/mt存量迁移随Phase3~4须配套存档迁移链；ADR-0003=目录延Phase5；ADR-0004=保留.gd。登记表=docs/architecture/ADR_INDEX.md(宪法§23A预占题不占号,新ADR自0005顺延)。forge_iron_sword按10图EC-R07 Phase4迁recipe_域(退役登记须存量引用清零后,CP-R02无基线豁免)。
 
 ## 架构铁律
 autoload→core→data→services→scenes→tests/tools；单向依赖/跨模块走EventBus/数值进JSON。PerformanceMonitor挂tools/=越位待Phase3收敛。

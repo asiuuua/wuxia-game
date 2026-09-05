@@ -169,6 +169,8 @@ Economy / Shop / Crafting 是本项目 **0-C Transaction 语义的第二主战�
 
 ## 8. 开放问题（需用户 / ADR 裁决，AI 不自决）
 
+> **【已追认 2026-09-06】** 用户整批复核：以下 EC-1~EC-4 全部按推荐执行（EC-1/EC-2 为 ADR 级：独立 Crafting Module、14 核心常量 + 域扩展段）。本节保留原文供审计。
+
 - **EC-1（ADR）Crafting 模块归属**：独立 Crafting Module（01 §59 字面为独立 Module，**推荐**）vs 并入 Economy 作子域。推荐理由：01 §59 明文独立；与 Economy 共享事务层但内容自治；烹饪等后续类别零核心改动。
 - **EC-2（ADR）Kernel ErrorCode 扩容机制**：「14 核心常量冻结不动 + 域扩展段」挂经济域 11 码（**推荐**，不破 02 冻结）vs 修改核心常量清单。与 02 O 系列开放问题咬合。
 - **EC-3 货币形态**：保留三级 silver/copper/gold（**推荐**：旧存档三字段红线 + 换算纯函数）vs 收敛单币种。推荐理由：存档兼容红线，三级换算成本极低。
