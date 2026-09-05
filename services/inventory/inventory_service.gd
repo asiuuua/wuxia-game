@@ -54,7 +54,7 @@ func add_item(item_id: String, count: int, source: String = "") -> bool:
 		inst.item_id = item_id
 		inst.count = put
 		inst.acquired_source = source
-		inst.acquired_time = int(Time.get_unix_time_from_system())
+		inst.acquired_time = WeatherTimeService.get_day()   # 游戏日真源（07图 TimeConsumer 收编/宪法§79 禁系统时间）
 		bag[idx] = inst
 		count -= inst.count
 		current_weight += unit_w * float(put)
@@ -800,7 +800,7 @@ func split_instance(iid: String, count: int) -> Dictionary:
 	new_inst.item_id = inst.item_id
 	new_inst.count = count
 	new_inst.acquired_source = inst.acquired_source
-	new_inst.acquired_time = int(Time.get_unix_time_from_system())
+	new_inst.acquired_time = WeatherTimeService.get_day()   # 游戏日真源（07图 TimeConsumer 收编/宪法§79 禁系统时间）
 	bag[empty] = new_inst
 	inst.count -= count
 	_recalculate_weight()

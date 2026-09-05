@@ -19,23 +19,24 @@ const WorldTimeState = preload("res://data/runtime/world_time_state.gd")
 var state: WorldTimeState = WorldTimeState.new()
 
 # === 调试 / 测试访问器（仅改值，不触发事件；类型均为基础类型，保证 --script 测试可解析） ===
-## 直接设定天数
+# 三级标签（宪法 §80 / 07图 P-8/WT-4）：以下 debug 直改面均属 Test Only / Development Only，禁入生产逻辑
+## 直接设定天数【Development Only·宪法§80三级标签】
 func debug_set_day(d: int) -> void:
 	state.day = d
 
-## 直接设定季节
+## 直接设定季节【Development Only·宪法§80三级标签】
 func debug_set_season(s: int) -> void:
 	state.season = s
 
-## 直接设定当天时刻
+## 直接设定当天时刻【Development Only·宪法§80三级标签】
 func debug_set_time_of_day(t: float) -> void:
 	state.time_of_day = t
 
-## 取状态存档快照（Dictionary，测试可解析）
+## 取状态存档快照（Dictionary，测试可解析）【Test Only·宪法§80三级标签】
 func debug_save_state() -> Dictionary:
 	return state.save()
 
-## 从快照恢复状态
+## 从快照恢复状态【Test Only·宪法§80三级标签】
 func debug_load_state(data: Dictionary) -> void:
 	state.load(data)
 
@@ -137,7 +138,11 @@ func _roll_weather() -> void:
 	if total <= 0:
 		state.weather = WorldEnums.Weather.CLEAR
 		return
-	var roll: int = randi() % total
+	# 天气 roll 按日+季决定论（07图 W-R01/W-R05：禁全局 randi，同日同季必同天气，可回放可单测；
+	# RandomProvider 注入随 02 图 Kernel 契约 Phase2 收编）
+	var w_rng := SeededRNG.new()
+	w_rng.configure(hash("weather:v1:%d:%d" % [state.day, state.season]))
+	var roll: int = w_rng.randi_range(0, total - 1)
 	var accum: int = 0
 	for w_key in table.keys():
 		accum += int(table[w_key])

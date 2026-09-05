@@ -47,18 +47,6 @@
    "line": 406
   },
   {
-   "code": "\"t\": int(Time.get_unix_time_from_system()),",
-   "file": "services/bond/bond_service.gd",
-   "gate": "GATE22-time",
-   "line": 196
-  },
-  {
-   "code": "\"sworn_day\": int(Time.get_unix_time_from_system()),",
-   "file": "services/bond/sworn_service.gd",
-   "gate": "GATE22-time",
-   "line": 65
-  },
-  {
    "code": "seed_val = int(Time.get_unix_time_from_system()) & 0x7FFFFFFF",
    "file": "services/combat/combat_core.gd",
    "gate": "GATE22-time",
@@ -69,18 +57,6 @@
    "file": "services/dialogue/dialogue_event_executor.gd",
    "gate": "GATE22-rand",
    "line": 109
-  },
-  {
-   "code": "inst.acquired_time = int(Time.get_unix_time_from_system())",
-   "file": "services/inventory/inventory_service.gd",
-   "gate": "GATE22-time",
-   "line": 57
-  },
-  {
-   "code": "new_inst.acquired_time = int(Time.get_unix_time_from_system())",
-   "file": "services/inventory/inventory_service.gd",
-   "gate": "GATE22-time",
-   "line": 803
   }
  ],
  "gate32_eventbus_signals": {

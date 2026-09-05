@@ -62,7 +62,7 @@ func sworn(npc_id: String) -> Dictionary:
 		return {"ok": false, "reason": "AFFECTION_NOT_FULL"}
 	var npc: Dictionary = ConfigManager.get_relation(npc_id)
 	sworn_brothers[npc_id] = {
-		"sworn_day": int(Time.get_unix_time_from_system()),
+		"sworn_day": WeatherTimeService.get_day(),   # 游戏日真源（07图 TimeConsumer 收编/宪法§79 禁系统时间）
 		"ability": String(npc.get("sworn_ability", "")),
 		"passive": String(npc.get("sworn_passive", "")),
 	}

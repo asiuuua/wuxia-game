@@ -193,7 +193,7 @@ func get_bond_stats() -> Dictionary:
 func _add_log(npc_id: String, action: int, detail: String, aff: int) -> void:
 	interaction_log.append({
 		"npc": npc_id,
-		"t": int(Time.get_unix_time_from_system()),
+		"t": WeatherTimeService.get_day(),   # 游戏日真源（07图 TimeConsumer 收编/宪法§79 禁系统时间）
 		"act": action,
 		"det": detail,
 		"aff": aff,

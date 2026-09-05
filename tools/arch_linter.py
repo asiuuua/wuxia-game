@@ -84,6 +84,11 @@ def scan_forbidden_api():
             for i, ln in enumerate(body.splitlines(), 1):
                 if RE_SYS_TIME.search(ln):
                     hits.append({"gate": "GATE22-time", "file": rel, "line": i, "code": ln.strip()[:110]})
+            # 时间域禁全局随机（07图 W-R01：weather_time_service 必经 RandomProvider/决定论）
+            if rel == "autoload/weather_time_service.gd":
+                for i, ln in enumerate(body.splitlines(), 1):
+                    if RE_GLOBAL_RAND.search(ln):
+                        hits.append({"gate": "GATE22-wrand", "file": rel, "line": i, "code": ln.strip()[:110]})
         # services/：禁全局随机（§78，SeededRNG 实例方法调用不命中）
         if rel.startswith("services/"):
             for i, ln in enumerate(body.splitlines(), 1):

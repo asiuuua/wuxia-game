@@ -66,3 +66,20 @@ func test_player_defaults_and_roundtrip() -> void:
 	ps.load(ps_snap)
 	expect_eq(ps.age, 18, "读档后年龄应还原")
 	expect(ps.companion_ids.size() == 0, "读档后队友槽位应还原")
+
+# === 07 图 W-R05 天气 roll 决定论：同日同季必同天气（可回放可单测） ===
+func test_weather_roll_deterministic() -> void:
+	WeatherTimeService.debug_set_day(1)
+	WeatherTimeService.debug_set_season(WorldEnums.Season.SPRING)
+	WeatherTimeService.advance_day(1)   # 推进触发 _roll_weather（决定论 seed=f(day,season)）
+	var w1: int = WeatherTimeService.get_weather()
+	# 重放：复位到同日同季再推进，天气必须一致
+	WeatherTimeService.debug_set_day(1)
+	WeatherTimeService.advance_day(1)
+	var w2: int = WeatherTimeService.get_weather()
+	expect_eq(w2, w1, "同日同季天气必须一致（W-R05 决定论）")
+	expect(w1 != -1, "天气应为合法枚举值")
+	# 不同日同季：seed 不同（结果可能相同也可能不同，但与日绑定可复现）
+	WeatherTimeService.debug_set_day(2)
+	WeatherTimeService.advance_day(1)
+	expect(WeatherTimeService.get_weather() >= 0, "第3日天气应为合法枚举值")
