@@ -57,6 +57,9 @@ def find_line(root, rel, val):
 def main():
     base = load_json(BASELINE)
     pattern = re.compile(base["pattern"])
+    # ADR-0002（2026-09-06 APPROVED）二级形态：区域缩写_域_local（如 nv_npc_chief）。
+    # extra_patterns 数组逐条编译，任一命中即合法；缩写白名单显式入正则（封闭、diff 可审计）。
+    extra = [re.compile(p) for p in base.get("extra_patterns", [])]
     exempt = set(base.get("exempt", []))
     baseline_set = {(v["file"], v["id"]) for v in base.get("violations", [])}
     retired = {r["id"] for r in load_json(RETIRED).get("retired", [])}
@@ -69,10 +72,13 @@ def main():
         if isinstance(val, str) and val:
             scanned.append((rel, val, find_line(ROOT, rel, val)))
 
+    def _id_ok(val):
+        return pattern.match(val) or any(p.match(val) for p in extra)
+
     def define(val, rel, domain):
         if isinstance(val, str) and val:
             scanned.append((rel, val, find_line(ROOT, rel, val)))
-            if pattern.match(val):
+            if _id_ok(val):
                 defs_by_domain.setdefault(domain, {}).setdefault(val, []).append(rel)
 
     def walk(obj, rel, depth, in_shard=False):
@@ -121,13 +127,13 @@ def main():
         seen.add((rel, val))
         if val in retired:
             violations.append(("CP-R02", rel, val, "退役名单内 ID 再现（I-1 永不复用）行%d" % line))
-        if not pattern.match(val) and val not in exempt:
+        if not _id_ok(val) and val not in exempt:
             if (rel, val) not in baseline_set:
                 violations.append(("CP-R01", rel, val, "基线外 ID 违例（基线外零容忍）行%d" % line))
 
     # CP-R01 收敛通报（基线内有、现已不存在）
     found = {(rel, val) for rel, val, _ in scanned
-             if not pattern.match(val) and val not in exempt}
+             if not _id_ok(val) and val not in exempt}
     collapsed = baseline_set - found
     if collapsed:
         notes.append("CP-R01 基线收敛 %d 处（只减不增 ✓，可从 id_baseline.json 移除）" % len(collapsed))

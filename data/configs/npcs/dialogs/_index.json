@@ -1,5 +1,5 @@
 {
-  "version": "1.0",
+  "version": "1.0.0",
   "_doc": "对话全局索引（KB级常驻）。dialog_id → {file, npc_id, chapter}。ConfigManager 启动只加载本索引，get_dialog 按需懒加载分片、闲置自动卸载（pin 保护进行中对话）。",
   "shards": {
     "dlg_tutorial": {

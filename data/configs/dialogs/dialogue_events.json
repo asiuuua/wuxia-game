@@ -1,5 +1,5 @@
 {
-	"version": "1.0",
+	"version": "1.0.0",
 	"_doc": "对话事件键 -> 效果列表。对话行 trigger_events 引用这里的 key。效果 type：sfx(需 path) / shake(intensity,duration) / quest_accept(quest_id) / quest_complete(quest_id)。音频文件缺失时静默跳过。",
 	"events": {
 		"sfx_elder_appear":   [{ "type": "sfx", "path": "res://resources/audio/sfx/elder_appear.ogg" }],

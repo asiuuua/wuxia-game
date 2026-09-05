@@ -1,0 +1,323 @@
+{
+ "_doc": "C-R05 结构指纹快照（合法变更升版后 --update-baseline 收编）+ ADR-0004 Schema 类摘要。生成器: tools/schema_guard.py",
+ "content_shapes": {
+  "data/configs/abilities/skills.json": {
+   "shape": "{skills:[{cooldown:num,description:str,effects:[],id:str,learned_by_default:bool,name:str,power:num,qi_cost:num,range:num,range_shape:str,target:str,tier:str}|{cooldown:num,description:str,effects:[],id:str,learned_by_default:bool,name:str,power:num,qi_cost:num,target:str,tier:str}|{cooldown:num,description:str,effects:[{stacks:num,status_id:str}],id:str,learned_by_default:bool,name:str,power:num,qi_cost:num,range:num,range_shape:str,target:str,tier:str}|{cooldown:num,description:str,effects:[{stacks:num,status_id:str}],id:str,learned_by_default:bool,name:str,power:num,qi_cost:num,target:str,tier:str}],version:str}",
+   "version": "1.2.0"
+  },
+  "data/configs/abilities/status_effects.json": {
+   "shape": "{status_effects:[{clear_on_rest:bool,dot_per_turn:num,duration:num,id:str,max_stacks:num,mode:str,name:str,stat:str,type:str,value:num}|{clear_on_rest:bool,duration:num,id:str,max_stacks:num,mode:str,name:str,stat:str,type:str,value:num}],version:str}",
+   "version": "1.0.0"
+  },
+  "data/configs/alchemy/recipes.json": {
+   "shape": "{recipes:[{id:str,inputs:[{count:num,item_id:str}],level_req:num,name:str,output_count:num,output_pill_id:str}],version:str}",
+   "version": "1.0.0"
+  },
+  "data/configs/bond/relations.json": {
+   "shape": "{relations:[{affection_decay_rate:num,affection_events:[],age:num,disliked_gifts:[],dowry_required:[],faction:str,gender:num,graduation_level:num,id:str,initial_affection:num,is_masterable:bool,is_romanceable:bool,is_swornable:bool,liked_gifts:[str],loved_gifts:[str],master_quest:str,max_affection:num,min_player_level:num,name:str,personality:[num],required_faction:str,required_gender:num,romance:{allow_multiple:bool,dowry_required:[],propose_affection:num,spouse_ability:str,wedding_type:str},romance_quest:str,spouse_ability:str,spouse_passive:str,sworn_ability:str,sworn_quest:str,teachable_abilities:[],wedding_scene:str}|{affection_decay_rate:num,affection_events:[],age:num,disliked_gifts:[str],dowry_required:[],faction:str,gender:num,graduation_level:num,id:str,initial_affection:num,is_masterable:bool,is_romanceable:bool,is_swornable:bool,liked_gifts:[str],loved_gifts:[str],master_quest:str,max_affection:num,min_player_level:num,name:str,personality:[num],required_faction:str,required_gender:num,romance:{allow_multiple:bool,dowry_required:[],propose_affection:num,spouse_ability:str,wedding_type:str},romance_quest:str,spouse_ability:str,spouse_passive:str,sworn_ability:str,sworn_quest:str,teachable_abilities:[],wedding_scene:str}|{affection_decay_rate:num,affection_events:[{event_id:str,event_type:str,is_one_time:bool,reward_affection:num,reward_item:str,threshold:num,unlocks:[str]}],age:num,disliked_gifts:[],dowry_required:[],faction:str,gender:num,graduation_level:num,id:str,initial_affection:num,is_masterable:bool,is_romanceable:bool,is_swornable:bool,liked_gifts:[str],loved_gifts:[str],master_quest:str,max_affection:num,min_player_level:num,name:str,personality:[num],required_faction:str,required_gender:num,romance_quest:str,spouse_ability:str,spouse_passive:str,sworn_ability:str,sworn_affection:num,sworn_quest:str,teachable_abilities:[],wedding_scene:str}|{affection_decay_rate:num,affection_events:[{event_id:str,event_type:str,is_one_time:bool,reward_affection:num,reward_item:str,threshold:num,unlocks:[str]}],age:num,disliked_gifts:[str],dowry_required:[],faction:str,gender:num,graduation_level:num,id:str,initial_affection:num,is_masterable:bool,is_romanceable:bool,is_swornable:bool,liked_gifts:[str],loved_gifts:[str],master_affection:num,master_quest:str,max_affection:num,min_player_level:num,name:str,personality:[num],required_faction:str,required_gender:num,romance_quest:str,spouse_ability:str,spouse_passive:str,sworn_ability:str,sworn_quest:str,teachable_abilities:[str],wedding_scene:str}|{affection_decay_rate:num,affection_events:[{event_id:str,event_type:str,is_one_time:bool,reward_affection:num,reward_item:str,threshold:num,unlocks:[str]}],age:num,disliked_gifts:[str],dowry_required:[],faction:str,gender:num,graduation_level:num,id:str,initial_affection:num,is_masterable:bool,is_romanceable:bool,is_swornable:bool,liked_gifts:[str],loved_gifts:[str],master_quest:str,max_affection:num,min_player_level:num,name:str,personality:[num],required_faction:str,required_gender:num,romance:{allow_multiple:bool,dowry_required:[],propose_affection:num,spouse_ability:str,wedding_type:str},romance_quest:str,spouse_ability:str,spouse_passive:str,sworn_ability:str,sworn_quest:str,teachable_abilities:[],wedding_scene:str}],version:str}",
+   "version": "1.0.0"
+  },
+  "data/configs/combat/attribute_table.json": {
+   "shape": "{_doc:str,defense:{_doc:str,soft_cap_k:num},derive_mode:str,five_attr_weights:{_doc:str,jin:{max_attack:num,min_attack:num},min:{crit_rate:num,min_attack:num},shi:{accuity_rate:num,max_attack:num},tizhi:{max_hp:num},yu:{defense:num,max_hp:num}},growth:{_doc:str,atk_base:num,atk_growth:num,hp_base:num,hp_growth:num},judgment:{_doc:str,accuity_damage_mult:num,accuity_rate_cap:num,crit_damage_mult:num,crit_heal_mult:num,crit_rate_cap:num,direct_accuity_bonus:num,direct_crit_bonus:num},version:str,weapon_range:{_doc:str,max_ratio:num,min_ratio:num}}",
+   "version": "1.0.0"
+  },
+  "data/configs/dialogs/dialogue_events.json": {
+   "shape": "{_doc:str,events:{accept_demo_quest:[{quest_id:str,type:str}],bandit_threat_shake:[{duration:num,intensity:num,type:str}],sfx_bandit_threat:[{path:str,type:str}],sfx_beggar:[{path:str,type:str}],sfx_elder_appear:[{path:str,type:str}],sfx_quest_accept:[{path:str,type:str}],sfx_tactical:[{path:str,type:str}]},version:str}",
+   "version": "1.0.0"
+  },
+  "data/configs/difficulty/difficulty_table.json": {
+   "shape": "{difficulties:[{ai_behavior_profile:str,allow_escape:bool,allow_non_lethal:bool,can_change_in_game:bool,defeat_behaviour:str,defeat_cg_text_id:str,defeat_cg_when_broke_only:bool,defeat_debt_if_broke:bool,defeat_lose_include_material:bool,defeat_lose_include_quest:bool,defeat_lose_item_count:num,defeat_lose_items:bool,defeat_lose_money:num,defeat_lose_rarities:[str],desc_text_id:str,difficulty_id:str,display_name_text_id:str,enemy_armor_mult:num,enemy_damage_mult:num,enemy_hp_mult:num,escape_modifier:num,player_damage_mult:num}|{ai_behavior_profile:str,allow_escape:bool,allow_non_lethal:bool,can_change_in_game:bool,defeat_behaviour:str,defeat_cg_text_id:str,defeat_debt_if_broke:bool,defeat_lose_include_material:bool,defeat_lose_include_quest:bool,defeat_lose_items:bool,defeat_lose_money:num,defeat_lose_rarities:[str],desc_text_id:str,difficulty_id:str,display_name_text_id:str,enemy_armor_mult:num,enemy_damage_mult:num,enemy_hp_mult:num,escape_modifier:num,player_damage_mult:num}],version:str}",
+   "version": "1.0.0"
+  },
+  "data/configs/forge/recipes.json": {
+   "shape": "{recipes:[{forge_type:str,id:str,inputs:[{count:num,item_id:str}],level_req:num,name:str,output_count:num,output_item_id:str}],version:str}",
+   "version": "1.0.0"
+  },
+  "data/configs/items/equipment.json": {
+   "shape": "{items:[{bonus_attack:num,bonus_defense:num,bonus_hp:num,equip_slot:str,flags:num,id:str,max_stack:num,name:str,price:num,rarity:str,type:str,weight:num}|{bonus_attack:num,bonus_defense:num,bonus_mp:num,equip_slot:str,flags:num,id:str,max_stack:num,name:str,price:num,rarity:str,type:str,weight:num}|{bonus_attack:num,bonus_defense:num,equip_slot:str,flags:num,id:str,max_stack:num,name:str,price:num,rarity:str,type:str,weight:num}|{bonus_defense:num,bonus_hp:num,equip_slot:str,flags:num,id:str,max_stack:num,name:str,price:num,rarity:str,type:str,weight:num}|{bonus_defense:num,bonus_mp:num,equip_slot:str,flags:num,id:str,max_stack:num,name:str,price:num,rarity:str,type:str,weight:num}|{bonus_hp:num,bonus_mp:num,equip_slot:str,flags:num,id:str,max_stack:num,name:str,price:num,rarity:str,type:str,weight:num}],version:str}",
+   "version": "1.0.1"
+  },
+  "data/configs/items/materials.json": {
+   "shape": "{items:[{flags:num,id:str,max_stack:num,name:str,price:num,rarity:str,type:str,weight:num}],version:str}",
+   "version": "1.0.1"
+  },
+  "data/configs/items/pills.json": {
+   "shape": "{items:[{buff_duration_minutes:num,buff_stat:str,buff_value:num,flags:num,id:str,kind:str,max_stack:num,name:str,price:num,rarity:str,type:str,weight:num}|{cure_status:[str],flags:num,id:str,kind:str,max_stack:num,name:str,price:num,rarity:str,type:str,weight:num}|{flags:num,heal_hp:num,heal_mp:num,id:str,max_stack:num,name:str,price:num,rarity:str,type:str,weight:num}],version:str}",
+   "version": "1.0.1"
+  },
+  "data/configs/items/weapons.json": {
+   "shape": "{items:[{attack:num,bonus_attack:num,durability:num,equip_slot:str,flags:num,id:str,max_stack:num,name:str,price:num,rarity:str,speed:num,type:str,weight:num}],version:str}",
+   "version": "1.0.1"
+  },
+  "data/configs/npcs/enemies.json": {
+   "shape": "{enemies:[{abilities:[],attack:num,hp:num,id:str,loot:[{count:num,item_id:str}],name:str,speed:num}|{abilities:[{condition:str,id:str,weight:num}],attack:num,hp:num,id:str,loot:[],name:str,speed:num}|{abilities:[{condition:str,id:str,weight:num}],attack:num,hp:num,id:str,loot:[{count:num,item_id:str}],name:str,speed:num}],version:str}",
+   "version": "1.0.0"
+  },
+  "data/configs/npcs/town_npcs.json": {
+   "shape": "{_doc:str,npcs:[],version:str}",
+   "version": "1.0.0"
+  },
+  "data/configs/quests/quests.json": {
+   "shape": "{quests:[{desc:str,id:str,name:str,objectives:[{desc:str,id:str,need:num,target_battle:str}],rewards:{abilities:[str],exp:num,items:[{count:num,item_id:str}],silver:num},type:str}|{desc:str,id:str,name:str,objectives:[{desc:str,id:str,need:num,target_battle:str}],rewards:{exp:num,items:[{count:num,item_id:str}],silver:num},type:str}|{desc:str,id:str,name:str,objectives:[{desc:str,id:str,need:num,target_battle:str}],rewards:{exp:num,items:[{count:num,item_id:str}]},type:str}],version:str}",
+   "version": "1.0.0"
+  },
+  "data/configs/regions/misty_town/battles.json": {
+   "shape": "{battles:[{enemy_ids:[str],id:str,name:str,rewards:{exp:num,items:[]},turn_mode:str}],version:str}",
+   "version": "1.0.0"
+  },
+  "data/configs/regions/misty_town/dialogs/mt_dialog_priest.json": {
+   "shape": "{_doc:str,id:str,lines:[{effects:[],id:str,speaker_id:str,text:str}|{id:str,options:[{effects:[],jump_id:str,text:str}|{effects:[str],jump_id:str,text:str}],speaker_id:str,text:str}],version:str}",
+   "version": "1.0.0"
+  },
+  "data/configs/regions/misty_town/enemies.json": {
+   "shape": "{enemies:[{attack:num,defense:num,id:str,lvl:num,max_hp:num,name:str,speed:num}],version:str}",
+   "version": "1.0.0"
+  },
+  "data/configs/regions/misty_town/index.json": {
+   "shape": "{_doc:str,battles:[str],dialogs:[str],display_name:str,enemies:[str],items:[str],npcs:[str],plotline:str,prefix:str,quests:[str],region_id:str,version:str}",
+   "version": "1.0.0"
+  },
+  "data/configs/regions/misty_town/items.json": {
+   "shape": "{items:[{desc:str,id:str,name:str,type:str}],version:str}",
+   "version": "1.0.0"
+  },
+  "data/configs/regions/misty_town/npcs.json": {
+   "shape": "{npcs:[{battle_id:str,dialog_id:str,id:str,name:str,pos_x:num,pos_y:num,quest_id:str,scene:str}],version:str}",
+   "version": "1.0.0"
+  },
+  "data/configs/regions/misty_town/quests.json": {
+   "shape": "{quests:[{id:str,name:str,objectives:[{desc:str,id:str,need:num,target_battle:str}],prerequisites:{nv_flag_maiden_helped:bool},rewards:{exp:num,items:[{count:num,item_id:str}]},then_set:{mt_flag_temple_cleared:bool},type:str}],version:str}",
+   "version": "1.0.0"
+  },
+  "data/configs/regions/newbie_village/battles.json": {
+   "shape": "{_doc:str,battles:[{enemy_ids:[str],id:str,name:str,rewards:{exp:num,items:[{count:num,item_id:str}]},turn_mode:str}],version:str}",
+   "version": "1.0.0"
+  },
+  "data/configs/regions/newbie_village/dialogs/nv_dialog_elder.json": {
+   "shape": "{_doc:str,id:str,lines:[{effects:[str],id:str,speaker_id:str,text:str}],version:str}",
+   "version": "1.0.0"
+  },
+  "data/configs/regions/newbie_village/dialogs/nv_dialog_maiden.json": {
+   "shape": "{_doc:str,id:str,lines:[{effects:[],id:str,speaker_id:str,text:str}|{id:str,options:[{effects:[],jump_id:str,text:str}|{effects:[str],jump_id:str,text:str}],speaker_id:str,text:str}],version:str}",
+   "version": "1.0.0"
+  },
+  "data/configs/regions/newbie_village/enemies.json": {
+   "shape": "{_doc:str,enemies:[{attack:num,defense:num,id:str,lvl:num,max_hp:num,name:str,speed:num}],version:str}",
+   "version": "1.0.0"
+  },
+  "data/configs/regions/newbie_village/index.json": {
+   "shape": "{_doc:str,battles:[str],dialogs:[str],display_name:str,enemies:[str],items:[str],npcs:[str],plotline:str,prefix:str,quests:[str],region_id:str,version:str}",
+   "version": "1.0.0"
+  },
+  "data/configs/regions/newbie_village/items.json": {
+   "shape": "{_doc:str,items:[{desc:str,id:str,name:str,type:str}],version:str}",
+   "version": "1.0.0"
+  },
+  "data/configs/regions/newbie_village/npcs.json": {
+   "shape": "{_doc:str,npcs:[{battle_id:str,dialog_id:str,half_body_portrait:str,id:str,name:str,portrait:str,portrait_frames:[],portrait_skeleton:str,portrait_type:str,pos_x:num,pos_y:num,quest_id:str,scene:str,sprite:str}|{battle_id:str,dialog_id:str,half_body_portrait:str,id:str,name:str,portrait:str,pos_x:num,pos_y:num,quest_id:str,scene:str,sprite:str}|{battle_id:str,dialog_id:str,half_body_portrait:str,id:str,name:str,portrait:str,pos_x:num,pos_y:num,scene:str,sprite:str}|{battle_id:str,dialog_id:str,half_body_portrait:str,id:str,name:str,pos_x:num,pos_y:num,quest_id:str,scene:str,sprite:str}|{battle_id:str,dialog_id:str,id:str,name:str,pos_x:num,pos_y:num,quest_id:str,scene:str}|{dialog_id:str,half_body_portrait:str,id:str,name:str,portrait:str,pos_x:num,pos_y:num,scene:str,sprite:str}|{dialog_id:str,half_body_portrait:str,id:str,name:str,pos_x:num,pos_y:num,scene:str,sprite:str}],version:str}",
+   "version": "1.0.0"
+  },
+  "data/configs/regions/newbie_village/quests.json": {
+   "shape": "{_doc:str,quests:[{_doc:str,id:str,name:str,objectives:[],quest_graph:{endings:[{id:str,require:{eq:bool,flag:str}}],nodes:{n_choice:{options:[{next:str,show:{eq:bool,flag:str},text_key:str,then:[]}|{next:str,show:{eq:bool,flag:str},text_key:str,then:[{key:str,op:str,value:bool}]}],type:str},n_end_good:{ending:str,type:str},n_end_refuse:{ending:str,type:str},n_give:{next:str,then:[{key:str,op:str,value:bool}|{op:str,target:str,value:num}],type:str},n_start:{next:str,then:[{key:str,op:str,value:bool}],type:str}},start_node:str},title_key:str,type:str}|{id:str,name:str,objectives:[{desc:str,id:str,need:num,target_battle:str}],rewards:{exp:num,items:[]},then_set:{nv_flag_guard_done:bool},type:str}|{id:str,name:str,objectives:[{desc:str,id:str,need_count:num,need_item:str}],prerequisites:{nv_flag_guard_done:bool},rewards:{items:[{count:num,item_id:str}],silver:num},then_set:{nv_flag_maiden_helped:bool,plot_advance:str},type:str}],version:str}",
+   "version": "1.0.0"
+  },
+  "data/configs/scenes/battles.json": {
+   "shape": "{battles:[{allies:[str],enemy_ids:[str],grid:{deployment:{ally_sworder_001:[num],bandit_001:[num],player:[num]},height:num,obstacles:[str],width:num},id:str,name:str,reward_exp:num,tactical:bool,turn_mode:str}|{allies:[str],enemy_ids:[str],grid:{deployment:{ally_sworder_001:[num],player:[num]},height:num,obstacles:[str],width:num},id:str,name:str,reward_exp:num,tactical:bool,turn_mode:str}|{allies:[str],enemy_ids:[str],grid:{deployment:{bandit_001:[num],player:[num]},height:num,obstacles:[str],width:num},id:str,name:str,reward_exp:num,tactical:bool,turn_mode:str}|{deployment:{bandit_001:[num],player:[num]},enemy_ids:[str],id:str,layout:str,name:str,reward_exp:num,tactical:bool,turn_mode:str}|{deployment:{bandit_001:[num],player:[num]},enemy_ids:[str],id:str,name:str,reward_exp:num,tactical:bool,turn_mode:str}|{enemy_ids:[str],grid:{deployment:{bandit_001:[num],player:[num]},height:num,obstacles:[str],width:num},id:str,name:str,reward_exp:num,tactical:bool,turn_mode:str}|{enemy_ids:[str],id:str,name:str,reward_exp:num,turn_mode:str}|{enemy_ids:[str],id:str,name:str,reward_exp:num}],version:str}",
+   "version": "1.0.0"
+  },
+  "data/configs/sect/sects.json": {
+   "shape": "{sects:[{description:str,id:str,join_reputation_req:num,join_req_item:str,name:str,ranks:[{benefit:str,rank:str,rep_threshold:num}]}],version:str}",
+   "version": "1.0.0"
+  },
+  "data/configs/shop/shops.json": {
+   "shape": "{shops:[{buy_rate:num,id:str,name:str,sell_rate:num,stock:[{item_id:str,price:num,restock:num,stock_limit:num}]}],version:str}",
+   "version": "1.0.0"
+  },
+  "data/configs/ui/ui_anim.json": {
+   "shape": "{_comment:str,battle:{damage_pop:num,death_fade:num,fast:num,gentle:num,hit_shake:num,instant:num,reflect:num,revive:num,shield_absorb:num,turn_gap:num},breath:{duration:str,easing:str,enabled:bool,random_phase:bool,scale_x_amp:num,scale_y_amp:num},durations:{breath:num,fast:num,gentle:num,instant:num,normal:num,screen:num,slow:num},easings:{bouncy:{ease:str,trans:str},enter:{ease:str,trans:str},exit:{ease:str,trans:str},linear:{ease:str,trans:str},smooth:{ease:str,trans:str},standard:{ease:str,trans:str}},focus:{duration:str,easing:str,scale:num},hover:{duration:str,easing:str,modulate:num,scale:num},press:{duration:str,easing:str,scale:num},screen:{easing:str,fade_in_duration:str,fade_out_duration:str},toast:{fade_in:str,fade_out:str,hold:num},version:str}",
+   "version": "1.0.0"
+  },
+  "data/configs/ui/ui_sfx.json": {
+   "shape": "{_comment:str,bus:str,events:{back:{path:str,volume_db:num},cancel:{path:str,volume_db:num},click:{path:str,volume_db:num},close:{path:str,volume_db:num},confirm:{path:str,volume_db:num},error:{path:str,volume_db:num},hover:{path:str,volume_db:num},open:{path:str,volume_db:num}},pool_size:num,version:str}",
+   "version": "1.0.0"
+  },
+  "data/configs/world/world_config.json": {
+   "shape": "{season_days:num,start_day:num,start_season:num,start_time_of_day:num,start_weather:num,version:str,weather_weights:{0:{0:num,1:num,2:num,3:num,4:num,5:num,6:num},1:{0:num,1:num,2:num,3:num,4:num,5:num,6:num},2:{0:num,1:num,2:num,3:num,4:num,5:num,6:num},3:{0:num,1:num,2:num,3:num,4:num,5:num,6:num}}}",
+   "version": "1.0.0"
+  }
+ },
+ "schema_classes": [
+  {
+   "class_name": "AbilityData",
+   "extends": "Resource",
+   "file": "data/schemas/ability_data.gd",
+   "properties": {
+    "description": {
+     "default": "\"\"",
+     "line": 10,
+     "type": "string"
+    },
+    "id": {
+     "default": "\"\"",
+     "line": 8,
+     "type": "string"
+    },
+    "learned_by_default": {
+     "default": "false",
+     "line": 16,
+     "type": "boolean"
+    },
+    "mp_cost": {
+     "default": "0",
+     "line": 11,
+     "type": "integer"
+    },
+    "name": {
+     "default": "\"\"",
+     "line": 9,
+     "type": "string"
+    },
+    "power": {
+     "default": "0",
+     "line": 12,
+     "type": "integer"
+    },
+    "tags": {
+     "default": "[]",
+     "line": 15,
+     "type": {
+      "$ref": "PackedStringArray"
+     }
+    },
+    "target": {
+     "default": "0",
+     "line": 14,
+     "type": "integer"
+    },
+    "type": {
+     "default": "0",
+     "line": 13,
+     "type": "integer"
+    }
+   }
+  },
+  {
+   "class_name": "ItemData",
+   "extends": "Resource",
+   "file": "data/schemas/item_data.gd",
+   "properties": {
+    "description": {
+     "default": "\"\"",
+     "line": 10,
+     "type": "string"
+    },
+    "flags": {
+     "default": "0",
+     "line": 17,
+     "type": "integer"
+    },
+    "icon_path": {
+     "default": "\"\"",
+     "line": 13,
+     "type": "string"
+    },
+    "id": {
+     "default": "\"\"",
+     "line": 8,
+     "type": "string"
+    },
+    "max_stack": {
+     "default": "1",
+     "line": 14,
+     "type": "integer"
+    },
+    "name": {
+     "default": "\"\"",
+     "line": 9,
+     "type": "string"
+    },
+    "price": {
+     "default": "0",
+     "line": 16,
+     "type": "integer"
+    },
+    "rarity": {
+     "default": "\"\"",
+     "line": 12,
+     "type": "string"
+    },
+    "type": {
+     "default": "\"\"",
+     "line": 11,
+     "type": "string"
+    },
+    "weight": {
+     "default": "0.0",
+     "line": 15,
+     "type": "number"
+    }
+   }
+  },
+  {
+   "class_name": "PillData",
+   "extends": "Resource",
+   "file": "data/schemas/pill_data.gd",
+   "properties": {
+    "buff_id": {
+     "default": "\"\"",
+     "line": 9,
+     "type": "string"
+    },
+    "heal_hp": {
+     "default": "0",
+     "line": 7,
+     "type": "integer"
+    },
+    "heal_mp": {
+     "default": "0",
+     "line": 8,
+     "type": "integer"
+    }
+   }
+  },
+  {
+   "class_name": "WeaponData",
+   "extends": "Resource",
+   "file": "data/schemas/weapon_data.gd",
+   "properties": {
+    "attack": {
+     "default": "0",
+     "line": 7,
+     "type": "integer"
+    },
+    "compatible_abilities": {
+     "default": "[]",
+     "line": 12,
+     "type": {
+      "$ref": "PackedStringArray"
+     }
+    },
+    "durability": {
+     "default": "100",
+     "line": 8,
+     "type": "integer"
+    },
+    "equip_slot": {
+     "default": "\"main_hand\"",
+     "line": 11,
+     "type": "string"
+    },
+    "max_durability": {
+     "default": "100",
+     "line": 9,
+     "type": "integer"
+    },
+    "speed": {
+     "default": "1.0",
+     "line": 10,
+     "type": "number"
+    }
+   }
+  }
+ ]
+}

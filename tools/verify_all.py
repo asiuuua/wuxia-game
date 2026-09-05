@@ -231,10 +231,29 @@ def gate6_ref_index():
         if s.startswith(("✗", "ℹ", "扫描值点")) or "结论" in s:
             print("   " + s)
     ok2 = code2 == 0
-    ok = ok1 and ok2
-    print("  GATE6 %s（数据 ID 引用：ref_index %s / id_validator %s）"
-          % ("✓ 通过" if ok else "✗ 未过", "✓" if ok1 else "✗", "✓" if ok2 else "✗"))
+    # 03 图 Contract/Schema：C-R04 版本三段 / C-R05 结构变更必升版 / ADR-0004 Schema 摘要
+    out3, code3 = _run([sys.executable, os.path.join(HERE, "schema_guard.py")])
+    for ln in out3.splitlines():
+        s = ln.strip()
+        if s.startswith(("✗", "ℹ", "  version", "（存在")) or "结论" in s or "基线已写入" in s:
+            print("   " + s)
+    ok3 = code3 == 0
+    # 03 图 Content Pack：C-R14 manifest 必填 / C-R15 依赖可解析无环
+    out4, code4 = _run([sys.executable, os.path.join(HERE, "pack_manifest_validator.py")])
+    for ln in out4.splitlines():
+        s = ln.strip()
+        if s.startswith(("✗", "  manifest")) or "结论" in s or rel_ok(s):
+            print("   " + s)
+    ok4 = code4 == 0
+    ok = ok1 and ok2 and ok3 and ok4
+    print("  GATE6 %s（数据 ID 引用：ref_index %s / id_validator %s / schema_guard %s / pack_manifest %s）"
+          % ("✓ 通过" if ok else "✗ 未过",
+             "✓" if ok1 else "✗", "✓" if ok2 else "✗", "✓" if ok3 else "✗", "✓" if ok4 else "✗"))
     return ok
+
+
+def rel_ok(s):
+    return s.startswith("- ")   # manifest 清单行
 
 
 def gate7_studio_smoke():
