@@ -10,8 +10,10 @@
 
 Release Gate（RH-4）编排现状：
   第1项 双闸门 / 第2项 GATE06 / 第5项 Provenance —— 本脚本强制。
-  第3项 GATE40+ 性能基准、第4项 迁移 golden 对 —— 17 图 SBP-6 与 13 图 SV-3 Phase2
-  产物尚未落地，本脚本以 [PENDING] 显式标注，落地后自动升级为强制项。
+  第3项 GATE40+ 性能基准 —— tools/run_benchmarks.py --release 强制（SBP-R09：
+      全部 RELEASE PASS 才放行；FUNCTIONAL PASS 不得作为发布依据）。
+  第4项 迁移 golden 对 —— 夹具在位检查 + 双闸门 GATE2 单元套件常绿强制（SV-R03）。
+  （原 [PENDING] 两项已于 2026-09-06 落地，本注释为 17图 SBP / 13图 SV-3 收口留痕。）
 
 用法：
   python tools/build_release.py                 # 全流程（门禁+provenance+导出）
@@ -107,10 +109,31 @@ def run_gates():
         print("✗ 门禁未全绿，中止发布（RH-4 第6项：门禁非绿即阻断）"); sys.exit(1)
 
 
-def pending_items():
-    print("── Release Gate 待落地项（显式标注，落地后自动升级为强制）──")
-    print("   [PENDING] GATE40+ 性能基准（17图 SBP-6，Phase2 后续批）")
-    print("   [PENDING] 迁移 golden 对（13图 SV-3 Phase2）")
+def release_gate_perf():
+    """Release Gate 第3项：GATE40+ 性能基准（17图 SBP），--release 模式强制。"""
+    print("── Release Gate 第3项：GATE40+ 性能基准（17图 SBP）──")
+    r = run([sys.executable, os.path.join(HERE, "run_benchmarks.py"), "--release"])
+    lines = r.stdout.splitlines()
+    for ln in lines[1:]:
+        if "PASS" in ln or "✗" in ln or "✓" in ln or "⚠" in ln:
+            print("   " + ln.strip())
+    if r.returncode != 0:
+        print("✗ 性能基准未达 RELEASE PASS，中止发布（SBP-R09：FUNCTIONAL PASS ≠ RELEASE PASS）")
+        sys.exit(1)
+
+
+def release_gate_golden():
+    """Release Gate 第4项：迁移 golden 对（13图 SV-3 Phase2）。
+    迁移正确性由双闸门 GATE2 单元套件常绿强制（test_save_migration golden 对）；
+    此处兜底检查夹具在位，防止夹具被误删后 Release Gate 名存实亡。"""
+    print("── Release Gate 第4项：迁移 golden 对（13图 SV-3 Phase2）──")
+    golden_dir = os.path.join(ROOT, "tests", "golden", "migrations")
+    required = ["migrate_1_0_0_to_1_1_0.input.json", "migrate_1_0_0_to_1_1_0.expected.json"]
+    missing = [f for f in required if not os.path.isfile(os.path.join(golden_dir, f))]
+    if missing:
+        print("✗ golden 夹具缺失: %s（重跑生产器 tools/golden/gen_migration_golden.tscn 产出）" % missing)
+        sys.exit(1)
+    print("   ✓ golden 夹具在位（%s），迁移对由 GATE2 常绿强制（SV-R03）" % len(required))
 
 
 def export_win(prov):
@@ -153,9 +176,11 @@ def main():
     else:
         print("⚠ --skip-gates：仅供调试，正式发布禁止（RH-4）")
     prov = make_provenance()
-    pending_items()
+    release_gate_golden()
     if args.provenance_only:
+        print("（--provenance-only：性能基准 Release Gate 在完整发布流程强制执行）")
         return
+    release_gate_perf()
     export_win(prov)
     print("══════ Android：Phase4 实测（RH-4），预设与说明已就位 ══════")
 

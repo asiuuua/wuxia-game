@@ -285,6 +285,20 @@ def gate9_js_lint():
     return ok
 
 
+def gate40_benchmarks():
+    """GATE40：Benchmark 性能基准（17图 SBP，可选 tier：--tier performance，不进默认全量）。
+    门禁壳只做「跑基准→比对基线→报 PASS/FAIL」（SBP-4）；基线五字段格式 FATAL（SBP-R07）；
+    双 PASS 状态机：FUNCTIONAL PASS ≠ RELEASE PASS（SBP-R09），tier 模式 FUNCTIONAL 即绿。"""
+    out, code = _run([sys.executable, os.path.join(HERE, "run_benchmarks.py")])
+    for ln in out.splitlines():
+        s = ln.strip()
+        if s.startswith(("═", "──")) or "PASS" in s or "✗" in s or "⚠" in s:
+            print("   " + s)
+    ok = code == 0
+    print("  GATE40 %s（Benchmark 性能基准 tier）" % ("✓ 通过" if ok else "✗ 未过"))
+    return ok
+
+
 GATES = {1: gate1_quit_check, 2: gate2_unit_tests, 3: gate3_project_validate,
          4: gate4_preset_redline, 5: gate5_no_dual_write, 6: gate6_ref_index,
          7: gate7_studio_smoke, 8: gate8_structure, 9: gate9_js_lint}
@@ -294,6 +308,21 @@ def main():
     if not os.path.exists(GODOT):
         print("找不到 Godot console：%s（可用环境变量 GODOT 指定路径）" % GODOT)
         return 1
+    # 可选 tier：--tier performance → 只跑 GATE40（性能基准），不与默认九门混跑
+    if "--tier" in sys.argv:
+        idx = sys.argv.index("--tier")
+        tier = sys.argv[idx + 1] if idx + 1 < len(sys.argv) else ""
+        if tier != "performance":
+            print("未知 tier: %s（可用：performance）" % tier)
+            return 1
+        print("══════ verify_all · tier=performance（GATE40 性能基准） ══════")
+        try:
+            ok = gate40_benchmarks()
+        except Exception as e:
+            print("  GATE40 ✗ 异常: %s" % e)
+            ok = False
+        print("══════ 结论：%s ══════" % ("全绿 ✓" if ok else "未过 ✗"))
+        return 0 if ok else 1
     pick = [int(a) for a in sys.argv[sys.argv.index("--gate") + 1:]] if "--gate" in sys.argv else sorted(GATES)
     print("══════ verify_all · 项目一键验证（八门禁+JS 语法门禁） ══════")
     print("  工程: %s\n  Godot: %s" % (ROOT, GODOT))

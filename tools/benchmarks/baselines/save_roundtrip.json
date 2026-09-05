@@ -1,0 +1,9 @@
+{
+  "benchmark_id": "save_roundtrip",
+  "input_scale": "keys=12 iter=30",
+  "environment": "win64-local-dev",
+  "result_distribution": "median",
+  "allowed_variance": 0.5,
+  "version": "0.5.0",
+  "baseline_ms": 1.77
+}

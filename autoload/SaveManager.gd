@@ -6,13 +6,38 @@ extends Node
 # 注：autoload 脚本不能写 class_name X 与 autoload 同名，会与单例冲突报错（已删除）
 
 const SAVE_VERSION := "1.1.0"   # 1.1.0(2026-09-04)：新增 last_region_id（读档恢复所在区域）
+const BASE_SAVE_VERSION := "1.0.0"   # 无版本号遗留档的推定起点（SV-3 注册表推导基点）
 
-# 版本迁移链（第二阶段·代码审查报告整改）：老版本存档按序迁移到当前版本。
-# 迁移步骤签名：func(data: Dictionary) -> Dictionary（原地补字段/改结构，返回处理后的 data）。
-# 新增不兼容变更时：SAVE_VERSION 升版 + 在此追加一步迁移，绝不破坏老档。
-var _migrations: Array = [
-	# {"from": "1.0.0", "step": Callable}
-]
+# 版本迁移链显式注册表（13 图 SV-3 / 宪法 §32）：老版本存档按序迁移到当前版本。
+# 步骤签名：{ "from": SemVer, "to": SemVer, "step": Callable }，step 为 func(data)->Dictionary。
+# 已知版本链由注册表自动推导（禁手写 known 数组，P-S6 收口）；未知版本一律拒读（P-S3）。
+# 新增不兼容变更时：SAVE_VERSION 升版 + register_migration 登记一步 + golden 对（SV-R03）。
+var _migrations: Array = []
+
+var _content_version_cache: String = ""   # content_version 进程内缓存（P-S5，见 _content_version）
+
+func _ready() -> void:
+	_seed_builtin_migrations()
+
+## 内置历史迁移登记（13 图 DoD 3：1.0.0→1.1.0 补正式注册步骤，禁止零登记豁免）。
+## 外部补丁迁移经 PatchManager → register_migration 接线（P-S1 修复）。
+func _seed_builtin_migrations() -> void:
+	register_migration({
+		"from": "1.0.0",
+		"to": "1.1.0",
+		"step": Callable(self, "_migrate_1_0_0_to_1_1_0"),
+	})
+
+## 1.0.0 → 1.1.0：新增 last_region_id（读档恢复所在区域）。
+## 老档 game_state 缺该字段时补起始区域默认值（与 GameState.load 兜底同口径）；
+## game_state 键整体缺失的老档不动（缺 key 分级归 SV-4 期望清单核对，Phase2）。
+func _migrate_1_0_0_to_1_1_0(data: Dictionary) -> Dictionary:
+	var gs: Variant = data.get("game_state", null)
+	if gs is Dictionary:
+		var g: Dictionary = gs
+		if not g.has("last_region_id"):
+			g["last_region_id"] = "newbie_village"
+	return data
 
 
 ## 公开迁移登记口（13 图 SV-3 显式注册表 / P-S1 死接线修复，Phase1 落地）：
@@ -40,9 +65,18 @@ const BAK_SUFFIX := ".bak"   # 覆盖前的上一份存档备份后缀
 
 var _saveables: Array = []   # 实现了 get_save_key()/save()/load() 的对象
 
+## 注册可存档对象。SV-4/P-S2（P0 漏修补课 2026-09-06）：注册期 key 撞车即拒绝并报错，
+## 不给玩家留「后注册者覆盖先注册者存档数据」的静默丢失窗口。
 func register_saveable(saveable: Variant) -> void:
-	if not _saveables.has(saveable):
-		_saveables.append(saveable)
+	if _saveables.has(saveable):
+		return
+	var key: String = saveable.get_save_key()
+	for existing in _saveables:
+		if existing.get_save_key() == key:
+			GameLogger.error("SaveManager", "存档 key 撞车，拒绝注册（SV-4/P-S2 注册期 FATAL）: key=%s 新对象=%s 与已有=%s 冲突" % [key, saveable, existing])
+			push_error("[Save] 存档 key 撞车: %s" % key)
+			return
+	_saveables.append(saveable)
 
 ## 已注册的可存档对象数量（Bootstrap 启动序列查询）
 func get_saveable_count() -> int:
@@ -176,19 +210,13 @@ func quick_save() -> bool:
 	if _saveables.is_empty():
 		GameLogger.warn("SaveManager", "无已注册存档对象，快速存档跳过")
 		return false
-	var save_data: Dictionary = {"meta": _build_meta()}
-	for saveable in _saveables:
-		var key: String = saveable.get_save_key()
-		save_data[key] = saveable.save()
+	var save_data: Dictionary = _build_save_data()
 	var path := SAVE_DIR + "auto_1.json"
 	return _write_json(path, save_data, -1)
 
 ## 手动存档到指定槽位；custom_name 非空时写入 meta，供卡片显示自定义存档名
 func save_to_slot(slot: int, custom_name: String = "") -> bool:
-	var save_data: Dictionary = {"meta": _build_meta(custom_name)}
-	for saveable in _saveables:
-		var key: String = saveable.get_save_key()
-		save_data[key] = saveable.save()
+	var save_data: Dictionary = _build_save_data(custom_name)
 	var path := SAVE_DIR + "save_%d.json" % slot
 	var ok: bool = _write_json(path, save_data, slot)
 	if ok:
@@ -204,20 +232,25 @@ func load_from_slot(slot: int) -> bool:
 func load_auto_save(slot: int) -> bool:
 	return _load_from_path(SAVE_DIR + "auto_%d.json" % slot, -1)
 
-## 统一读档流程：存在性 → 解析 → 损坏回退 .bak → 版本校验 → 分发各模块
+## 统一读档流程：存在性 → 解析+checksum 双验 → 损坏回退 .bak → 版本校验 → 分发各模块
 func _load_from_path(path: String, slot: int) -> bool:
 	if not FileAccess.file_exists(path):
 		push_warning("[Save] 存档不存在: %s" % path)
 		return false
 	var data: Dictionary = _load_json(path)
+	var bad := ""
 	if data.is_empty():
-		GameLogger.error("SaveManager", "存档解析失败（可能已损坏），尝试回退备份: %s" % path)
+		bad = "解析失败（可能已损坏）"
+	elif not _checksum_ok(data):
+		bad = "checksum 不一致（内容损坏或被篡改）"   # SV-1：禁静默尽力解析
+	if bad != "":
+		GameLogger.error("SaveManager", "存档%s，走 .bak 抢救链: %s" % [bad, path])
 		if not _restore_from_backup(path):
 			GameLogger.error("SaveManager", "备份不可用，读档中止: %s" % path)
 			return false
 		data = _load_json(path)
-		if data.is_empty():
-			GameLogger.error("SaveManager", "回退后仍无法解析，读档中止: %s" % path)
+		if data.is_empty() or not _checksum_ok(data):
+			GameLogger.error("SaveManager", "回退后仍无法通过校验，读档中止: %s" % path)
 			return false
 	_check_version(data)
 	if not _migrate_if_needed(data):
@@ -241,7 +274,8 @@ func _check_version(data: Dictionary) -> void:
 		return
 	GameLogger.warn("SaveManager", "存档版本 %s 与当前 %s 不一致" % [v, SAVE_VERSION])
 
-## 版本迁移（第二阶段·代码审查报告整改）：老档按迁移链逐步升级；更新版本拒绝读档。
+## 版本迁移（13 图 SV-3 注册表链走）：老档沿注册表逐步升级；未知/未来版本一律拒读（P-S3）。
+## 迁移全部在内存副本上进行，全部通过才写回版本戳（失败保原档）。
 ## 返回 false = 无法安全读档（调用方中止）。
 func _migrate_if_needed(data: Dictionary) -> bool:
 	if not data.has("meta") or not (data["meta"] is Dictionary):
@@ -252,21 +286,29 @@ func _migrate_if_needed(data: Dictionary) -> bool:
 		return true
 	if v != "" and _version_gt(v, SAVE_VERSION):
 		return false   # 未来版本的档：拒绝，防旧逻辑写坏新数据
-	# 无版本号 = 1.0.0 遗留档；或已知老版本 → 依次走迁移链
-	var known: Array[String] = ["1.0.0"]
-	known.append(SAVE_VERSION)
-	var from_idx := 0 if v == "" else known.find(v)
-	if from_idx < 0:
-		GameLogger.warn("SaveManager", "未知存档版本 %s，按当前版本尽力解析" % v)
-		meta["save_version"] = SAVE_VERSION
-		return true
-	# 1.0.0 → 1.1.0 无破坏性结构变化（last_region_id 由 GameState.load 默认值兜底）；
-	# 未来步骤在此追加：for step in _migrations: data = step.step.call(data)
-	for m in _migrations:
-		if m.get("from", "") == v and m.get("step") is Callable:
-			data = m["step"].call(data)
+	var origin: String = v if v != "" else "%s(遗留)" % BASE_SAVE_VERSION
+	if v == "":
+		v = BASE_SAVE_VERSION   # 无版本号 = 1.0.0 遗留档（推定起点）
+	# 注册表链走：找到 from==当前版本 的步骤逐步推进，直到抵达 SAVE_VERSION；
+	# 中途任何一步找不到注册步骤 = 未知版本 → 拒读（识别不了=不是我们的档，宁可拒读保数据）
+	var guard := 0
+	while v != SAVE_VERSION:
+		var step: Dictionary = {}
+		for m in _migrations:
+			if str(m.get("from", "")) == v:
+				step = m
+				break
+		if step.is_empty() or not (step.get("step") is Callable):
+			GameLogger.error("SaveManager", "未知存档版本 %s（注册表无迁移步骤），拒绝读档：不可按当前版本尽力解析盖戳（P-S3 退役）" % v)
+			return false
+		data = step["step"].call(data)
+		v = str(step.get("to", ""))
+		guard += 1
+		if guard > 32:
+			GameLogger.error("SaveManager", "迁移链异常（超 32 步未抵达 %s），拒绝读档" % SAVE_VERSION)
+			return false
 	meta["save_version"] = SAVE_VERSION
-	GameLogger.info("SaveManager", "存档已迁移：%s → %s" % [v if v != "" else "1.0.0(遗留)", SAVE_VERSION])
+	GameLogger.info("SaveManager", "存档已迁移：%s → %s" % [origin, SAVE_VERSION])
 	return true
 
 ## 简易语义化版本比较：a > b
@@ -341,22 +383,73 @@ func _backup(path: String) -> void:
 	if DirAccess.copy_absolute(path, bak) != OK:
 		push_warning("[Save] 备份失败（不阻断写入）: %s" % path)
 
-## 回读校验：确认刚写的文件能被完整解析，避免把半截数据当成存档
+## 回读校验升级（SV-5）：可解析 + checksum 一致双验，避免把半截/被改数据当成存档
 func _verify_file(path: String) -> bool:
-	var f := FileAccess.open(path, FileAccess.READ)
-	if f == null:
+	var data: Dictionary = _load_json(path)
+	if data.is_empty():
 		return false
-	var text := f.get_as_text()
-	f.close()
-	if text.is_empty():
-		return false
-	return JSON.parse_string(text) != null
+	return _checksum_ok(data)
 
-func _build_meta(custom_name: String = "") -> Dictionary:
+## 组装完整存档体（13 图 SV-1 SaveHeader 五字段 / P-S5 收口）：
+## meta = save_version / game_version / content_version / timestamp / checksum；
+## custom_name 保留为 meta 可选扩展字段。
+## checksum = 正文（meta 之外全量）SHA-256，写时计算、读时验证（SV-1 冻结口径）。
+func _build_save_data(custom_name: String = "") -> Dictionary:
+	var body: Dictionary = {}
+	for saveable in _saveables:
+		var key: String = saveable.get_save_key()
+		body[key] = saveable.save()
 	var meta := {
 		"save_version": SAVE_VERSION,
+		"game_version": str(ProjectSettings.get_setting("application/config/version", "")),
+		"content_version": _content_version(),
 		"timestamp": Time.get_unix_time_from_system(),
+		"checksum": _body_checksum(body),
 	}
 	if custom_name != "":
 		meta["custom_name"] = custom_name
-	return meta
+	var save_data: Dictionary = {"meta": meta}
+	for k in body:
+		save_data[k] = body[k]
+	return save_data
+
+## content_version 来源（P-S5 落地口径）：发行环境读 res://provenance.json（RH-2 产物，
+## content_fingerprint 与 data/configs 全树同源）；开发环境回退 "dev"。
+## 05 图 VE-1 运行时指纹机（已载 pack 排序序列）落地后由此处替换。
+func _content_version() -> String:
+	if _content_version_cache != "":
+		return _content_version_cache
+	if FileAccess.file_exists("res://provenance.json"):
+		var prov: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://provenance.json"))
+		if prov is Dictionary:
+			var p: Dictionary = prov
+			var cv: String = str(p.get("content_version", ""))
+			if cv != "":
+				_content_version_cache = cv
+				return cv
+	_content_version_cache = "dev"
+	return _content_version_cache
+
+## 正文校验和（SV-1）：对「JSON 归一化后的正文」取 SHA-256。
+## 归一化 = 先 stringify 再 parse 回来：把 Vector2 等运行时类型转成其 JSON 形态，
+## 与读端（解析后的纯 JSON 数据）的序列化口径逐字节对齐（回归实录 2026-09-06：
+## 直拍内存 dict 曾因 Variant 序列化往返不等导致 _verify_file 拒掉刚写的 tmp）。
+func _body_checksum(body: Dictionary) -> String:
+	var pure: Variant = JSON.parse_string(JSON.stringify(body))
+	var norm: Dictionary = pure if pure is Dictionary else {}
+	return JSON.stringify(norm).sha256_text()
+
+## checksum 读端验证（SV-1）：正文重算 SHA-256 与 meta.checksum 比对。
+## 老档 meta 无 checksum（1.1.0 前存量）→ 读兼容放行（缺省值渐进，映射表 SV-1 行）。
+## 重算统一走 _body_checksum 归一化器：对已解析数据幂等，对内存原始 dict 同样口径一致。
+func _checksum_ok(data: Dictionary) -> bool:
+	var meta_v: Variant = data.get("meta", {})
+	var meta: Dictionary = meta_v if meta_v is Dictionary else {}
+	var stored: String = str(meta.get("checksum", ""))
+	if stored == "":
+		return true
+	var body: Dictionary = {}
+	for k in data:
+		if k != "meta":
+			body[k] = data[k]
+	return _body_checksum(body) == stored

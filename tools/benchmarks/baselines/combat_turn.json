@@ -1,0 +1,9 @@
+{
+  "benchmark_id": "combat_turn",
+  "input_scale": "battle=battle_bandit_001 actions=100",
+  "environment": "win64-local-dev",
+  "result_distribution": "median",
+  "allowed_variance": 0.5,
+  "version": "0.5.0",
+  "baseline_ms": 0.07
+}

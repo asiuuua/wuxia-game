@@ -40,3 +40,29 @@ func test_game_state_invalid_region_falls_back() -> void:
 	expect(GameState.get_last_region() == "newbie_village", "非法区域应回退 newbie_village")
 	GameState.load({})
 	expect(GameState.get_last_region() == "newbie_village", "缺字段应回退 newbie_village")
+
+# === P-S3 退役：未知版本一律拒读（13 图 SV-3，禁「按当前版本尽力解析」盖戳） ===
+func test_unknown_version_rejected() -> void:
+	# 0.9.9 小于当前版且非未来版：注册表无 from=0.9.9 的步骤 → 未知版本 → 拒读
+	var data := {"meta": {"save_version": "0.9.9"}}
+	expect(not SaveManager._migrate_if_needed(data), "未知版本 0.9.9 应被拒读")
+
+func test_unknown_version_not_stamped() -> void:
+	# 拒读时不得改写版本号——盖当前版戳会让后续写入永久污染原档
+	var data := {"meta": {"save_version": "0.9.9"}}
+	SaveManager._migrate_if_needed(data)
+	expect(str(data["meta"]["save_version"]) == "0.9.9", "拒读后版本号应保持原样，不被盖章")
+
+# === SV-R03：每条迁移步骤必带 Input/Expected golden 对（生产器 tools/golden/ 产出，人审冻结） ===
+func test_migration_golden_pair() -> void:
+	var input_v: Variant = JSON.parse_string(
+		FileAccess.get_file_as_string("res://tests/golden/migrations/migrate_1_0_0_to_1_1_0.input.json"))
+	var expected_v: Variant = JSON.parse_string(
+		FileAccess.get_file_as_string("res://tests/golden/migrations/migrate_1_0_0_to_1_1_0.expected.json"))
+	if not expect(input_v is Dictionary and expected_v is Dictionary, "golden 夹具应存在且可解析"):
+		return
+	var migrated: Dictionary = input_v
+	var expected: Dictionary = expected_v
+	expect(SaveManager._migrate_if_needed(migrated), "golden input 应沿注册表迁移成功")
+	# JSON.stringify 默认键排序，两侧字符串比较与键序无关
+	expect(JSON.stringify(migrated) == JSON.stringify(expected), "迁移结果应与 golden expected 完全一致")
