@@ -1,5 +1,5 @@
 {
-  "updated": "2026-09-02",
+  "updated": "2026-09-06",
   "description": "武侠江湖模块化待办清单（含隐性BUG / 未实现逻辑 / 是否占位 / 未来优化建议四维度）。由 tools/gen_backlog.py 由本文件生成 docs/待办清单.md 与 docs/backlog_dashboard.html。",
   "type_legend": {
     "待办": "已知要做、尚未开始或待决策的事项",
@@ -121,6 +121,15 @@
           "source": "docs/提案_UI放权方案.md",
           "detail": "VideoStreamPlayer 路径外置；骨骼动画换资产+混合参数（不编骨骼）。需低端/安卓自动关与资产白名单护栏。",
           "suggestion": "低风险评估后置后，放在 Phase 3。"
+        },
+        {
+          "title": "RULE004 ui_write_validator（🔴）",
+          "type": "未实现",
+          "status": "open",
+          "placeholder": false,
+          "source": "宪法RULE004/GATE41扩展",
+          "detail": "scenes/ 对 Owner 状态直写零扫描",
+          "suggestion": "GATE41 新 rule，白名单 ViewModel 写入口"
         }
       ]
     },
@@ -206,6 +215,78 @@
           "resolvedBy": "测试窗口",
           "resolvedAt": "2026-09-02 22:50:36",
           "resolution": "只读审计发现卡描述已过期：用 .signal.emit 全仓统计，真正 emit=0 仅 2 个(game_error/patch_applied)，其中 game_error 被 error_handler.gd 用4处(非死信号)。player_exp_changed 及大量所指信号均有生产方，已接线。唯一真死信号候选项=patch_applied(仅test_eventbus契约出现、无生产方无业务监听)。旧'17个'描述作废；patch_applied 已另派精准新单转交架构窗口，此项据此闭环。零代码改动，仅同步状态。"
+        },
+        {
+          "title": "装配收敛 ADR-0007（批次3主战役）",
+          "type": "待办",
+          "status": "open",
+          "placeholder": false,
+          "source": "01图§29/Task#58",
+          "detail": "18 Autoload→ApplicationRoot+Write Lease+GameManager双装配期；用户已批准开工",
+          "suggestion": "ADR起草→评审→分批迁移"
+        },
+        {
+          "title": "五图开工排期：05批2~3/06/08/14/15",
+          "type": "待办",
+          "status": "open",
+          "placeholder": false,
+          "source": "待办清单D组",
+          "detail": "05 DoD3~6（校验规则表JSON/12索引/指纹进SaveHeader/Mod拒载）最近便可续",
+          "suggestion": "05批2先行，06依赖B1"
+        },
+        {
+          "title": "多AI窗口级 Write Lease 两案待用户裁决",
+          "type": "待办",
+          "status": "open",
+          "placeholder": false,
+          "source": "宪法RULE009流程缺口/本日撞车实录",
+          "detail": "①handoff claim纪律强化②git worktree每窗一树",
+          "suggestion": "须用户裁决后实施"
+        },
+        {
+          "title": "13图「§23A ADR-0005」撞号核查",
+          "type": "待办",
+          "status": "open",
+          "placeholder": false,
+          "source": "13图上游行/ADR_INDEX",
+          "detail": "13图引用的旧ADR-0005(Save与RuntimeState分离)与现行ADR-0005(宪法升版)撞号",
+          "suggestion": "核对宪法§23A预占题归属后更正13图表述走ACR"
+        },
+        {
+          "title": "GATE11 86信号 Owner 抽审",
+          "type": "待办",
+          "status": "open",
+          "placeholder": false,
+          "source": "04图GATE11/Q-1",
+          "detail": "eventbus_signal_registry.json 初版抽审待做",
+          "suggestion": "抽审报告回写04图"
+        },
+        {
+          "title": "10图 EC-R07 forge 域迁移",
+          "type": "待办",
+          "status": "open",
+          "placeholder": false,
+          "source": "10图EC-R07/ADR_INDEX§4",
+          "detail": "forge_iron_sword/material_iron_001 违例冻结中",
+          "suggestion": "Phase4 随 GATE07 基线统一迁 recipe_"
+        },
+        {
+          "title": "目录收敛：data→content+kernel顶层归位",
+          "type": "待办",
+          "status": "open",
+          "placeholder": false,
+          "source": "ADR-0003",
+          "detail": "Phase5 一次性搬迁",
+          "suggestion": "含 effect_registry 迁移口"
+        },
+        {
+          "title": "GATE18 Localization 物理化",
+          "type": "未实现",
+          "status": "open",
+          "placeholder": false,
+          "source": "宪法§88/03图",
+          "detail": "本地化key扫描器缺失，desc中文内联P-Q9同族",
+          "suggestion": "补扫描器挂槽"
         }
       ]
     },
@@ -262,6 +343,15 @@
           "plain": {
             "what": "原『战斗内用药扣了却没结算』隐性BUG已失效：战斗内用药被产品决策禁止(返回 NOT_ALLOWED_IN_BATTLE 不扣不结算)，信号更名 item_used(城镇发射已接线)。本 FINDING 关闭。"
           }
+        },
+        {
+          "title": "11图 AB-6 确定性快照",
+          "type": "待办",
+          "status": "open",
+          "placeholder": false,
+          "source": "11图 AB-6",
+          "detail": "随 Phase2~3 未启动",
+          "suggestion": "战斗域收口件"
         }
       ]
     },
@@ -308,6 +398,15 @@
           "resolvedAt": "2026-09-02 17:38:43",
           "commit": "756fbf1",
           "resolution": "inventory_service 新增 organize() 自动堆叠同类/压实空槽/排序，锁定实例不参与合并"
+        },
+        {
+          "title": "RULE007 唯一Owner观察期收口（🔴）",
+          "type": "待办",
+          "status": "open",
+          "placeholder": false,
+          "source": "宪法RULE007/04图GATE25/T-4",
+          "detail": "state_owner 三处 REPORT 不拦（game_state 8/inventory 6/settings 4），T-4 追认两周将到期",
+          "suggestion": "定阈值转拦截+Owner白名单裁定"
         }
       ]
     },
@@ -467,6 +566,15 @@
           "resolvedAt": "2026-09-02 18:45:00",
           "commit": "324203b",
           "resolution": "goto_region 改走异步加载(_async_change_scene + _process 轮询 _poll_async_loading)，加载完成用已加载 PackedScene 切换避免二次加载；GameManager 自建 loading 覆盖层(CanvasLayer 层600 高于系统浮层500，不越权改 UI 文件)，提示文案读 loading_tips.json 随机展示 + 透明度呼吸动效；进入区域后台预加载相邻区域场景(_preload_adjacent_regions 按 regions.json connections，未实装 scene_path 跳过)。新增 test_loading_overlay.gd 5 项回归(覆盖层构建/清理/幂等/提示文案/预加载守卫)。GATE1 零错；GATE2 本模块 5 项全过，全量失败 1 为他人 WIP(test_responsive_anchor)基线预存。"
+        },
+        {
+          "title": "07图 TimeConsumer 注册制分相消费主体",
+          "type": "未实现",
+          "status": "open",
+          "placeholder": false,
+          "source": "07图 W-R 系列",
+          "detail": "上午审计半程判定未变",
+          "suggestion": "Phase2 收口批"
         }
       ]
     },
@@ -483,6 +591,15 @@
           "source": "派单 08ec940f5674（UI→任务窗，已闭环）",
           "detail": "EventBus 已新增 notify_quest_track_changed 且 HUD 任务追踪已订阅，accept/turn_in/reset 三处 emit 已落地。经全生命周期自验（新增 test_quest_track_full_lifecycle_refresh：真实 accept→出现、quest_objective_updated→数字刷新 1/1、turn_in→消失、reset→清空）确认刷新完整，无「刷新不全」隐性问题。派单协议层已闭环。",
           "suggestion": "构造任务接取/完成用例，核对 HUD 任务追踪实时刷新。"
+        },
+        {
+          "title": "任务 auto_complete JSON null 语义缺陷（A1实测新发现）",
+          "type": "隐性BUG",
+          "status": "open",
+          "placeholder": false,
+          "source": "data/configs/regions/newbie_village/quests.json nv_quest_help_maiden",
+          "detail": "auto_complete 键为 null，运行时 get(\"auto_complete\",true) 取值 bool true→交足 need_item 即自动交付发奖，与「null=不自动交付」意图相悖；null 经加载管线变 true 的具体层待查（json_util 归一化或 Godot JSON null 语义）",
+          "suggestion": "数据侧改 false 或代码侧判空，随 12 图/内容主权窗裁决，禁他窗直改"
         }
       ]
     },
@@ -526,6 +643,51 @@
           "resolvedBy": "AI-战斗",
           "resolvedAt": "2026-09-02",
           "resolution": "战斗窗核实：随机隐患已系统性解决——①唯一真flaky的 test_elite_battle_shows_status_mechanics 已由commit a8ae77f(战斗窗切片B收口，UI模块替其收口，派单e769b689077d)用 rng.configure(20260829) 固定；②其余战斗测试(test_combat_smoke归零+固定seed、test_battle_roster/test_party/test_battle_status_content/test_enemy_target_party 均归零 dodge/crit、test_tactical_loop 归零+注释约定) 要么固定种子要么断言不依赖随机；③test_swarm/test_battle_turn_order 断言纯结构性(数量/唯一性/速度序)与RNG无关。战斗窗实测连跑run_all 2遍共114套件次、0失败无flaky。零代码改动，判定已解决。"
+        },
+        {
+          "title": "GATE03 Integration 最小集成链（待办A1）",
+          "type": "待办",
+          "status": "done",
+          "placeholder": false,
+          "source": "待办清单_2026-09-06 A1 / 04图LN-G03",
+          "detail": "tests/integration/test_integration_quest_save_chain.gd 3用例（接取→交件→自动交付→奖励→存读档回环→不重复发奖），run_all 扫描扩展至 tests/integration，73套件全绿",
+          "suggestion": "已完成并随本批提交"
+        },
+        {
+          "title": "GATE21 test_shape/naming 扫描器未物理化（待办A3核查）",
+          "type": "未实现",
+          "status": "open",
+          "placeholder": false,
+          "source": "04图 T-R01/T-R02 核查批注",
+          "detail": "arch_linter 现仅 signals/forbidden_api/eventbus_freeze 三扫描器，GATE21 物理槽现承载 Type Policy(0-B.12)；实测存量73套件 extends TestBase 全量合规，上线即零红项",
+          "suggestion": "补齐随 ACR 升表，禁即时直改"
+        },
+        {
+          "title": "GATE26/27 转 ACTIVE 进必过清单",
+          "type": "待办",
+          "status": "open",
+          "placeholder": false,
+          "source": "04图状态表",
+          "detail": "载体已齐（test_transaction_runtime 13项+test_shop_trade_tx 10项）仍 PARTIAL",
+          "suggestion": "按状态迁移纪律同步 Registry+PROJECT_STATUS+verify_all"
+        },
+        {
+          "title": "GATE28 command_ordering_test 缺失",
+          "type": "未实现",
+          "status": "open",
+          "placeholder": false,
+          "source": "04图GATE28/02图顺序冻结",
+          "detail": "tests/ 零 command_ordering 文件",
+          "suggestion": "Phase2 收口批补套件"
+        },
+        {
+          "title": "GATE30 Context Integrity & Freshness 物理化进 verify_all",
+          "type": "未实现",
+          "status": "open",
+          "placeholder": false,
+          "source": "04图升表口/ADR-0005",
+          "detail": "context_pack_validator 未实现",
+          "suggestion": "随 ACR 升表"
         }
       ]
     },
@@ -570,6 +732,24 @@
           "resolvedBy": "工作室工具",
           "resolvedAt": "2026-09-03 02:47:04",
           "resolution": "闭环：manifest 三段(ai_context/reskin/knowledge)已读取/渲染(get_connector_info+经验库面板+总控知识路由)；回归测试已加(security_selftest 8项)；本轮补齐最后一环——前端「工程切换」一键对接UI(list_projects补data_root+prjLoad/prjSwitch)，Phase 2 版本切换落地"
+        },
+        {
+          "title": "18图Phase2三件：RH-2 provenance启动行/RH-5 golden样本产物/RH-6 弹窗文案",
+          "type": "待办",
+          "status": "open",
+          "placeholder": false,
+          "source": "18图 RH-2/5/6 + P-RH9",
+          "detail": "迁移映射表 Phase2 行未销",
+          "suggestion": "随 18 图批次"
+        },
+        {
+          "title": "P-RH6 旧规范编号引用清零（待办A2）",
+          "type": "待办",
+          "status": "resolved",
+          "placeholder": false,
+          "source": "18图P-RH6",
+          "detail": "本次清零6处：error_enums/EventBus×4/GameManager（仅注释零行为）",
+          "suggestion": "已完成"
         }
       ]
     }

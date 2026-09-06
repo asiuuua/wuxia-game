@@ -1,5 +1,5 @@
 # autoload/EventBus.gd
-# 全局事件总线：跨模块通信唯一通道（规范 §6）
+# 全局事件总线：跨模块通信唯一通道（宪法 RULE 008 / 02 图 EventBus 语义；旧「规范 §6」编号已废）
 # 铁律：禁止直接引用其他业务模块；谁产生谁 emit，谁关心谁 connect；参数用值类型
 
 extends Node
@@ -136,7 +136,7 @@ signal game_loaded(slot: int)
 @warning_ignore("unused_signal")
 signal scene_changed(scene_name: String)
 
-# === 启动流程（Bootstrap，规范 §4.1） ===
+# === 启动流程（Bootstrap，18 图 RH 域；旧「规范 §4.1」编号已废） ===
 @warning_ignore("unused_signal")
 signal bootstrap_started(total_steps: int)
 @warning_ignore("unused_signal")
@@ -146,13 +146,13 @@ signal bootstrap_step_completed(step_name: String, index: int)
 @warning_ignore("unused_signal")
 signal bootstrap_completed()
 
-# === 错误处理（规范 §4.2） ===
+# === 错误处理（18 图 RH 域；旧「规范 §4.2」编号已废） ===
 @warning_ignore("unused_signal")
 signal game_error(level: int, module: String, message: String)
 @warning_ignore("unused_signal")
 signal notification_show(text: String)
 
-# === 补丁/热更新（规范 §4.7） ===
+# === 补丁/热更新（18 图 RH-8 域；旧「规范 §4.7」编号已废） ===
 @warning_ignore("unused_signal")
 signal patch_applied(patch_id: String, version: String)
 

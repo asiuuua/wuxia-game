@@ -1,5 +1,6 @@
 # tests/unit/run_all.gd
-# 单元测试总入口：扫描 tests/unit 下所有 test_*.gd，逐个执行后汇总退出码
+# 单元测试总入口：扫描 tests/unit 与 tests/integration 下所有 test_*.gd，逐个执行后汇总退出码
+# （2026-09-06 A1：GATE03 Integration 空层补最小实体——integration 目录并入扫描，见 04 图 LN-G03）
 # 运行：Godot_4.7.2_console --headless --path "D:/武侠游戏" res://tests/unit/run_all.tscn
 # 退出码：0 全通过 / 1 有失败（可直接接 CI）
 # 注意：必须走场景运行（--path + 场景），不能用 --script——后者不加载 autoload，
@@ -7,7 +8,7 @@
 
 extends Node
 
-const TEST_DIR := "res://tests/unit"
+const TEST_DIRS: Array[String] = ["res://tests/unit", "res://tests/integration"]
 
 func _ready() -> void:
 	var scripts: Array[String] = _find_test_scripts()
@@ -43,16 +44,17 @@ func _ready() -> void:
 
 func _find_test_scripts() -> Array[String]:
 	var out: Array[String] = []
-	var dir := DirAccess.open(TEST_DIR)
-	if dir == null:
-		push_error("[Test] 无法打开测试目录: %s" % TEST_DIR)
-		return out
-	dir.list_dir_begin()
-	var fname: String = dir.get_next()
-	while fname != "":
-		if fname.begins_with("test_") and fname.ends_with(".gd"):
-			out.append(TEST_DIR + "/" + fname)
-		fname = dir.get_next()
-	dir.list_dir_end()
+	for dir_path in TEST_DIRS:
+		var dir := DirAccess.open(dir_path)
+		if dir == null:
+			push_error("[Test] 无法打开测试目录: %s" % dir_path)
+			continue
+		dir.list_dir_begin()
+		var fname: String = dir.get_next()
+		while fname != "":
+			if fname.begins_with("test_") and fname.ends_with(".gd"):
+				out.append(dir_path + "/" + fname)
+			fname = dir.get_next()
+		dir.list_dir_end()
 	out.sort()
 	return out

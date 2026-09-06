@@ -269,8 +269,8 @@
 
 | 规则 | 内容 | 严重度 | E 级 | 扫描器/测试 | Gate |
 |---|---|---|---|---|---|
-| T-R01 | 单测必须继承 TestBase，禁自造 runner | ERROR | E3 | arch_lint --rules test_shape | GATE21 |
-| T-R02 | `test_*` 命名法（U-4） | ERROR | E3 | naming_validator | GATE21 |
+| T-R01 | 单测必须继承 TestBase，禁自造 runner | ERROR | E3 | arch_lint --rules test_shape（**未物理化**——2026-09-06 A3 核查：arch_linter 现仅 signals/forbidden_api/eventbus_freeze 三扫描器，GATE21 物理槽现承载 Type Policy 0-B.12；实测存量 73 套件 extends TestBase 全量合规，扫描器上线即零红项；补齐随 ACR 升表） | GATE21 |
+| T-R02 | `test_*` 命名法（U-4） | ERROR | E3 | naming_validator（**未物理化**——2026-09-06 A3 核查同 T-R01；补齐随 ACR 升表） | GATE21 |
 | T-R03 | 单测禁真实磁盘/真实时钟/全局随机（宪法 §82） | FATAL | E3 | forbidden_api_validator | GATE22 |
 | T-R04 | Test Double 只准住 `tests/doubles/` | FATAL | E3 | module_scope_validator | GATE21 |
 | T-R05 | 生产代码禁引用 `tests/` | FATAL | E3/E4 | dependency_validator | GATE22 |
