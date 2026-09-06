@@ -2,9 +2,13 @@
 # 设置管理器：集中保存/读取玩家设置（落 user://settings.json，不污染项目资源）
 # 覆盖：音频音量 / 画面 / 控制键位 / 游戏偏好 / 语言
 # 实时生效：任何 set_* 都会立即应用到对应系统并自动落盘
-# 注意：autoload 脚本不写 class_name（避免与单例名冲突）
+# 批D 子批6（ADR-0007 装配收敛）：原 autoload 降级为纯静态类（class_name+static，
+# 唯一状态 data 字典静态化），setup() 由 Bootstrap 生命周期壳调用——
+# 时序说明：AudioManager._ready 的音量读取拿到的中间态为默认值，setup 的 apply_audio
+# 在 LoadingScreen 之前覆盖重设，早于任何音频播放，无用户可感回归。
 
-extends Node
+class_name SettingsManager
+extends RefCounted
 
 const SAVE_PATH := "user://settings.json"
 
@@ -59,7 +63,7 @@ const TEXT_SPEED_LEVELS := ["slow", "normal", "fast"]
 const LOCALES := ["zh_CN", "zh_TW", "en"]
 
 # 设置数据（嵌套字典，单一真相源）
-var data: Dictionary = {
+static var data: Dictionary = {
 	"audio": {"master": 0.8, "music": 0.6, "sfx": 0.8, "voice": 1.0},
 	"graphics": {"resolution": "1920x1080", "display_mode": "fullscreen", "vsync": true, "fps_limit": 60, "quality": "high", "render_scale": 1.0, "ui_scale": 1.0},
 	"control": {"bindings": {}},
@@ -67,7 +71,7 @@ var data: Dictionary = {
 	"language": {"locale": "zh_CN"},
 }
 
-func _ready() -> void:
+static func setup() -> void:
 	load_settings()
 	# 用已存偏好补全默认键位（未改过则用默认）
 	for action in REBINDABLE_ACTIONS:
@@ -75,10 +79,11 @@ func _ready() -> void:
 			data["control"]["bindings"][action] = DEFAULT_BINDINGS[action]
 	apply_audio()
 	# 画面/窗口设置依赖主窗口就绪，延后一帧确保窗口已创建（避免 _ready 期窗口为空导致设置失效）
-	call_deferred("apply_graphics")
+	# （批D 子批6：静态上下文无 Node.call_deferred，改静态 Callable 延帧）
+	apply_graphics_deferred()
 
 ## 读取磁盘设置并合并到 data（缺失字段保留默认值）
-func load_settings() -> void:
+static func load_settings() -> void:
 	if not FileAccess.file_exists(SAVE_PATH):
 		return
 	var f := FileAccess.open(SAVE_PATH, FileAccess.READ)
@@ -93,7 +98,7 @@ func load_settings() -> void:
 	_merge_dict(data, parsed)
 
 ## 写盘（自动调用，无需手动）
-func save_settings() -> void:
+static func save_settings() -> void:
 	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if f == null:
 		GameLogger.warn("Settings", "无法写入设置: %s" % SAVE_PATH)
@@ -102,37 +107,45 @@ func save_settings() -> void:
 	f.close()
 
 # ===== 音频 =====
-func get_audio_volume(category: String) -> float:
+static func get_audio_volume(category: String) -> float:
 	return float(data["audio"].get(category, 0.8))
 
-func set_audio_volume(category: String, value: float) -> void:
+static func set_audio_volume(category: String, value: float) -> void:
 	var v: float = clampf(value, 0.0, 1.0)
 	data["audio"][category] = v
 	if AudioManager != null and AudioManager.has_method("set_bus_volume"):
 		AudioManager.set_bus_volume(category.capitalize(), v)
 	save_settings()
 
-func apply_audio() -> void:
+static func apply_audio() -> void:
 	for category in data["audio"].keys():
 		if AudioManager != null and AudioManager.has_method("set_bus_volume"):
 			AudioManager.set_bus_volume(category.capitalize(), float(data["audio"][category]))
 
 # ===== 画面 =====
-func get_graphics(key: String):
+static func get_graphics(key: String):
 	return data["graphics"].get(key, null)
 
-func set_graphics(key: String, value) -> void:
+static func set_graphics(key: String, value) -> void:
 	data["graphics"][key] = value
 	apply_graphics()
 	save_settings()
 
-func apply_graphics() -> void:
+## 批D 子批6：静态上下文的延帧辅助（SceneTree 帧末回调静态 Callable，替代 Node.call_deferred）
+static func apply_graphics_deferred() -> void:
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree != null:
+		var _t := tree.create_timer(0.0)
+		_t.timeout.connect(apply_graphics)
+
+static func apply_graphics() -> void:
 	if Engine.is_editor_hint():
 		return
-	var window: Window = get_window()
+	var tree := Engine.get_main_loop() as SceneTree
+	var window: Window = tree.root if tree != null else null
 	if window == null:
 		# 主窗口尚未就绪，下一帧重试（启动早期常见）
-		call_deferred("apply_graphics")
+		apply_graphics_deferred()
 		return
 
 	# 解析目标分辨率（仅窗口/最大化模式生效；全屏时由系统决定尺寸）
@@ -179,20 +192,20 @@ func apply_graphics() -> void:
 	window.content_scale_factor = clampf(us, 0.5, 4.0)
 
 # ===== 控制 / 键位 =====
-func get_binding(action: String) -> int:
+static func get_binding(action: String) -> int:
 	return int(data["control"]["bindings"].get(action, -1))
 
-func rebind(action: String, keycode: int) -> void:
+static func rebind(action: String, keycode: int) -> void:
 	data["control"]["bindings"][action] = keycode
 	_apply_one_binding(action, keycode)
 	save_settings()
 
 ## 把偏好尽力应用到当前 InputMap（动作存在才改，避免游戏内默认覆盖问题——TownScene 注册默认后此偏好应在进入场景前生效）
-func apply_bindings() -> void:
+static func apply_bindings() -> void:
 	for action in data["control"]["bindings"].keys():
 		_apply_one_binding(action, int(data["control"]["bindings"][action]))
 
-func _apply_one_binding(action: String, keycode: int) -> void:
+static func _apply_one_binding(action: String, keycode: int) -> void:
 	if not InputMap.has_action(action):
 		return
 	# 清掉现有键盘绑定（保留非键盘事件）
@@ -205,15 +218,15 @@ func _apply_one_binding(action: String, keycode: int) -> void:
 	InputMap.action_add_event(action, new_event)
 
 # ===== 游戏偏好 =====
-func get_game(key: String):
+static func get_game(key: String):
 	return data["game"].get(key, null)
 
-func set_game(key: String, value) -> void:
+static func set_game(key: String, value) -> void:
 	data["game"][key] = value
 	save_settings()
 
 ## 恢复某分类到默认值并立即应用+落盘
-func reset_category(category: String) -> void:
+static func reset_category(category: String) -> void:
 	match category:
 		"audio":
 			data["audio"] = {"master": 0.8, "music": 0.6, "sfx": 0.8, "voice": 1.0}
@@ -234,10 +247,10 @@ func reset_category(category: String) -> void:
 	save_settings()
 
 # ===== 语言 =====
-func get_language() -> String:
+static func get_language() -> String:
 	return str(data["language"]["locale"])
 
-func set_language(locale: String) -> void:
+static func set_language(locale: String) -> void:
 	if not LOCALES.has(locale):
 		locale = "zh_CN"
 	data["language"]["locale"] = locale
@@ -246,7 +259,7 @@ func set_language(locale: String) -> void:
 
 # ===== 工具 =====
 ## 深合并 parsed 到 base（仅覆盖已存在键，不动 base 的结构类型约束）
-func _merge_dict(base: Dictionary, parsed: Dictionary) -> void:
+static func _merge_dict(base: Dictionary, parsed: Dictionary) -> void:
 	for key in parsed.keys():
 		if not base.has(key):
 			base[key] = parsed[key]

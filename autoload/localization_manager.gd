@@ -14,10 +14,8 @@ const LOCALES := ["zh_CN", "zh_TW", "en"]
 ## 启动初始化（Bootstrap 生命周期壳调用）：加载 CSV + 按设置恢复语言
 static func setup() -> void:
 	_load_csv()
-	if SettingsManager != null and SettingsManager.has_method("get_language"):
-		set_locale(SettingsManager.get_language())
-	else:
-		set_locale("zh_CN")
+	# 批D 子批6：SettingsManager 已静态化——类静态调用恒可用，防御式 null 检查随之收编
+	set_locale(SettingsManager.get_language())
 
 static func _load_csv() -> void:
 	if not FileAccess.file_exists(CSV_PATH):

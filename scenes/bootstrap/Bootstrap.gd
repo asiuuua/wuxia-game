@@ -26,8 +26,11 @@ func _ready() -> void:
 	add_child(PatchManager.new())
 	add_child(SaveValidator.new())
 	add_child(DefeatHandler.new())
+	# 批D 子批6：SettingsManager 降级纯静态类（data 字典静态化）——load/键位补全/apply_audio/
+	# apply_graphics(延帧) 在 setup 保真；必须先于 LocalizationManager.setup（后者读语言设置）。
+	SettingsManager.setup()
 	# 批D 子批4：LocalizationManager 降级纯静态工具类（零实例状态，语言数据在 TranslationServer）——
-	# 静态 setup() 替代原 autoload _ready；须在 SettingsManager（仍为 autoload）就绪后调用。
+	# 静态 setup() 替代原 autoload _ready；读语言设置依赖 SettingsManager.setup 已跑。
 	LocalizationManager.setup()
 	# 批D 子批5：DifficultyManager 降级纯静态类（_current 缓存静态化）——订阅与初始刷新在 setup 保真。
 	DifficultyManager.setup()

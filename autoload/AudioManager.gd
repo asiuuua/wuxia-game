@@ -210,9 +210,11 @@ func play_bgm(path: String) -> void:
 	# 独立 BGM 总线，音量按规范 VOLUME_BGM=0.6
 	var bus_idx: int = ensure_bus("Music")
 	# 背景音乐音量统一交由 SettingsManager（audio.music）管理，避免与设置界面双总线不一致
+	# （批D 子批6：SettingsManager 已静态化——类静态调用恒可用，防御式检查收编；
+	#   AudioManager._ready 先于 Bootstrap.setup 跑，此时读到的中间态为默认值，
+	#   SettingsManager.setup 的 apply_audio 随后覆盖重设，早于任何音频播放。）
 	var music_vol: float = VOLUME_BGM
-	if SettingsManager != null and SettingsManager.has_method("get_audio_volume"):
-		music_vol = SettingsManager.get_audio_volume("music")
+	music_vol = SettingsManager.get_audio_volume("music")
 	AudioServer.set_bus_volume_db(bus_idx, linear_to_db(music_vol))
 	# 让音频资源循环播放
 	if stream is AudioStreamMP3:
