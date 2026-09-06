@@ -1,0 +1,42 @@
+{
+ "entries": {
+  "demo_npc": [
+   "demo_npc"
+  ],
+  "dlg_event_demo": [
+   "event_demo_npc"
+  ],
+  "mt_dialog_priest": [
+   "mt_npc_priest"
+  ],
+  "npc_bandit": [
+   "npc_bandit"
+  ],
+  "npc_hunter": [
+   "npc_hunter"
+  ],
+  "npc_liu_ruyan": [
+   "npc_liu_ruyan"
+  ],
+  "npc_merchant": [
+   "npc_merchant"
+  ],
+  "npc_mu_wanqing": [
+   "npc_mu_wanqing"
+  ],
+  "npc_sect_elder": [
+   "npc_sect_elder"
+  ],
+  "nv_dialog_elder": [
+   "nv_npc_elder"
+  ],
+  "nv_dialog_maiden": [
+   "nv_npc_maiden"
+  ],
+  "tactical_demo_master": [
+   "tactical_demo_master"
+  ]
+ },
+ "index": "dialogue_by_npc",
+ "version": "1.0.0"
+}

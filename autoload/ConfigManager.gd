@@ -158,6 +158,10 @@ func _setup_content_registry() -> void:
 	content_registry.attach_shard_registry(_dialog_index)
 	content_registry.set_ready_callback(func(fp: String) -> void:
 		EventBus.content_ready.emit(fp))
+	# DoD5（批2）：content_fingerprint 运行期真源注入 SaveHeader（provenance.json 缺席时回退链）
+	content_registry.load_validation_rules(_load_json("res://data/configs/content_validation_rules.json"))
+	SaveManager.set_content_version_provider(func() -> String:
+		return content_registry.content_fingerprint())
 	var lr: OperationResult = content_registry.load_packs()
 	if lr.is_failed():
 		push_error("[Config] Content Registry 装载失败: %s" % lr.get_error().get_message())

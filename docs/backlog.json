@@ -287,6 +287,51 @@
           "source": "宪法§88/03图",
           "detail": "本地化key扫描器缺失，desc中文内联P-Q9同族",
           "suggestion": "补扫描器挂槽"
+        },
+        {
+          "module": "audit",
+          "title": "D1：05图批2~3 DoD3~6（五图排期首图）",
+          "type": "待办",
+          "status": "resolved",
+          "source": "data/configs/content_validation_rules.json + tools/build_content_indexes.py + tools/validate_content_rules.py + content_registry.gd",
+          "detail": "DoD3=五层规则表 JSON 化（content_validation_rules.json 五层 6 规则，构建期 validate_content_rules.py 与运行期 load_validation_rules 双端同一份；L1 Schema 执行器真实现+VA-3 severity 分流 FATAL 拒载/ERROR 登记——首轮实测真实数据历史缺字段被 FATAL 误拒载打崩战斗 AI，降 ERROR 登记+数据治理后升 FATAL）；DoD4=Build 期索引生成器（build_content_indexes.py 产 npc_by_region 15keys+dialogue_by_npc 12keys——C-3 追认后从 NPC 侧 dialog_id 反向派生不代填分片）+attach_index 注入 CO-R03 运行期只查不建；DoD5=fingerprint 注入链收尾（SaveManager.set_content_version_provider：provenance→provider→dev 三段回退）；DoD6=Mod 拒载（discover 补 CO-R07 递归扫 .gd/.tscn/.tres 拒载+violation 证据+6 用例含假 pack 正反两态）",
+          "suggestion": "已完成；五层执行器批3 补 L2~L5 完整语义（规则表已声明位）"
+        },
+        {
+          "module": "audit",
+          "title": "D2：06 Actor 批1 施工单（五图开工）",
+          "type": "待办",
+          "status": "open",
+          "source": "06_Actor_Player_NPC施工图_V1.4修复版 冻结8件",
+          "detail": "批1 范围=①EntityId 分配器接入（09 图 ID-2 分配器水位）②State Owner 落位（B1 拦截模式已就绪做 Enforcement 锚）③Materialization/VS-005 物化骨架④NPC 四态数据契约登记。现状：player_state/actor 存量在 data/runtime+scenes/gameplay，05 批1 同款绞杀者路径",
+          "suggestion": "独立大批次，前置已满足（B1 ✓），建议下一主批次"
+        },
+        {
+          "module": "audit",
+          "title": "D3：08 Relationship 批1 施工单",
+          "type": "待办",
+          "status": "open",
+          "source": "08_Relationship_Faction施工图_V1.4修复版 冻结8件",
+          "detail": "批1 范围=①RelationshipGraph 本体骨架（十型统一登记）②好感送礼事务化（0-C 事务收编同 ShopTradeTransaction 范式）③读模型 Query 化（SV-3 同族）。BondService 真源已落（前置 ✓）；bond 域主权=结缘窗，施工前 handoff 确认",
+          "suggestion": "独立大批次；与结缘窗协同排期"
+        },
+        {
+          "module": "audit",
+          "title": "D4：14 Presentation 批1 施工单",
+          "type": "待办",
+          "status": "open",
+          "source": "14_Presentation_Input_ViewModel施工图_V1.4修复版 PV-R01~12",
+          "detail": "批1 范围=①PresentationEffect 消费面核查（QD-2 已建通道）②PV ViewModel 契约骨架③UI 写行为白名单对接（B2 ui_write 扫描器已上线=Enforcement 锚就绪）。scenes 存量大，绞杀者按屏分批",
+          "suggestion": "独立大批次"
+        },
+        {
+          "module": "audit",
+          "title": "D5：15 Studio 批1 施工单",
+          "type": "待办",
+          "status": "open",
+          "source": "15_Studio_Authoring_Validator_Preview施工图_V1.4修复版 ST 系列",
+          "detail": "批1 范围=①ST-6 校验器注册表挂载点实装（arch_validators 基础已在）②ST-2 DataSink 契约③GATE16 Studio Smoke 已 ACTIVE（B 批核实）。依赖 14 配置面（软前置，可并行）",
+          "suggestion": "独立批次；体量最小可先做"
         }
       ]
     },

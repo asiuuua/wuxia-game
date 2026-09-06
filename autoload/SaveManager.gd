@@ -32,6 +32,7 @@ var _module_migrations: Array = []
 var _migrations: Array = []
 
 var _content_version_cache: String = ""   # content_version 进程内缓存（P-S5，见 _content_version）
+var _content_version_provider: Callable = Callable()   # DoD5 注入链（05 图 fingerprint 真源）
 
 func _ready() -> void:
 	_seed_builtin_migrations()
@@ -612,6 +613,11 @@ func _build_save_data(custom_name: String = "") -> Dictionary:
 ## content_version 来源（P-S5 落地口径）：发行环境读 res://provenance.json（RH-2 产物，
 ## content_fingerprint 与 data/configs 全树同源）；开发环境回退 "dev"。
 ## 05 图 VE-1 运行时指纹机（已载 pack 排序序列）落地后由此处替换。
+## DoD5（批2）：content_version 注入链——provenance.json（发行）→ provider（05 图 ContentRegistry
+## fingerprint 运行期真源，ConfigManager 装配时注入）→ "dev"。三段回退，同源 05 图 VE-1。
+func set_content_version_provider(cb: Callable) -> void:
+	_content_version_provider = cb
+
 func _content_version() -> String:
 	if _content_version_cache != "":
 		return _content_version_cache
@@ -623,6 +629,11 @@ func _content_version() -> String:
 			if cv != "":
 				_content_version_cache = cv
 				return cv
+	if _content_version_provider.is_valid():
+		var fp: String = str(_content_version_provider.call())
+		if fp != "":
+			_content_version_cache = fp
+			return fp
 	_content_version_cache = "dev"
 	return _content_version_cache
 

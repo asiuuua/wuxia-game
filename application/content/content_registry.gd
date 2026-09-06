@@ -30,6 +30,7 @@ var _indexes: Dictionary = {}         # index_name -> {IndexKey -> Array[String]
 var _cache: ShardCache                # CA-1 二级缓存（内建；Phase3 收回私有）
 var _source_versions: Dictionary = {} # kind -> 最后抓到的 JSON version（与现 _config_version 语义对齐）
 var _violations: Array[ValidationViolation] = []   # VA-3：rule_id+file+id+证据
+var _validation_rules: Dictionary = {}   # VA-4（批2 DoD3）：五层规则表（构建期/运行期双端同一份 JSON）
 var _loaded: bool = false
 var _fingerprint: String = ""
 var _fingerprint_list: Array[String] = []          # C-4 已追认：列表+哈希双存（哈希可比对，列表可读可迁移）
@@ -72,6 +73,69 @@ func set_ready_callback(cb: Callable) -> void:
 
 # === 冻结 API 面（CT-3）===
 
+## CO-R03（批2 DoD4）：注入 Build 期索引产物（tools/build_content_indexes.py 产出）
+## 运行期只查不建；注入后 _ensure_indexes 对该索引只保底不覆盖（Build 产物优先）。
+func attach_index(index_name: String, tbl: Dictionary) -> void:
+	if _loaded:
+		push_error("[Content] 运行期内容不可变（CA-4），load 后禁改索引")
+		return
+	if not REQUIRED_INDEXES.has(index_name):
+		push_warning("[Content] 未登记索引: %s（IX-1 之外禁建）" % index_name)
+		return
+	_indexes[index_name] = tbl
+
+## VA-4（批2 DoD3）：注入五层规则表（双端同一份 JSON——构建期 tools/validate_content_rules.py 同读）
+## 结构见 data/configs/content_validation_rules.json；注入后 load_packs 的校验按表执行。
+func load_validation_rules(rules: Dictionary) -> void:
+	if _loaded:
+		push_error("[Content] 运行期内容不可变（CA-4），load 后禁改规则表")
+		return
+	if not rules.has("layers"):
+		push_error("[Content] 规则表缺 layers（VA-4 结构）")
+		return
+	_validation_rules = rules
+
+## VA-3 severity 映射（rule_id → severity）：FATAL 才进拒载路径，ERROR/WARN 登记可见不拒载
+func _severity_of(rule_id: String) -> String:
+	for l in _validation_rules.get("layers", []):
+		for r in l.get("rules", []):
+			if str(r.get("rule_id", "")) == rule_id:
+				return str(r.get("severity", "ERROR"))
+	return "ERROR"
+
+## 规则表查询：layer 序号 → rules 数组（未注入返回空=校验退化为内建最小集）
+func _rules_for_layer(layer: int) -> Array:
+	if _validation_rules.is_empty():
+		return []
+	for l in _validation_rules.get("layers", []):
+		if int(l.get("layer", -1)) == layer:
+			return l.get("rules", [])
+	return []
+
+## VA-2 第一层（Schema 形状）执行器：按规则表 required_fields/required_fields_by_kind 校验
+func _validate_schema_layer(kind: StringName, entries: Array) -> Array[ValidationViolation]:
+	var out: Array[ValidationViolation] = []
+	for rule in _rules_for_layer(1):
+		var rid := String(rule.get("rule_code", ""))
+		var sev := String(rule.get("severity", "ERROR"))
+		if rid == "VA1-REQ-ID":
+			for e in entries:
+				var id := str(e.get("id", ""))
+				if id.is_empty():
+					out.append(ValidationViolation.new(StringName(rid), &"id",
+						"条目缺 id（VA-2 L1）"))
+		elif rid == "VA1-REQ-ADAPTER":
+			var by_kind: Dictionary = rule.get("required_fields_by_kind", {})
+			var req: Array = by_kind.get(String(kind), [])
+			for e in entries:
+				for f in req:
+					var fv: Variant = e.get(String(f), null)
+					if fv == null or str(fv).strip_edges() == "":
+						out.append(ValidationViolation.new(
+							StringName(rid), StringName(String(kind) + "." + String(f)),
+							"条目 %s 必填字段缺失: %s（VA-2 L1）" % [e.get("id", ""), f]))
+	return out
+
 ## Load：启动期唯一入口，内部走 LD-2 五段顺序
 func load_packs() -> OperationResult:
 	if _loaded:
@@ -83,6 +147,15 @@ func load_packs() -> OperationResult:
 	base_manifest.state = ContentPackManifest.STATE_LOADING
 	for kind in _adapter_order:
 		_load_adapter(_adapters[kind])
+	# VA-2 L1（批2 DoD3）：规则表注入后按表执行 Schema 形状校验（双端同一份 JSON）
+	# VA-3 分流：FATAL→拒载路径（run_violations）；ERROR/WARN→登记可见不拒载
+	for kind in _adapter_order:
+		var adapter: ContentTypeAdapter = _adapters[kind]
+		for v in _validate_schema_layer(kind, adapter.store.values()):
+			if _severity_of(str(v.get_code())) == "FATAL":
+				run_violations.append(v)
+			else:
+				_violations.append(v)
 	var last_ver: String = ""
 	for kind in _adapter_order:
 		var v: String = str(_source_versions.get(kind, ""))
@@ -159,10 +232,41 @@ func discover(dir: String) -> Array[ContentPackManifest]:
 			m.semver = str(data.get("version", "0.0.0"))
 			m.priority = int(data.get("priority", 0))
 			m.source_dir = dir
-			found.append(m)
+			# DM-3/CO-R07（批2 DoD6）：Mod 禁代码——pack 目录出现 .gd/.tscn/.tres = 拒载（FAIL 并列证据）
+			var unsafe := _scan_mod_safety(dir)
+			if not unsafe.is_empty():
+				m.state = ContentPackManifest.STATE_FAILED
+				for u in unsafe:
+					_violations.append(ValidationViolation.new(&"CO-R07_MOD_CODE",
+						StringName(str(m.pack_id)), u))
+				push_error("[Content] pack %s 含可执行资源，拒载（CO-R07）: %s 项"
+					% [str(m.pack_id), unsafe.size()])
+			else:
+				found.append(m)
 		fname = d.get_next()
 	d.list_dir_end()
 	return found
+
+## CO-R07 安全扫描：递归检查 pack 目录内可执行资源（GDScript 无沙箱的硬约束，DM-3）
+func _scan_mod_safety(dir: String) -> Array[String]:
+	var bad: Array[String] = []
+	var stack: Array[String] = [dir]
+	while not stack.is_empty():
+		var cur: String = stack.pop_back()
+		var dd := DirAccess.open(cur)
+		if dd == null:
+			continue
+		dd.list_dir_begin()
+		var fname := dd.get_next()
+		while fname != "":
+			var full := cur.path_join(fname)
+			if dd.current_is_dir():
+				stack.append(full)
+			elif fname.ends_with(".gd") or fname.ends_with(".tscn") or fname.ends_with(".tres"):
+				bad.append(full)
+			fname = dd.get_next()
+		dd.list_dir_end()
+	return bad
 
 ## Validation：返回违规清单（VA-1 运行期通道；五层校验器批接入）
 func validate_all() -> Array[ValidationViolation]:

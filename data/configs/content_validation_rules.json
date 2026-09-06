@@ -1,0 +1,91 @@
+{
+  "version": "1.0.0",
+  "_notes": "05 图 VA-4：五层校验规则表（构建期 Python 与运行期 GDScript 双端读取同一份，防两套规则漂移）。层序冻结（VA-2）：1 Schema 形状 → 2 ID → 3 引用 → 4 语义 → 5 本地化。severity 枚举（VA-3）：FATAL=拒载 / ERROR=载入+登记 / WARN=仅记录。",
+  "layers": [
+    {
+      "layer": 1,
+      "name": "schema",
+      "rules": [
+        {
+          "severity": "FATAL",
+          "applies": "all",
+          "required_fields": [
+            "id"
+          ],
+          "desc": "全部内容条目必须有 id（03 §3 ID 契约）",
+          "rule_code": "VA1-REQ-ID"
+        },
+        {
+          "severity": "ERROR",
+          "applies": "per_adapter",
+          "required_fields_by_kind": {
+            "ability": [
+              "id",
+              "name",
+              "type"
+            ],
+            "item": [
+              "id",
+              "name",
+              "type"
+            ],
+            "dialog": [
+              "id",
+              "npc_id"
+            ]
+          },
+          "desc": "各 kind 的 Definition 必填字段（03 契约；首批三类，后续 kind 随迁移补）；severity=ERROR（批2：真实存量数据存在历史缺字段，先登记不拒载，数据治理补齐后升 FATAL——VA-3 处置表）",
+          "rule_code": "VA1-REQ-ADAPTER"
+        }
+      ]
+    },
+    {
+      "layer": 2,
+      "name": "id",
+      "rules": [
+        {
+          "severity": "FATAL",
+          "applies": "all",
+          "desc": "ID 白名单正则与退役复用校验——执行器=既有 id_validator（GATE06 构建期）与 Registry 运行期对齐，本表登记口径不重复实现",
+          "rule_code": "VA2-REGEX"
+        }
+      ]
+    },
+    {
+      "layer": 3,
+      "name": "reference",
+      "rules": [
+        {
+          "severity": "FATAL",
+          "applies": "all",
+          "desc": "引用悬空拦截（03 §4/06 图 ref_index 同族）；运行期 Binding 校验（_validate_bindings）消费本 rule_id",
+          "rule_code": "VA3-DANGLING"
+        }
+      ]
+    },
+    {
+      "layer": 4,
+      "name": "semantic",
+      "rules": [
+        {
+          "severity": "ERROR",
+          "applies": "dialog",
+          "desc": "对话分片 Binding 完整性（npc_id 空置=C-3 追认 Dialogue 主权，工具侧只校验不代填）",
+          "rule_code": "VA4-BINDING"
+        }
+      ]
+    },
+    {
+      "layer": 5,
+      "name": "localization",
+      "rules": [
+        {
+          "severity": "WARN",
+          "applies": "all",
+          "desc": "display 键必须存在于 strings.csv（接 LN-G18 Localization；物理化随 F5）",
+          "rule_code": "VA5-DISPLAY-KEY"
+        }
+      ]
+    }
+  ]
+}
