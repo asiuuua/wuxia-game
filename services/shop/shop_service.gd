@@ -2,6 +2,8 @@
 # 商店系统（Phase 2 系统填充）：玩家向商店买卖物品
 # 纯配置驱动、无持久状态（商店库存为静态配置），故不实现 ISaveable
 # 2026-08-29 叶子层实现：buy() / sell() / can_buy() / can_sell() 补全
+# 2026-09-06 D-10 收编：buy/sell 事务段改走 ShopTradeTransaction（TransactionRuntime/
+#   Journal/0-C.19 Golden Invariant），手工补偿退役；预检链与对外签名零变。
 # 货币走 PlayerState.silver（spend_money / add_money），价格单位=银两
 
 extends RefCounted
@@ -75,18 +77,20 @@ func buy(shop_id: String, item_id: String, count: int) -> int:
 		EventBus.notify_trade_failed.emit(shop_id, item_id, "BAG_FULL")
 		return ShopEnums.TradeResult.FAIL_BAG_FULL
 
-	# P0 纪律修复：spend_money 返回值必须检查（不足拒扣）——预检后理论上不可达，但
-	# 忽略返回值一旦发生就是「钱没扣到货先给」；双保险不发货。
-	if not ps.spend_money(total):
-		EventBus.notify_trade_failed.emit(shop_id, item_id, "NO_MONEY")
-		return ShopEnums.TradeResult.FAIL_NO_MONEY
-	if not inv.add_item(item_id, count, "shop_buy"):
-		# 兜底回滚（预检后理论上不可达）：退款，保证资产守恒
-		ps.add_money(total)
-		EventBus.notify_trade_failed.emit(shop_id, item_id, "BAG_FULL")
-		return ShopEnums.TradeResult.FAIL_BAG_FULL
-	EventBus.notify_trade_completed.emit(shop_id, item_id, count, true)
-	return ShopEnums.TradeResult.SUCCESS
+	# 事务段（10 图 EC-5 / 0-C.19 / 01 §60）：Money Mutation → Inventory Mutation → Commit。
+	# 预检后理论上不可达的 run 失败也走统一回滚（0-C.8），绝不手工补偿。
+	var trade := ShopTradeTransaction.new()
+	var out: Dictionary = trade.execute_buy(ps, inv, shop_id, item_id, total, count)
+	var cr: CommandResult = out["result"]
+	if cr.is_ok():
+		EventBus.notify_trade_completed.emit(shop_id, item_id, count, true)
+		return ShopEnums.TradeResult.SUCCESS
+	if cr.is_recovery_required():
+		# 0-C.9：回滚自身失败禁静默，五元组上日志，人工介入
+		push_error("[ShopService] buy rollback RECOVERY_REQUIRED: %s" % str(cr.get_error().get_context()))
+	var fail_tag: String = out["fail_tag"]
+	EventBus.notify_trade_failed.emit(shop_id, item_id, fail_tag)
+	return _tag_to_result(fail_tag)
 
 ## 玩家卖出：扣背包 + 加银两
 func sell(shop_id: String, item_id: String, count: int) -> int:
@@ -117,12 +121,34 @@ func sell(shop_id: String, item_id: String, count: int) -> int:
 		return ShopEnums.TradeResult.FAIL_NO_ITEM
 
 	var total: int = sell_price(shop_id, item_id) * count
-	if not inv.remove_item_by_id(item_id, count):
-		EventBus.notify_trade_failed.emit(shop_id, item_id, "NO_ITEM")
-		return ShopEnums.TradeResult.FAIL_NO_ITEM
-	ps.add_money(total)
-	EventBus.notify_trade_completed.emit(shop_id, item_id, count, false)
-	return ShopEnums.TradeResult.SUCCESS
+	# 事务段：Inventory Mutation → Money Mutation（先扣货后给钱，10 图 P-E5 冻结序）。
+	# remove 失败（预检后理论不可达）走统一回滚，绝不加钱。
+	var trade := ShopTradeTransaction.new()
+	var out: Dictionary = trade.execute_sell(ps, inv, shop_id, item_id, total, count)
+	var cr: CommandResult = out["result"]
+	if cr.is_ok():
+		EventBus.notify_trade_completed.emit(shop_id, item_id, count, false)
+		return ShopEnums.TradeResult.SUCCESS
+	if cr.is_recovery_required():
+		push_error("[ShopService] sell rollback RECOVERY_REQUIRED: %s" % str(cr.get_error().get_context()))
+	var fail_tag: String = out["fail_tag"]
+	EventBus.notify_trade_failed.emit(shop_id, item_id, fail_tag)
+	return _tag_to_result(fail_tag)
+
+## 失败标签 → TradeResult 映射（09 TX-4：失败原因走常量，UI 禁判中文字符串；
+## 既存英文标签为 UI 兼容面，Phase4 随 GATE21/32 收编统一）
+func _tag_to_result(tag: String) -> int:
+	match tag:
+		"NO_MONEY":
+			return ShopEnums.TradeResult.FAIL_NO_MONEY
+		"BAG_FULL":
+			return ShopEnums.TradeResult.FAIL_BAG_FULL
+		"NO_ITEM":
+			return ShopEnums.TradeResult.FAIL_NO_ITEM
+		"NO_STOCK":
+			return ShopEnums.TradeResult.FAIL_NO_STOCK
+		_:
+			return ShopEnums.TradeResult.FAIL_INVALID
 
 ## UI 用：银两是否够买 count 个
 func can_buy(shop_id: String, item_id: String, count: int = 1) -> bool:
