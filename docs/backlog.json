@@ -593,13 +593,13 @@
           "suggestion": "构造任务接取/完成用例，核对 HUD 任务追踪实时刷新。"
         },
         {
-          "title": "任务 auto_complete JSON null 语义缺陷（A1实测新发现）",
-          "type": "隐性BUG",
-          "status": "open",
+          "title": "任务 auto_complete 字段缺省语义复查（A1 侦察失误修正）",
+          "type": "待办",
+          "status": "resolved",
           "placeholder": false,
           "source": "data/configs/regions/newbie_village/quests.json nv_quest_help_maiden",
-          "detail": "auto_complete 键为 null，运行时 get(\"auto_complete\",true) 取值 bool true→交足 need_item 即自动交付发奖，与「null=不自动交付」意图相悖；null 经加载管线变 true 的具体层待查（json_util 归一化或 Godot JSON null 语义）",
-          "suggestion": "数据侧改 false 或代码侧判空，随 12 图/内容主权窗裁决，禁他窗直改"
+          "detail": "复查结论（2026-09-06 二次实证）：全部任务 JSON 均未写 auto_complete 字段（grep data/ 零命中；初判 null 系 python dict.get() 键缺失返 None 被误读为 null）。运行时 data.get(\"auto_complete\", true) 走缺省 true → 交足即自动交付，为 12 图 QuestDefinition 可选字段缺省语义，非缺陷，无需改数据或代码。集成测试注记已同步修正。",
+          "suggestion": "已销项；如未来想让某任务手动交付，显式写 \"auto_complete\": false 即可"
         }
       ]
     },

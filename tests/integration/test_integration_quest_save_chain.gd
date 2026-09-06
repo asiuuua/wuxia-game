@@ -4,9 +4,10 @@
 #           → QuestService(分相队列推进 + auto_complete 交付) → PlayerState(奖励结算)
 #           → SaveManager(存读档回环)
 # 服务经装配根访问（GameManager.inventory_service / quest_service，Phase3 装配收敛前形态）。
-# 行为注记（实测 2026-09-06）：nv_quest_help_maiden 的 auto_complete 键为 JSON null，
-#   经加载管线运行时取值为 true（bool）——交足 need_item 后自动交付发奖。null 语义缺陷已
-#   登记待办清单（数据侧改 false 或代码侧判空，属 12 图/内容主权，本测试按实证行为断言）。
+# 行为注记（实测复查 2026-09-06）：全部任务 JSON 均未写 auto_complete 字段（grep data/ 零命中，
+#   初判「null 语义缺陷」系侦察失误——python dict.get() 键缺失也返回 None 被误读为 null）。
+#   运行时 data.get("auto_complete", true) 走缺省 true → 交足 need_item 自动交付，此为
+#   12 图 QuestDefinition 可选字段的缺省语义，非缺陷，无需改数据或代码。
 # 安全约定：只占用 save_99.json（UI 槽位之外探针槽），用完即删；
 #           after_each 恢复内存态（任务出册/奖励回冲/背包清场/旗标复位）防用例间污染。
 
@@ -58,7 +59,7 @@ func test_chain_accept_progress_autoturn_in_reward() -> void:
 	expect(inv.add_item(NEED_ITEM, 1, "integration_test"), "背包加入玉簪应成功")
 	# 分相纪律（QD-R07）：外部直调 _on_* 后须冲刷才见推进（_flush_events 同步可调，测试确定性入口）
 	qs._flush_events()
-	# auto_complete 运行时为 true → 交足后自动交付（实测行为，见文件头注记）
+	# auto_complete 字段全任务未写 → 缺省 true → 交足后自动交付（见文件头注记）
 	expect(qs.completed_quests.has(QUEST_ID), "交足玉簪后应自动交付并入 completed_quests")
 	expect(not qs.active_quests.has(QUEST_ID), "交付后应移出 active_quests")
 	expect_eq(GameManager.player_state.silver, _base_silver + REWARD_SILVER, "银两奖励 +60 应入账")
