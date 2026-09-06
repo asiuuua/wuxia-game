@@ -54,8 +54,8 @@ func register_adapter(adapter: ContentTypeAdapter) -> bool:
 	if _adapters.has(adapter.content_kind):
 		push_error("[Content] adapter kind 重复注册: %s" % adapter.content_kind)
 		return false
-	if adapter.array_key.is_empty() or adapter.files.is_empty():
-		push_error("[Content] adapter %s 缺 array_key/files" % adapter.content_kind)
+	if adapter.files.is_empty() or (adapter.array_key.is_empty() and not adapter.loose and adapter.expand_key.is_empty()):
+		push_error("[Content] adapter %s 缺 array_key/files（loose/expand 模式豁免 array_key）" % adapter.content_kind)
 		return false
 	_adapters[adapter.content_kind] = adapter
 	_adapter_order.append(adapter.content_kind)
@@ -130,6 +130,8 @@ func _validate_schema_layer(kind: StringName, entries: Array, files: Array[Strin
 		var sev := String(rule.get("severity", "ERROR"))
 		if rid == "VA1-REQ-ID":
 			for e in entries:
+				if not (e is Dictionary):
+					continue   # 批C 后段：expand/loose 模式 store 值可为数组/整文档，非条目跳过
 				var id := str(e.get("id", ""))
 				if id.is_empty():
 					out.append(ValidationViolation.new(StringName(rid), &"id",
@@ -346,7 +348,9 @@ func shard_cache() -> ShardCache:
 # === 内部：装载 / 索引 / 校验 / 指纹 ===
 
 ## 通用装载算法（ConfigManager _load_abilities/_load_items 模式通用化，行为保真：
-## 逐文件 version「最后者胜」+ 条目校验跳过 + 重复 id 记错覆盖）
+## 逐文件 version「最后者胜」+ 条目校验跳过 + 重复 id 记错覆盖。
+## 批C 后段三模式：loose=整表（store=最后文档，空文件跳过保真）；expand_key=字典展开；
+## 默认=entries 条目循环。）
 func _load_adapter(adapter: ContentTypeAdapter) -> void:
 	for path in adapter.files:
 		var data: Dictionary = {}
@@ -354,9 +358,29 @@ func _load_adapter(adapter: ContentTypeAdapter) -> void:
 			var got: Variant = _loader.call(path)
 			if got is Dictionary:
 				data = got
-		var ver := str(data.get("version", ""))
-		if not ver.is_empty():
-			_source_versions[adapter.content_kind] = ver
+		if adapter.loose:
+			# 整表模式：空文件跳过（与原 _load_world/_load_ui_anim/_load_ui_sfx 空保护保真）
+			if data.is_empty():
+				continue
+			if not adapter.schema_check.is_null():
+				adapter.schema_check.call(path, data)
+			var ver := str(data.get("version", ""))
+			if not ver.is_empty():
+				_source_versions[adapter.content_kind] = ver
+			adapter.store.clear()
+			adapter.store.merge(data, true)
+			continue
+		if not adapter.expand_key.is_empty():
+			# 字典展开模式：data[expand_key] 的 {键:值} 对直接拷入 store（重复键记错覆盖）
+			var mapping: Dictionary = data.get(adapter.expand_key, {})
+			for k in mapping.keys():
+				if adapter.store.has(k) and not _error_cb.is_null():
+					_error_cb.call("%s %s 重复定义，后者覆盖" % [adapter.display_label, str(k)])
+				adapter.store[str(k)] = mapping[k]
+			continue
+		var ver2 := str(data.get("version", ""))
+		if not ver2.is_empty():
+			_source_versions[adapter.content_kind] = ver2
 		for entry in data.get(adapter.array_key, []):
 			if not _is_valid_entry(entry, path, adapter.array_key, adapter.id_field):
 				continue

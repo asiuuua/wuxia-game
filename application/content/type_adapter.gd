@@ -13,7 +13,9 @@ var array_key: String = ""            # JSON 中条目数组键（如 "skills"/"
 var id_field: String = "id"           # 条目 id 字段名
 var display_label: String = ""        # 错误文案用的中文名（保真原 _record_error 文案）
 var definition_class: String = ""     # 03 Definition 类名占位（Phase4 类型化时启用）
-var schema_check: Callable = Callable()  # 可选 Schema 校验挂点（批C：签名 func(path: String, entry: Dictionary) -> void；store 前调用）
+var schema_check: Callable = Callable()  # 可选 Schema 校验挂点（批C：签名 func(path: String, entry: Dictionary) -> void；entries 模式按条目调用，loose 模式按整文档调用）
+var loose: bool = false               # 批C 后段泛化：整表模式——单文件整体 Dictionary（非 id 键控），store=最后加载文档（「最后者胜」逐文件覆盖保真）
+var expand_key: String = ""           # 批C 后段泛化：字典展开模式——data[expand_key] 为 {键:值} 映射，键值对直接拷入 store（如 dialog_events 的 events 节）
 var store: Dictionary = {}            # id -> entry 真身（Registry 持有，运行期内容不可变 CA-4）
 
 func _init(p_kind: StringName, p_files: Array[String], p_array_key: String,

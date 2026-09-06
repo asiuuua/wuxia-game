@@ -132,13 +132,8 @@ func _ready() -> void:
 	_config_errors.clear()
 	_load_dialogs()   # 提前：分片登记先行，供 Registry 收编建 DialogueByNPC（IX-4）
 	content_registry = ContentRegistry.new(_load_json, _record_error)
-	_setup_content_registry()   # 12 类走 TypeAdapter（05 图 CT-4 绞杀者：首批 2+批C 批1 10）
-	_load_dialog_events()
+	_setup_content_registry()   # 18 类走 TypeAdapter（05 图 CT-4 绞杀者：首批 2+批1 10+后段 6）
 	_load_player()
-	_load_world()
-	_load_ui_anim()
-	_load_ui_sfx()
-	_load_menus()
 	_load_combat_attr()
 	_load_regions()
 	_validate_references()
@@ -164,6 +159,21 @@ func _setup_content_registry() -> void:
 	var shop_adapter := ContentTypeAdapter.new(&"shops", SHOP_FILES, "shops", "id", "商店")
 	var sect_adapter := ContentTypeAdapter.new(&"sects", SECT_FILES, "sects", "id", "门派")
 	var relation_adapter := ContentTypeAdapter.new(&"relations", RELATION_FILES, "relations", "id", "关系 NPC")
+	# 批C 后段：C 组泛化迁移（loose 整表 + expand 字典展开 + status_effects 标准化）
+	var world_adapter := ContentTypeAdapter.new(&"world", WORLD_FILES, "", "id", "世界环境")
+	world_adapter.loose = true
+	var ui_anim_adapter := ContentTypeAdapter.new(&"ui_anim", UI_ANIM_FILES, "", "id", "UI 动效")
+	ui_anim_adapter.loose = true
+	ui_anim_adapter.schema_check = func(path: String, data: Dictionary) -> void: _record_schema_violations(_schema_rel_of(path), data, "UI 动效")
+	var ui_sfx_adapter := ContentTypeAdapter.new(&"ui_sfx", UI_SFX_FILES, "", "id", "UI 音效")
+	ui_sfx_adapter.loose = true
+	ui_sfx_adapter.schema_check = func(path: String, data: Dictionary) -> void: _record_schema_violations(_schema_rel_of(path), data, "UI 音效")
+	var menu_adapter := ContentTypeAdapter.new(&"menus", MENU_FILES, "", "id", "菜单配置")
+	menu_adapter.loose = true
+	var dialog_event_adapter := ContentTypeAdapter.new(&"dialog_events", DIALOG_EVENT_FILES, "", "id", "对话事件")
+	dialog_event_adapter.expand_key = "events"
+	var se_files: Array[String] = [STATUS_EFFECTS_FILE]
+	var status_effect_adapter := ContentTypeAdapter.new(&"status_effects", se_files, "status_effects", "id", "状态效果")
 	content_registry.register_adapter(ability_adapter)
 	content_registry.register_adapter(item_adapter)
 	content_registry.register_adapter(enemy_adapter)
@@ -176,6 +186,12 @@ func _setup_content_registry() -> void:
 	content_registry.register_adapter(shop_adapter)
 	content_registry.register_adapter(sect_adapter)
 	content_registry.register_adapter(relation_adapter)
+	content_registry.register_adapter(world_adapter)
+	content_registry.register_adapter(ui_anim_adapter)
+	content_registry.register_adapter(ui_sfx_adapter)
+	content_registry.register_adapter(menu_adapter)
+	content_registry.register_adapter(dialog_event_adapter)
+	content_registry.register_adapter(status_effect_adapter)
 	content_registry.load_schemas(_content_schemas)   # Phase 3：Schema 真源注入（双端同源，同一份 JSON）
 	content_registry.attach_shard_registry(_dialog_index)
 	content_registry.set_ready_callback(func(fp: String) -> void:
@@ -201,6 +217,13 @@ func _setup_content_registry() -> void:
 	_shops = content_registry.adapter_store(&"shops")
 	_sects = content_registry.adapter_store(&"sects")
 	_relations = content_registry.adapter_store(&"relations")
+	_world_config = content_registry.adapter_store(&"world")
+	_ui_anim = content_registry.adapter_store(&"ui_anim")
+	_ui_sfx = content_registry.adapter_store(&"ui_sfx")
+	_menus = content_registry.adapter_store(&"menus")
+	_dialog_events = content_registry.adapter_store(&"dialog_events")
+	_status_effects = content_registry.adapter_store(&"status_effects")
+	_status_effects_loaded = true   # 回接即已加载（原惰性标志语义）
 	_shard_cache = content_registry.shard_cache()
 	# version「最后者胜」保真：ability→item 段落抓取结果回写（未迁类按原逻辑继续覆盖）
 	_config_version = content_registry.source_version(&"item")
@@ -259,46 +282,6 @@ func _load_dialogs() -> void:
 			_record_error("对话 %s 索引重复定义，后者覆盖" % did)
 		_dialog_index[did] = entry
 
-func _load_dialog_events() -> void:
-	for path in DIALOG_EVENT_FILES:
-		var data: Dictionary = _load_json(path)
-		var events: Dictionary = data.get("events", {})
-		for key in events.keys():
-			var lst: Array = events[key]
-			if not (lst is Array):
-				_record_error("对话事件 %s 效果须为数组" % key)
-				continue
-			if _dialog_events.has(key):
-				_record_error("对话事件 %s 重复定义，后者覆盖" % key)
-			_dialog_events[key] = lst
-
-func _load_world() -> void:
-	for path in WORLD_FILES:
-		var data: Dictionary = _load_json(path)
-		_config_version = data.get("version", _config_version)
-		if data.size() > 0:
-			_world_config = data
-
-# === UI 动效 / 音效配置（2026-08-29 配置层落地）===
-# 二者都是「整表 Dictionary」而非 id 键控，直接整存；读取一律走带兜底的 get_*，
-# 配置缺失或写错都不影响运行（退回默认值，不崩）。
-
-func _load_ui_anim() -> void:
-	for path in UI_ANIM_FILES:
-		var data: Dictionary = _load_json(path)
-		if data.size() > 0:
-			_record_schema_violations(_schema_rel_of(path), data, "UI 动效")
-			_config_version = data.get("version", _config_version)
-			_ui_anim = data
-
-func _load_ui_sfx() -> void:
-	for path in UI_SFX_FILES:
-		var data: Dictionary = _load_json(path)
-		if data.size() > 0:
-			_record_schema_violations(_schema_rel_of(path), data, "UI 音效")
-			_config_version = data.get("version", _config_version)
-			_ui_sfx = data
-
 ## 取时长令牌（秒）
 func get_anim_duration(token: String, fallback: float = 0.12) -> float:
 	return float(_ui_anim.get("durations", {}).get(token, fallback))
@@ -355,30 +338,20 @@ func get_ui_sfx_bus() -> String:
 func get_ui_sfx_pool_size() -> int:
 	return int(_ui_sfx.get("pool_size", 4))
 
-# === 状态效果配置（战斗核心懒加载取用口 · 纯追加）===
-# 不暴露硬编码路径：由本方法内部按集中常量懒加载，调用方只传 id。
+# === 状态效果配置（战斗核心取用口 · 纯追加）===
+# 批C 后段：已迁 Registry 标准条目模式（_ready 装载+回接，_status_effects_loaded 随回接置位）；
+# 不暴露硬编码路径：真源=STATUS_EFFECTS_FILE 经 adapter.files 声明。
 const STATUS_EFFECTS_FILE := "res://data/configs/abilities/status_effects.json"
 var _status_effects_loaded: bool = false
 
 func get_status_effect(id: String) -> Dictionary:
-	if not _status_effects_loaded:
-		_load_status_effects()
 	if not _status_effects.has(id):
 		return {}
 	return _status_effects[id]
 
 ## 状态效果整表（战斗核心本地缓存一次性填充用）
 func get_status_effect_table() -> Dictionary:
-	if not _status_effects_loaded:
-		_load_status_effects()
 	return _status_effects
-
-func _load_status_effects() -> void:
-	var data: Dictionary = _load_json(STATUS_EFFECTS_FILE)
-	for s in data.get("status_effects", []):
-		if s is Dictionary and s.has("id"):
-			_status_effects[str(s["id"])] = s
-	_status_effects_loaded = true
 
 ## UI 动效整表（战斗演出等需要直接读 battle 令牌时长时取用，避免重复打开文件）
 func get_ui_anim_table() -> Dictionary:
@@ -861,25 +834,17 @@ func get_config_version() -> String:
 var _menus: Dictionary = {}
 
 func get_menu_config() -> Dictionary:
-	if _menus.is_empty():
-		_load_menus()
+	# 批C 后段：menus 已由 Registry _ready 回接；装载失败时 store 为空，语义同原兜底
 	return _menus
 
 ## 按 action_id 解析菜单项（screen/badge/icon_id/nav...）；找不到返回空 Dictionary
 func get_menu_item(action_id: String) -> Dictionary:
-	if _menus.is_empty():
-		_load_menus()
+	# menus 已由 Registry _ready 回接（批C 后段）；装载失败时 store 为空，此处自然返回 {}
 	for cat in _menus.get("categories", []):
 		for item in cat.get("items", []):
 			if String(item.get("action_id", "")) == action_id:
 				return item
 	return {}
-
-func _load_menus() -> void:
-	var data: Dictionary = _load_json(MENU_FILES[0])
-	if data.is_empty():
-		return
-	_menus = data
 
 # === 战斗数值换算表（阶段A：五维根属性→面板属性派生）===
 # 整表 Dictionary 直接整存；所有换算系数集中此处，代码只读取不硬编码（derive_mode=flat 时零回归）。
