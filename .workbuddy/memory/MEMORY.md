@@ -2,7 +2,7 @@
 
 ## 定位与宪法 V1.2
 - 等距2.5D武侠RPG单机；Godot 4.7.2；纯GDScript；个人开发；回合制+自动；Win+安卓。
-- 真源：`docs/constitution/PROJECT_CONSTITUTION_V1.2.md`。优先级：宪法>架构>契约>施工图>任务卡>AI推断。
+- 真源：**`docs/constitution/PROJECT_CONSTITUTION_V1.4.md`（现行有效,ADR-0005）**；V1.2 保留历史基线；V1.3 经 V1.4 修订说明承载。优先级：宪法>架构>契约>施工图>任务卡>AI推断。V1.4 核心：RULE001 放软白名单 Adapter/0-B.0 分治双轨/0-B.12 三层语义/0-E.3 GATE15 Adapter 放行；0-C 章 20 条逐字兼容；02图K-R+GATE22 基线 Adapter 判据升版待 ACR。
 - AI不是架构师：架构级变更一律 STOP→ACR→评审→ADR→分批迁移，禁推倒重写。ACR-0001 APPROVED(2026-09-06)。
 - 迁移=绞杀者分批：0测量→1 Kernel→2 事务根治(P0)→3 装配收敛(18 Autoload)→4 逐模块→5 基础设施；每Phase可停；§171收编不丢弃。
 - **进度**(2026-09-06)：P1+09/10/11事务根治+D-01~10销项+裁决收口+13/03/16/17图红线批+12图QD-2五类收编；**Phase3 kernel窗批1~3=02图24契约(5a71907)+TransactionRuntime(b9f6489,GATE26/27升PARTIAL)+ShopTradeTransaction买卖0-C(ae5cdc1,10图EC-5)**；**05图批1=CONTENT-RUNTIME骨架(ab46676:ContentRegistry九API五段Loader/VE-1指纹/ShardCache CA-2/ability+item+dialog三TypeAdapter attach回接/GATE17挂槽,GATE2=72,十四槽全绿)**；05图DoD3~6(五层校验规则表JSON/12索引实建/指纹进SaveHeader/Mod拒载)留批2~3；kernel窗下批=装配收敛(需单独ADR+Write Lease)。
