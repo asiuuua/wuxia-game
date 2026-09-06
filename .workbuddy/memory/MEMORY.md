@@ -5,7 +5,7 @@
 - 真源：`docs/constitution/PROJECT_CONSTITUTION_V1.2.md`。优先级：宪法>架构>契约>施工图>任务卡>AI推断。
 - AI不是架构师：架构级变更一律 STOP→ACR→评审→ADR→分批迁移，禁推倒重写。ACR-0001 APPROVED(2026-09-06)。
 - 迁移=绞杀者分批：0测量→1 Kernel→2 事务根治(P0)→3 装配收敛(18 Autoload)→4 逐模块→5 基础设施；每Phase可停；§171收编不丢弃。
-- **进度**(2026-09-06)：P1完成+09/10/11事务根治+D-01~10全销项(D-08/09/10已派单)；13图Phase2全落(SV-1~4/6;SV-2=03afa3d二段式DTO+登记制+模块迁移链)+03图(ADR-0002二级正则/schema_guard/ADR-0004摘要/pack_manifest)+16图(CP-R06三同/CP-R09)+12图QD-R07分相队列+04图(GATE41/84信号registry/doubles)。
+- **进度**(2026-09-06)：P1完成+09/10/11事务根治+D-01~10全销项+五项裁决收口；13图SV-1~4/6+03图(ADR-0002/0004)+16图(CP-R06/09)+12图QD-R07+04图(GATE41)+**12图QD-2五类收编**(EffectRegistry五kind锁/CommandDispatcher退役/P-Q1修复/顺序冻结/GATE32基线85)。
 
 ## 施工图序列 01→18（FROZEN；唯一真源=docs/architecture/NN_*.md）
 - 0-C事务主战场=09/10/11(完成)；13图Phase2红线批全落(SV-1/2/3/4/6)；16 id_validator挂GATE06(基线234只减不增)；17 GATE40+落地；18 RH版本真源/Provenance八字段/Release Gate六项。
