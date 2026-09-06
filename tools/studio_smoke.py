@@ -62,11 +62,11 @@ def main() -> int:
             failures.append("npc_upsert 失败: %s" % msg)
         names = [n.get("id") for n in studio_core.npc_list()]
         if "npc_smoke_001" not in names:
-            failures.append("npc_upsert 后 npc_list 未读回 smoke_npc_001（读=%s）" % names)
+            failures.append("npc_upsert 后 npc_list 未读回 npc_smoke_001（读=%s）" % names)
         region_data = json.load(open(os.path.join(d, "data/configs/regions/newbie_village/npcs.json"), encoding="utf-8"))
         ids = [n.get("id") for n in region_data.get("npcs", [])]
         if "npc_smoke_001" not in ids:
-            failures.append("区域表落盘缺少 smoke_npc_001（写入了 %s）" % ids)
+            failures.append("区域表落盘缺少 npc_smoke_001（写入了 %s）" % ids)
     finally:
         studio_core.set_project_root("D:/武侠游戏")   # 恢复真实工程根，绝不残留
 

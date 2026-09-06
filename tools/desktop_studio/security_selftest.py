@@ -42,6 +42,9 @@ def _test_ids_and_trash():
     _check("trash_restore 穿越文件名安全",
            core.trash_restore("../../npc数据文件.json")[0] is False)
     _check("trash_purge 穿越文件名安全", core.trash_purge("../../npc数据文件.json") is False)
+    # V1.4 施工图 §28 补测：URL 编码 / 反斜杠形态的路径穿越探针（白名单必须同样拦截）
+    _check("dlg_new URL 编码穿越 id 被拒", core.dlg_new("..%2f..%2fevil")[0] is False)
+    _check("dlg_new 反斜杠穿越 id 被拒", core.dlg_new("..\\..\\evil")[0] is False)
 
 
 def _make_zip(entries):
@@ -84,12 +87,41 @@ def _test_origin():
            srv._origin_allowed(_FakeHandler({"Referer": "http://evil.com/x"})) is False)
     _check("file:// 本地页放行",
            srv._origin_allowed(_FakeHandler({"Origin": "null"})) is True)
+    # V1.4 施工图 §28 补测：前缀匹配漏洞（子域欺骗）必须被严格解析拦截
+    _check("子域欺骗 Origin 拦截（localhost.evil.com）",
+           srv._origin_allowed(_FakeHandler({"Origin": "http://localhost.evil.com"})) is False)
+    _check("子域欺骗 Origin 拦截（127.0.0.1.evil.io）",
+           srv._origin_allowed(_FakeHandler({"Origin": "http://127.0.0.1.evil.io"})) is False)
+    _check("本机 localhost 带端口放行",
+           srv._origin_allowed(_FakeHandler({"Origin": "http://localhost:8765"})) is True)
+    _check("非 http(s) 协议拦截",
+           srv._origin_allowed(_FakeHandler({"Origin": "ftp://127.0.0.1/x"})) is False)
+
+
+class _BodyHandler(_FakeHandler):
+    def __init__(self, headers, data=b""):
+        super().__init__(headers)
+        self.rfile = io.BytesIO(data)
+
+
+def _test_body_limits():
+    _check("小请求体正常解析",
+           srv._read_body(_BodyHandler({"Content-Length": "2"}, b"{}"), srv._JSON_BODY_LIMIT) == {})
+    big = srv._JSON_BODY_LIMIT + 1
+    _check("超大 JSON 请求体被拒",
+           srv._read_body(_BodyHandler({"Content-Length": str(big)}, b"{}"), srv._JSON_BODY_LIMIT) is None)
+    up = srv._UPLOAD_BODY_LIMIT + 1
+    _check("超大上传请求体被拒",
+           srv._read_body(_BodyHandler({"Content-Length": str(up)}, b"{}"), srv._UPLOAD_BODY_LIMIT) is None)
+    _check("非法 JSON 返回空体",
+           srv._read_body(_BodyHandler({"Content-Length": "3"}, b"xyz"), srv._JSON_BODY_LIMIT) == {})
 
 
 def main():
     _test_ids_and_trash()
     _test_zip_slip()
     _test_origin()
+    _test_body_limits()
     print("=" * 40)
     if _FAILED:
         print("安全自检：%d 项 FAIL -> %s" % (len(_FAILED), _FAILED))

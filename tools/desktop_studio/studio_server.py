@@ -37,21 +37,34 @@ MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
 _MIME = {"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg", "webp": "image/webp"}
 
 # 防 CSRF：仅放行本机来源。恶意网页（如浏览器里开着 http://evil.com/x）无法再向 127.0.0.1 接口发指令。
-# 放行规则：无 Origin/Referer（curl / 非浏览器）✓；工具自身页面（127.0.0.1:端口）✓；file:// 或 null（本地双击打开的静态页）✓。
-_ALLOWED_ORIGIN_PREFIXES = (
-    "http://127.0.0.1", "http://localhost",
-    "file://", "null",
-)
-
-
+# 放行规则：无 Origin/Referer（curl / 非浏览器）✓；工具自身页面（127.0.0.1/localhost:端口）✓；
+#          file:// 或 null（本地双击打开的静态页）✓。
+# V1.4 施工图 §28：禁止前缀匹配（http://localhost.evil.com 可绕过），改为解析 scheme/hostname 后严格比对。
 def _origin_allowed(handler):
     origin = handler.headers.get("Origin") or handler.headers.get("Referer") or ""
     if not origin:
         return True
-    for ok in _ALLOWED_ORIGIN_PREFIXES:
-        if origin.startswith(ok):
-            return True
-    return False
+    if origin == "null" or origin.startswith("file://"):
+        return True
+    try:
+        u = urllib.parse.urlsplit(origin)
+    except Exception:
+        return False
+    if u.scheme not in ("http", "https"):
+        return False
+    return (u.hostname or "").lower() in ("127.0.0.1", "localhost")
+
+
+# 请求体大小上限（V1.4 施工图 §28：JSON / ZIP / Image 分类型限制）。
+# 本工具上传（立绘 ZIP / 背景图等）经 JSON body 内嵌 base64 传输（膨胀比约 ×1.37），
+# 故上传类接口用更高上限；常规 API 严格限小。
+_JSON_BODY_LIMIT = 8 * 1024 * 1024      # 常规 JSON API（8MB）
+_UPLOAD_BODY_LIMIT = 64 * 1024 * 1024   # 上传类接口（ZIP/Image base64 内嵌，64MB）
+_UPLOAD_PATHS = frozenset({
+    "/api/npc/portrait", "/api/npc/asset_upload", "/api/ui_slot/upload",
+    "/api/login/bg", "/api/login/btn_bg", "/api/login/bg_variant",
+    "/api/main_menu/assets/replace", "/api/battle_bg/upload", "/api/demo_portrait/upload",
+})
 
 
 def _mime_of(path):
@@ -67,11 +80,22 @@ def _send_json(handler, obj, code=200):
     handler.wfile.write(body)
 
 
-def _read_body(handler):
+def _read_body(handler, limit):
+    """按 Content-Length 分块读取请求体，超过 limit 返回 None（do_POST 回 413）。
+
+    分块读而非一次性 read(length)：防客户端谎报超大 Content-Length 导致内存吃满/长阻塞。
+    """
     length = int(handler.headers.get("Content-Length", 0) or 0)
-    if length == 0:
+    if length <= 0:
         return {}
-    raw = handler.rfile.read(length)
+    if length > limit:
+        return None
+    raw = b""
+    while len(raw) < length:
+        chunk = handler.rfile.read(min(65536, length - len(raw)))
+        if not chunk:
+            break
+        raw += chunk
     try:
         return json.loads(raw.decode("utf-8"))
     except Exception:
@@ -680,7 +704,9 @@ class Handler(BaseHTTPRequestHandler):
         if not _origin_allowed(self):
             return _send_json(self, {"error": "forbidden origin"}, 403)
         path = self.path.split("?")[0]
-        body = _read_body(self)
+        body = _read_body(self, _UPLOAD_BODY_LIMIT if path in _UPLOAD_PATHS else _JSON_BODY_LIMIT)
+        if body is None:
+            return _send_json(self, {"ok": False, "error": "request body too large"}, 413)
         parts = [p for p in path.strip("/").split("/") if p]
         if path == "/api/settings":
             s = core.load_settings()

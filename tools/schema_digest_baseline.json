@@ -21,6 +21,18 @@
    "shape": "{_doc:str,defense:{_doc:str,soft_cap_k:num},derive_mode:str,five_attr_weights:{_doc:str,jin:{max_attack:num,min_attack:num},min:{crit_rate:num,min_attack:num},shi:{accuity_rate:num,max_attack:num},tizhi:{max_hp:num},yu:{defense:num,max_hp:num}},growth:{_doc:str,atk_base:num,atk_growth:num,hp_base:num,hp_growth:num},judgment:{_doc:str,accuity_damage_mult:num,accuity_rate_cap:num,crit_damage_mult:num,crit_heal_mult:num,crit_rate_cap:num,direct_accuity_bonus:num,direct_crit_bonus:num},version:str,weapon_range:{_doc:str,max_ratio:num,min_ratio:num}}",
    "version": "1.0.0"
   },
+  "data/configs/content/indexes/dialogue_by_npc.json": {
+   "shape": "{entries:{demo_npc:[str],dlg_event_demo:[str],mt_dialog_priest:[str],npc_bandit:[str],npc_hunter:[str],npc_liu_ruyan:[str],npc_merchant:[str],npc_mu_wanqing:[str],npc_sect_elder:[str],nv_dialog_elder:[str],nv_dialog_maiden:[str],tactical_demo_master:[str]},index:str,version:str}",
+   "version": "1.0.0"
+  },
+  "data/configs/content/indexes/npc_by_region.json": {
+   "shape": "{entries:{demo_npc:[str],event_demo_npc:[str],mt_npc_priest:[str],mt_npc_tailor:[str],npc_bandit:[str],npc_hunter:[str],npc_liu_ruyan:[str],npc_merchant:[str],npc_mu_wanqing:[str],npc_sect_elder:[str],npc_village_chief:[str],nv_npc_chief:[str],nv_npc_elder:[str],nv_npc_maiden:[str],tactical_demo_master:[str]},index:str,version:str}",
+   "version": "1.0.0"
+  },
+  "data/configs/content_validation_rules.json": {
+   "shape": "{_notes:str,layers:[{layer:num,name:str,rules:[{applies:str,desc:str,required_fields:[str],rule_code:str,severity:str}|{applies:str,desc:str,required_fields_by_kind:{ability:[str],dialog:[str],item:[str]},rule_code:str,severity:str}]}|{layer:num,name:str,rules:[{applies:str,desc:str,rule_code:str,severity:str}]}],version:str}",
+   "version": "1.0.0"
+  },
   "data/configs/dialogs/dialogue_events.json": {
    "shape": "{_doc:str,events:{accept_demo_quest:[{quest_id:str,type:str}],bandit_threat_shake:[{duration:num,intensity:num,type:str}],sfx_bandit_threat:[{path:str,type:str}],sfx_beggar:[{path:str,type:str}],sfx_elder_appear:[{path:str,type:str}],sfx_quest_accept:[{path:str,type:str}],sfx_tactical:[{path:str,type:str}]},version:str}",
    "version": "1.0.0"

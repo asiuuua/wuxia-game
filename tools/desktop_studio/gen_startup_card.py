@@ -135,6 +135,12 @@ def parse(doc_text: str):
     return {
         "updated": "",
         "source": "docs/AI协同启动卡.md",
+        # V1.4 施工图 §23 AI Context Integrity：派生知识必须标记 DERIVED，不得成为事实源。
+        "DERIVED": True,
+        "derived_from": {
+            "generation_chain": "PROJECT_CONSTITUTION_V1.4 -> Architecture -> Contract -> Schema -> ADR -> Task -> Context Generator",
+            "authority_note": "本文件为派生上下文；与 Constitution/Contract/Schema/ADR 冲突时以权威文档为准，本文件将被重新生成。",
+        },
         "windows": [windows[w] for w in order],
         "template": template,
         "collab_prompt": collab_prompt,
@@ -154,9 +160,11 @@ def main():
                 data["collab_prompt"] = old["collab_prompt"]
         except Exception:
             pass
-    # 更新时间
+    # 更新时间 + 源文档哈希（V1.4 §23：派生知识可审计，源文档变更即可检测陈旧）
     import datetime
+    import hashlib
     data["updated"] = datetime.date.today().isoformat()
+    data["source_hash"] = hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
     # 兜底：没有专属口令的窗口用通用模板
     for w in data["windows"]:
         if not w["command"]:
