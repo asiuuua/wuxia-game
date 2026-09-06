@@ -56,5 +56,13 @@ func get_transaction_id() -> StringName:
 func is_committed() -> bool:
 	return _phase == Phase.COMMITTED
 
+# ---- Runtime 内部推进接口（与 TransactionContext._mark_* 同构；下划线=非公共契约）----
+# 合法迁移：PENDING→COMMITTED。仅 TransactionRuntime.commit 在事务提交成功时调用（0-C.7）。
+func _mark_committed() -> bool:
+	if _phase != Phase.PENDING:
+		return false
+	_phase = Phase.COMMITTED
+	return true
+
 func get_type() -> StringName:
 	return _event_type

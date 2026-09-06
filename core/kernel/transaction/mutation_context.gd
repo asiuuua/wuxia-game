@@ -10,6 +10,7 @@ extends RefCounted
 
 var _transaction_id: StringName
 var _records: Array[MutationRecord] = []
+var _audits: Array[Dictionary] = []   # 审计侧表（0-C.5：before/after 不在 MutationRecord 冻结面内，由 Runtime 经 get_audits() 同步进 Journal）
 var _next_sequence: int = 0
 
 func _init(transaction_id: StringName = &"") -> void:
@@ -24,9 +25,31 @@ func get_records() -> Array[MutationRecord]:
 func get_record_count() -> int:
 	return _records.size()
 
+## 审计记录（0-C.5 七字段 + transaction_id）：供 Execution Runtime 填充 MutationJournal。
+func get_audits() -> Array[Dictionary]:
+	return _audits
+
 ## 登记一条可逆变更；sequence 由本上下文单调分配（Rollback 按其逆序执行，01 §17）。
-func register(target_id: StringName, owner_module: StringName, state_key: StringName, undo: UndoStrategy) -> MutationRecord:
+## before/after 为可选项（0-C.5 要求 Journal 登记双值；未提供时为 null，审计面如实记录）。
+func register(
+	target_id: StringName,
+	owner_module: StringName,
+	state_key: StringName,
+	undo: UndoStrategy,
+	before: Variant = null,
+	after: Variant = null
+) -> MutationRecord:
 	var record := MutationRecord.new(_next_sequence, _transaction_id, target_id, owner_module, state_key, undo)
+	_audits.append({
+		"sequence": _next_sequence,
+		"transaction_id": _transaction_id,
+		"target_id": target_id,
+		"owner_module": owner_module,
+		"state_key": state_key,
+		"before": before,
+		"after": after,
+		"undo": undo,
+	})
 	_next_sequence += 1
 	_records.append(record)
 	return record

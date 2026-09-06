@@ -106,8 +106,8 @@
 | GATE23 | Changed File Scope | changed_file_scope_validator | 多 AI 阶段 | E4 |
 | GATE24 | Contract Drift | contract_drift_validator + 契约测试（吸收 LN-G10/11） | Phase1 | E2/E3 |
 | GATE25 | State Ownership | state_owner_validator | Phase2 | E3 |
-| GATE26 | Transaction Atomicity | transaction_test（11 场景） | Phase2 | E2 |
-| GATE27 | Rollback Recovery | transaction_test | Phase2 | E2 |
+| GATE26 | Transaction Atomicity | transaction_test（11 场景） | PARTIAL（Phase2） | E2 | 载体已落地：tests/unit/test_transaction_runtime.gd 13 项（01 §118 十一路+嵌套拒绝+Journal 审计，经 GATE2 run_all 执行）；独立点亮随 Phase2 收口（2026-09-06 架构窗） |
+| GATE27 | Rollback Recovery | transaction_test | PARTIAL（Phase2） | E2 | 同 GATE26 载体；逆序恢复/RECOVERY_REQUIRED 五元组/COMMITTED 终态拒绝已覆盖（2026-09-06 架构窗） |
 | GATE28 | Command Ordering | command_ordering_test | Phase2 | E2 |
 | GATE29 | Vertical Slice | vs_replay 套件 | Phase2 | E2 |
 | GATE30 | Context Freshness | context_pack_validator | 多 AI 阶段 | E3 |
