@@ -5,7 +5,7 @@
  "exempt": [
   "player"
  ],
- "total": 263,
+ "total": 233,
  "note_20260905": "蓝图扫描口径为 202 处/36 文件（含更多引用面）；本基线为可复扫口径，以本文件为准继续只减不增。",
  "violations": [
   {
@@ -192,16 +192,6 @@
    "file": "data/configs/difficulty/difficulty_table.json",
    "line": 28,
    "id": "diff_normal_name"
-  },
-  {
-   "file": "data/configs/forge/recipes.json",
-   "line": 5,
-   "id": "forge_iron_sword"
-  },
-  {
-   "file": "data/configs/forge/recipes.json",
-   "line": 7,
-   "id": "material_iron_001"
   },
   {
    "file": "data/configs/forge/recipes.json",
@@ -1177,10 +1167,16 @@
    "file": "data/configs/shop/shops.json",
    "line": 23,
    "id": "weapon_sword_steel_001"
+  },
+  {
+   "file": "data/configs/forge/recipes.json",
+   "line": 7,
+   "id": "material_ore_001"
   }
  ],
  "extra_patterns": [
   "^(nv|mt)_(npc|dlg|quest|item|abil|stat|enemy|battle|region|shop|recipe|sect|flag)_[a-z0-9][a-z0-9_]*$"
  ],
- "_extra_patterns_doc": "ADR-0002(2026-09-06 APPROVED)二级形态：区域缩写_域_local。新增区域缩写=在此正则显式扩(nv|mt|...)，diff 可审计；存量 nv/mt 迁移随 Phase3~4(须配套存档迁移链+Impact Analysis)。注意：仅「缩写+白名单域段」合法化；缩写+非标域段(如 nv_qg_demo 的 qg)仍须基线登记待迁移。"
+ "_extra_patterns_doc": "ADR-0002(2026-09-06 APPROVED)二级形态：区域缩写_域_local。新增区域缩写=在此正则显式扩(nv|mt|...)，diff 可审计；存量 nv/mt 迁移随 Phase3~4(须配套存档迁移链+Impact Analysis)。注意：仅「缩写+白名单域段」合法化；缩写+非标域段(如 nv_qg_demo 的 qg)仍须基线登记待迁移。",
+ "note_20260906": "F1(EC-R07) 迁移收编：收敛 forge_iron_sword/material_iron_001 两对；收编 (forge/recipes.json, material_ore_001)=引用既有存量定义的位置转移，非新增债。"
 }

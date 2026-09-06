@@ -79,6 +79,8 @@ def scan():
             pairs = []
             _walk(data, pairs)
             for key, val in pairs:
+                if key.startswith("_") or key in ("reason",):
+                    continue   # 元数据键（_doc/_note/reason 等）非玩家向文本，不入 C-R12 扫描面
                 if CJK.search(val):
                     current.add("%s | %s | %s" % (rel, key, val.strip()[:60]))
                 if key.endswith(TEXT_ID_SUFFIX) and val.strip():

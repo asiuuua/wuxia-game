@@ -6,6 +6,18 @@
       "reason": "town_npcs.json 全局表数据源标识退役（16 图 CP-1b）；实体 id 未退役者以 regions 真源为准",
       "retired_at": "2026-09-04",
       "successor": ""
+    },
+    {
+      "id": "forge_iron_sword",
+      "reason": "10图EC-R07/P-E7：forge 前缀违 03 白名单（forge 非 13 域），2026-09-06 迁 recipe_iron_sword",
+      "retired_at": "2026-09-06",
+      "successor": "recipe_iron_sword"
+    },
+    {
+      "id": "material_iron_001",
+      "reason": "10图EC-R07：悬空调料（materials.json 无定义，配方恒缺料），2026-09-06 改配方输入=material_ore_001（精铁矿石，定义在案）",
+      "retired_at": "2026-09-06",
+      "successor": "material_ore_001"
     }
   ]
 }
