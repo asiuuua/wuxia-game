@@ -9,21 +9,22 @@
 #   parent.add_child(n); ... 使用 n ...
 #   ObjectPool.release("hit_spark", n)
 # 生命周期：切场景边界（GameManager.start_battle / return_to_town 调 ResourceManager.reclaim_all）内统一 clear()，避免跨场景泄漏。
-# 注意：本脚本作为 autoload 注册（name=ObjectPool，见 project.godot），故无需声明 class_name —— 同名 autoload 单例已提供全局
-#       ObjectPool 实例引用；若再写 class_name ObjectPool 会与 autoload 单例名冲突（"hides an autoload singleton"）导致加载失败。
-extends Node
+# 批D 子批1（ADR-0007 装配收敛）：原 autoload 降级为纯静态工具类（class_name + static 成员）——
+#       池本就是进程级单例语义，static 化后调用方写法不变（ObjectPool.xxx），无状态实例化成本。
+class_name ObjectPool
+extends RefCounted
 
 const DEFAULT_MAX := 256
 
-var _pools: Dictionary = {}
+static var _pools: Dictionary = {}
 
-func _ensure(key: String) -> Dictionary:
+static func _ensure(key: String) -> Dictionary:
 	if not _pools.has(key):
 		_pools[key] = {"free": [], "active": [], "max": DEFAULT_MAX}
 	return _pools[key]
 
 ## 取一个可用节点：优先复用空闲桶；否则在 max 内新建；达上限返回 null（绝不偷活跃节点）
-func acquire(key: String, factory: Callable) -> Node:
+static func acquire(key: String, factory: Callable) -> Node:
 	var pool := _ensure(key)
 	if not pool.free.is_empty():
 		var n: Node = pool.free.pop_back()
@@ -39,7 +40,7 @@ func acquire(key: String, factory: Callable) -> Node:
 	return null
 
 ## 归还节点：从活跃桶移除，从父节点摘下，入空闲桶待复用
-func release(key: String, node: Node) -> void:
+static func release(key: String, node: Node) -> void:
 	var pool := _ensure(key)
 	var idx: int = pool.active.find(node)
 	if idx >= 0:
@@ -50,11 +51,11 @@ func release(key: String, node: Node) -> void:
 		pool.free.append(node)
 
 ## 设置某 key 的最大实例数（默认 256）
-func set_max(key: String, max_count: int) -> void:
+static func set_max(key: String, max_count: int) -> void:
 	_ensure(key).max = max_count
 
 ## 回收：释放某 key（或全部 key）的所有节点，切场景 / 退场时调用，避免跨场景泄漏
-func clear(key: String = "") -> void:
+static func clear(key: String = "") -> void:
 	if key == "":
 		for k in _pools.keys():
 			_free_pool(_pools[k])
@@ -63,7 +64,7 @@ func clear(key: String = "") -> void:
 		_free_pool(_pools[key])
 		_pools.erase(key)
 
-func _free_pool(pool: Dictionary) -> void:
+static func _free_pool(pool: Dictionary) -> void:
 	for n in pool.free + pool.active:
 		if is_instance_valid(n):
 			n.queue_free()
@@ -71,7 +72,7 @@ func _free_pool(pool: Dictionary) -> void:
 	pool.active.clear()
 
 ## 诊断：当前活跃 / 空闲计数（调试用）
-func stats(key: String) -> Dictionary:
+static func stats(key: String) -> Dictionary:
 	if not _pools.has(key):
 		return {"active": 0, "free": 0, "max": 0}
 	var p: Dictionary = _pools[key]

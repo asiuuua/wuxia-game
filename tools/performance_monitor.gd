@@ -1,8 +1,8 @@
 # tools/performance_monitor.gd
 # 性能监控器（规范 §4.6.1）：仅调试构建启用；记录帧率/卡顿/模块计时，守住性能红线。
-# 注册为 Autoload 单例 PerformanceMonitor，发布版自动 queue_free。
-# 注：autoload 脚本不写 class_name（与单例名冲突），通过全局单例名调用。
-
+# 批D 子批1（ADR-0007 装配收敛）：原 autoload 降级为普通 Node 服务——由 Bootstrap（生命周期壳）
+# 在 _ready 挂载，debug 之外自毁（原语义保真）；观察器零业务调用方，挂载点=唯一生命周期接线。
+class_name PerformanceMonitor
 extends Node
 
 var _frame_times: Array[float] = []
