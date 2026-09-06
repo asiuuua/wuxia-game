@@ -247,7 +247,15 @@ func _process(delta: float) -> void:
 	_poll_preloads()
 	_animate_loading_overlay(delta)
 
+## ADR-0007 批A：装配收敛开关（默认 false=旧路径零行为；true=经 ApplicationRoot 组装后引用转发）
+const USE_APPLICATION_ROOT := false
+
 func _init_services() -> void:
+	if USE_APPLICATION_ROOT:
+		var root := ApplicationRoot.new()
+		root.assemble()
+		_adopt_from(root)
+		return
 	combat_service = CombatService.new()
 	inventory_service = InventoryService.new()
 	ability_service = AbilityService.new()
@@ -290,6 +298,27 @@ func _on_screen_shake_requested(intensity: float, duration: float) -> void:
 	tw.finished.connect(func() -> void:
 		if is_instance_valid(cam):
 			cam.offset = base)
+
+## ADR-0007 批A：ApplicationRoot 组装结果引用转发（成员同名拷贝，调用方/测试零改动）
+func _adopt_from(root: ApplicationRoot) -> void:
+	combat_service = root.combat_service
+	inventory_service = root.inventory_service
+	ability_service = root.ability_service
+	quest_service = root.quest_service
+	equipment_service = root.equipment_service
+	alchemy_service = root.alchemy_service
+	forge_service = root.forge_service
+	shop_service = root.shop_service
+	sect_service = root.sect_service
+	effect_registry = root.effect_registry
+	dialogue_service = root.dialogue_service
+	dialogue_event_executor = root.dialogue_event_executor
+	bond_service = root.bond_service
+	romance_service = root.romance_service
+	sworn_service = root.sworn_service
+	master_service = root.master_service
+	relationship_service = root.relationship_service
+
 
 func _register_saveables() -> void:
 	SaveManager.register_saveable(player_state)

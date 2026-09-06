@@ -47,4 +47,4 @@ GATE08/09（语义复用 GATE2 存档套件）/ GATE13 God Object（state_owner 
 
 - **Write Lease**：tools/write_lease.py（宪法 0-G.8 载体）——FROZEN_SCOPE（core/kernel/、core/execution/、EventBus.gd、arch_linter_baseline.json）无租约禁止动；claim/check/release/list；4h 过期。多窗口施工前必须 claim（B 批撞车实录的根治件）。
 - **GATE22 §93 完整矩阵**：kernel 面绝对禁令（零基线）+core 面基线 64 条禁新增；0-E.3 Adapter 豁免（adapter/ 或 *_adapter.gd）。
-- **ADR-0007**：装配收敛实施案 PROPOSED，批准后按批 A~D 实施（详见 ADR 文档）。
+- **ADR-0007**：APPROVED（2026-09-06 用户批准）。**批A 已落地**：application/application_root.gd（Create/Inject 段+装配完整性自检）+ GameManager.USE_APPLICATION_ROOT 开关（默认 false 旧路径）+ _adopt_from 引用转发（调用方/测试零改动）+ 4 用例；双开关各 77 套件全绿等价验证。批B（shop/quest/inventory 迁移+Register 段移交）随下一批次。
