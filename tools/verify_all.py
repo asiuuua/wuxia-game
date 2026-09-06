@@ -410,12 +410,22 @@ def gate42_context_pack():
     return code == 0
 
 
+def gate43_localization():
+    """GATE43：GATE18（LN）Localization 物理槽——03图 C-R12 硬编码中文基线禁新增 + VA5 display 文本键核对。"""
+    out, code = _run([sys.executable, os.path.join(HERE, "localization_validator.py")])
+    for ln in out.splitlines():
+        s = ln.strip()
+        if s.startswith(("✗", "⚠", "ℹ")) or "结论" in s:
+            print("   " + s)
+    return code == 0
+
+
 GATES = {1: gate1_quit_check, 2: gate2_unit_tests, 3: gate3_project_validate,
          4: gate4_preset_redline, 5: gate5_no_dual_write, 6: gate6_ref_index,
          7: gate7_studio_smoke, 8: gate8_structure, 9: gate9_js_lint,
          17: gate17_assets_contract,
          21: gate21_type_policy, 22: gate22_forbidden_api, 32: gate32_foundation_freeze,
-         41: gate41_arch_validators, 42: gate42_context_pack}
+         41: gate41_arch_validators, 42: gate42_context_pack, 43: gate43_localization}
 
 
 def main():

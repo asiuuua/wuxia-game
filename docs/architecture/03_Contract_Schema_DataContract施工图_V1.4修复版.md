@@ -476,6 +476,10 @@ Runtime Consumption (Domain / Application)
 | C-R10 | 业务代码禁止 `load("res://...")` | FATAL | E3/E4 | `forbidden_api_validator` | GATE22 |
 | C-R11 | Definition 类必须 `RefCounted` + 私有字段 + getter | ERROR | E3 | `definition_shape_validator` | GATE21 |
 | C-R12 | Definition 禁止硬编码中文（须本地化键） | ERROR | E3 | `localization_validator` | GATE18 |
+
+> **GATE18 物理化批注（2026-09-06 F5）**：C-R12 执行器已落地=tools/localization_validator.py（物理槽 GATE43 进 verify_all 必过清单）。存量 362 处中文内联（P-Q9 同族）按「基线禁新增」管理（tools/loc_baseline.json，只减不增）；VA5-DISPLAY-KEY（*_text_id 须存在于 strings.csv）同器核对，severity=WARN 按 VA-3 处置通报不拦。三同步：contract_registry 槽 43 / manifest / PROJECT_STATUS。
+
+> **GATE18 物理化批注（2026-09-06 F5）**：C-R12 执行器已落地=tools/localization_validator.py（物理槽 GATE43 进 verify_all 必过清单）。存量 362 处中文内联（P-Q9 同族）按「基线禁新增」管理（tools/loc_baseline.json，只减不增）；VA5-DISPLAY-KEY（*_text_id 须存在于 strings.csv）同器核对，severity=WARN 按 VA-3 处置通报不拦。三同步：contract_registry 槽 43 / manifest / PROJECT_STATUS。
 | C-R13 | Definition 禁止存资源路径（须 Asset ID） | ERROR | E3 | `asset_ref_validator` | GATE17 |
 | C-R14 | Pack manifest 必填字段完整 | FATAL | E3 | `pack_manifest_validator` | GATE06 |
 | C-R15 | Pack 依赖可解析、无循环 | FATAL | E3 | `pack_dependency_validator` | GATE06 |

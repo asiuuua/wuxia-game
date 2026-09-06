@@ -145,6 +145,15 @@
       "domain": "governance",
       "report_only": false,
       "host": "tools/context_pack_validator.py"
+    },
+    {
+      "slot": 43,
+      "name": "localization_validator",
+      "ln_gate": "GATE18",
+      "tier": "default",
+      "domain": "localization",
+      "report_only": false,
+      "host": "tools/localization_validator.py (C-R12 硬编码中文基线禁新增 + VA5-DISPLAY-KEY)"
     }
   ],
   "pre_commit_hooks": [

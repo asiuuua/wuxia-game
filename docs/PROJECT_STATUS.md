@@ -23,6 +23,7 @@
 | GATE32 Foundation Freeze | ACTIVE | EventBus 86 信号基线 + save_body_registry 登记制 |
 | GATE41 架构校验器组 | ACTIVE | dependency 禁引矩阵+环 / module_scope / test_naming / state_owner（B 批收口，见下） |
 | GATE42 Context Pack | ACTIVE | GATE30（LN）物理槽：0-G.5 六字段+0-G.6 STALE 红线+01§127 对账（C2②） |
+| GATE43 Localization | ACTIVE（F5 物理化 2026-09-06） | GATE18（LN）物理槽：localization_validator——C-R12 硬编码中文基线禁新增（loc_baseline.json 362 条只减不增）+VA5 display 文本键核对 strings.csv（WARN 通报） |
 | GATE40 性能基准 | ACTIVE | --tier performance（17 图 SBP-6） |
 
 ## 逻辑槽（LN，宪法 §88 ∪ 01 §127）——关键状态
@@ -41,7 +42,7 @@
 
 ## 未点亮清单（防纸面门禁）
 
-GATE08/09（语义复用 GATE2 存档套件）/ GATE13 God Object（state_owner 前身观察）/ GATE18 Localization / GATE19（=GATE40 已覆盖）——状态细节以 04 图 §2 表为准。
+GATE08/09（语义复用 GATE2 存档套件）/ GATE13 God Object（state_owner 前身观察）/ GATE19（=GATE40 已覆盖）——状态细节以 04 图 §2 表为准。GATE18 Localization 已于 2026-09-06（F5）经 GATE43 物理化，移出未点亮清单。
 
 ## C 组基础设施（2026-09-06）
 

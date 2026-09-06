@@ -141,6 +141,11 @@
       "name": "compress_textures.py",
       "role": "纹理压缩双保险第二层（ST-2 批2：desktop_studio 111行版已退役合并，全 tools 禁同名双份）",
       "gate": "GATE17族"
+    },
+    {
+      "name": "localization_validator.py",
+      "role": "GATE18 Localization（C-R12 中文内联基线禁新增+VA5 display 键核对 strings.csv）",
+      "gate": "GATE43"
     }
   ]
 }
