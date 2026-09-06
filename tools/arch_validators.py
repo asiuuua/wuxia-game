@@ -495,6 +495,31 @@ def report_state_owners():
         notes.append("state_owner REPORT: %s 写入口 %d 个（观察期 T-4，不拦）" % (rel, n))
 
 
+def scan_content_graph_cycles():
+    """Phase 5 Content Dependency Graph 环检测（REPORT 模式，不拦截）。
+    统计 Content Graph 中的环数量与类型，供后续细化规则时参考。
+    已知正常模式：NPC↔Dialog 双向绑定（NPC.dialog_id ↔ Dialog.npc_id 互指）。"""
+    try:
+        sys.path.insert(0, HERE)
+        import dep_graph
+        cycles = dep_graph.content_cycles()
+    except Exception as e:
+        notes.append("Content Graph 环检测不可用：%s" % e)
+        return
+    type_counts = {}
+    for c in cycles:
+        key = tuple(sorted({k for k, _e in c}))
+        type_counts[key] = type_counts.get(key, 0) + 1
+    breakdown = ", ".join(
+        "%s=%d" % ("+".join(k), v)
+        for k, v in sorted(type_counts.items(), key=lambda x: -x[1])
+    )
+    notes.append(
+        "Content Graph 环检测（REPORT）：共 %d 个环（%s）；NPC↔Dialog 双向绑定属正常模式"
+        % (len(cycles), breakdown or "无")
+    )
+
+
 def main():
     if "--fix" in sys.argv:
         fix_baselines()
@@ -509,6 +534,7 @@ def main():
     scan_ui_flow_whitelist()
     scan_services_no_stage()
     scan_view_model_hygiene()
+    scan_content_graph_cycles()
     report_state_owners()
 
     print("arch_validators · 04图 GATE41（dependency/module_scope/test_naming/test_shape + cross_write R004/007 + state_owner 基线+REPORT + ST-R01 studio_writes + PV-R03 ui_flow + QD-R10 services_no_stage + PV-1 vm_hygiene）")
