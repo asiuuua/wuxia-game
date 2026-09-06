@@ -1,0 +1,29 @@
+{
+  "architecture_version": "01_V1.4修复版#50fd7d4be3a7c3fe",
+  "constitution_version": "V1.4",
+  "contract_versions": {
+    "01_总体架构施工图_V1.4修复版.md": "50fd7d4be3a7c3fe",
+    "02_Domain_Kernel施工图_V1.4修复版.md": "fdb4666961d0eda0",
+    "03_Contract_Schema_DataContract施工图_V1.4修复版.md": "dbb355e205a8b24c",
+    "04_Test_Infrastructure_Architecture_Gate施工图_V1.4修复版.md": "15d03773a521b76e",
+    "05_Content_Registry_Content_Pipeline施工图_V1.4修复版.md": "506ced9c97ae9a36",
+    "06_Actor_Player_NPC施工图_V1.4修复版.md": "a378ef92134110dc",
+    "07_World_Time_Schedule施工图_V1.4修复版.md": "b77fe44bf36d59b0",
+    "08_Relationship_Faction施工图_V1.4修复版.md": "01d5ca7b2deea751",
+    "09_Item_Inventory_Equipment施工图_V1.4修复版.md": "63a68b48d7caefc0",
+    "10_Economy_Shop_Crafting施工图_V1.4修复版.md": "a878a5fd4433d5bf",
+    "11_Ability_Combat_CombatAI施工图_V1.4修复版.md": "f1f14e4a04bea881",
+    "12_Quest_Dialogue_Story施工图_V1.4修复版.md": "5df1b49ab288b439",
+    "13_Save_Persistence_Migration施工图_V1.4修复版.md": "53a6585b6c10bd16",
+    "14_Presentation_Input_ViewModel施工图_V1.4修复版.md": "90c5c231e79bce24",
+    "15_Studio_Authoring_Validator_Preview施工图_V1.4修复版.md": "6b88a0a5c8fd98fe",
+    "16_Content_Production施工图_V1.4修复版.md": "a56e94e9e979ccc8",
+    "17_Simulation_Balance_Performance施工图_V1.4修复版.md": "d0ad9d894e9a9562",
+    "18_Release_Hardening_Compatibility_Migration施工图_V1.4修复版.md": "a8b66c27d9613a61"
+  },
+  "save_schema_version": "1.2.0",
+  "schema_versions": {
+    "content_pack_manifest": "MISSING"
+  },
+  "verified_revision": "9708aaf14efb"
+}

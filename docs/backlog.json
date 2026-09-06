@@ -219,10 +219,10 @@
         {
           "title": "装配收敛 ADR-0007（批次3主战役）",
           "type": "待办",
-          "status": "open",
+          "status": "resolved",
           "placeholder": false,
           "source": "01图§29/Task#58",
-          "detail": "18 Autoload→ApplicationRoot+Write Lease+GameManager双装配期；用户已批准开工",
+          "detail": "C1 推进至批准即执行态：ADR-0007 完整起草（PROPOSED）+Write Lease 落地+分批 A~D 方案+回滚策略；批准后按批实施（2026-09-06 C 批）",
           "suggestion": "ADR起草→评审→分批迁移"
         },
         {
@@ -683,10 +683,10 @@
         {
           "title": "GATE30 Context Integrity & Freshness 物理化进 verify_all",
           "type": "未实现",
-          "status": "open",
+          "status": "resolved",
           "placeholder": false,
           "source": "04图升表口/ADR-0005",
-          "detail": "context_pack_validator 未实现",
+          "detail": "C2② 完成：context_pack_validator 进 GATE42（0-G.5/0-G.6+对账），verify_all 十五槽（2026-09-06 C 批）",
           "suggestion": "随 ACR 升表"
         }
       ]

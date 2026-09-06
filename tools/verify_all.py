@@ -5,7 +5,7 @@ verify_all.py — 一键验证入口（架构整改 P0-c 落地；逐步扩容�
 把「证明没踩坏游戏」的全部门禁串成一条命令，任何窗口/任何人改动代码或数据后必须全绿：
 
   GATE1  headless --quit 零 SCRIPT/PARSE/COMPILE 错误（自愈：新 class 自动 --import 重建缓存）
-  GATE2  tests/unit/run_all.tscn 单元套件（零 ✗ 且 失败 M=0）
+  GATE2  tests/unit+tests/integration 套件（零 ✗ 且 失败 M=0）
   GATE3  validate_project.gd 工程规范（JSON 全可解析 / 禁 .tres / 无硬编码数据路径 / class_name 规范）
   GATE4  战斗预设红线：data/configs/battles/grids/preset_*.json 存在性校验
   GATE5  双写防线：town_npcs.json 只读留档，代码不得再写它
@@ -400,12 +400,22 @@ def gate41_arch_validators():
     return code == 0
 
 
+def gate42_context_pack():
+    """GATE42：GATE30（LN）Context Integrity & Freshness 物理槽（宪法 0-G.5/0-G.6，C2②）。"""
+    out, code = _run([sys.executable, os.path.join(HERE, "context_pack_validator.py")])
+    for ln in out.splitlines():
+        s = ln.strip()
+        if s.startswith(("✗", "ℹ", "[G")) or "结论" in s:
+            print("   " + s)
+    return code == 0
+
+
 GATES = {1: gate1_quit_check, 2: gate2_unit_tests, 3: gate3_project_validate,
          4: gate4_preset_redline, 5: gate5_no_dual_write, 6: gate6_ref_index,
          7: gate7_studio_smoke, 8: gate8_structure, 9: gate9_js_lint,
          17: gate17_assets_contract,
          21: gate21_type_policy, 22: gate22_forbidden_api, 32: gate32_foundation_freeze,
-         41: gate41_arch_validators}
+         41: gate41_arch_validators, 42: gate42_context_pack}
 
 
 def main():

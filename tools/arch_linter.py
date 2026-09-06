@@ -37,6 +37,21 @@ RE_SIGNAL_DICT = re.compile(r"^signal\s+\w+\s*\([^)]*:\s*(Dictionary|Array)\b", 
 RE_CORE_FORBIDDEN = re.compile(
     r"\bFileAccess\b|\bDirAccess\b|\bJSON\s*\.|\bTime\.get_|\brandf\(|\brandi\(|\bRandomNumberGenerator\b")
 RE_SYS_TIME = re.compile(r"\bTime\.get_unix_time_from_system\b|\bTime\.get_datetime_string_from_system\b")
+# C2①（2026-09-06）：宪法 01 §93 完整 Kernel API 矩阵（GATE22 升版）——
+# FileAccess/DirAccess/JSON/ResourceLoader/SceneTree/get_tree/get_node/ProjectSettings/
+# randf/randi/RandomNumberGenerator/Time.get_*/OS.get_datetime。
+# kernel 面（core/kernel/）绝对禁令零基线（实测零命中）；core 其余面基线禁新增
+# （arch_linter_baseline.json gate22_kernel93_baseline，存量系 Godot 协作基建=0-B.0 Boundary 性质）。
+# 0-E.3 Adapter 白名单豁免：adapter/ 目录或 *_adapter.gd 命名，逐项登记可机器校验（RULE 001 出口）。
+RE_KERNEL93 = re.compile(
+    r"\bNode\b|\bSceneTree\b|\bget_tree\b|\bget_node\b|\bFileAccess\b|\bDirAccess\b"
+    r"|\bJSON\s*\.|\bResourceLoader\b|\bProjectSettings\b|\brandf\s*\(|\brandi\s*\("
+    r"|\bRandomNumberGenerator\b|\bTime\.get_|\bOS\.get_datetime\b")
+
+
+def _is_adapter(rel: str) -> bool:
+    """0-E.3 白名单豁免判据：adapter/ 目录或 *_adapter.gd 命名（逐项登记制，基线可查）。"""
+    return "/adapter/" in rel or rel.endswith("_adapter.gd")
 RE_GLOBAL_RAND = re.compile(r"(?<![.\w])randf\s*\(|(?<![.\w])randi\s*\(|(?<![.\w])randi_range\s*\(|(?<![.\w])randf_range\s*\(")
 
 
@@ -106,7 +121,34 @@ def scan_forbidden_api():
                 code = _code_part(ln)
                 if RE_GLOBAL_RAND.search(code):
                     hits.append({"gate": "GATE22-rand", "file": rel, "line": i, "code": code[:110]})
+    hits.extend(scan_kernel93())
     return hits
+
+
+def scan_kernel93():
+    """C2①：01 §93 完整 Kernel API 矩阵（GATE22 升版，0-E.3/0-E.4 机器化）。
+    core/kernel/ 绝对禁令（零基线，实测零命中）；core 其余面基线禁新增；
+    adapter（0-E.3 白名单）豁免——即 RULE 001 的 Godot 协作合法出口。"""
+    baseline = _load_baseline()
+    known = set(baseline.get("gate22_kernel93_baseline", []))
+    out = []
+    for rel in _gd_files():
+        if not rel.startswith("core/") or _is_adapter(rel):
+            continue
+        body = _read(rel)
+        is_kernel = rel.startswith("core/kernel/")
+        for i, ln in enumerate(body.splitlines(), 1):
+            code = _code_part(ln)
+            if not RE_KERNEL93.search(code):
+                continue
+            sig = "%s | %s" % (rel, code.strip()[:90])
+            if is_kernel:
+                out.append({"gate": "GATE22-kernel93", "file": rel, "line": i,
+                            "code": "KERNEL 绝对禁令（0-E.3 无豁免）: " + code[:100]})
+            elif sig not in known:
+                out.append({"gate": "GATE22-k93new", "file": rel, "line": i,
+                            "code": "§93 矩阵新增（未入基线）: " + code[:100]})
+    return out
 
 
 def scan_eventbus_freeze():

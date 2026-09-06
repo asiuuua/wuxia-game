@@ -102,7 +102,7 @@
 | LN | 逻辑名（01 §127 原文） | 实现载体 | 点亮 Phase | 级别 |
 |---|---|---|---|---|
 | GATE21 | GDScript Type Policy | arch_lint --rules type | Phase1 | E3 |
-| GATE22 | Forbidden API | arch_lint --rules api | Phase1 | E3/E4 |
+| GATE22 | Forbidden API | arch_lint --rules api | **ACTIVE**（C2① 升版 2026-09-06） | E3/E4 | 01 §93 完整矩阵（scan_kernel93：kernel 面绝对禁令+core 面基线 64 条禁新增）+ 0-E.3 Adapter 白名单豁免（adapter/ 或 *_adapter.gd 逐项登记） |
 | GATE23 | Changed File Scope | changed_file_scope_validator | 多 AI 阶段 | E4 |
 | GATE24 | Contract Drift | contract_drift_validator + 契约测试（吸收 LN-G10/11） | Phase1 | E2/E3 |
 | GATE25 | State Ownership | state_owner_validator | **ACTIVE**（2026-09-06 B1 收口） | E3 | 载体=arch_validators 双模式：写入口基线禁新增（gate25_owner_writers，18 文件 43 入口）+ 跨模块直写扫描（gate41_cross_module_writes 基线 1 条）；REPORT 观察保留（T-4 多写者阈值继续） |
@@ -110,7 +110,7 @@
 | GATE27 | Rollback Recovery | transaction_test | **ACTIVE**（2026-09-06 B3 点亮） | E2 | 同 GATE26 载体；逆序恢复/RECOVERY_REQUIRED 五元组/COMMITTED 终态拒绝已覆盖（2026-09-06 架构窗） |
 | GATE28 | Command Ordering | command_ordering_test | Phase2 | E2 |
 | GATE29 | Vertical Slice | vs_replay 套件 | Phase2 | E2 |
-| GATE30 | Context Integrity & Freshness（原 Context Freshness，V1.4 扩义改名） | context_pack_validator | 多 AI 阶段 | E3 |
+| GATE30 | Context Integrity & Freshness（原 Context Freshness，V1.4 扩义改名） | context_pack_validator | **ACTIVE**（C2② 物理化 2026-09-06，物理槽 GATE42） | E3 | 宪法 0-G.5 六字段+0-G.6 Freeze 一致性（STALE 红）+01 §127 GATE21~32 硬性验收对账，进 verify_all 十五槽 |
 | GATE31 | Permission Evidence | write_lease_validator | 多 AI 阶段 | E4 |
 | GATE32 | Foundation Freeze Consistency | freeze_manifest_validator | Phase1 | E3 |
 

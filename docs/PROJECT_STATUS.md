@@ -22,6 +22,7 @@
 | GATE22 Forbidden API | ACTIVE | core 禁 IO/JSON/随机；存量 3 条基线 |
 | GATE32 Foundation Freeze | ACTIVE | EventBus 86 信号基线 + save_body_registry 登记制 |
 | GATE41 架构校验器组 | ACTIVE | dependency 禁引矩阵+环 / module_scope / test_naming / state_owner（B 批收口，见下） |
+| GATE42 Context Pack | ACTIVE | GATE30（LN）物理槽：0-G.5 六字段+0-G.6 STALE 红线+01§127 对账（C2②） |
 | GATE40 性能基准 | ACTIVE | --tier performance（17 图 SBP-6） |
 
 ## 逻辑槽（LN，宪法 §88 ∪ 01 §127）——关键状态
@@ -35,9 +36,15 @@
 | GATE03 Integration | ACTIVE（A1 实体化） | tests/integration 3 用例入 GATE2 扫描 |
 | GATE23 Changed File Scope | PLANNED | 多 AI 阶段，依赖 Write Lease 元数据 |
 | GATE24 Contract Drift | PARTIAL | pre-commit 0b 信号审计 + GATE32 基线镜像承载；独立 contract_drift_validator 待建 |
-| GATE30 Context Integrity & Freshness | PLANNED | context_pack_validator，物理化随 ACR（04 图 GATE30 改名批注） |
+| GATE30 Context Integrity & Freshness | ACTIVE（C2② 物理化） | context_pack_validator 进 GATE42，STALE 即红；STALE 期间禁 Foundation 修改（0-G.6） |
 | GATE11 API Contract | PARTIAL | eventbus_signal_registry.json 初版 + GATE32 镜像；Owner 抽审待做 |
 
 ## 未点亮清单（防纸面门禁）
 
 GATE08/09（语义复用 GATE2 存档套件）/ GATE13 God Object（state_owner 前身观察）/ GATE18 Localization / GATE19（=GATE40 已覆盖）——状态细节以 04 图 §2 表为准。
+
+## C 组基础设施（2026-09-06）
+
+- **Write Lease**：tools/write_lease.py（宪法 0-G.8 载体）——FROZEN_SCOPE（core/kernel/、core/execution/、EventBus.gd、arch_linter_baseline.json）无租约禁止动；claim/check/release/list；4h 过期。多窗口施工前必须 claim（B 批撞车实录的根治件）。
+- **GATE22 §93 完整矩阵**：kernel 面绝对禁令（零基线）+core 面基线 64 条禁新增；0-E.3 Adapter 豁免（adapter/ 或 *_adapter.gd）。
+- **ADR-0007**：装配收敛实施案 PROPOSED，批准后按批 A~D 实施（详见 ADR 文档）。
