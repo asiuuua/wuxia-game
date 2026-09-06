@@ -127,6 +127,7 @@ signal screen_shake_requested(intensity: float, duration: float)
 
 # === 游戏流程 ===
 @warning_ignore("unused_signal")
+signal content_ready(fingerprint: String)                          # 内容装载完成（LD-2 ⑤ COMMITTED 语义）：fingerprint=VE-1 聚合指纹前 16 位
 signal game_started()
 @warning_ignore("unused_signal")
 signal game_saved(slot: int)

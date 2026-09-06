@@ -379,6 +379,17 @@ def gate32_foundation_freeze():
     return _arch_gate("GATE32")
 
 
+def gate17_assets_contract():
+    """GATE17：05图 asset_ref_validator 宿主（CO-R02）——资源/数据契约静态扫描
+    （res:// 引用存在性 + JSON 合法性；--strict 模式发现问题即拦）。"""
+    out, code = _run([sys.executable, os.path.join(HERE, "check_assets_contract.py"), "--strict"])
+    for ln in out.splitlines():
+        s = ln.strip()
+        if s:
+            print("   " + s)
+    return code == 0
+
+
 def gate41_arch_validators():
     """GATE41：04图架构校验器组——dependency 禁引矩阵+环检测 / module_scope(Test Double 隔离) / test_* 命名 / state_owner REPORT。"""
     out, code = _run([sys.executable, os.path.join(HERE, "arch_validators.py")])
@@ -392,6 +403,7 @@ def gate41_arch_validators():
 GATES = {1: gate1_quit_check, 2: gate2_unit_tests, 3: gate3_project_validate,
          4: gate4_preset_redline, 5: gate5_no_dual_write, 6: gate6_ref_index,
          7: gate7_studio_smoke, 8: gate8_structure, 9: gate9_js_lint,
+         17: gate17_assets_contract,
          21: gate21_type_policy, 22: gate22_forbidden_api, 32: gate32_foundation_freeze,
          41: gate41_arch_validators}
 
@@ -416,13 +428,13 @@ def main():
         print("══════ 结论：%s ══════" % ("全绿 ✓" if ok else "未过 ✗"))
         return 0 if ok else 1
     pick = [int(a) for a in sys.argv[sys.argv.index("--gate") + 1:]] if "--gate" in sys.argv else sorted(GATES)
-    print("══════ verify_all · 项目一键验证（九门禁+架构Linter GATE21/22/32） ══════")
+    print("══════ verify_all · 项目一键验证（九门禁+资产契约GATE17+架构Linter GATE21/22/32/41） ══════")
     print("  工程: %s\n  Godot: %s" % (ROOT, GODOT))
     all_ok = True
     for g in pick:
         fn = GATES.get(g)
         if fn is None:
-            print("未知门禁编号: %s（可用 1-9 / 21 / 22 / 32）" % g)
+            print("未知门禁编号: %s（可用 1-9 / 17 / 21 / 22 / 32 / 41）" % g)
             return 1
         print("── GATE%d ──" % g)
         try:

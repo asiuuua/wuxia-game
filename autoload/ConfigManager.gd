@@ -30,8 +30,6 @@ const NPC_FILES: Array[String] = [
 # 对话分片（P1 工业化扩容）：单文件拆分为 per-dialog 分片 + 全局索引
 # 启动只加载 KB 级索引；get_dialog 按需懒加载分片、闲置自动卸载（pin 保护进行中对话）
 const DIALOG_INDEX_FILE: String = "res://data/configs/npcs/dialogs/_index.json"
-const DIALOG_CACHE_MAX: int = 256
-const DIALOG_IDLE_TTL_MS: int = 2000
 
 # 对话事件映射（事件键 -> 效果数组；trigger_events 引用）
 const DIALOG_EVENT_FILES: Array[String] = [
@@ -95,6 +93,11 @@ const COMBAT_ATTR_FILE := "res://data/configs/combat/attribute_table.json"
 const REGION_MAP_INDEX := "res://data/configs/regions/_map_index.json"
 const REGION_DIR := "res://data/configs/regions/"
 
+# === Content Registry（05 图 CONTENT-RUNTIME v1.2.0 · C-1 过渡态驻本 autoload 位）===
+# Phase3 装配收敛时创建上移 GameManager；ability/item 已走 TypeAdapter，其余 14 类逐批迁
+var content_registry: ContentRegistry = null
+var _shard_cache: ShardCache = null      # 对话分片缓存（CA-2 契约，ShardCache 通用化收编）
+
 var _abilities: Dictionary = {}
 var _items: Dictionary = {}
 var _enemies: Dictionary = {}
@@ -102,10 +105,6 @@ var _battles: Dictionary = {}
 var _quests: Dictionary = {}
 var _npcs: Dictionary = {}
 var _dialog_index: Dictionary = {}
-var _dialog_cache: Dictionary = {}      # dialog_id -> 已加载分片（懒加载）
-var _dialog_pinned: Dictionary = {}     # dialog_id -> pin 计数（>0 时禁止卸载）
-var _dialog_last_access: Dictionary = {}
-var _dialog_last_sweep: int = 0
 var _dialog_events: Dictionary = {}   # 对话事件：事件键 -> 效果数组
 var _difficulties: Dictionary = {}
 var _recipes: Dictionary = {}
@@ -124,13 +123,13 @@ var _config_errors: Array[String] = []  # 配置容错层：累积加载/引用�
 
 func _ready() -> void:
 	_config_errors.clear()
-	_load_abilities()
-	_load_items()
+	_load_dialogs()   # 提前：分片登记先行，供 Registry 收编建 DialogueByNPC（IX-4）
+	content_registry = ContentRegistry.new(_load_json, _record_error)
+	_setup_content_registry()   # ability/item 走 TypeAdapter（05 图 CT-4 绞杀者首批）
 	_load_enemies()
 	_load_battles()
 	_load_quests()
 	_load_npcs()
-	_load_dialogs()
 	_load_dialog_events()
 	_load_player()
 	_load_difficulties()
@@ -149,36 +148,37 @@ func _ready() -> void:
 	_flush_config_errors()
 	_is_loaded = true
 
+## Content Registry 装配（05 图 CT-4：Registry 先建 + ConfigManager 保留旧签名 facade 委托）
+## attach 模式：store 引用直接回接 _abilities/_items，61 个调用方零改动
+func _setup_content_registry() -> void:
+	var ability_adapter := ContentTypeAdapter.new(&"ability", ABILITY_FILES, "skills", "id", "技能")
+	var item_adapter := ContentTypeAdapter.new(&"item", ITEM_FILES, "items", "id", "物品")
+	content_registry.register_adapter(ability_adapter)
+	content_registry.register_adapter(item_adapter)
+	content_registry.attach_shard_registry(_dialog_index)
+	content_registry.set_ready_callback(func(fp: String) -> void:
+		EventBus.content_ready.emit(fp))
+	var lr: OperationResult = content_registry.load_packs()
+	if lr.is_failed():
+		push_error("[Config] Content Registry 装载失败: %s" % lr.get_error().get_message())
+		return
+	_abilities = content_registry.adapter_store(&"ability")
+	_items = content_registry.adapter_store(&"item")
+	_shard_cache = content_registry.shard_cache()
+	# version「最后者胜」保真：ability→item 段落抓取结果回写（其余 14 类按原逻辑继续覆盖）
+	_config_version = content_registry.source_version(&"item")
+
 ## 配置是否加载完成（Bootstrap 启动序列查询）
 func is_loaded() -> bool:
 	return _is_loaded
 
+## Registry 访问口（05 图 CT-1 过渡态；Phase3 装配收敛后由 ApplicationRoot 持有）
+func get_content_registry() -> ContentRegistry:
+	return content_registry
+
 # === 各系统配置加载（含条目级容错守卫）===
 # 守卫规则：每条必须是对象且含非空 id；否则记录并跳过，绝不崩溃
-
-func _load_abilities() -> void:
-	for path in ABILITY_FILES:
-		var data: Dictionary = _load_json(path)
-		_config_version = data.get("version", _config_version)
-		for entry in data.get("skills", []):
-			if not _is_valid_entry(entry, path, "skills"):
-				continue
-			var id: String = str(entry["id"])
-			if _abilities.has(id):
-				_record_error("技能 %s 重复定义，后者覆盖" % id)
-			_abilities[id] = entry
-
-func _load_items() -> void:
-	for path in ITEM_FILES:
-		var data: Dictionary = _load_json(path)
-		_config_version = data.get("version", _config_version)
-		for entry in data.get("items", []):
-			if not _is_valid_entry(entry, path, "items"):
-				continue
-			var id: String = str(entry["id"])
-			if _items.has(id):
-				_record_error("物品 %s 重复定义，后者覆盖" % id)
-			_items[id] = entry
+# （ability/item 两类已由 ContentRegistry TypeAdapter 接管，05 图 CT-4 首批）
 
 func _load_enemies() -> void:
 	for path in ENEMY_FILES:
@@ -741,10 +741,10 @@ func get_all_npc_ids() -> Array[String]:
 
 # === 对话（分片懒加载 + 闲置自动卸载 + pin 保护） ===
 func get_dialog(id: String) -> Dictionary:
-	# 1) 命中缓存直接返回
-	if _dialog_cache.has(id):
-		_dialog_last_access[id] = Time.get_ticks_msec()
-		return _dialog_cache[id]
+	# 1) 命中缓存直接返回（ShardCache CA-2 契约：键=内容 ID，访问即刷新）
+	var cached: Variant = _shard_cache.fetch(id)
+	if cached != null:
+		return cached
 	# 2) 索引中没有该 id
 	if not _dialog_index.has(id):
 		push_error("[Config] 对话不存在: %s" % id)
@@ -755,60 +755,24 @@ func get_dialog(id: String) -> Dictionary:
 	if entry.is_empty():
 		_record_error("对话分片加载失败: %s (%s)" % [id, file])
 		return {}
-	_dialog_cache[id] = entry
-	_dialog_last_access[id] = Time.get_ticks_msec()
-	_sweep_idle_dialogs()
+	_shard_cache.put(id, entry)
+	_shard_cache.sweep()
 	return entry
 
 func has_dialog(id: String) -> bool:
 	return _dialog_index.has(id)
 
-## 钉住：进行中的对话禁止被闲置回收（引用计数）
+## 钉住：进行中的对话禁止被闲置回收（引用计数，CO-R11）
 func pin_dialog(id: String) -> void:
-	_dialog_pinned[id] = int(_dialog_pinned.get(id, 0)) + 1
+	_shard_cache.pin(id)
 
 ## 解钉
 func unpin_dialog(id: String) -> void:
-	var n: int = int(_dialog_pinned.get(id, 0)) - 1
-	if n <= 0:
-		_dialog_pinned.erase(id)
-	else:
-		_dialog_pinned[id] = n
+	_shard_cache.unpin(id)
 
-## 主动卸载（pin 中则跳过）
+## 主动卸载（pin 中则拒绝，ShardCache 内部守卫）
 func unload_dialog(id: String) -> void:
-	if int(_dialog_pinned.get(id, 0)) > 0:
-		return
-	_dialog_cache.erase(id)
-	_dialog_last_access.erase(id)
-
-## 闲置回收：超过 TTL 或超出缓存上限的未 pin 分片自动释放
-func _sweep_idle_dialogs() -> void:
-	var now: int = Time.get_ticks_msec()
-	if now - _dialog_last_sweep < 250:
-		return
-	_dialog_last_sweep = now
-	var expired: Array[String] = []
-	for did in _dialog_cache.keys():
-		if int(_dialog_pinned.get(did, 0)) > 0:
-			continue
-		var last: int = int(_dialog_last_access.get(did, 0))
-		if now - last > DIALOG_IDLE_TTL_MS:
-			expired.append(did)
-	if _dialog_cache.size() > DIALOG_CACHE_MAX:
-		var sorted: Array = Array(_dialog_cache.keys())
-		sorted.sort_custom(func(a: String, b: String) -> bool: return int(_dialog_last_access.get(a, 0)) < int(_dialog_last_access.get(b, 0)))
-		for did in sorted:
-			if int(_dialog_pinned.get(did, 0)) > 0:
-				continue
-			if _dialog_cache.size() <= DIALOG_CACHE_MAX:
-				break
-			expired.append(did)
-	for did in expired:
-		if int(_dialog_pinned.get(did, 0)) > 0:
-			continue
-		_dialog_cache.erase(did)
-		_dialog_last_access.erase(did)
+	_shard_cache.erase(id)
 
 ## 取全部对话 id（基于索引，不触达分片）
 func get_all_dialog_ids() -> Array[String]:

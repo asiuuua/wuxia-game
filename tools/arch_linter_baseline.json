@@ -82,6 +82,7 @@
   "combat_finished": "signal combat_finished(combat_id: String, victory: bool, escaped: bool, unit_snapshots: Array)",
   "combat_skill_equipped": "signal combat_skill_equipped(ability_id: String, slot: int)",
   "combat_started": "signal combat_started(combat_id: String)",
+  "content_ready": "signal content_ready(fingerprint: String)",
   "dialogue_ended": "signal dialogue_ended(dialogue_id: String)",
   "dialogue_event_triggered": "signal dialogue_event_triggered(event_key: String)",
   "dialogue_started": "signal dialogue_started(dialogue_id: String, npc_id: String)",
