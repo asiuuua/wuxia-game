@@ -130,3 +130,31 @@ def _backup_dir(src):
         shutil.copytree(src, dst)
     except Exception:
         pass
+
+
+# ============================ 删除保护统一守卫（Phase 4 Reference 三件套） ============================
+def ref_guard_delete(kind, eid, cascade=None):
+    """删除保护统一守卫（Phase 4 Reference 三件套）：
+    被引用且无显式级联 → (False, blockers, 原因)；cascade 完整覆盖 → (True, [], "")。
+    root=被编辑工程；ref_index 不可用时降级放行（与 DataSink ⑤ 口径一致）。"""
+    try:
+        from services.project_service import discover_project_root
+        import ref_index
+        root = discover_project_root()
+        allowed, blockers = ref_index.validate_delete(kind, eid, root=root)
+        if allowed:
+            return True, [], ""
+        if cascade:
+            a2, uncovered, invalid = ref_index.validate_cascade(kind, eid, cascade, root=root)
+            if a2:
+                return True, [], ""
+            parts = []
+            if uncovered:
+                parts.append("漏报引用方 %s" % uncovered[:6])
+            if invalid:
+                parts.append("cascade 含不存在引用 %s" % invalid[:6])
+            return False, blockers, "级联校验未过：" + "；".join(parts)
+        return False, blockers, "被 %d 处引用：%s" % (
+            len(blockers), "; ".join("%s←%s" % (k, f) for (k, f, _fp) in blockers[:8]))
+    except Exception:
+        return True, [], ""

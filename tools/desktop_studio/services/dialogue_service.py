@@ -9,7 +9,7 @@ import os
 from services import _common
 from services._common import (  # noqa: F401  门面透传用
     _safe_id, _is_valid_id, _ensure_dirs, load_settings, save_settings,
-    load_json, _backup, _backup_dir,
+    load_json, _backup, _backup_dir, ref_guard_delete,
     SAFETY_DIR, TRASH_DIR, BACKUP_DIR, SETTINGS_PATH, LOG_PATH,
     DEFAULT_PROJECT_ROOT, DEFAULT_PORT, DEFAULT_RETENTION_DAYS, DEFAULT_SAFE_MODE,
 )
@@ -105,7 +105,9 @@ def dlg_line_upsert(dlg_id, line):
     return True, ("更新" if found else "新建") + " 台词 %s" % lid
 
 
-def dlg_line_delete(dlg_id, lid):
+def dlg_line_delete(dlg_id, lid, cascade=None):
+    """删除台词行。被同分片跳转（next_id/jump_id）引用 → BLOCK，
+    除非显式 cascade（引用方行 id 列表）声明覆盖；级联声明但跳转未真清时由 DataSink ⑤ 兜底。"""
     if not _is_valid_id(dlg_id):
         return False, "对话 id 非法（仅允许字母/数字/下划线/短横线）"
     p = _shard_path(dlg_id)
@@ -115,24 +117,44 @@ def dlg_line_delete(dlg_id, lid):
     if len(kept) == len(lines):
         return False, "未找到该台词"
     removed = next(ln for ln in lines if ln.get("id") == lid)
+    scoped = ["%s/%s" % (dlg_id, c) for c in (cascade or [])] if cascade else None
+    allowed, blockers, reason = ref_guard_delete("line_jump", "%s/%s" % (dlg_id, lid), scoped)
+    if not allowed:
+        return False, "删除被阻止：%s/%s（%s。需先手动改引用方 next_id/jump_id）" % (dlg_id, lid, reason)
     s = load_settings()
-    data["lines"] = kept
-    dialogue_repo.save_shard(dlg_id, data)
+    try:
+        data["lines"] = kept
+        dialogue_repo.save_shard(dlg_id, data)
+    except Exception as e:
+        return False, "删除失败（已回滚）：%s" % e
     if s.get("safe_mode", True):
         trash_put("dlg_line", "%s/%s" % (dlg_id, lid), removed, {"type": "dlg_line", "dlg_id": dlg_id})
         return True, "已删除并放入回收站：%s" % lid
     return True, "已彻底删除：%s" % lid
 
 
-def dlg_delete(dlg_id):
+def dlg_delete(dlg_id, cascade=None):
+    """删除对话。被 NPC dialog_id 引用 → BLOCK，
+    除非显式 cascade（引用方 NPC id 列表）声明覆盖（级联解除其 dialog_id 后删除）。"""
+    if not _is_valid_id(dlg_id):
+        return False, "对话 id 非法（仅允许字母/数字/下划线/短横线）"
     idx = load_json(_paths()["dlg_index"], {"shards": {}})
     if dlg_id not in idx.get("shards", {}):
         return False, "未找到该对话"
+    allowed, blockers, reason = ref_guard_delete("dialog", dlg_id, cascade)
+    if not allowed:
+        return False, "删除被阻止：%s（%s）" % (dlg_id, reason)
     entry = idx["shards"][dlg_id]
     shard = load_json(_shard_path(dlg_id), {"id": dlg_id, "lines": []})
     s = load_settings()
-    del idx["shards"][dlg_id]
-    dialogue_repo.save_index(idx)
+    try:
+        if cascade:                                   # 显式级联：解除引用方 NPC 的 dialog_id
+            from services import npc_service
+            npc_service.npc_clear_dialog(dlg_id)
+        del idx["shards"][dlg_id]
+        dialogue_repo.save_index(idx)
+    except Exception as e:
+        return False, "删除失败（已回滚）：%s" % e
     if s.get("safe_mode", True):
         trash_put("dlg", dlg_id, {"shard": shard, "index_entry": entry},
                   {"type": "dlg", "dlg_id": dlg_id, "file": _paths()["dlg_index"]})
@@ -142,3 +164,19 @@ def dlg_delete(dlg_id):
     except Exception:
         pass
     return True, "已彻底删除对话：%s" % dlg_id
+
+
+def dlg_clear_npc_binding(dlg_id, npc_id=None):
+    """解除对话分片对 NPC 的顶层绑定（npc_delete 级联用）：
+    npc_id=None 时清任意绑定；绑定不匹配/无绑定则跳过。返回 (ok, msg)。"""
+    if not _is_valid_id(dlg_id):
+        return False, "对话 id 非法"
+    data = load_json(_shard_path(dlg_id), {"id": dlg_id, "lines": []})
+    cur = data.get("npc_id")
+    if npc_id is not None and cur != npc_id:
+        return True, "分片 %s 未绑定 %s，跳过" % (dlg_id, npc_id)
+    if not cur:
+        return True, "分片 %s 无绑定，跳过" % dlg_id
+    data["npc_id"] = ""
+    dialogue_repo.save_shard(dlg_id, data)
+    return True, "已解除 %s 对 %s 的绑定" % (dlg_id, npc_id)

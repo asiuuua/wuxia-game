@@ -14,7 +14,7 @@ import datetime
 from services import _common
 from services._common import (  # noqa: F401  门面透传用
     _safe_id, _is_valid_id, _ensure_dirs, load_settings, save_settings,
-    load_json, _backup, _backup_dir,
+    load_json, _backup, _backup_dir, ref_guard_delete,
     SAFETY_DIR, TRASH_DIR, BACKUP_DIR, SETTINGS_PATH, LOG_PATH,
     DEFAULT_PROJECT_ROOT, DEFAULT_PORT, DEFAULT_RETENTION_DAYS, DEFAULT_SAFE_MODE,
 )
@@ -298,18 +298,46 @@ def npc_upsert(fields):
     return True, ("更新" if found else "新建") + " NPC %s（区域 %s）" % (nid, rid)
 
 
-def npc_delete(nid):
+def npc_delete(nid, cascade=None):
+    """删除 NPC。被其它实体引用（对话分片 npc_id/speaker_id 等）→ BLOCK，
+    除非显式 cascade 声明并完整覆盖引用方（级联解除其绑定后删除）。"""
     agg = _load_all_region_npcs()
     if nid not in agg:
         return False, "未找到该 NPC"
+    allowed, blockers, reason = ref_guard_delete("npc", nid, cascade)
+    if not allowed:
+        return False, "删除被阻止：%s（%s）" % (nid, reason)
     rid, removed = agg[nid]
     p, _ = _load_region_file(rid)
     s = load_settings()
-    _remove_npc_from_region(rid, nid)
+    try:
+        if cascade:                                   # 显式级联：解除引用方分片绑定
+            from services import dialogue_service
+            for dlg_id in cascade:
+                dialogue_service.dlg_clear_npc_binding(dlg_id, nid)
+        _remove_npc_from_region(rid, nid)
+    except Exception as e:
+        return False, "删除失败（已回滚）：%s" % e
     if s.get("safe_mode", True):
         trash_put("npc", nid, dict(removed), {"type": "npc", "file": p})
         return True, "已删除并放入回收站：%s（区域 %s）" % (nid, rid)
     return True, "已彻底删除：%s" % nid
+
+
+def npc_clear_dialog(dlg_id):
+    """解除所有 NPC 对某对话的 dialog_id 引用（dlg_delete 级联用）。返回 (ok, msg)。"""
+    changed = 0
+    for rid in _all_region_ids():
+        _, data = _load_region_file(rid)
+        dirty = False
+        for n in data.get("npcs", []):
+            if n.get("dialog_id") == dlg_id:
+                n["dialog_id"] = ""
+                dirty = True
+                changed += 1
+        if dirty:
+            npc_repo.save_region(rid, data)
+    return True, "已解除 %d 个 NPC 对 %s 的引用" % (changed, dlg_id)
 
 
 def npc_rename(old_id, new_id, fields):
