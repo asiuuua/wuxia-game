@@ -5,7 +5,7 @@
 - 真源：`docs/constitution/PROJECT_CONSTITUTION_V1.2.md`。优先级：宪法>架构>契约>施工图>任务卡>AI推断。
 - AI不是架构师：架构级变更一律 STOP→ACR→评审→ADR→分批迁移，禁推倒重写。ACR-0001 APPROVED(2026-09-06)。
 - 迁移=绞杀者分批：0测量→1 Kernel→2 事务根治(P0)→3 装配收敛(18 Autoload)→4 逐模块→5 基础设施；每Phase可停；§171收编不丢弃。
-- **进度**(2026-09-06)：P1+09/10/11事务根治+D-01~10销项+裁决收口+13/03/16/17图红线批+12图QD-2五类收编(EffectRegistry五kind锁/P-Q1修复/GATE32基线85)；**Phase3批次1=02图kernel 24契约(5a71907)+批次2=TransactionRuntime三件套(b9f6489：begin/run/commit/rollback+Journal八字段,13测试,GATE26/27升PARTIAL,GATE2=69套件)**；下批=批次3装配收敛(需单独ADR+Write Lease)。
+- **进度**(2026-09-06)：P1+09/10/11事务根治+D-01~10销项+裁决收口+13/03/16/17图红线批+12图QD-2五类收编；**Phase3 kernel窗批1~3=02图24契约(5a71907)+TransactionRuntime(b9f6489,GATE26/27升PARTIAL)+ShopTradeTransaction买卖0-C(ae5cdc1,10图EC-5)**；**05图批1=CONTENT-RUNTIME骨架(ab46676:ContentRegistry九API五段Loader/VE-1指纹/ShardCache CA-2/ability+item+dialog三TypeAdapter attach回接/GATE17挂槽,GATE2=72,十四槽全绿)**；05图DoD3~6(五层校验规则表JSON/12索引实建/指纹进SaveHeader/Mod拒载)留批2~3；kernel窗下批=装配收敛(需单独ADR+Write Lease)。
 
 ## 施工图序列 01→18（FROZEN；唯一真源=docs/architecture/NN_*.md）
 - 0-C事务主战场=09/10/11(完成)；13图Phase2红线批全落(SV-1/2/3/4/6)；16 id_validator挂GATE06(基线234只减不增)；17 GATE40+落地；18 RH版本真源/Provenance八字段/Release Gate六项。
@@ -14,7 +14,7 @@
 - 大图余量：06 Actor、08 Relationship、14表现、15 Studio；02 kernel批次1/2/3已落；GATE28 command_ordering未动。
 
 ## 裁决状态（2026-09-06 用户整批追认「按各图§7推荐」）
-02~18 开放问题+ADR-0002/0003/0004 全部追认，登记表=docs/architecture/ADR_INDEX.md(新ADR自0005顺延,§23A预占题不占号)；nv/mt存量迁移随Phase3~4须存档迁移链；forge_iron_sword按10图EC-R07 Phase4迁recipe_域。
+02~18开放问题+ADR-0002/0003/0004全追认，登记=docs/architecture/ADR_INDEX.md(新ADR自0005顺延)；nv/mt存量迁移随Phase3~4须存档迁移链。
 
 ## 架构铁律
 依赖禁引矩阵(04图GATE41机器化)：core地基纯净只引core/data只准core+data/services禁引scenes/生产禁引tests/autoload与scenes装配表现自由；跨模块走EventBus/数值进JSON。PerformanceMonitor挂tools/=越位待Phase3收敛。
