@@ -5,16 +5,16 @@
 - 真源：**`docs/constitution/PROJECT_CONSTITUTION_V1.4.md`（现行有效,ADR-0005）**；V1.2 保留历史基线；V1.3 经 V1.4 修订说明承载。优先级：宪法>架构>契约>施工图>任务卡>AI推断。V1.4 核心：RULE001 放软白名单 Adapter/0-B.0 分治双轨/0-B.12 三层语义/0-E.3 GATE15 Adapter 放行；0-C 章 20 条逐字兼容；02图K-R+GATE22 基线 Adapter 判据升版待 ACR。
 - AI不是架构师：架构级变更一律 STOP→ACR→评审→ADR→分批迁移，禁推倒重写。ACR-0001 APPROVED(2026-09-06)。
 - 迁移=绞杀者分批：0测量→1 Kernel→2 事务根治(P0)→3 装配收敛(18 Autoload)→4 逐模块→5 基础设施；每Phase可停；§171收编不丢弃。
-- **进度**(2026-09-06)：P1+09/10/11事务根治+D-01~10销项+裁决收口+13/03/16/17图红线批+12图QD-2五类收编；**Phase3 kernel窗批1~3=02图24契约(5a71907)+TransactionRuntime(b9f6489,GATE26/27升PARTIAL)+ShopTradeTransaction买卖0-C(ae5cdc1,10图EC-5)**；**05图批1=CONTENT-RUNTIME骨架(ab46676:ContentRegistry九API五段Loader/VE-1指纹/ShardCache CA-2/ability+item+dialog三TypeAdapter attach回接/GATE17挂槽,GATE2=72,十四槽全绿)**；05图DoD3~6(五层校验规则表JSON/12索引实建/指纹进SaveHeader/Mod拒载)留批2~3；kernel窗下批=装配收敛(需单独ADR+Write Lease)。
+- **进度**(2026-09-06)：P1+09/10/11事务根治+D-01~10销项+裁决收口+13/03/16/17图红线批+12图QD-2五类收编；**Phase3 kernel窗批1~3=02图24契约(5a71907)+TransactionRuntime(b9f6489,GATE26/27升PARTIAL)+ShopTrade买卖0-C(ae5cdc1,10图EC-5)**；**05图批1=CONTENT-RUNTIME骨架(ab46676,三TypeAdapter attach回接/GATE17挂槽,十四槽全绿)**；05图DoD3~6留批2~3；**待办清单A组✅(5683d8b)**=Integration链3用例入GATE2(73套件)/P-RH6旧编号清零6处/GATE21核查(test_shape/naming未物理化随ACR)/backlog单一真源20项；**auto_complete null坑**:任务JSON null运行时=true→交足即自动交付(quest模块待主权窗裁决)；下批=B组(Owner观察期🔴/ui_write🔴)或装配收敛(ADR-0007+Write Lease,衔接01图§29)。
 
-## 施工图序列 01→18（FROZEN；唯一真源=docs/architecture/NN_*.md）
+## 施工图序列 01→18（FROZEN；现行真源=NN_*_V1.4修复版.md——17图升版完成(ADR-0006,commit c2ee981/4602bb3/c10eac7),V1.2稿保留；升表口随ACR：GATE22 Adapter判据/GATE30物理化进verify_all/装配收敛=ADR-0007）
 - 18图零星：16 id_validator挂GATE06(基线234只减不增)；GATE28 command_ordering未动。
 - SV-2新纪律：新模块入档=先重跑gen_save_body_registry.tscn重产登记表(否则注册期拒)；模块字段变更=升_module_versions+register_module_migration+golden对,不动SAVE_VERSION。
 - 门禁双命名空间(T-1追认)：文档LN=GATE01~32；物理槽1~9冻结；新槽GATE40+(40=性能基准,41=架构校验器组)；禁裸引物理号。GATE6=五检；GATE22/32=arch_linter(去注释指纹)。
 - 大图余量：06 Actor、08 Relationship、14表现、15 Studio。
 
 ## 裁决状态（2026-09-06 用户整批追认「按各图§7推荐」）
-02~18开放问题+ADR-0002/0003/0004全追认，登记=docs/architecture/ADR_INDEX.md(新ADR自0005顺延)；nv/mt存量迁移随Phase3~4须存档迁移链。
+02~18开放问题+ADR-0002~0004全追认+ADR-0005宪法升版+ADR-0006十七图升版，登记=docs/architecture/ADR_INDEX.md(新ADR自0007顺延)；nv/mt存量迁移随Phase3~4须存档迁移链。
 
 ## 架构铁律
 依赖禁引矩阵(04图GATE41机器化)：core地基纯净只引core/data只准core+data/services禁引scenes/生产禁引tests/autoload与scenes装配表现自由；跨模块走EventBus/数值进JSON。
