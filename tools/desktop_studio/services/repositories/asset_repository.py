@@ -100,6 +100,11 @@ class AssetRepository:
         p = os.path.join(discover_project_root(), "data", "configs", "battles", "grids", "%s.json" % layout_id)
         persistence.save_json(p, data, note=note or "战棋布局")
 
+    # ---- 战斗定义（scenes/battles.json：仅战棋布局级联清理用）----
+    def save_scenes_battles(self, data, note=""):
+        p = os.path.join(discover_project_root(), "data", "configs", "scenes", "battles.json")
+        persistence.save_json(p, data, note=note or "战斗定义（布局引用清理）")
+
     # ---- 登录背景变体 ----
     def save_bg_variants(self, data, note=""):
         p = os.path.join(discover_project_root(), "data", "configs", "ui", "login_bg_variants.json")

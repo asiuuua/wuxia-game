@@ -17,7 +17,7 @@ import configparser
 from services import _common
 from services._common import (  # noqa: F401  门面透传用
     _safe_id, _is_valid_id, _ensure_dirs, load_settings, save_settings,
-    load_json, _backup, _backup_dir,
+    load_json, _backup, _backup_dir, ref_guard_delete,
     SAFETY_DIR, TRASH_DIR, BACKUP_DIR, SETTINGS_PATH, LOG_PATH,
     DEFAULT_PROJECT_ROOT, DEFAULT_PORT, DEFAULT_RETENTION_DAYS, DEFAULT_SAFE_MODE,
 )
@@ -1249,25 +1249,48 @@ def battle_layout_save(layout_id, data):
     return True, "已保存战棋布局「%s」" % norm["name"]
 
 
-def battle_layout_delete(layout_id):
-    """删除布局文件（进回收站保险，不直接销毁）。"""
+def _battle_clear_layout(battle_id):
+    """解除战斗对某战棋布局的 layout 引用（battle_layout_delete 级联用）。"""
+    p = os.path.join(discover_project_root(), "data", "configs", "scenes", "battles.json")
+    data = load_json(p, {"battles": []})
+    dirty = False
+    for b in data.get("battles", []):
+        if isinstance(b, dict) and b.get("id") == battle_id and b.get("layout"):
+            b["layout"] = ""
+            dirty = True
+    if dirty:
+        asset_repo.save_scenes_battles(data)
+    return True, "已解除 %s 对布局的引用" % battle_id
+
+
+def battle_layout_delete(layout_id, cascade=None):
+    """删除布局文件（进回收站保险）。被战斗 layout 引用 → BLOCK，除非显式 cascade。"""
     lid = _safe_id(layout_id)
     if not lid:
         return False, "布局 id 非法"
+    allowed, blockers, reason = ref_guard_delete("battle_layout", lid, cascade)
+    if not allowed:
+        return False, "删除被阻止：%s（%s）" % (lid, reason)
     p = os.path.join(_battle_layout_dir(), lid + ".json")
     if not os.path.exists(p):
         return False, "布局不存在"
-    _backup(p)
-    # 同时清关联底图
-    bg_dir = _battle_bg_dir()
-    for ext in (".png", ".jpg", ".webp"):
-        bp = os.path.join(bg_dir, lid + ext)
-        if os.path.exists(bp):
-            try:
-                os.remove(bp)
-            except Exception:
-                pass
-    os.remove(p)
+    try:
+        if cascade:                                   # 显式级联：解除引用方战斗的 layout
+            for bid in cascade:
+                _battle_clear_layout(bid)
+        _backup(p)
+        # 同时清关联底图
+        bg_dir = _battle_bg_dir()
+        for ext in (".png", ".jpg", ".webp"):
+            bp = os.path.join(bg_dir, lid + ext)
+            if os.path.exists(bp):
+                try:
+                    os.remove(bp)
+                except Exception:
+                    pass
+        os.remove(p)
+    except Exception as e:
+        return False, "删除失败（已回滚）：%s" % e
     log_event("battle_layout", lid, "删除战棋布局（已备份）")
     return True, "已删除战棋布局「%s」（备份在回收站）" % lid
 
