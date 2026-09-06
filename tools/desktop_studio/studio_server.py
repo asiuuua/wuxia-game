@@ -576,6 +576,13 @@ class Handler(BaseHTTPRequestHandler):
             return _send_json(self, {"ok": True, "quests": core.quest_graph_list()})
         if path == "/api/trash":
             return _send_json(self, core.trash_list())
+        if path.startswith("/api/impact/"):
+            # Content Graph 影响分析：GET /api/impact/<kind>/<id> → {kind: [ids]}
+            parts = path[len("/api/impact/"):].split("/", 1)
+            if len(parts) == 2:
+                kind, eid = parts[0], parts[1]
+                return _send_json(self, {"ok": True, "impact": core.impact_of(kind, eid)})
+            return _send_json(self, {"ok": False, "error": "格式：/api/impact/<kind>/<id>"}, 400)
         if path == "/api/log":
             return _send_json(self, core.read_log())
         if path == "/api/startup_card":

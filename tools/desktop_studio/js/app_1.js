@@ -1,5 +1,54 @@
 const A = (m,p,b)=>fetch(p,{method:m,headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined}).then(r=>r.json());
 function show(id,msg,ok){const e=document.getElementById(id);e.textContent=msg;e.className='status '+(ok?'ok':'bad');}
+
+// ---- 删除确认 + Impact 分析（Phase 5 Dependency Graph）----
+// kind: npc / dialog / battle_layout
+// 返回 true=确认删除，false=取消
+async function confirmDelete(kind, id, label){
+  const kindMap = {npc:'NPC', dialog:'对话', battle_layout:'战棋布局', line_jump:'台词行'};
+  const labelCn = kindMap[kind] || kind;
+  // 先拉 impact 分析
+  let impactHtml = '';
+  try{
+    const r = await A('GET', '/api/impact/'+encodeURIComponent(kind)+'/'+encodeURIComponent(id));
+    if(r && r.ok && r.impact){
+      const keys = Object.keys(r.impact);
+      if(keys.length){
+        const labelMap = {npc:'NPC', dialog:'对话', quest:'任务', item:'物品',
+                          battle:'战斗', enemy:'敌人', ability:'技能',
+                          battle_layout:'战棋布局', line_jump:'台词行', flag_def:'旗标'};
+        impactHtml = '<div style="margin:10px 0;padding:10px 14px;background:#fff7e6;border:1px solid #ffd966;border-radius:6px;font-size:13px;color:#8a6d00;">'
+          + '<b>影响范围提醒</b>（Content Graph 分析）：<br>';
+        keys.forEach(k=>{
+          const cnt = r.impact[k].length;
+          const kn = labelMap[k] || k;
+          impactHtml += '· '+kn+'：'+cnt+' 个<br>';
+        });
+        impactHtml += '</div>';
+      }
+    }
+  }catch(e){ /* 降级：无 impact 也不阻塞删除 */ }
+  const msg = '确定删除 '+labelCn+'「'+id+'」？（保险模式下会进回收站）';
+  // 用自定义 DOM 弹窗（比原生 confirm 支持 HTML）
+  return new Promise(resolve=>{
+    const ov = document.createElement('div');
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:99999;';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:#fff;padding:24px 28px;border-radius:10px;min-width:340px;max-width:480px;box-shadow:0 10px 40px rgba(0,0,0,.3);';
+    box.innerHTML = '<div style="font-size:15px;color:#2a2e44;margin-bottom:8px;font-weight:600;">确认删除</div>'
+      + '<div style="font-size:14px;color:#4a4f66;line-height:1.6;">'+msg+'</div>'
+      + impactHtml
+      + '<div style="display:flex;gap:12px;justify-content:flex-end;margin-top:20px;">'
+      + '<button id="__delCancel" style="padding:8px 18px;border:1px solid #ccd2e6;background:#fff;border-radius:6px;cursor:pointer;color:#4a4f66;">取消</button>'
+      + '<button id="__delOk" style="padding:8px 18px;border:none;background:#e66b6b;color:#fff;border-radius:6px;cursor:pointer;">确认删除</button>'
+      + '</div>';
+    ov.appendChild(box);
+    document.body.appendChild(ov);
+    box.querySelector('#__delCancel').onclick = ()=>{ document.body.removeChild(ov); resolve(false); };
+    box.querySelector('#__delOk').onclick = ()=>{ document.body.removeChild(ov); resolve(true); };
+    ov.onclick = (e)=>{ if(e.target===ov){ document.body.removeChild(ov); resolve(false); } };
+  });
+}
 async function stat(){
   const [s,v]=await Promise.all([A('GET','/api/settings'), A('GET','/api/tool_version')]);
   const ver='工具版本：'+(v.build_time||'?')+' · '+v.md5;
@@ -510,7 +559,7 @@ async function npcSave(){
 }
 async function npcDel(){
   const id=document.getElementById('n_id').value.trim();if(!id){show('npcStat','请先选择/新建一个 NPC',false);return;}
-  if(!confirm('确定删除 '+id+'？（保险模式下会进回收站）'))return;
+  const ok=await confirmDelete('npc',id);if(!ok)return;
   const r=await A('DELETE','/api/npc/'+encodeURIComponent(id));show('npcStat',r.msg,r.ok);if(r.ok)npcLoad();
 }
 
@@ -617,7 +666,7 @@ async function lineDel(){
 }
 async function dlgDel(){
   if(!curDlg){show('dlgStat','请先选一个对话',false);return;}
-  if(!confirm('删除整个对话 '+curDlg+'？（保险模式下进回收站）'))return;
+  const ok=await confirmDelete('dialog',curDlg);if(!ok)return;
   const r=await A('POST','/api/dialog',{action:'delete_dialog',dlg_id:curDlg});show('dlgStat',r.msg,r.ok);if(r.ok){curDlg='';dlgLoad();}
 }
 
@@ -2222,7 +2271,7 @@ async function blSave(){
 }
 async function blDelete(){
   if(!window._blSel)return;
-  if(!confirm('删除布局「'+window._blSel+'」？（已备份到回收站）'))return;
+  const ok=await confirmDelete('battle_layout',window._blSel);if(!ok)return;
   const r=await A('POST','/api/battle_layout/delete',{id:window._blSel});
   show('blStat',(r&&r.msg)?r.msg:'已删除',!!(r&&r.ok));
   if(r&&r.ok){window._bl=null;blRender();blLoadList();}

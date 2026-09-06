@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """武侠游戏「内容工作室」桌面版 —— 门面（Facade）层。
 
@@ -104,3 +104,16 @@ from services.asset_service import (  # noqa: F401
     _HUD_SCALE_MAX, _SETTINGS_SCREEN_LAYOUT_DEFAULT, _SETTINGS_SCREEN_LAYOUT_KEYS,
     _SAVELOAD_SCREEN_LAYOUT_KEYS, _DEFAULT_MAIN_MENU_ASSETS, _DEMO_PORTRAIT_TARGETS,
 )
+
+
+
+# ---------------- Dependency Graph：impact 分析（Phase 5，删除确认弹窗用） ----------------
+def impact_of(kind, eid):
+    """Content Graph 影响分析：改 kind/eid 会影响哪些实体（可传递）。
+    返回 {kind: [ids...]}。供前端删除确认弹窗展示「删除此 NPC 将影响 X 个对话、Y 个任务」。
+    失败时返回空 dict（降级：不影响删除流程）。"""
+    try:
+        import dep_graph
+        return dep_graph.content_impact(kind, eid)
+    except Exception:
+        return {}
