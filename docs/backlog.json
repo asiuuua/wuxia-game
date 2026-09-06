@@ -228,11 +228,14 @@
         {
           "title": "五图开工排期：05批2~3/06/08/14/15",
           "type": "待办",
-          "status": "open",
+          "status": "done",
           "placeholder": false,
           "source": "待办清单D组",
           "detail": "05 DoD3~6（校验规则表JSON/12索引/指纹进SaveHeader/Mod拒载）最近便可续",
-          "suggestion": "05批2先行，06依赖B1"
+          "suggestion": "05批2先行，06依赖B1",
+          "resolvedBy": "AI-架构窗口(kernel)",
+          "resolvedAt": "2026-09-06",
+          "resolution": "全部落地：05批2~3=D1 DoD3~6（f1085ef）；06 Actor批1=D2；08 Relationship批1=D3（ea916ef）；14 Presentation批1=D4（b14e48e）；15 Studio批1=D5+批2 ST-2 DataSink。详见更改日志 2026-09-06 各批条目与 task #78/79/82/83/84。"
         },
         {
           "title": "多AI窗口级 Write Lease 两案待用户裁决",
@@ -246,29 +249,38 @@
         {
           "title": "13图「§23A ADR-0005」撞号核查",
           "type": "待办",
-          "status": "open",
+          "status": "done",
           "placeholder": false,
           "source": "13图上游行/ADR_INDEX",
           "detail": "13图引用的旧ADR-0005(Save与RuntimeState分离)与现行ADR-0005(宪法升版)撞号",
-          "suggestion": "核对宪法§23A预占题归属后更正13图表述走ACR"
+          "suggestion": "核对宪法§23A预占题归属后更正13图表述走ACR",
+          "resolvedBy": "AI-架构窗口(kernel)",
+          "resolvedAt": "2026-09-06",
+          "resolution": "E2 澄清完成（79a0321）：§23A=架构闭环条款，13图「ADR-0005」系预占题专名批注，消歧义批注已回写，非真实撞号。"
         },
         {
           "title": "GATE11 86信号 Owner 抽审",
           "type": "待办",
-          "status": "open",
+          "status": "done",
           "placeholder": false,
           "source": "04图GATE11/Q-1",
           "detail": "eventbus_signal_registry.json 初版抽审待做",
-          "suggestion": "抽审报告回写04图"
+          "suggestion": "抽审报告回写04图",
+          "resolvedBy": "AI-架构窗口(kernel)",
+          "resolvedAt": "2026-09-06",
+          "resolution": "E3 抽审完成（79a0321）：12信号12合法；OBS-1 defeat 直写 silver 登记为观察项（B2 局部别名盲区实例），继续观察期。"
         },
         {
           "title": "10图 EC-R07 forge 域迁移",
           "type": "待办",
-          "status": "open",
+          "status": "done",
           "placeholder": false,
           "source": "10图EC-R07/ADR_INDEX§4",
           "detail": "forge_iron_sword/material_iron_001 违例冻结中",
-          "suggestion": "Phase4 随 GATE07 基线统一迁 recipe_"
+          "suggestion": "Phase4 随 GATE07 基线统一迁 recipe_",
+          "resolvedBy": "AI-架构窗口(kernel)",
+          "resolvedAt": "2026-09-06",
+          "resolution": "F1 完成（task #81）：收敛 forge_iron_sword/material_iron_001 两对+recipes 引用转移收编，id_baseline 同步。"
         },
         {
           "title": "目录收敛：data→content+kernel顶层归位",
@@ -282,11 +294,14 @@
         {
           "title": "GATE18 Localization 物理化",
           "type": "未实现",
-          "status": "open",
+          "status": "done",
           "placeholder": false,
           "source": "宪法§88/03图",
           "detail": "本地化key扫描器缺失，desc中文内联P-Q9同族",
-          "suggestion": "补扫描器挂槽"
+          "suggestion": "补扫描器挂槽",
+          "resolvedBy": "AI-架构窗口(kernel)",
+          "resolvedAt": "2026-09-06",
+          "resolution": "F5 完成（task #80）：GATE43 物理槽 ACTIVE——localization_validator（C-R12 基线禁新增+VA5 display 键核对）进 verify_all。"
         },
         {
           "module": "audit",
@@ -328,10 +343,13 @@
           "module": "audit",
           "title": "D5：15 Studio 批1 施工单",
           "type": "待办",
-          "status": "open",
+          "status": "done",
           "source": "15_Studio_Authoring_Validator_Preview施工图_V1.4修复版 ST 系列",
           "detail": "批1 范围=①ST-6 校验器注册表挂载点实装（arch_validators 基础已在）②ST-2 DataSink 契约③GATE16 Studio Smoke 已 ACTIVE（B 批核实）。依赖 14 配置面（软前置，可并行）",
-          "suggestion": "独立批次；体量最小可先做"
+          "suggestion": "独立批次；体量最小可先做",
+          "resolvedBy": "AI-架构窗口(kernel)",
+          "resolvedAt": "2026-09-06",
+          "resolution": "D5 批1 完成（task #78：ST-6 注册表三方对账+ST-5 manifest）+批2 ST-2 DataSink 契约落地（task #79）。"
         },
         {
           "title": "05图 Phase3 Schema 真源（content_schemas 双端同读）",
