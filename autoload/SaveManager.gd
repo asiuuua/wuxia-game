@@ -63,6 +63,28 @@ func _seed_builtin_migrations() -> void:
 		"to": "1.2.0",
 		"step": Callable(self, "_migrate_1_1_0_to_1_2_0"),
 	})
+	# 模块级迁移 seed（SV-2 首条，F4/CP-2 2026-09-06）：game_state 1.0.0 → 1.1.0
+	# 裸名区域升 region_* 前缀（16 图 CP-2c 冻结映射；CP-2e 存档红线配套迁移）。
+	register_module_version("game_state", "1.1.0")
+	register_module_migration({
+		"key": "game_state",
+		"from": "1.0.0",
+		"to": "1.1.0",
+		"step": Callable(self, "_migrate_module_game_state_1_0_0_to_1_1_0"),
+	})
+
+
+## 模块迁移步骤（SV-2）：game_state 1.0.0 → 1.1.0 —— last_region_id 裸名 → region_*。
+## 只改写已知裸名映射；已带前缀/其他值原样透传（未知值由 GameState.load 的
+## 注册表校验兜底回退起始区域，双保险）；global_flags 不动（nv_/mt_ 旗标键拆分留 Phase3~4）。
+func _migrate_module_game_state_1_0_0_to_1_1_0(carried: Dictionary) -> Dictionary:
+	var data: Dictionary = carried.get("data", {})
+	var rid := str(data.get("last_region_id", ""))
+	if rid == "newbie_village":
+		data["last_region_id"] = "region_newbie_village"
+	elif rid == "misty_town":
+		data["last_region_id"] = "region_misty_town"
+	return {"data": data}
 
 ## 载入 Body 键登记表（SV-2 登记制机器化）：docs/contract/save_body_registry.json
 ## 由 tools/golden/gen_save_body_registry 场景 dump 真实注册清单产出（人审入库）。
@@ -100,6 +122,16 @@ func register_module_migration(entry: Dictionary) -> bool:
 			return true
 	_module_migrations.append({"key": key, "from": from_v, "to": to_v, "step": step})
 	GameLogger.info("SaveManager", "已登记模块迁移步骤: %s %s -> %s" % [key, from_v, to_v])
+	return true
+
+
+## 模块当前 schema 版本登记口（SV-2）：登记后新档按此版本戳印（_build_save_data）。
+## 升版必须同批配 register_module_migration 步骤 + golden 对，否则老档断链拒读（P-S3 同精神）。
+func register_module_version(key: String, version: String) -> bool:
+	if key.is_empty() or version.is_empty():
+		GameLogger.error("SaveManager", "register_module_version 拒绝非法条目（需 key/version 非空）")
+		return false
+	_module_versions[key] = version
 	return true
 
 ## 模块当前 schema 版本：覆盖表登记值优先，缺省 = MODULE_SCHEMA_VERSION 起点版
@@ -160,8 +192,10 @@ func _resolve_module_payload(key: String, raw: Variant) -> Variant:
 ## 公开迁移登记口（13 图 SV-3 显式注册表 / P-S1 死接线修复，Phase1 落地）：
 
 ## 1.0.0 → 1.1.0：新增 last_region_id（读档恢复所在区域）。
-## 老档 game_state 缺该字段时补起始区域默认值（与 GameState.load 兜底同口径）；
+## 老档 game_state 缺该字段时补起始区域默认值；
 ## game_state 键整体缺失的老档不动（缺 key 分级归 SV-4 期望清单核对，Phase2）。
+## 注意（F4/CP-2e）：此处默认值保持裸名 "newbie_village" —— 全局链 golden 冻结承诺不动；
+## 裸名由模块迁移链 1.0.0→1.1.0 改写为 region_*，legacy 裸载荷则由 GameState.load 注册表校验回退兜底。
 func _migrate_1_0_0_to_1_1_0(data: Dictionary) -> Dictionary:
 	var gs: Variant = data.get("game_state", null)
 	if gs is Dictionary:

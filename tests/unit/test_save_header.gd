@@ -190,8 +190,8 @@ func test_body_two_phase_wrap() -> void:
 		if not expect(wrapped_v is Dictionary, "模块键 %s 应为包装 Dictionary" % k):
 			continue
 		var wrapped: Dictionary = wrapped_v
-		expect(str(wrapped.get("schema_version", "")) == SaveManager.MODULE_SCHEMA_VERSION,
-			"模块键 %s 应带当前模块版本 %s（实际 %s）" % [k, SaveManager.MODULE_SCHEMA_VERSION, str(wrapped.get("schema_version", ""))])
+		expect(str(wrapped.get("schema_version", "")) == SaveManager._module_current_version(k),
+			"模块键 %s 应带当前模块版本 %s（实际 %s）" % [k, SaveManager._module_current_version(k), str(wrapped.get("schema_version", ""))])
 		expect(wrapped.get("data", null) is Dictionary, "模块键 %s 的 data 应为 Dictionary" % k)
 	expect(module_keys >= 12, "真实装配下 Body 应含 12 个模块键（实际 %d）" % module_keys)
 

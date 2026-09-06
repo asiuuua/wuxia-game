@@ -5,7 +5,7 @@
     {
       "id": "nv_npc_chief",
       "name": "村长",
-      "scene": "newbie_village",
+      "scene": "region_newbie_village",
       "pos_x": 220,
       "pos_y": 160,
       "dialog_id": "",
@@ -15,7 +15,7 @@
     {
       "id": "nv_npc_maiden",
       "name": "村口姑娘吴巧娘",
-      "scene": "newbie_village",
+      "scene": "region_newbie_village",
       "pos_x": 60,
       "pos_y": 200,
       "dialog_id": "nv_dialog_maiden",
@@ -25,7 +25,7 @@
     {
       "id": "nv_npc_elder",
       "name": "老猎户赵老爹",
-      "scene": "newbie_village",
+      "scene": "region_newbie_village",
       "pos_x": 420,
       "pos_y": 260,
       "dialog_id": "nv_dialog_elder",
@@ -46,7 +46,7 @@
       "portrait_type": "static",
       "portrait_skeleton": "",
       "portrait_frames": [],
-      "scene": "newbie_village"
+      "scene": "region_newbie_village"
     },
     {
       "id": "demo_npc",
@@ -59,7 +59,7 @@
       "quest_id": "demo_quest",
       "battle_id": "demo_battle",
       "half_body_portrait": "res://assets/characters/half_body/demo_npc.png",
-      "scene": "newbie_village"
+      "scene": "region_newbie_village"
     },
     {
       "id": "npc_bandit",
@@ -72,7 +72,7 @@
       "quest_id": "q_bandit_001",
       "battle_id": "battle_bandit_001",
       "half_body_portrait": "res://assets/characters/half_body/npc_bandit.png",
-      "scene": "newbie_village"
+      "scene": "region_newbie_village"
     },
     {
       "id": "npc_hunter",
@@ -84,7 +84,7 @@
       "quest_id": "q_wolf_001",
       "battle_id": "battle_wolf_001",
       "half_body_portrait": "res://assets/characters/half_body/npc_hunter.png",
-      "scene": "newbie_village"
+      "scene": "region_newbie_village"
     },
     {
       "id": "npc_sect_elder",
@@ -96,7 +96,7 @@
       "quest_id": "q_sect_join_001",
       "battle_id": "battle_sect_trials",
       "half_body_portrait": "res://assets/characters/half_body/npc_sect_elder.png",
-      "scene": "newbie_village"
+      "scene": "region_newbie_village"
     },
     {
       "id": "npc_merchant",
@@ -106,7 +106,7 @@
       "sprite": "res://assets/characters/player.png",
       "dialog_id": "npc_merchant",
       "half_body_portrait": "res://assets/characters/half_body/npc_merchant.png",
-      "scene": "newbie_village"
+      "scene": "region_newbie_village"
     },
     {
       "id": "tactical_demo_master",
@@ -118,7 +118,7 @@
       "dialog_id": "tactical_demo_master",
       "battle_id": "",
       "half_body_portrait": "res://assets/characters/half_body/tactical_demo_master.png",
-      "scene": "newbie_village"
+      "scene": "region_newbie_village"
     },
     {
       "id": "event_demo_npc",
@@ -129,7 +129,7 @@
       "portrait": "res://assets/characters/village_chief_face.png",
       "dialog_id": "dlg_event_demo",
       "half_body_portrait": "res://assets/characters/half_body/event_demo_npc.png",
-      "scene": "newbie_village"
+      "scene": "region_newbie_village"
     },
     {
       "id": "npc_liu_ruyan",
@@ -139,7 +139,7 @@
       "sprite": "res://assets/characters/npc_liu_ruyan.png",
       "dialog_id": "npc_liu_ruyan",
       "half_body_portrait": "res://assets/characters/half_body/npc_liu_ruyan.png",
-      "scene": "newbie_village"
+      "scene": "region_newbie_village"
     },
     {
       "id": "npc_mu_wanqing",
@@ -149,7 +149,7 @@
       "sprite": "res://assets/characters/npc_mu_wanqing.png",
       "dialog_id": "npc_mu_wanqing",
       "half_body_portrait": "res://assets/characters/half_body/npc_mu_wanqing.png",
-      "scene": "newbie_village"
+      "scene": "region_newbie_village"
     }
   ]
 }

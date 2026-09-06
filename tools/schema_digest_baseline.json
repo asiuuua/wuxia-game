@@ -29,6 +29,10 @@
    "shape": "{entries:{demo_npc:[str],event_demo_npc:[str],mt_npc_priest:[str],mt_npc_tailor:[str],npc_bandit:[str],npc_hunter:[str],npc_liu_ruyan:[str],npc_merchant:[str],npc_mu_wanqing:[str],npc_sect_elder:[str],npc_village_chief:[str],nv_npc_chief:[str],nv_npc_elder:[str],nv_npc_maiden:[str],tactical_demo_master:[str]},index:str,version:str}",
    "version": "1.0.0"
   },
+  "data/configs/content_schemas.json": {
+   "shape": "{_notes:str,schemas:{battle_grid:{entry_fields:{height:{required:bool,type:str},obstacles:{allow_empty:bool,type:str},width:{required:bool,type:str}},files:[str],root_entry:bool,title:str},dialogue:{entry_fields:{_doc:{allow_empty:bool,type:str},id:{required:bool,stable_id:bool,type:str},npc_id:{allow_empty:bool,npc_ref:bool,type:str},version:{allow_empty:bool,type:str}},files:[str],nested:{lines:{collection:str,entry_fields:{effects:{allow_empty:bool,type:str},id:{required:bool,type:str},next_id:{allow_empty:bool,type:str},options:{allow_empty:bool,type:str},speaker_id:{allow_empty:bool,type:str},speaker_name:{allow_empty:bool,type:str},text:{localization_key:bool,required:bool,type:str},trigger_events:{allow_empty:bool,type:str}}}},root_entry:bool,title:str},dialogue_index:{files:[str],title:str,value_key:str,value_schema:{chapter:{allow_empty:bool,type:str},file:{asset_ref:bool,required:bool,type:str},npc_id:{allow_empty:bool,npc_ref:bool,type:str}}},localization:{csv:{header:[str],key_regex:str},files:[str],title:str},npc:{collection:str,entry_fields:{battle_id:{allow_empty:bool,battle_ref:bool,type:str},dialog_id:{allow_empty:bool,dialogue_ref:bool,type:str},half_body_portrait:{allow_empty:bool,asset_ref:bool,type:str},id:{required:bool,stable_id:bool,type:str},name:{allow_empty:bool,required:bool,type:str},portrait:{allow_empty:bool,asset_ref:bool,type:str},portrait_frames:{allow_empty:bool,type:str},portrait_skeleton:{allow_empty:bool,asset_ref:bool,type:str},portrait_type:{allow_empty:bool,enum:[str],type:str},pos_x:{type:str},pos_y:{type:str},quest_id:{allow_empty:bool,quest_ref:bool,type:str},scene:{required:bool,type:str},sprite:{allow_empty:bool,asset_ref:bool,type:str}},files:[str],title:str},npc_stats:{files:[str],title:str,value_schema:{attack:{type:str},backpack_note:{allow_empty:bool,type:str},can_spar:{type:str},defense:{type:str},gift_prefs:{allow_empty:bool,type:str},hp:{type:str},level:{type:str},martial_arts:{allow_empty:bool,type:str},title:{allow_empty:bool,type:str}}},quest:{collection:str,entry_fields:{desc:{allow_empty:bool,type:str},id:{required:bool,stable_id:bool,type:str},name:{required:bool,type:str},objectives:{allow_empty:bool,type:str},rewards:{allow_empty:bool,type:str},then_set:{allow_empty:bool,type:str},type:{enum:[str],type:str}},files:[str],nested:{objectives:{collection:str,entry_fields:{desc:{allow_empty:bool,required:bool,type:str},id:{required:bool,type:str},need:{type:str},target_battle:{allow_empty:bool,battle_ref:bool,type:str}}}},title:str},ui_asset:{entry_fields:{btn_hover_bg:{asset_ref:bool,type:str},edge_auto:{type:str},edge_color:{type:str},hover_shift_x:{type:str},hover_shift_y:{type:str},icon_scales:{allow_empty:bool,item_type:str,type:str},icons:{allow_empty:bool,item_type:str,type:str},leaves_enabled:{type:str},reference_height:{type:str},reference_width:{type:str},scrim_alpha:{type:str},stretch_mode:{type:str},title_logo:{asset_ref:bool,type:str}},files:[str],loose:bool,root_entry:bool,title:str}},version:str}",
+   "version": "1.0.0"
+  },
   "data/configs/content_validation_rules.json": {
    "shape": "{_notes:str,layers:[{layer:num,name:str,rules:[{applies:str,desc:str,required_fields:[str],rule_code:str,severity:str}|{applies:str,desc:str,required_fields_by_kind:{ability:[str],dialog:[str],item:[str]},rule_code:str,severity:str}]}|{layer:num,name:str,rules:[{applies:str,desc:str,rule_code:str,severity:str}]}],version:str}",
    "version": "1.0.0"
@@ -73,63 +77,63 @@
    "shape": "{quests:[{desc:str,id:str,name:str,objectives:[{desc:str,id:str,need:num,target_battle:str}],rewards:{abilities:[str],exp:num,items:[{count:num,item_id:str}],silver:num},type:str}|{desc:str,id:str,name:str,objectives:[{desc:str,id:str,need:num,target_battle:str}],rewards:{exp:num,items:[{count:num,item_id:str}],silver:num},type:str}|{desc:str,id:str,name:str,objectives:[{desc:str,id:str,need:num,target_battle:str}],rewards:{exp:num,items:[{count:num,item_id:str}]},type:str}],version:str}",
    "version": "1.0.0"
   },
-  "data/configs/regions/misty_town/battles.json": {
+  "data/configs/regions/region_misty_town/battles.json": {
    "shape": "{battles:[{enemy_ids:[str],id:str,name:str,rewards:{exp:num,items:[]},turn_mode:str}],version:str}",
    "version": "1.0.0"
   },
-  "data/configs/regions/misty_town/dialogs/mt_dialog_priest.json": {
+  "data/configs/regions/region_misty_town/dialogs/mt_dialog_priest.json": {
    "shape": "{_doc:str,id:str,lines:[{effects:[],id:str,speaker_id:str,text:str}|{id:str,options:[{effects:[],jump_id:str,text:str}|{effects:[str],jump_id:str,text:str}],speaker_id:str,text:str}],version:str}",
    "version": "1.0.0"
   },
-  "data/configs/regions/misty_town/enemies.json": {
+  "data/configs/regions/region_misty_town/enemies.json": {
    "shape": "{enemies:[{attack:num,defense:num,id:str,lvl:num,max_hp:num,name:str,speed:num}],version:str}",
    "version": "1.0.0"
   },
-  "data/configs/regions/misty_town/index.json": {
+  "data/configs/regions/region_misty_town/index.json": {
    "shape": "{_doc:str,battles:[str],dialogs:[str],display_name:str,enemies:[str],items:[str],npcs:[str],plotline:str,prefix:str,quests:[str],region_id:str,version:str}",
    "version": "1.0.0"
   },
-  "data/configs/regions/misty_town/items.json": {
+  "data/configs/regions/region_misty_town/items.json": {
    "shape": "{items:[{desc:str,id:str,name:str,type:str}],version:str}",
    "version": "1.0.0"
   },
-  "data/configs/regions/misty_town/npcs.json": {
+  "data/configs/regions/region_misty_town/npcs.json": {
    "shape": "{npcs:[{battle_id:str,dialog_id:str,id:str,name:str,pos_x:num,pos_y:num,quest_id:str,scene:str}],version:str}",
    "version": "1.0.0"
   },
-  "data/configs/regions/misty_town/quests.json": {
+  "data/configs/regions/region_misty_town/quests.json": {
    "shape": "{quests:[{id:str,name:str,objectives:[{desc:str,id:str,need:num,target_battle:str}],prerequisites:{nv_flag_maiden_helped:bool},rewards:{exp:num,items:[{count:num,item_id:str}]},then_set:{mt_flag_temple_cleared:bool},type:str}],version:str}",
    "version": "1.0.0"
   },
-  "data/configs/regions/newbie_village/battles.json": {
+  "data/configs/regions/region_newbie_village/battles.json": {
    "shape": "{_doc:str,battles:[{enemy_ids:[str],id:str,name:str,rewards:{exp:num,items:[{count:num,item_id:str}]},turn_mode:str}],version:str}",
    "version": "1.0.0"
   },
-  "data/configs/regions/newbie_village/dialogs/nv_dialog_elder.json": {
+  "data/configs/regions/region_newbie_village/dialogs/nv_dialog_elder.json": {
    "shape": "{_doc:str,id:str,lines:[{effects:[str],id:str,speaker_id:str,text:str}],version:str}",
    "version": "1.0.0"
   },
-  "data/configs/regions/newbie_village/dialogs/nv_dialog_maiden.json": {
+  "data/configs/regions/region_newbie_village/dialogs/nv_dialog_maiden.json": {
    "shape": "{_doc:str,id:str,lines:[{effects:[],id:str,speaker_id:str,text:str}|{id:str,options:[{effects:[],jump_id:str,text:str}|{effects:[str],jump_id:str,text:str}],speaker_id:str,text:str}],version:str}",
    "version": "1.0.0"
   },
-  "data/configs/regions/newbie_village/enemies.json": {
+  "data/configs/regions/region_newbie_village/enemies.json": {
    "shape": "{_doc:str,enemies:[{attack:num,defense:num,id:str,lvl:num,max_hp:num,name:str,speed:num}],version:str}",
    "version": "1.0.0"
   },
-  "data/configs/regions/newbie_village/index.json": {
+  "data/configs/regions/region_newbie_village/index.json": {
    "shape": "{_doc:str,battles:[str],dialogs:[str],display_name:str,enemies:[str],items:[str],npcs:[str],plotline:str,prefix:str,quests:[str],region_id:str,version:str}",
    "version": "1.0.0"
   },
-  "data/configs/regions/newbie_village/items.json": {
+  "data/configs/regions/region_newbie_village/items.json": {
    "shape": "{_doc:str,items:[{desc:str,id:str,name:str,type:str}],version:str}",
    "version": "1.0.0"
   },
-  "data/configs/regions/newbie_village/npcs.json": {
+  "data/configs/regions/region_newbie_village/npcs.json": {
    "shape": "{_doc:str,npcs:[{battle_id:str,dialog_id:str,half_body_portrait:str,id:str,name:str,portrait:str,portrait_frames:[],portrait_skeleton:str,portrait_type:str,pos_x:num,pos_y:num,quest_id:str,scene:str,sprite:str}|{battle_id:str,dialog_id:str,half_body_portrait:str,id:str,name:str,portrait:str,pos_x:num,pos_y:num,quest_id:str,scene:str,sprite:str}|{battle_id:str,dialog_id:str,half_body_portrait:str,id:str,name:str,portrait:str,pos_x:num,pos_y:num,scene:str,sprite:str}|{battle_id:str,dialog_id:str,half_body_portrait:str,id:str,name:str,pos_x:num,pos_y:num,quest_id:str,scene:str,sprite:str}|{battle_id:str,dialog_id:str,id:str,name:str,pos_x:num,pos_y:num,quest_id:str,scene:str}|{dialog_id:str,half_body_portrait:str,id:str,name:str,portrait:str,pos_x:num,pos_y:num,scene:str,sprite:str}|{dialog_id:str,half_body_portrait:str,id:str,name:str,pos_x:num,pos_y:num,scene:str,sprite:str}],version:str}",
    "version": "1.0.0"
   },
-  "data/configs/regions/newbie_village/quests.json": {
+  "data/configs/regions/region_newbie_village/quests.json": {
    "shape": "{_doc:str,quests:[{_doc:str,id:str,name:str,objectives:[],quest_graph:{endings:[{id:str,require:{eq:bool,flag:str}}],nodes:{n_choice:{options:[{next:str,show:{eq:bool,flag:str},text_key:str,then:[]}|{next:str,show:{eq:bool,flag:str},text_key:str,then:[{key:str,op:str,value:bool}]}],type:str},n_end_good:{ending:str,type:str},n_end_refuse:{ending:str,type:str},n_give:{next:str,then:[{key:str,op:str,value:bool}|{op:str,target:str,value:num}],type:str},n_start:{next:str,then:[{key:str,op:str,value:bool}],type:str}},start_node:str},title_key:str,type:str}|{id:str,name:str,objectives:[{desc:str,id:str,need:num,target_battle:str}],rewards:{exp:num,items:[]},then_set:{nv_flag_guard_done:bool},type:str}|{id:str,name:str,objectives:[{desc:str,id:str,need_count:num,need_item:str}],prerequisites:{nv_flag_guard_done:bool},rewards:{items:[{count:num,item_id:str}],silver:num},then_set:{nv_flag_maiden_helped:bool,plot_advance:str},type:str}],version:str}",
    "version": "1.0.0"
   },

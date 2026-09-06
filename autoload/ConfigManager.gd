@@ -96,6 +96,9 @@ const COMBAT_ATTR_FILE := "res://data/configs/combat/attribute_table.json"
 const REGION_MAP_INDEX := "res://data/configs/regions/_map_index.json"
 const REGION_DIR := "res://data/configs/regions/"
 
+# Phase 3 Schema 系统真源（双端同源：构建期 tools/schema_validator.py / DataSink ② 同读此文件）
+const CONTENT_SCHEMAS_FILE := "res://data/configs/content_schemas.json"
+
 # === Content Registry（05 图 CONTENT-RUNTIME v1.2.0 · C-1 过渡态驻本 autoload 位）===
 # Phase3 装配收敛时创建上移 GameManager；ability/item 已走 TypeAdapter，其余 14 类逐批迁
 var content_registry: ContentRegistry = null
@@ -123,6 +126,7 @@ var _combat_attr: Dictionary = {}   # 战斗数值换算表（阶段A；整表 D
 var _config_version: String = ""
 var _is_loaded: bool = false
 var _config_errors: Array[String] = []  # 配置容错层：累积加载/引用校验发现的问题
+var _content_schemas: Dictionary = {}   # Phase 3 Schema 真源缓存（content_schemas.json，双端同源）
 
 func _ready() -> void:
 	_config_errors.clear()
@@ -158,6 +162,7 @@ func _setup_content_registry() -> void:
 	var item_adapter := ContentTypeAdapter.new(&"item", ITEM_FILES, "items", "id", "物品")
 	content_registry.register_adapter(ability_adapter)
 	content_registry.register_adapter(item_adapter)
+	content_registry.load_schemas(_content_schemas)   # Phase 3：Schema 真源注入（双端同源，同一份 JSON）
 	content_registry.attach_shard_registry(_dialog_index)
 	content_registry.set_ready_callback(func(fp: String) -> void:
 		EventBus.content_ready.emit(fp))
@@ -182,6 +187,30 @@ func is_loaded() -> bool:
 ## Registry 访问口（05 图 CT-1 过渡态；Phase3 装配收敛后由 ApplicationRoot 持有）
 func get_content_registry() -> ContentRegistry:
 	return content_registry
+
+## Phase 3 Schema 真源加载（双端同源：构建期 tools/schema_validator.py / DataSink ② 同读此文件）。
+## 运行期只做形状登记（容错层 ERROR 语义，不拒载）；FATAL 拒写发生在构建期 DataSink ② 步。
+func _load_content_schemas() -> void:
+	var data := _load_json(CONTENT_SCHEMAS_FILE)
+	if data.is_empty():
+		_record_error("Schema 真源缺失或解析失败: %s" % CONTENT_SCHEMAS_FILE)
+		return
+	var schemas: Variant = data.get("schemas", {})
+	if not (schemas is Dictionary) or (schemas as Dictionary).is_empty():
+		_record_error("Schema 真源缺 schemas 节（Phase 3 双端同源契约）")
+		return
+	_content_schemas = schemas
+
+## 运行期 Schema 登记校验：res:// 路径 → 相对 data/configs 的路径（供 SchemaFieldChecker 匹配）
+func _schema_rel_of(res_path: String) -> String:
+	var s := res_path.replace("\\", "/")
+	const PREFIX := "res://data/configs/"
+	return s.substr(PREFIX.length()) if s.begins_with(PREFIX) else s
+
+## 按 Schema 真源登记单条目违规（双端同源；命中才检查，未命中静默）
+func _record_schema_violations(rel: String, entry: Dictionary, ctx: String) -> void:
+	for v in SchemaFieldChecker.violations_for(_content_schemas, rel, entry):
+		_record_error("%s Schema: %s" % [ctx, v])
 
 # === 各系统配置加载（含条目级容错守卫）===
 # 守卫规则：每条必须是对象且含非空 id；否则记录并跳过，绝不崩溃
@@ -215,9 +244,11 @@ func _load_quests() -> void:
 	for path in QUEST_FILES:
 		var data: Dictionary = _load_json(path)
 		_config_version = data.get("version", _config_version)
+		var rel := _schema_rel_of(path)
 		for entry in data.get("quests", []):
 			if not _is_valid_entry(entry, path, "quests"):
 				continue
+			_record_schema_violations(rel, entry, "任务")
 			var id: String = str(entry["id"])
 			if _quests.has(id):
 				_record_error("任务 %s 重复定义，后者覆盖" % id)
@@ -242,11 +273,13 @@ func _load_dialogs() -> void:
 		_record_error("对话索引缺失或解析失败: %s" % DIALOG_INDEX_FILE)
 		return
 	_config_version = data.get("version", _config_version)
+	var rel := _schema_rel_of(DIALOG_INDEX_FILE)
 	for did in data.get("shards", {}).keys():
 		var entry: Dictionary = data["shards"][did]
 		if not (entry is Dictionary) or not entry.has("file"):
 			_record_error("对话索引 %s 条目缺 file 字段，已跳过" % did)
 			continue
+		_record_schema_violations(rel, entry, "对话索引 %s" % did)
 		if _dialog_index.has(did):
 			_record_error("对话 %s 索引重复定义，后者覆盖" % did)
 		_dialog_index[did] = entry
@@ -352,6 +385,7 @@ func _load_ui_anim() -> void:
 	for path in UI_ANIM_FILES:
 		var data: Dictionary = _load_json(path)
 		if data.size() > 0:
+			_record_schema_violations(_schema_rel_of(path), data, "UI 动效")
 			_config_version = data.get("version", _config_version)
 			_ui_anim = data
 
@@ -359,6 +393,7 @@ func _load_ui_sfx() -> void:
 	for path in UI_SFX_FILES:
 		var data: Dictionary = _load_json(path)
 		if data.size() > 0:
+			_record_schema_violations(_schema_rel_of(path), data, "UI 音效")
 			_config_version = data.get("version", _config_version)
 			_ui_sfx = data
 
@@ -685,9 +720,11 @@ func _region_path(rid: String, fname: String) -> String:
 func _merge_region_kind(rid: String, kind: String, target: Dictionary, label: String) -> void:
 	var path := _region_path(rid, kind + ".json")
 	var data: Dictionary = _load_json(path)
+	var rel := _schema_rel_of(path)
 	for entry in data.get(kind, []):
 		if not _is_valid_entry(entry, path, "region_" + kind):
 			continue
+		_record_schema_violations(rel, entry, "区域 %s 的%s" % [rid, label])
 		var eid: String = str(entry["id"])
 		if target.has(eid):
 			_record_error("区域 %s 的%s %s 与全局重复，后者覆盖" % [rid, label, eid])
@@ -713,7 +750,7 @@ func get_all_region_meta() -> Dictionary:
 func get_region_plotline(rid: String) -> String:
 	return String(get_region_meta(rid).get("plotline", ""))
 
-## 取区域内特定实体清单（如 get_region_entity_list("newbie_village","npcs")）
+## 取区域内特定实体清单（如 get_region_entity_list("region_newbie_village","npcs")）
 func get_region_entity_list(rid: String, kind: String) -> Array[String]:
 	var idx: Dictionary = get_region_meta(rid)
 	var arr: Array = idx.get(kind, [])
@@ -762,6 +799,7 @@ func get_dialog(id: String) -> Dictionary:
 	if entry.is_empty():
 		_record_error("对话分片加载失败: %s (%s)" % [id, file])
 		return {}
+	_record_schema_violations(_schema_rel_of(file), entry, "对话分片 %s" % id)
 	_shard_cache.put(id, entry)
 	_shard_cache.sweep()
 	return entry

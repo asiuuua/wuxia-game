@@ -49,14 +49,14 @@ func test_dod3_schema_layer_enforced_from_rule_table() -> void:
 # === DoD4：Build 期索引注入（CO-R03 运行期只查不建） ===
 func test_dod4_attach_index_and_query() -> void:
 	var reg := _make_registry()
-	var tbl := {"nv_npc_chief": ["newbie_village"], "npc_hunter": ["newbie_village"]}
+	var tbl := {"nv_npc_chief": ["region_newbie_village"], "npc_hunter": ["region_newbie_village"]}
 	reg.attach_index("npc_by_region", tbl)
 	_files["res://t/abilities.json"] = {"version": "1.0.0", "skills": [{"id": "abi_a"}]}
 	var fa: Array[String] = ["res://t/abilities.json"]
 	reg.register_adapter(ContentTypeAdapter.new(&"ability", fa, "skills", "id", "技能"))
 	reg.load_packs()
 	var got := reg.query(&"npc_by_region", "nv_npc_chief")
-	expect(got.has("newbie_village"), "Build 期注入的 npc_by_region 应可查（实际 %s）" % [got])
+	expect(got.has("region_newbie_village"), "Build 期注入的 npc_by_region 应可查（实际 %s）" % [got])
 	expect(reg.query(&"npc_by_region", "不存在").is_empty(), "无键应回空数组（CO-R04）")
 
 func test_dod4_unregistered_index_refused() -> void:

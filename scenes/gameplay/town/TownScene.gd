@@ -10,7 +10,7 @@ class_name TownScene
 const UIPalette = preload("res://core/constants/ui_theme.gd")
 
 ## 本场景归属的区域 ID（P1 统一真源：与 regions/_map_index.json 里 scene_path 指向本场景的条目一致）
-const REGION_ID := "newbie_village"
+const REGION_ID := "region_newbie_village"
 
 const MOVE_SPEED := 200.0
 const PLAYER_SCENE_H := 175.0  # 玩家在场景里的目标高度（像素）— 白背景视频重抠版（matte_clean），用户要求缩一半看效果（350→175）

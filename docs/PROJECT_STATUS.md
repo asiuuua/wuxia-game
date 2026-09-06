@@ -9,11 +9,11 @@
 | 槽 | 状态 | 说明 |
 |---|---|---|
 | GATE1 quit_check | ACTIVE | 含自愈缓存重建 |
-| GATE2 unit tests | ACTIVE | 82 套件（tests/unit + tests/integration）零 ✗ 零 M，flaky 防抖 D-07 |
+| GATE2 unit tests | ACTIVE | 84 套件（tests/unit + tests/integration）零 ✗ 零 M，flaky 防抖 D-07；84=83+test_schema_field_checker（F4 批 Schema 真源收编） |
 | GATE3 内容红线 | ACTIVE | JSON 铁律/硬编码路径扫描（基线模式） |
 | GATE4 战斗预设红线 | ACTIVE | |
 | GATE5 双写防线 | ACTIVE | |
-| GATE6 五检 | ACTIVE | ref_index/id_validator/schema_guard/pack_manifest/region 三同 |
+| GATE6 六检 | ACTIVE | ref_index/id_validator/schema_guard/pack_manifest/region 三同/schema_validator（F4 批六检化：Phase 3 Schema 构建期字段级校验入列，GATE6 五检→六检） |
 | GATE7 Studio Smoke | ACTIVE | 编辑闭环冒烟 |
 | GATE10 Studio 架构 | ACTIVE（D5批2 物理化，登记滞后收编 2026-09-06） | 工作室服务层架构：业务零 save_json/save_text 直调 / Repository 边界 |
 | GATE8 结构完整性 | ACTIVE | |
@@ -24,7 +24,7 @@
 | GATE32 Foundation Freeze | ACTIVE | EventBus 86 信号基线 + save_body_registry 登记制 |
 | GATE41 架构校验器组 | ACTIVE | dependency 禁引矩阵+环 / module_scope / test_naming / state_owner（B 批收口）+ **PV-R03 ui_flow 白名单禁新增（14 批1，14 条只减不增）+ QD-R10 services_no_stage（14 批1 机器化，零容忍）+ PV-1 vm_hygiene 三禁（14 批1）**（见下） |
 | GATE42 Context Pack | ACTIVE | GATE30（LN）物理槽：0-G.5 六字段+0-G.6 STALE 红线+01§127 对账（C2②） |
-| GATE43 Localization | ACTIVE（F5 物理化 2026-09-06） | GATE18（LN）物理槽：localization_validator——C-R12 硬编码中文基线禁新增（loc_baseline.json 362 条只减不增）+VA5 display 文本键核对 strings.csv（WARN 通报） |
+| GATE43 Localization | ACTIVE（F5 物理化 2026-09-06） | GATE18（LN）物理槽：localization_validator——C-R12 硬编码中文基线禁新增（loc_baseline.json 330 条只减不增；F4 批收编 Schema 真源 8 条 title+搬移路径置换 4 条，362→330）+VA5 display 文本键核对 strings.csv（WARN 通报） |
 | GATE40 性能基准 | ACTIVE | --tier performance（17 图 SBP-6） |
 
 ## 逻辑槽（LN，宪法 §88 ∪ 01 §127）——关键状态

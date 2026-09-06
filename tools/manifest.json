@@ -53,6 +53,11 @@
       "gate": "GATE06"
     },
     {
+      "name": "schema_validator.py",
+      "role": "Phase 3 Schema 构建期校验（03 §6.3/05 VA-2 第一层，真源 content_schemas.json 双端同读）",
+      "gate": "GATE06"
+    },
+    {
       "name": "ref_index.py",
       "role": "引用索引与悬空校验",
       "gate": "GATE06"

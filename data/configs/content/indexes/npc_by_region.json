@@ -1,49 +1,49 @@
 {
  "entries": {
   "demo_npc": [
-   "newbie_village"
+   "region_newbie_village"
   ],
   "event_demo_npc": [
-   "newbie_village"
+   "region_newbie_village"
   ],
   "mt_npc_priest": [
-   "misty_town"
+   "region_misty_town"
   ],
   "mt_npc_tailor": [
-   "misty_town"
+   "region_misty_town"
   ],
   "npc_bandit": [
-   "newbie_village"
+   "region_newbie_village"
   ],
   "npc_hunter": [
-   "newbie_village"
+   "region_newbie_village"
   ],
   "npc_liu_ruyan": [
-   "newbie_village"
+   "region_newbie_village"
   ],
   "npc_merchant": [
-   "newbie_village"
+   "region_newbie_village"
   ],
   "npc_mu_wanqing": [
-   "newbie_village"
+   "region_newbie_village"
   ],
   "npc_sect_elder": [
-   "newbie_village"
+   "region_newbie_village"
   ],
   "npc_village_chief": [
-   "newbie_village"
+   "region_newbie_village"
   ],
   "nv_npc_chief": [
-   "newbie_village"
+   "region_newbie_village"
   ],
   "nv_npc_elder": [
-   "newbie_village"
+   "region_newbie_village"
   ],
   "nv_npc_maiden": [
-   "newbie_village"
+   "region_newbie_village"
   ],
   "tactical_demo_master": [
-   "newbie_village"
+   "region_newbie_village"
   ]
  },
  "index": "npc_by_region",

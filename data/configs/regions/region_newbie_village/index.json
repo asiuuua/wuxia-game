@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "region_id": "newbie_village",
+  "region_id": "region_newbie_village",
   "display_name": "新手村",
   "prefix": "nv_",
   "_doc": "本区域点名册。所有本区实体统一以 nv_ 为前缀，一眼认亲。本表仅是'目录快照'，具体内容在下方各分片表。",

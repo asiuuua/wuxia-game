@@ -1,14 +1,27 @@
 {
   "version": "1.0.0",
-  "region_id": "misty_town",
+  "region_id": "region_misty_town",
   "display_name": "迷烟镇",
   "prefix": "mt_",
   "_doc": "第二区域：承接新手村送来的玉簪委托，顺道调查镇外古庙的野狼传闻。结构完全复刻新手村，仅换前缀与内容。",
   "plotline": "收下新手村送来的玉簪（需 nv_flag_maiden_helped）→ 替金记铺跑腿 → 调查镇外古庙野狼闹事",
-  "npcs":    ["mt_npc_priest", "mt_npc_tailor"],
-  "quests":  ["mt_quest_deliver"],
-  "items":   ["mt_item_night_pearl"],
-  "battles": ["mt_battle_wolf"],
-  "enemies": ["mt_enemy_wolf"],
-  "dialogs": ["mt_dialog_priest"]
+  "npcs": [
+    "mt_npc_priest",
+    "mt_npc_tailor"
+  ],
+  "quests": [
+    "mt_quest_deliver"
+  ],
+  "items": [
+    "mt_item_night_pearl"
+  ],
+  "battles": [
+    "mt_battle_wolf"
+  ],
+  "enemies": [
+    "mt_enemy_wolf"
+  ],
+  "dialogs": [
+    "mt_dialog_priest"
+  ]
 }

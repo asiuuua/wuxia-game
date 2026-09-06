@@ -14,7 +14,7 @@ var _global_flags: Dictionary = {}          # 世界开关 / 剧情变量：key(
 var _unit_runtime: Dictionary = {}          # 单位世界态：unit_id -> {status, faction, affinity}
 var _difficulty: int = CombatEnums.Difficulty.NORMAL   # 当前全局难度
 var _last_safe_point: Dictionary = {"marker": "town", "text_id": "safe_town"}
-var _last_region_id: String = "newbie_village"   # P4 整改：读档恢复所在区域（区域ID=注册表ID）   # 最近安全点（复活点），默认城镇
+var _last_region_id: String = "region_newbie_village"   # P4 整改：读档恢复所在区域（区域ID=注册表ID）   # 最近安全点（复活点），默认城镇
 var _xiaozhang_collateral: Array = []   # 小张抵押物：HARD 团灭丢失的非稀有物 item_id 清单（随存档持久化）
 var _quest_phase: int = 1               # 任务阶段（章节进度）：存档唯一真源，外部一律走 API
 
@@ -158,9 +158,10 @@ func load(data: Dictionary) -> void:
 	_difficulty = int(data.get("difficulty", CombatEnums.Difficulty.NORMAL))
 	_last_safe_point = data.get("last_safe_point", {"marker": "town", "text_id": "safe_town"})
 	# 1.1.0 迁移兜底：老档无 last_region_id → 校验区域注册表，非法回退起始区域
-	var rid := str(data.get("last_region_id", "newbie_village"))
+	# （F4/CP-2 后注册表已无裸名；旧裸名值由 SaveManager 模块迁移 1.0.0→1.1.0 先行改写）
+	var rid := str(data.get("last_region_id", "region_newbie_village"))
 	var reg: Dictionary = ConfigManager.get_region(rid)
-	_last_region_id = rid if not reg.is_empty() else "newbie_village"
+	_last_region_id = rid if not reg.is_empty() else "region_newbie_village"
 	_xiaozhang_collateral = data.get("xiaozhang_collateral", [])
 	_quest_phase = int(data.get("quest_phase", 1))
 
@@ -177,7 +178,7 @@ func reset() -> void:
 	_unit_runtime.clear()
 	# 难度保留：新游戏前由难度选择界面经 cmd_set_difficulty 写入，reset 不应清空
 	_last_safe_point = {"marker": "town", "text_id": "safe_town"}
-	_last_region_id = "newbie_village"
+	_last_region_id = "region_newbie_village"
 	_xiaozhang_collateral = []
 	_quest_phase = 1
 

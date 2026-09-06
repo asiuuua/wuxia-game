@@ -65,7 +65,7 @@ func test_region_elder_line_effects_apply_on_start() -> void:
 	GameState._global_flags.erase("nv_flag_guard_praised")
 
 func test_region_priest_chain_and_end() -> void:
-	# 跨区域分片：misty_town 的 mt_dialog_priest 选项接任务 → 跳转行 → 继续到无 next_id 自然结束
+	# 跨区域分片：region_misty_town 的 mt_dialog_priest 选项接任务 → 跳转行 → 继续到无 next_id 自然结束
 	if GameManager == null or GameManager.quest_service == null:
 		expect(false, "GameManager.quest_service 不可用")
 		return

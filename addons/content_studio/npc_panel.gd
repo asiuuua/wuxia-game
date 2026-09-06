@@ -8,7 +8,7 @@ extends Control
 # 跨区域选择/迁移属 P1 统一区域真源后的工具增强，届时接入区域下拉。
 # ⚠ 旧真源 town_npcs.json 已清空只读留档（.bak 备份），任何代码/工具不得再写它。
 
-const NPC_PATH := "res://data/configs/regions/newbie_village/npcs.json"
+const NPC_PATH := "res://data/configs/regions/region_newbie_village/npcs.json"
 
 var _list: ItemList = null
 var _fields: Dictionary = {}
@@ -136,7 +136,7 @@ func _on_save() -> void:
 		npcs.append(entry)
 	data["npcs"] = npcs
 	_write_json(NPC_PATH, data)
-	_status.text = "已保存 NPC：%s（写回 regions/newbie_village/npcs.json 区域表）" % id
+	_status.text = "已保存 NPC：%s（写回 regions/region_newbie_village/npcs.json 区域表）" % id
 	_refresh_list()
 	for i in _list.item_count:
 		if _list.get_item_text(i) == id:

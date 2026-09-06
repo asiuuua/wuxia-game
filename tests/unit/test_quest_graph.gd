@@ -1,7 +1,7 @@
 # tests/unit/test_quest_graph.gd
 # 任务流程图解释器 QuestGraph 单元测试（继承 TestBase，被 run_all.tscn 收录）
 # 覆盖：条件DSL(all/any/not/flag/favor/progress)、choice 分支、副作用、结局判定、成环保护。
-# 与 regions/newbie_village/quests.json 的 nv_qg_demo 分支图语义一致。
+# 与 regions/region_newbie_village/quests.json 的 nv_qg_demo 分支图语义一致。
 extends TestBase
 class_name TestQuestGraph
 

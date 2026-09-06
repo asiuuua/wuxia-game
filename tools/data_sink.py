@@ -206,6 +206,14 @@ def step2_schema_check(root, rel, data):
             items.append((sev("VA4-BINDING"),
                           "VA4-BINDING(%s): 对话分片 npc_id 空置（C-3 Dialogue 主权，登记放行；归属由对话域裁定）"
                           % sev("VA4-BINDING")))
+    # Phase 3 Schema 系统（03 §6.3 / 整改报告 Phase 3）：字段级校验（content_schemas.json 真源）。
+    # 与构建期 schema_validator.py 同源（同一份 JSON），写路径 FATAAL 拒写（正式内容必须 Schema PASS）。
+    try:
+        from schema_validator import validate_file as _schema_validate_file
+        for v in _schema_validate_file(root, rel, data):
+            items.append(("FATAL", "VA1-SCHEMA: %s" % v))
+    except Exception:
+        pass  # Schema 系统不可用时降级为既有 VA1-REQ-ID/ADAPTER（不阻断既有写路径）
     hard = [m for s, m in items if s == "FATAL"]
     warns = [m for s, m in items if s != "FATAL"]
     return hard, warns

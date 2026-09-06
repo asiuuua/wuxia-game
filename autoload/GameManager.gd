@@ -30,7 +30,7 @@ var relationship_service: RelationshipService = null   # 关系网数据中枢�
 var pending_battle_id: String = ""     # 由 NPC/剧情设置，战斗场景读取
 var debug_override_battle_id: String = ""  # 测试用：让战术测试场景壳(riverside)复用并加载指定战斗配置；空=用默认
 var current_map_id: String = "town"     # 当前底图标识（世界区域）；战棋布局映射壳据此继承底图共享网格几何
-var current_region_id: String = "newbie_village"  # 当前所在世界区域（P1 统一真源：区域ID=世界传送ID=内容分片ID，对应 regions/_map_index.json）
+var current_region_id: String = "region_newbie_village"  # 当前所在世界区域（P1 统一真源：区域ID=世界传送ID=内容分片ID，对应 regions/_map_index.json；F4/CP-2 裸名升 region_* 前缀）
 var current_slot: int = -1             # 当前游戏所在存档槽位（-1 表示尚未存档）；HELL 删档时定点删除
 var _last_known_day: int = 1             # 姻缘子嗣推进用的天数基线（M3）             # 当前游戏所在存档槽位（-1 表示尚未存档）；HELL 删档时定点删除
 
@@ -358,7 +358,7 @@ func start_new_game() -> void:
 	WeatherTimeService.reset()
 	_sync_day_baseline()
 	_equip_starting_abilities()
-	set_current_region("newbie_village")
+	set_current_region("region_newbie_village")
 	_deferred_change_scene(PathConstants.SCENE_TOWN)
 
 ## 读取存档并进入游戏（主菜单"继续江湖路"调用，M2 新增）
@@ -467,7 +467,7 @@ func return_to_safe_point() -> void:
 	# 当前所有安全点都映射到城镇场景；marker 预留给后续扩展（客栈/营地等不同场景）
 	GameLogger.info("GameManager", "回安全点: %s" % sp.get("marker", "town"))
 	ResourceManager.reclaim_all()
-	set_current_region("newbie_village")
+	set_current_region("region_newbie_village")
 	_deferred_change_scene(PathConstants.SCENE_TOWN)
 
 ## 统一区域切换入口（P4 整改）：改内存态同时写穿 GameState（随存档持久化），

@@ -107,6 +107,18 @@
 | d | **引用同步红线**：任何 ID 改名必须同一次变更内完成「数据定义 + 全部引用（JSON/GDScript/存档迁移层）+ ref_index 反查零悬空 + change_log 留痕」；**禁止**只改数据文件（02 图 Command 化同理） |
 | e | **存档红线**：凡已被存档引用的实体 ID 改名，必须配套 Save Migration（13 图 SV 契约），「旧存档必须可用」不可破 |
 
+#### CP-2 落地批注（2026-09-06，AI-架构窗口(kernel)）
+
+> 本批注为施工留痕，非契约条款；条款以 §3 冻结面为准。
+
+**F4 批（CP-2 裸名区域升级 + SV-2 模块迁移链首用）**：
+
+1. **裸名区域全量升级（CP-2c/d）**——`newbie_village/misty_town → region_*`：目录 git mv ×2、`_map_index.json`（region_id×2+connections 全表+index_file 路径，version 2.0.0→2.0.1 走 CP-4d patch）、区内 index.json region_id、npcs.json scene×15、代码面默认值（TownScene 常量/GameManager×3/game_state 默认+fallback+reset/ConfigManager docstring/content_studio 工具）。`plot_advance="to_misty_town"` 定性=剧情旗标标记串非 ID，不改写。
+2. **SV-2 模块迁移链首用（CP-2e）**——SaveManager 新增 `register_module_version`（新档戳印口径）+`register_module_migration` 条目登记：game_state 1.0.0→1.1.0 裸名改写步骤+golden 对（input/expected）+test_save_migration 4 新测试（golden 走 `_resolve_module_payload`/mt 改写/前缀透传/版本登记）。全局链 golden 冻结不动（`_migrate_1_0_0_to_1_1_0` 补默认值保持裸名，裸名由模块链改写或 GameState.load 注册表校验兜底，docstring 已注明口径）。
+3. **nv_/mt_ 前缀存量**——按 ADR-0002 二级形态白名单继续有效，迁移随 Phase3~4 分批（本批不动）。
+4. **基线收编三笔**——id_baseline 233→229（CP-R01 收敛 _map_index 裸名 2 条+重扫路径同步）；loc_baseline 322→330（Schema 真源 8 条 title 按 validation_rules desc 先例收编+搬移 4 条等量路径置换）；GATE3 已知误伤条目行号漂移收编（content_registry 265→287，CO-R07 黑名单字符串非真引用）。
+5. **意外收获：05图 Phase3 Schema 真源工作包接手收编**——工作树发现无主半成品（git log -S 零历史），配套件齐全（schema_field_checker.gd+content_schemas.json+schema_validator.py 构建期端+test_schema_field_checker+六域接线+data_sink VA1-SCHEMA 拒写接线），补齐声明行+类缓存重建+test_save_header 断言对齐 `_module_current_version` 真源后整包并入本批；GATE6 随之五检→六检（schema_validator 入列）+schema_digest_baseline 指纹同步。84 套件+verify_all 十六槽全绿。
+
 ### CP-3 真源与分片契约（冻结现有统一成果）
 
 | # | 冻结内容 |

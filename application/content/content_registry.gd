@@ -31,6 +31,7 @@ var _cache: ShardCache                # CA-1 二级缓存（内建；Phase3 收�
 var _source_versions: Dictionary = {} # kind -> 最后抓到的 JSON version（与现 _config_version 语义对齐）
 var _violations: Array[ValidationViolation] = []   # VA-3：rule_id+file+id+证据
 var _validation_rules: Dictionary = {}   # VA-4（批2 DoD3）：五层规则表（构建期/运行期双端同一份 JSON）
+var _schemas: Dictionary = {}            # Phase 3 Schema 真源（ConfigManager 注入；同一份 content_schemas.json，防两套规则漂移）
 var _loaded: bool = false
 var _fingerprint: String = ""
 var _fingerprint_list: Array[String] = []          # C-4 已追认：列表+哈希双存（哈希可比对，列表可读可迁移）
@@ -95,6 +96,15 @@ func load_validation_rules(rules: Dictionary) -> void:
 		return
 	_validation_rules = rules
 
+## Phase 3 Schema 真源注入（03 图 §6.3 / 双端同源：构建期 tools/schema_validator.py 同读同一份
+## data/configs/content_schemas.json，由 ConfigManager 装载后注入，防两套规则漂移）。
+## 本类在 VA-2 L1 校验时按文件匹配 schema 做字段级检查（VA1-SCHEMA，ERROR 语义=登记不拒载）。
+func load_schemas(schemas: Dictionary) -> void:
+	if _loaded:
+		push_error("[Content] 运行期内容不可变（CA-4），load 后禁改 Schema 表")
+		return
+	_schemas = schemas
+
 ## VA-3 severity 映射（rule_id → severity）：FATAL 才进拒载路径，ERROR/WARN 登记可见不拒载
 func _severity_of(rule_id: String) -> String:
 	for l in _validation_rules.get("layers", []):
@@ -113,7 +123,7 @@ func _rules_for_layer(layer: int) -> Array:
 	return []
 
 ## VA-2 第一层（Schema 形状）执行器：按规则表 required_fields/required_fields_by_kind 校验
-func _validate_schema_layer(kind: StringName, entries: Array) -> Array[ValidationViolation]:
+func _validate_schema_layer(kind: StringName, entries: Array, files: Array[String]) -> Array[ValidationViolation]:
 	var out: Array[ValidationViolation] = []
 	for rule in _rules_for_layer(1):
 		var rid := String(rule.get("rule_code", ""))
@@ -134,6 +144,18 @@ func _validate_schema_layer(kind: StringName, entries: Array) -> Array[Validatio
 						out.append(ValidationViolation.new(
 							StringName(rid), StringName(String(kind) + "." + String(f)),
 							"条目 %s 必填字段缺失: %s（VA-2 L1）" % [e.get("id", ""), f]))
+	# Phase 3 Schema 字段级（VA1-SCHEMA，ERROR 语义=登记不拒载）：adapter 文件命中
+	# content_schemas.json 时按同一份真源做形状校验（双端同源；ability/item 当前无命中=no-op）
+	for f in files:
+		var rel := String(f).replace("res://data/configs/", "").replace("\\", "/")
+		var schema := SchemaFieldChecker.schema_for(_schemas, rel)
+		if schema.is_empty():
+			continue
+		for e in entries:
+			if not (e is Dictionary):
+				continue
+			for v in SchemaFieldChecker.check_entry(schema, e):
+				out.append(ValidationViolation.new(&"VA1-SCHEMA", &"schema", v))
 	return out
 
 ## Load：启动期唯一入口，内部走 LD-2 五段顺序
@@ -151,7 +173,7 @@ func load_packs() -> OperationResult:
 	# VA-3 分流：FATAL→拒载路径（run_violations）；ERROR/WARN→登记可见不拒载
 	for kind in _adapter_order:
 		var adapter: ContentTypeAdapter = _adapters[kind]
-		for v in _validate_schema_layer(kind, adapter.store.values()):
+		for v in _validate_schema_layer(kind, adapter.store.values(), adapter.files):
 			if _severity_of(str(v.get_code())) == "FATAL":
 				run_violations.append(v)
 			else:

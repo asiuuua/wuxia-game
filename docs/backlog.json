@@ -332,6 +332,17 @@
           "source": "15_Studio_Authoring_Validator_Preview施工图_V1.4修复版 ST 系列",
           "detail": "批1 范围=①ST-6 校验器注册表挂载点实装（arch_validators 基础已在）②ST-2 DataSink 契约③GATE16 Studio Smoke 已 ACTIVE（B 批核实）。依赖 14 配置面（软前置，可并行）",
           "suggestion": "独立批次；体量最小可先做"
+        },
+        {
+          "title": "05图 Phase3 Schema 真源（content_schemas 双端同读）",
+          "type": "待办",
+          "status": "resolved",
+          "placeholder": false,
+          "source": "F4 施工中发现（AI-架构窗口 kernel，2026-09-06）",
+          "detail": "工作树发现 05图 Phase3 Schema 真源半成品：ConfigManager.gd 含 _content_schemas 声明与_load_content_schemas() 调用，git log -S 全历史零命中（从未入过提交）。F4 施工中其不完整态两度阻塞GATE1/GATE2（parse error+标识符未声明），一度按清退处置；随后发现配套件齐全（schema_field_checker.gd 类+content_schemas.json 数据+test_schema_field_checker 测试+六域接线），终局转接手收编：恢复声明行+重建类缓存+补过时断言（test_save_header 模块版本对齐 _module_current_version 真源）+loc_baseline 收编 8 条 title（desc 先例）+GATE3 行号漂移收编（265→287）。84 套件+verify_all 十六槽全绿。",
+          "suggestion": "已收编入 F4 批提交。后续：Schema 悬空引用校验属 Phase 4 Reference 三件套（content_schemas.json _notes 已注明现由 ref_index GATE06/DataSink ⑤ 兜底）；ADR-0007 批C ConfigManager 全类迁移时注意本表接线随迁。",
+          "resolvedBy": "AI-架构窗口(kernel)",
+          "resolvedAt": "2026-09-06"
         }
       ]
     },

@@ -1,0 +1,142 @@
+{
+  "version": "1.0.0",
+  "_notes": "Phase 3 Schema 系统真源（整改报告 Phase 3 / 03 图 §6.3 / 05 图 VA-2 第一层①Schema 形状）。Python 构建期（tools/schema_validator.py + DataSink ② 步）与 GDScript 运行期（content_registry/ConfigManager）双端读取同一份，防两套规则漂移。字段级能力：type / required / allow_empty / enum / regex / stable_id / localization_key / asset_ref / dialogue_ref / quest_ref / npc_ref / battle_ref。引用存在性（悬空）属 Phase 4 Reference 三件套，本表只做类型标注；悬空兜底现由 ref_index（GATE06 / DataSink ⑤）承担。severity 口径沿用 content_validation_rules.json VA-3：FATAL 拒载/拒写。",
+  "schemas": {
+    "npc": {
+      "title": "区域 NPC 演员表",
+      "files": ["regions/region_*/npcs.json"],
+      "collection": "npcs",
+      "entry_fields": {
+        "id": {"type": "string", "required": true, "stable_id": true},
+        "name": {"type": "string", "required": true, "allow_empty": true},
+        "scene": {"type": "string", "required": true},
+        "pos_x": {"type": "number"},
+        "pos_y": {"type": "number"},
+        "dialog_id": {"type": "string", "dialogue_ref": true, "allow_empty": true},
+        "quest_id": {"type": "string", "quest_ref": true, "allow_empty": true},
+        "battle_id": {"type": "string", "battle_ref": true, "allow_empty": true},
+        "sprite": {"type": "string", "asset_ref": true, "allow_empty": true},
+        "portrait": {"type": "string", "asset_ref": true, "allow_empty": true},
+        "half_body_portrait": {"type": "string", "asset_ref": true, "allow_empty": true},
+        "portrait_type": {"type": "string", "enum": ["static", "skeleton"], "allow_empty": true},
+        "portrait_skeleton": {"type": "string", "asset_ref": true, "allow_empty": true},
+        "portrait_frames": {"type": "array", "allow_empty": true}
+      }
+    },
+    "npc_stats": {
+      "title": "NPC 属性预留（键值映射，键=stable_id）",
+      "files": ["npcs/npc_stats.json"],
+      "value_schema": {
+        "title": {"type": "string", "allow_empty": true},
+        "level": {"type": "number"},
+        "attack": {"type": "number"},
+        "defense": {"type": "number"},
+        "hp": {"type": "number"},
+        "martial_arts": {"type": "array", "allow_empty": true},
+        "gift_prefs": {"type": "array", "allow_empty": true},
+        "can_spar": {"type": "boolean"},
+        "backpack_note": {"type": "string", "allow_empty": true}
+      }
+    },
+    "dialogue": {
+      "title": "对话分片（根条目 + lines 嵌套）",
+      "files": ["npcs/dialogs/shards/*.json", "regions/region_*/dialogs/*.json"],
+      "root_entry": true,
+      "entry_fields": {
+        "id": {"type": "string", "required": true, "stable_id": true},
+        "npc_id": {"type": "string", "npc_ref": true, "allow_empty": true},
+        "version": {"type": "string", "allow_empty": true},
+        "_doc": {"type": "string", "allow_empty": true}
+      },
+      "nested": {
+        "lines": {
+          "collection": "lines",
+          "entry_fields": {
+            "id": {"type": "string", "required": true},
+            "speaker_id": {"type": "string", "allow_empty": true},
+            "text": {"type": "string", "required": true, "localization_key": true},
+            "speaker_name": {"type": "string", "allow_empty": true},
+            "next_id": {"type": "string", "allow_empty": true},
+            "trigger_events": {"type": "array", "allow_empty": true},
+            "options": {"type": "array", "allow_empty": true},
+            "effects": {"type": "array", "allow_empty": true}
+          }
+        }
+      }
+    },
+    "dialogue_index": {
+      "title": "对话全局索引（shards 键值映射）",
+      "files": ["npcs/dialogs/_index.json"],
+      "value_key": "shards",
+      "value_schema": {
+        "file": {"type": "string", "required": true, "asset_ref": true},
+        "npc_id": {"type": "string", "npc_ref": true, "allow_empty": true},
+        "chapter": {"type": "string", "allow_empty": true}
+      }
+    },
+    "quest": {
+      "title": "任务定义（全局 + 区域 quests[]）",
+      "files": ["quests/quests.json", "regions/region_*/quests.json"],
+      "collection": "quests",
+      "entry_fields": {
+        "id": {"type": "string", "required": true, "stable_id": true},
+        "name": {"type": "string", "required": true},
+        "desc": {"type": "string", "allow_empty": true},
+        "type": {"type": "string", "enum": ["main", "side", "quest_graph"]},
+        "objectives": {"type": "array", "allow_empty": true},
+        "then_set": {"type": "object", "allow_empty": true},
+        "rewards": {"type": "object", "allow_empty": true}
+      },
+      "nested": {
+        "objectives": {
+          "collection": "objectives",
+          "entry_fields": {
+            "id": {"type": "string", "required": true},
+            "desc": {"type": "string", "required": true, "allow_empty": true},
+            "target_battle": {"type": "string", "battle_ref": true, "allow_empty": true},
+            "need": {"type": "number"}
+          }
+        }
+      }
+    },
+    "localization": {
+      "title": "本地化字符串表（CSV 结构专项）",
+      "files": ["localization/strings.csv"],
+      "csv": {
+        "header": ["keys", "zh_CN", "zh_TW", "en"],
+        "key_regex": "^[a-z][a-z0-9_]*$"
+      }
+    },
+    "battle_grid": {
+      "title": "战棋布局（battles/grids）",
+      "files": ["battles/grids/*.json"],
+      "root_entry": true,
+      "entry_fields": {
+        "width": {"type": "number", "required": true},
+        "height": {"type": "number", "required": true},
+        "obstacles": {"type": "array", "allow_empty": true}
+      }
+    },
+    "ui_asset": {
+      "title": "UI 配置（布局/皮肤/映射，浅层字段类型校验，未知字段不拦）",
+      "files": ["ui/*.json", "ui/skin/*.json"],
+      "root_entry": true,
+      "loose": true,
+      "entry_fields": {
+        "reference_width": {"type": "number"},
+        "reference_height": {"type": "number"},
+        "stretch_mode": {"type": "string"},
+        "scrim_alpha": {"type": "number"},
+        "edge_auto": {"type": "boolean"},
+        "leaves_enabled": {"type": "boolean"},
+        "edge_color": {"type": "array"},
+        "title_logo": {"type": "string", "asset_ref": true},
+        "btn_hover_bg": {"type": "string", "asset_ref": true},
+        "icons": {"type": "array", "item_type": "string", "allow_empty": true},
+        "icon_scales": {"type": "array", "item_type": "number", "allow_empty": true},
+        "hover_shift_x": {"type": "number"},
+        "hover_shift_y": {"type": "number"}
+      }
+    }
+  }
+}

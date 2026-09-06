@@ -6,6 +6,6 @@
   "res://scenes/gameplay/battle/tactical_battle_scene.gd:161",
   "res://scenes/gameplay/town/TownScene.gd:30",
   "res://scenes/ui/overlays/dialog/DialogOverlay.gd:79",
-  "res://application/content/content_registry.gd:265 出现 .tres（JSON 铁律禁止；应使用 .json/资源引用）"
+  "res://application/content/content_registry.gd:287 出现 .tres（JSON 铁律禁止；应使用 .json/资源引用）"
  ]
 }

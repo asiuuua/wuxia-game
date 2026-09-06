@@ -27,19 +27,52 @@ func test_future_version_rejected() -> void:
 	expect(not SaveManager._migrate_if_needed(data), "未来版本存档应被拒绝")
 
 func test_game_state_last_region_roundtrip() -> void:
-	GameState.set_last_region("misty_town")
+	GameState.set_last_region("region_misty_town")
 	var d := GameState.save()
-	expect(str(d.get("last_region_id", "")) == "misty_town", "save() 应包含 last_region_id")
+	expect(str(d.get("last_region_id", "")) == "region_misty_town", "save() 应包含 last_region_id")
 	# 模拟读档：load 后恢复
-	GameState.load({"last_region_id": "misty_town"})
-	expect(GameState.get_last_region() == "misty_town", "load() 应恢复 last_region_id")
+	GameState.load({"last_region_id": "region_misty_town"})
+	expect(GameState.get_last_region() == "region_misty_town", "load() 应恢复 last_region_id")
 
 func test_game_state_invalid_region_falls_back() -> void:
 	# 1.1.0 迁移兜底：last_region_id 指向不存在区域（如手工改档）→ 回退起始区域
+	# （F4/CP-2 起注册表已无裸名，回退目标=region_newbie_village）
 	GameState.load({"last_region_id": "__no_such_region__"})
-	expect(GameState.get_last_region() == "newbie_village", "非法区域应回退 newbie_village")
+	expect(GameState.get_last_region() == "region_newbie_village", "非法区域应回退 region_newbie_village")
 	GameState.load({})
-	expect(GameState.get_last_region() == "newbie_village", "缺字段应回退 newbie_village")
+	expect(GameState.get_last_region() == "region_newbie_village", "缺字段应回退 region_newbie_village")
+
+# === SV-2 模块迁移链（F4/CP-2 2026-09-06）：game_state 1.0.0→1.1.0 裸名区域升 region_* ===
+## SV-R03 同律：模块迁移步骤必带 Input/Expected golden 对（人审冻结）。
+## input=存档文件中 game_state 键的二段式包装原样；expected=_resolve_module_payload 解析后的载荷。
+func test_module_game_state_migration_golden_pair() -> void:
+	var input_v: Variant = JSON.parse_string(
+		FileAccess.get_file_as_string("res://tests/golden/migrations/module_game_state_1_0_0_to_1_1_0.input.json"))
+	var expected_v: Variant = JSON.parse_string(
+		FileAccess.get_file_as_string("res://tests/golden/migrations/module_game_state_1_0_0_to_1_1_0.expected.json"))
+	if not expect(input_v is Dictionary and expected_v is Dictionary, "模块 golden 夹具应存在且可解析"):
+		return
+	var resolved: Variant = SaveManager._resolve_module_payload("game_state", input_v)
+	if not expect(resolved is Dictionary, "模块 1.0.0 载荷应沿模块链迁移成功"):
+		return
+	# JSON.stringify 默认键排序，两侧字符串比较与键序无关
+	expect(JSON.stringify(resolved) == JSON.stringify(expected_v), "模块迁移结果应与 golden expected 完全一致")
+
+func test_module_migration_rewrites_misty_town() -> void:
+	var wrapper := {"schema_version": "1.0.0", "data": {"last_region_id": "misty_town", "global_flags": {}}}
+	var resolved: Variant = SaveManager._resolve_module_payload("game_state", wrapper)
+	expect(resolved is Dictionary and str((resolved as Dictionary).get("last_region_id", "")) == "region_misty_town",
+		"裸名 misty_town 应被模块迁移改写为 region_misty_town")
+
+func test_module_migration_passes_prefixed_through() -> void:
+	var wrapper := {"schema_version": "1.0.0", "data": {"last_region_id": "region_snow", "global_flags": {}}}
+	var resolved: Variant = SaveManager._resolve_module_payload("game_state", wrapper)
+	expect(resolved is Dictionary and str((resolved as Dictionary).get("last_region_id", "")) == "region_snow",
+		"已带 region_ 前缀的值应原样透传不被改写")
+
+func test_module_version_registered_for_new_saves() -> void:
+	expect(SaveManager._module_current_version("game_state") == "1.1.0",
+		"game_state 模块版本应已登记 1.1.0（新档戳印口径）")
 
 # === P-S3 退役：未知版本一律拒读（13 图 SV-3，禁「按当前版本尽力解析」盖戳） ===
 func test_unknown_version_rejected() -> void:

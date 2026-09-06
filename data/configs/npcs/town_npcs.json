@@ -1,5 +1,5 @@
 {
   "version": "1.0.0",
-  "_doc": "城镇 NPC 配置（外观/位置/动作入口）。台词已拆到 dialogs.json，通过 dialog_id 绑定。 【已迁移至 regions/newbie_village/npcs.json，本文件仅留档备份，npcs 列表已清空】",
+  "_doc": "城镇 NPC 配置（外观/位置/动作入口）。台词已拆到 dialogs.json，通过 dialog_id 绑定。 【已迁移至 regions/region_newbie_village/npcs.json，本文件仅留档备份，npcs 列表已清空】",
   "npcs": []
 }

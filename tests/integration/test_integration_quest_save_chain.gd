@@ -47,7 +47,7 @@ func after_each() -> void:
 
 # === 链 1：接取 → 交件推进 → 自动交付 → 奖励结算（跨 5 模块全链） ===
 func test_chain_accept_progress_autoturn_in_reward() -> void:
-	if not expect(ConfigManager.has_quest(QUEST_ID), "区域任务应已入 ConfigManager（newbie_village/quests.json）"):
+	if not expect(ConfigManager.has_quest(QUEST_ID), "区域任务应已入 ConfigManager（region_newbie_village/quests.json）"):
 		return
 	var qs := GameManager.quest_service
 	var inv := GameManager.inventory_service

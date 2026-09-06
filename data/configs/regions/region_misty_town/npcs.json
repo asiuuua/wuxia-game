@@ -4,7 +4,7 @@
     {
       "id": "mt_npc_priest",
       "name": "古庙住持",
-      "scene": "misty_town",
+      "scene": "region_misty_town",
       "pos_x": 300,
       "pos_y": 140,
       "dialog_id": "mt_dialog_priest",
@@ -14,7 +14,7 @@
     {
       "id": "mt_npc_tailor",
       "name": "金记铺掌柜",
-      "scene": "misty_town",
+      "scene": "region_misty_town",
       "pos_x": 180,
       "pos_y": 220,
       "dialog_id": "",

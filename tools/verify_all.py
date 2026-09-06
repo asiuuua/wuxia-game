@@ -253,11 +253,19 @@ def gate6_ref_index():
         if s.startswith(("✗", "ℹ", "注册区域")) or "结论" in s:
             print("   " + s)
     ok5 = code5 == 0
-    ok = ok1 and ok2 and ok3 and ok4 and ok5
-    print("  GATE6 %s（数据 ID 引用：ref_index %s / id_validator %s / schema_guard %s / pack_manifest %s / region 三同 %s）"
+    # Phase 3 Schema 系统（03 图 §6.3）：五域字段级校验（content_schemas.json 真源，双端同源；
+    # 与运行期 content_registry/ConfigManager 读同一份，防两套规则漂移）
+    out6, code6 = _run([sys.executable, os.path.join(HERE, "schema_validator.py"), "--quiet"])
+    for ln in out6.splitlines():
+        s = ln.strip()
+        if s.startswith("✗") or "违规" in s:
+            print("   " + s)
+    ok6 = code6 == 0
+    ok = ok1 and ok2 and ok3 and ok4 and ok5 and ok6
+    print("  GATE6 %s（数据 ID 引用：ref_index %s / id_validator %s / schema_guard %s / pack_manifest %s / region 三同 %s / schema_validator %s）"
           % ("✓ 通过" if ok else "✗ 未过",
              "✓" if ok1 else "✗", "✓" if ok2 else "✗", "✓" if ok3 else "✗",
-             "✓" if ok4 else "✗", "✓" if ok5 else "✗"))
+             "✓" if ok4 else "✗", "✓" if ok5 else "✗", "✓" if ok6 else "✗"))
     return ok
 
 

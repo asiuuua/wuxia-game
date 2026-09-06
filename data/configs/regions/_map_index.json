@@ -1,78 +1,108 @@
 {
-  "version": "2.0.0",
-  "_doc": "唯一区域注册表（P1 统一真源 2026-09-04）。\n 核心铁律：区域ID = 世界传送ID = 内容分片ID，三处不得各自一套。\n 新增一个区域 = 在本表登记一行 +（可选）建 regions/<region_id>/ 内容分片目录（index.json 等），零代码。\n 字段：region_id=唯一ID(即内容分片目录名)；name=显示名；type=hub(枢纽城镇)/world(大世界)/dungeon(副本)/battle(战斗场)/special(特殊)；scene_path=场景文件(空=尚未实装，点击提示不崩溃)；connections=可直达的区域id列表(建议双向)；index_file=内容分片点名册(世界型区域无内容分片则省略)。\n 历史：world/regions.json 与本表曾并存（真源分裂），region_start_town 已并入 newbie_village（同一地点），world/regions.json 已删除（git 历史可查）。",
+  "version": "2.0.1",
+  "_doc": "唯一区域注册表（P1 统一真源 2026-09-04）。\n 核心铁律：区域ID = 世界传送ID = 内容分片ID，三处不得各自一套。\n 新增一个区域 = 在本表登记一行 +（可选）建 regions/<region_id>/ 内容分片目录（index.json 等），零代码。\n 字段：region_id=唯一ID(即内容分片目录名)；name=显示名；type=hub(枢纽城镇)/world(大世界)/dungeon(副本)/battle(战斗场)/special(特殊)；scene_path=场景文件(空=尚未实装，点击提示不崩溃)；connections=可直达的区域id列表(建议双向)；index_file=内容分片点名册(世界型区域无内容分片则省略)。\n 历史：world/regions.json 与本表曾并存（真源分裂），region_start_town 已并入 newbie_village（同一地点），world/regions.json 已删除（git 历史可查）。\n 历史：2026-09-06 F4/CP-2 裸名区域升 region_* 前缀（newbie_village→region_newbie_village / misty_town→region_misty_town，分片目录同步改名），version 2.0.0→2.0.1（CP-4d 改内容升 patch）。",
   "regions": [
     {
-      "region_id": "newbie_village",
+      "region_id": "region_newbie_village",
       "name": "起始城镇",
       "type": "hub",
       "scene_path": "res://scenes/gameplay/town/TownScene.tscn",
-      "connections": ["region_sect_gate", "region_market", "region_frontier", "misty_town"],
-      "index_file": "res://data/configs/regions/newbie_village/index.json"
+      "connections": [
+        "region_sect_gate",
+        "region_market",
+        "region_frontier",
+        "region_misty_town"
+      ],
+      "index_file": "res://data/configs/regions/region_newbie_village/index.json"
     },
     {
-      "region_id": "misty_town",
+      "region_id": "region_misty_town",
       "name": "迷烟镇",
       "type": "hub",
       "scene_path": "",
-      "connections": ["newbie_village"],
-      "index_file": "res://data/configs/regions/misty_town/index.json"
+      "connections": [
+        "region_newbie_village"
+      ],
+      "index_file": "res://data/configs/regions/region_misty_town/index.json"
     },
     {
       "region_id": "region_sect_gate",
       "name": "宗门山门",
       "type": "world",
       "scene_path": "",
-      "connections": ["newbie_village", "region_secret"]
+      "connections": [
+        "region_newbie_village",
+        "region_secret"
+      ]
     },
     {
       "region_id": "region_market",
       "name": "市集",
       "type": "world",
       "scene_path": "",
-      "connections": ["newbie_village"]
+      "connections": [
+        "region_newbie_village"
+      ]
     },
     {
       "region_id": "region_frontier",
       "name": "边荒",
       "type": "world",
       "scene_path": "",
-      "connections": ["newbie_village", "region_isle", "region_desert"]
+      "connections": [
+        "region_newbie_village",
+        "region_isle",
+        "region_desert"
+      ]
     },
     {
       "region_id": "region_isle",
       "name": "海岛",
       "type": "world",
       "scene_path": "",
-      "connections": ["region_frontier", "region_underworld"]
+      "connections": [
+        "region_frontier",
+        "region_underworld"
+      ]
     },
     {
       "region_id": "region_secret",
       "name": "秘境",
       "type": "dungeon",
       "scene_path": "",
-      "connections": ["region_sect_gate", "region_snow"]
+      "connections": [
+        "region_sect_gate",
+        "region_snow"
+      ]
     },
     {
       "region_id": "region_underworld",
       "name": "幽冥",
       "type": "dungeon",
       "scene_path": "",
-      "connections": ["region_isle"]
+      "connections": [
+        "region_isle"
+      ]
     },
     {
       "region_id": "region_desert",
       "name": "大漠",
       "type": "world",
       "scene_path": "",
-      "connections": ["region_frontier", "region_snow"]
+      "connections": [
+        "region_frontier",
+        "region_snow"
+      ]
     },
     {
       "region_id": "region_snow",
       "name": "雪原",
       "type": "world",
       "scene_path": "",
-      "connections": ["region_secret", "region_desert"]
+      "connections": [
+        "region_secret",
+        "region_desert"
+      ]
     }
   ]
 }

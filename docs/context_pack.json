@@ -17,7 +17,7 @@
     "13_Save_Persistence_Migration施工图_V1.4修复版.md": "d956fa0b13600929",
     "14_Presentation_Input_ViewModel施工图_V1.4修复版.md": "bec10460514d8002",
     "15_Studio_Authoring_Validator_Preview施工图_V1.4修复版.md": "6c617733e2a9aa16",
-    "16_Content_Production施工图_V1.4修复版.md": "a56e94e9e979ccc8",
+    "16_Content_Production施工图_V1.4修复版.md": "4b1dd07219a965b6",
     "17_Simulation_Balance_Performance施工图_V1.4修复版.md": "d0ad9d894e9a9562",
     "18_Release_Hardening_Compatibility_Migration施工图_V1.4修复版.md": "a8b66c27d9613a61"
   },
@@ -25,5 +25,5 @@
   "schema_versions": {
     "content_pack_manifest": "MISSING"
   },
-  "verified_revision": "a89928a0a8c2"
+  "verified_revision": "b14e48eb81f5"
 }

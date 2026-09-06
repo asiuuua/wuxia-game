@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "data": {
+    "global_flags": {
+      "nv_flag_maiden_helped": true,
+      "nv_flag_guard_done": true,
+      "nv_qg_started": true,
+      "nv_qg_accepted": true,
+      "nv_qg_rewarded": false,
+      "plot_advance": "to_misty_town"
+    },
+    "unit_runtime": {},
+    "difficulty": 1,
+    "last_safe_point": {
+      "marker": "town",
+      "text_id": "safe_town"
+    },
+    "last_region_id": "newbie_village",
+    "xiaozhang_collateral": [],
+    "quest_phase": 1
+  }
+}
