@@ -49,14 +49,15 @@ def _load(fp):
 def build(root=None):
     # root 参数：DataSink 增量反查（15 图 ST-2 ⑤）对被编辑工程（可非本仓）建索引用
     R = os.path.abspath(root) if root else ROOT
-    defs = {k: {} for k in ["npc", "quest", "item", "battle", "enemy", "dialog", "ability", "flag_def"]}
-    refs = []   # (kind, from_id, to_kind, to_id, file)
+    defs = {k: {} for k in ["npc", "quest", "item", "battle", "enemy", "dialog",
+                            "ability", "flag_def", "battle_layout", "line_jump"]}
+    refs = []   # (kind, from_id, to_kind, to_id, file, soft)
 
     def add_def(kind, eid, file):
         defs[kind][str(eid)] = file
 
-    def add_ref(from_id, to_kind, to_id, file):
-        refs.append((to_kind, str(from_id), str(to_id), file))
+    def add_ref(from_id, to_kind, to_id, file, soft=False):
+        refs.append((to_kind, str(from_id), str(to_id), file, soft))
 
     # ---- 定义收集 ----
     for fp in glob.glob(os.path.join(R, "data", "configs", "regions", "*", "npcs.json")):
@@ -78,7 +79,7 @@ def build(root=None):
         for b in _load(fp).get("battles", []):
             add_def("battle", b.get("id"), fp)
             for eid in b.get("enemy_ids", []):
-                refs.append(("enemy", str(b.get("id")), str(eid), fp))
+                refs.append(("enemy", str(b.get("id")), str(eid), fp, False))
     for fp in glob.glob(os.path.join(R, "data", "configs", "scenes", "*.json")) + \
             glob.glob(os.path.join(R, "data", "configs", "battles", "*.json")):
         d = _load(fp)
@@ -89,7 +90,13 @@ def build(root=None):
             if isinstance(b, dict) and b.get("id"):
                 add_def("battle", b["id"], fp)
                 for eid in b.get("enemy_ids", []):
-                    refs.append(("enemy", str(b["id"]), str(eid), fp))
+                    refs.append(("enemy", str(b["id"]), str(eid), fp, False))
+                if b.get("layout"):
+                    add_ref(b["id"], "battle_layout", b["layout"], fp)   # 硬边：战斗定义字段
+    for fp in glob.glob(os.path.join(R, "data", "configs", "battles", "grids", "*.json")):
+        if os.path.basename(fp).startswith("_"):
+            continue
+        add_def("battle_layout", os.path.basename(fp)[:-5], fp)
     for fp in glob.glob(os.path.join(R, "data", "configs", "regions", "*", "enemies.json")) + \
             [os.path.join(R, "data", "configs", "npcs", "enemies.json")]:
         for e in _load(fp).get("enemies", []):
@@ -135,20 +142,27 @@ def build(root=None):
                 add_ref(qid, "flag_def", k, fp)   # 旗标引用：只告警
             for k in q.get("then_set", {}).keys():
                 add_def("flag_def", k, fp)
-    # 对话分片：行内命令 + 图内部跳转
+    # 对话分片：绑定 NPC + 行内命令 + 图内部跳转（line_jump 正向边：行定义全量登记，目标作用域=分片 id）
     shard_files = glob.glob(os.path.join(R, "data", "configs", "npcs", "dialogs", "shards", "*.json")) + \
         glob.glob(os.path.join(R, "data", "configs", "regions", "*", "dialogs", "*.json"))
     for fp in shard_files:
         d = _load(fp)
         did = d.get("id", os.path.basename(fp)[:-5])
-        line_ids = {str(l.get("id")) for l in d.get("lines", []) if l.get("id")}
+        if d.get("npc_id"):
+            add_ref(did, "npc", d["npc_id"], fp, soft=True)   # 软边：VA4-BINDING 登记放行（回收站延迟绑定/预建实体）
+        for l in d.get("lines", []):
+            if l.get("id"):
+                add_def("line_jump", "%s/%s" % (did, l["id"]), fp)
         for l in d.get("lines", []):
             lid = l.get("id", "?")
-            if l.get("next_id") and str(l["next_id"]) not in line_ids:
-                refs.append(("line_jump", "%s/%s" % (did, lid), str(l["next_id"]), fp))
+            s = l.get("speaker_id")
+            if s and s != "player":
+                add_ref(did, "npc", s, fp, soft=True)     # 软边：内容字段（player=玩家发言）
+            if l.get("next_id"):
+                refs.append(("line_jump", "%s/%s" % (did, lid), "%s/%s" % (did, l["next_id"]), fp, False))
             for o in l.get("options", []):
-                if o.get("jump_id") and str(o["jump_id"]) not in line_ids:
-                    refs.append(("line_jump", "%s/%s" % (did, lid), str(o["jump_id"]), fp))
+                if o.get("jump_id"):
+                    refs.append(("line_jump", "%s/%s" % (did, lid), "%s/%s" % (did, o["jump_id"]), fp, False))
                 for eff in o.get("effects", []):
                     _effect_ref(did, eff, fp, add_ref, add_def)
             for eff in l.get("effects", []):
@@ -171,18 +185,60 @@ def check(defs, refs):
     if os.path.exists(BASE):
         baseline = {(e.get("kind"), e.get("from"), e.get("to")) for e in _load(BASE).get("known", [])}
     dangling, warned, known = [], [], []
-    for kind, frm, to, fp in refs:
+    for kind, frm, to, fp, soft in refs:
         ok = to in defs.get(kind, {})
         if ok:
             continue
         entry = (kind, frm, to)
         if entry in baseline:
             known.append((kind, frm, to, fp))
-        elif kind == "flag_def":
+        elif kind == "flag_def" or soft:
             warned.append((kind, frm, to, fp))
         else:
             dangling.append((kind, frm, to, fp))
     return dangling, warned, known
+
+
+# ---- ReferenceInspector：查询（Phase 4 三件套） ----
+def _all_refs(root=None):
+    _defs, refs = build(root)
+    return refs
+
+
+def reverse_dependencies(target, root=None):
+    """谁引用了 target：返回 [(kind, from_id, file)]（含软边，供删除保护）。"""
+    return [(k, f, fp) for (k, f, t, fp, _s) in _all_refs(root) if str(t) == str(target)]
+
+
+def references_of(from_id, root=None):
+    """我引用了谁：返回 [(kind, to_id, file)]。"""
+    return [(k, t, fp) for (k, f, t, fp, _s) in _all_refs(root) if str(f) == str(from_id)]
+
+
+def resolve(kind, eid, root=None):
+    """定义查询：存在返回所在文件，否则 None。"""
+    defs, _refs = build(root)
+    return defs.get(kind, {}).get(str(eid))
+
+
+# ---- ReferenceValidator：删除保护（Phase 4 三件套） ----
+def validate_delete(kind, eid, root=None):
+    """删除保护：kind=被删实体边种类（npc/dialog/line_jump/battle_layout…）。
+    被引用 → (False, blockers)；无引用 → (True, [])。blockers=[(kind, from_id, file)]。"""
+    blockers = [(k, f, fp) for (k, f, t, fp, _s) in _all_refs(root)
+                if k == kind and str(t) == str(eid)]
+    return (not blockers), blockers
+
+
+def validate_cascade(kind, eid, cascade, root=None):
+    """显式级联验证：cascade（引用方 id 列表）必须恰好覆盖全部引用方。
+    返回 (allowed, uncovered, invalid)。uncovered=漏报；invalid=cascade 里不存在的引用。"""
+    blockers = [f for (_k, f, _fp) in validate_delete(kind, eid, root=root)[1]]
+    cset = set(str(x) for x in (cascade or []))
+    bset = set(blockers)
+    uncovered = sorted(bset - cset)
+    invalid = sorted(cset - bset)
+    return (not uncovered and not invalid), uncovered, invalid
 
 
 def main():
@@ -190,15 +246,16 @@ def main():
     args = sys.argv[1:]
     if "--who" in args:
         target = args[args.index("--who") + 1]
-        hits = [(k, f, t, fp) for (k, f, t, fp) in refs if t == target]
+        hits = [(k, f, t, fp) for (k, f, t, fp, _s) in refs if t == target]
         print("被谁引用 [%s]：%d 处" % (target, len(hits)))
         for k, f, t, fp in hits[:30]:
             print("  [%s] %s ← %s" % (k, t, os.path.relpath(fp, ROOT)))
         return 0
     dangling, warned, known = check(defs, refs)
     print("════ ref_index · 数据引用校验 ════")
-    print("实体定义：npc=%d quest=%d item=%d battle=%d enemy=%d dialog=%d ability=%d flag_def=%d"
-          % tuple(len(defs[k]) for k in ["npc", "quest", "item", "battle", "enemy", "dialog", "ability", "flag_def"]))
+    print("实体定义：" + " ".join("%s=%d" % (k, len(defs[k]))
+          for k in ["npc", "quest", "item", "battle", "enemy", "dialog",
+                    "ability", "flag_def", "battle_layout", "line_jump"]))
     print("引用总数：%d" % len(refs))
     for kind, frm, to, fp in dangling[:15]:
         print("  ✗ 悬空[%s] %s → %s（%s）" % (kind, frm, to, os.path.relpath(fp, ROOT)))
