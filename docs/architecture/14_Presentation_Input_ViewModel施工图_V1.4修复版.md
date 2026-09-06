@@ -161,6 +161,29 @@
 
 ---
 
+## 5.5 14 批1 落地批注（2026-09-06，AI-架构窗口(kernel)）
+
+> 本批注为施工留痕，非契约条款；条款以 §3~§6 冻结面为准。
+
+**批1 三件套（GATE41 arch_validators 三锚 + ViewModel 骨架）**：
+
+1. **①PresentationEffect 消费面核查（PV-3 承接 QD-2/QD-R10）**——核查结论：
+   - 产面（services）：`dialogue_event_executor.gd` 注册 presentation 类 op 两个——`sfx` 走 `AudioManager.play_sfx`（autoload 表现 API，QD-R10 豁免口径合规）、`shake` 只产 `EventBus.screen_shake_requested` 指令（单通道，EventBus L122-126 冻结段）；quest_service 侧 reward/progress 类无演出。
+   - 消面：`GameManager._on_screen_shake_requested`（L281）装配层订阅执行相机 Tween——RULE001 装配表现自由，现状合法；**PV-3 目标形态=scenes 层独立 PresentationExecutor，迁移落点为 Phase2（§4 行6）**，宿主搬迁素材登记于此。
+   - 机器化：GATE41 新增 `scan_services_no_stage`（QD-R10 落地，services 层禁 create_tween/Tween/相机/AudioStreamPlayer/ResourceLoader/舞台资源直载，**零容忍零基线**）——首跑实测 services 全域零命中，消费面核查结论=合规。
+2. **②PV ViewModel 契约骨架（PV-1）**：`scenes/ui/view_model_base.gd`（class_name ViewModelBase extends RefCounted，rebuild() 唯一数据进点抽象）+ `test_view_model_base.gd` 5 用例（RefCounted 非 Node/基类抽象面/试点投影往返/transient 快照独立性/投影字段零 Node 引用运行时抽查）。三禁机器锚=新增 `scan_view_model_hygiene`（extends ViewModelBase 文件：禁跨模块直写复用 RE_CROSS_WRITE / 禁 Node 引用与 add_child/preload(.tscn) / 禁写入口前缀方法）。骨架期 VM 文件 0 个（逐屏绞杀者引入 §4 行12，Phase4 HUD 四面板+Inventory 先行）。
+3. **③PV-R03 UI 流程白名单物理化**：GATE41 新增 `scan_ui_flow_whitelist`——scenes/**/*.gd + autoload/ui_manager.gd 的 `GameManager.<流程>` 直连基线禁新增（gate41_ui_flow_whitelist **14 条**，粒度=文件|方法）。构成：P-V4 登记六处（MapScreen goto_region / SaveLoadScreen load_game+start_new_game / MainMenu load_game / EscMenu return_to_title / UIManager start_battle+return_to_town）+ P-V4 未登的 gameplay 侧增量（BattleScene/tactical/WeddingScene return_to_town ×3、TownScene start_battle DEBUG ×1+start_test_swarm/riverside ×2）。Phase3 Application 就位后逐条销减（§4 行9 只减不增）。
+
+**Enforcement 矩阵缺口登记**：DoD5 承诺的 PV-R01~R12 明细表未随 V1.2 成文（对齐审计登记「全 E0」）；本批三锚分别以 **QD-R10**（12 图编号承接）、**PV-R03**（§5.5 明示）、**PV-1**（契约编号承载）落 GATE41，不发明未定义的 PV-R 编号；矩阵明细表升版补全随 14 图后续批次（ACR/批注登记）。
+
+**存量收编顺手件**：registry_audit 三方对账抓获 GATE10（D5批2 studio_arch）注册表+PROJECT_STATUS 登记滞后，本批收编（注册表 17=verify_all 17=PROJECT_STATUS 物理槽行一致）。
+
+**基线与验证**：83 套件全绿（+test_view_model_base）；verify_all 十六槽全绿（GATE41 三新锚全绿零基线新增）；类缓存重建后 ViewModelBase 入全局缓存。
+
+**批2 预告（§4 行1~8 Phase2 面）**：PV-5 键位三合一（P-V1）/PV-2 音量兜底（P-V2）/PV-6 IO 收编+原子写+screens.json 校验（P-V8/P-V12）/PV-8 CSV 加固+has_method 退役（P-V6/7）/PV-2 toggle_screen 收口（P-V11）/P-V10 转场降级登记。
+
+---
+
 ## 6. DoD（本图完成的定义）
 
 1. PV-1~PV-8 全部契约有宪法/01 图条款锚点，无 AI 自创标准。

@@ -84,6 +84,15 @@
       "host": "tools/js_lint.py"
     },
     {
+      "slot": 10,
+      "name": "studio_arch",
+      "ln_gate": "GATE10",
+      "tier": "default",
+      "domain": "studio",
+      "report_only": false,
+      "host": "verify_all.gate10_studio_arch"
+    },
+    {
       "slot": 17,
       "name": "assets_contract",
       "ln_gate": "GATE17",
@@ -135,7 +144,7 @@
       "tier": "default",
       "domain": "arch",
       "report_only": false,
-      "host": "tools/arch_validators.py (dependency/module_scope/test_naming/cross_write/owner_baseline/st_r01_studio_writes)"
+      "host": "tools/arch_validators.py (dependency/module_scope/test_naming/cross_write/owner_baseline/st_r01_studio_writes/ui_flow_pv_r03/services_no_stage_qd_r10/vm_hygiene_pv1)"
     },
     {
       "slot": 42,

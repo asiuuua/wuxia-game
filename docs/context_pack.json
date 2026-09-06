@@ -15,7 +15,7 @@
     "11_Ability_Combat_CombatAI施工图_V1.4修复版.md": "f1f14e4a04bea881",
     "12_Quest_Dialogue_Story施工图_V1.4修复版.md": "5df1b49ab288b439",
     "13_Save_Persistence_Migration施工图_V1.4修复版.md": "d956fa0b13600929",
-    "14_Presentation_Input_ViewModel施工图_V1.4修复版.md": "90c5c231e79bce24",
+    "14_Presentation_Input_ViewModel施工图_V1.4修复版.md": "bec10460514d8002",
     "15_Studio_Authoring_Validator_Preview施工图_V1.4修复版.md": "6c617733e2a9aa16",
     "16_Content_Production施工图_V1.4修复版.md": "a56e94e9e979ccc8",
     "17_Simulation_Balance_Performance施工图_V1.4修复版.md": "d0ad9d894e9a9562",
@@ -25,5 +25,5 @@
   "schema_versions": {
     "content_pack_manifest": "MISSING"
   },
-  "verified_revision": "984c1bc1a3a3"
+  "verified_revision": "a89928a0a8c2"
 }

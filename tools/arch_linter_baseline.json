@@ -299,5 +299,21 @@
   "gate41_cross_module_writes": [
     "services/equipment/equipment_service.gd | player_state.equipment_bonuses"
   ],
+  "gate41_ui_flow_whitelist": [
+    "autoload/ui_manager.gd | return_to_town",
+    "autoload/ui_manager.gd | start_battle",
+    "scenes/gameplay/battle/BattleScene.gd | return_to_town",
+    "scenes/gameplay/battle/tactical_battle_scene.gd | return_to_town",
+    "scenes/gameplay/bond/WeddingScene.gd | return_to_town",
+    "scenes/gameplay/town/TownScene.gd | start_battle",
+    "scenes/gameplay/town/TownScene.gd | start_test_riverside",
+    "scenes/gameplay/town/TownScene.gd | start_test_swarm",
+    "scenes/ui/overlays/map/MapScreen.gd | goto_region",
+    "scenes/ui/screens/difficulty_select/DifficultySelect.gd | start_new_game",
+    "scenes/ui/screens/esc_menu/EscMenu.gd | return_to_title",
+    "scenes/ui/screens/main_menu/MainMenu.gd | load_game",
+    "scenes/ui/screens/save_load/SaveLoadScreen.gd | load_game",
+    "scenes/ui/screens/save_load/SaveLoadScreen.gd | start_new_game"
+  ],
   "gate_st_r01_studio_writes": []
 }

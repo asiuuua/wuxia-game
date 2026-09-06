@@ -319,10 +319,10 @@
           "module": "audit",
           "title": "D4：14 Presentation 批1 施工单",
           "type": "待办",
-          "status": "open",
+          "status": "resolved",
           "source": "14_Presentation_Input_ViewModel施工图_V1.4修复版 PV-R01~12",
           "detail": "批1 范围=①PresentationEffect 消费面核查（QD-2 已建通道）②PV ViewModel 契约骨架③UI 写行为白名单对接（B2 ui_write 扫描器已上线=Enforcement 锚就绪）。scenes 存量大，绞杀者按屏分批",
-          "suggestion": "独立大批次"
+          "suggestion": "已完成（2026-09-06）：①消费面核查合规——产面 sfx 走 AudioManager 表现 API（QD-R10 豁免口径）+shake 走 screen_shake_requested 单通道，消面 GameManager 装配层订阅（RULE001 合法），目标形态 scenes PresentationExecutor 留 Phase2；机器化=scan_services_no_stage 零容忍首跑零命中 ②ViewModelBase 骨架（scenes/ui/view_model_base.gd，rebuild 唯一数据进点）+scan_view_model_hygiene 三禁扫描（禁直写/禁 Node/禁写入口）+5 用例 ③scan_ui_flow_whitelist 物理化 PV-R03——UI/场景层 GameManager 流程直连 14 条基线禁新增（P-V4 六处+gameplay 增量八处），Phase3 Command 化只减不增；83 套件+verify_all 十六槽全绿；顺手收编 registry_audit 抓获的 GATE10 登记滞后（D5批2）；PV-R01~12 明细表未成文缺口已批注登记不发明编号；批2=§4 行1~8 Phase2 面（键位三合一/IO 收编/screens 校验/CSV 加固/toggle 收口/转场降级）"
         },
         {
           "module": "audit",

@@ -15,13 +15,14 @@
 | GATE5 双写防线 | ACTIVE | |
 | GATE6 五检 | ACTIVE | ref_index/id_validator/schema_guard/pack_manifest/region 三同 |
 | GATE7 Studio Smoke | ACTIVE | 编辑闭环冒烟 |
+| GATE10 Studio 架构 | ACTIVE（D5批2 物理化，登记滞后收编 2026-09-06） | 工作室服务层架构：业务零 save_json/save_text 直调 / Repository 边界 |
 | GATE8 结构完整性 | ACTIVE | |
 | GATE9 JS 语法 | ACTIVE | |
 | GATE17 Asset Contract | ACTIVE | check_assets_contract.py --strict（05 图批1 挂槽） |
 | GATE21 Type Policy | ACTIVE | 0-B.12 禁裸信号载荷，存量退役禁新增 |
 | GATE22 Forbidden API | ACTIVE | core 禁 IO/JSON/随机；存量 3 条基线 |
 | GATE32 Foundation Freeze | ACTIVE | EventBus 86 信号基线 + save_body_registry 登记制 |
-| GATE41 架构校验器组 | ACTIVE | dependency 禁引矩阵+环 / module_scope / test_naming / state_owner（B 批收口，见下） |
+| GATE41 架构校验器组 | ACTIVE | dependency 禁引矩阵+环 / module_scope / test_naming / state_owner（B 批收口）+ **PV-R03 ui_flow 白名单禁新增（14 批1，14 条只减不增）+ QD-R10 services_no_stage（14 批1 机器化，零容忍）+ PV-1 vm_hygiene 三禁（14 批1）**（见下） |
 | GATE42 Context Pack | ACTIVE | GATE30（LN）物理槽：0-G.5 六字段+0-G.6 STALE 红线+01§127 对账（C2②） |
 | GATE43 Localization | ACTIVE（F5 物理化 2026-09-06） | GATE18（LN）物理槽：localization_validator——C-R12 硬编码中文基线禁新增（loc_baseline.json 362 条只减不增）+VA5 display 文本键核对 strings.csv（WARN 通报） |
 | GATE40 性能基准 | ACTIVE | --tier performance（17 图 SBP-6） |

@@ -15,6 +15,12 @@
   cross_module_write_validator（RULE 004/007，B2 上线 2026-09-06）= scan_cross_module_writes：
       对 Owner 对象的跨模块属性直写扫描——Owner 自文件写豁免，跨模块直写基线禁新增
       （tools/arch_linter_baseline.json gate41_cross_module_writes）
+  14 图批1 三锚（2026-09-06）：
+      scan_ui_flow_whitelist   —— PV-R03 UI/场景层 GameManager 流程直连白名单禁新增
+                                  （gate41_ui_flow_whitelist，Phase3 Command 化只减不增）
+      scan_services_no_stage   —— QD-R10（12图）机器化/PV-3 消费面核查：services 禁 Node 演出（零容忍）
+      scan_view_model_hygiene  —— PV-1 三禁（14图§5.3）：extends ViewModelBase 文件
+                                  禁直写/禁 Node 引用/禁写入口前缀
 
 层方向铁律（宪法 §85 / 工作记忆）：autoload → core → data → services → scenes → tests，单向。
 用法: python tools/arch_validators.py   （退出码 0=通过 1=违规）
@@ -316,6 +322,87 @@ def scan_studio_write_paths():
                  % (len(known), len(hits), len(new_hits)))
 
 
+# --- 14 图批1（PV 域 Enforcement，2026-09-06）：RE 集与三扫描器 ---
+RE_UI_FLOW = re.compile(
+    r"\bGameManager\.(goto_region|load_game|start_new_game|return_to_title|"
+    r"start_battle|return_to_town|start_test_\w+)\s*\(")
+RE_STAGE_API = re.compile(
+    r"create_tween\(|\bTween\b|get_camera|AudioStreamPlayer|ResourceLoader|CanvasItem|"
+    r"preload\([^)]*\.(?:tscn|png|ogg|wav)")
+RE_VM_EXTENDS = re.compile(r"^extends\s+ViewModelBase\s*$", re.M)
+RE_NODE_REF = re.compile(
+    r":\s*(?:Node|Node2D|Node3D|Control|CanvasItem|CanvasLayer|Viewport)\b|"
+    r"add_child\(|Node\.new\(|preload\([^)]*\.tscn")
+RE_VM_WRITER = re.compile(r"^func\s+(?:set|add|remove|clear|update)_\w+\s*\(", re.M)
+
+
+def scan_ui_flow_whitelist():
+    """PV-R03（14 图批1 物理化）：UI/场景层 GameManager 流程直连白名单——基线禁新增，
+    Phase3 Application Command 化后逐条销减（14 图 §4 行9「只减不增」）。
+    范围 = scenes/**/*.gd + autoload/ui_manager.gd；粒度 =「文件 | 方法」。
+    基线 = tools/arch_linter_baseline.json gate41_ui_flow_whitelist。"""
+    baseline = _load_baseline()
+    known = set(baseline.get("gate41_ui_flow_whitelist", []))
+    hits = set()
+    for rel, full in _gd_files_scan():
+        if not (rel.startswith("scenes/") or rel == "autoload/ui_manager.gd"):
+            continue
+        code = re.sub(r"#[^\n]*", "", open(full, encoding="utf-8", errors="replace").read())
+        for m in RE_UI_FLOW.finditer(code):
+            hits.add("%s | %s" % (rel, m.group(1)))
+    new_hits = [h for h in sorted(hits) if h not in known]
+    if new_hits:
+        for h in new_hits[:10]:
+            violations.append(("PV-R03", h.split(" | ")[0],
+                               "UI/场景层 GameManager 流程直连新增（未入白名单）: %s" % h))
+    notes.append("ui_flow_whitelist: 白名单 %d 条 / 本次命中 %d 处 / 新增 %d（PV-R03 只减不增）"
+                 % (len(known), len(hits), len(new_hits)))
+
+
+def scan_services_no_stage():
+    """QD-R10（12 图）机器化——PV-3 消费面核查锚（14 图批1）：services 层禁 Node 演出
+    （Tween/相机/AudioStreamPlayer/ResourceLoader/舞台资源直载）。演出只产指令
+    （EventBus.screen_shake_requested 单通道）交表现层执行；sfx 走 AudioManager
+    （autoload 表现 API）豁免。零基线 ACTIVE（2026-09-06 实测零命中），命中即红。"""
+    hits = []
+    for rel, full in _gd_files_scan():
+        if not rel.startswith("services/"):
+            continue
+        code = re.sub(r"#[^\n]*", "", open(full, encoding="utf-8", errors="replace").read())
+        for i, ln in enumerate(code.split("\n"), 1):
+            if RE_STAGE_API.search(ln):
+                hits.append("%s:%d  %s" % (rel, i, ln.strip()[:90]))
+    if hits:
+        for h in hits[:10]:
+            violations.append(("QD-R10", h.split(":")[0],
+                               "services 层 Node 演出 API 直查（演出须产指令交表现层）: %s" % h))
+    notes.append("services_no_stage: services 演出 API 直查 %d 处（QD-R10 零容忍）" % len(hits))
+
+
+def scan_view_model_hygiene():
+    """PV-1 三禁（14 图 §5.3 Freeze）机器锚（14 图批1）：extends ViewModelBase 文件扫描——
+    ①禁跨模块属性直写（复用 RE_CROSS_WRITE）②禁 Node 引用/add_child/preload(.tscn)
+    ③禁写入口前缀公共方法（ViewModel 输出端只被 UI 读）。
+    骨架期 VM 文件 0 个（基类 scenes/ui/view_model_base.gd 不 extends 自身），扫描即 ACTIVE。"""
+    vm_files = []
+    for rel, full in _gd_files_scan():
+        code = re.sub(r"#[^\n]*", "", open(full, encoding="utf-8", errors="replace").read())
+        if not RE_VM_EXTENDS.search(code):
+            continue
+        vm_files.append(rel)
+        for i, ln in enumerate(code.split("\n"), 1):
+            if RE_CROSS_WRITE.search(ln):
+                violations.append(("PV-1", rel, "ViewModel 禁写业务状态（跨模块直写）: %s:%d  %s"
+                                   % (rel, i, ln.strip()[:90])))
+            if RE_NODE_REF.search(ln):
+                violations.append(("PV-1", rel, "ViewModel 禁持 Node 引用: %s:%d  %s"
+                                   % (rel, i, ln.strip()[:90])))
+            if RE_VM_WRITER.search(ln):
+                violations.append(("PV-1", rel, "ViewModel 禁写入口前缀方法（输出端只被 UI 读）: %s:%d"
+                                   % (rel, i)))
+    notes.append("view_model_hygiene: VM 文件 %d 个（PV-1 三禁扫描 ACTIVE）" % len(vm_files))
+
+
 def fix_baselines():
     """--fix：把当前快照写回基线（仅供首次生成/收编时人工确认后使用）。"""
     baseline = _load_baseline()
@@ -351,11 +438,19 @@ def fix_baselines():
                     if "configs" in "\n".join(lines[max(0, i - 3):i + 4]):
                         st_hits.append("%s | %s" % (rel, ln.strip()[:120]))
     baseline["gate_st_r01_studio_writes"] = sorted(set(st_hits))
+    flow = set()
+    for rel, full in _gd_files_scan():
+        if not (rel.startswith("scenes/") or rel == "autoload/ui_manager.gd"):
+            continue
+        code = re.sub(r"#[^\n]*", "", open(full, encoding="utf-8", errors="replace").read())
+        for m in RE_UI_FLOW.finditer(code):
+            flow.add("%s | %s" % (rel, m.group(1)))
+    baseline["gate41_ui_flow_whitelist"] = sorted(flow)
     _save_baseline(baseline)
     print("--fix 已写基线: gate25_owner_writers(%d 文件) / gate41_cross_module_writes(%d 条) / "
-          "gate_st_r01_studio_writes(%d 条)"
+          "gate_st_r01_studio_writes(%d 条) / gate41_ui_flow_whitelist(%d 条)"
           % (len(baseline["gate25_owner_writers"]), len(baseline["gate41_cross_module_writes"]),
-             len(baseline["gate_st_r01_studio_writes"])))
+             len(baseline["gate_st_r01_studio_writes"]), len(baseline["gate41_ui_flow_whitelist"])))
 
 
 def report_state_owners():
@@ -390,9 +485,12 @@ def main():
     scan_cross_module_writes()
     scan_owner_writer_baseline()
     scan_studio_write_paths()
+    scan_ui_flow_whitelist()
+    scan_services_no_stage()
+    scan_view_model_hygiene()
     report_state_owners()
 
-    print("arch_validators · 04图 GATE41（dependency/module_scope/test_naming + cross_write R004/007 + state_owner 基线+REPORT + ST-R01 studio_writes）")
+    print("arch_validators · 04图 GATE41（dependency/module_scope/test_naming + cross_write R004/007 + state_owner 基线+REPORT + ST-R01 studio_writes + PV-R03 ui_flow + QD-R10 services_no_stage + PV-1 vm_hygiene）")
     for n in notes:
         print("  ℹ " + n)
     if violations:
