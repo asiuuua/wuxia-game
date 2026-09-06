@@ -7,7 +7,7 @@
     "03_Contract_Schema_DataContract施工图_V1.4修复版.md": "eee6873d45568df7",
     "04_Test_Infrastructure_Architecture_Gate施工图_V1.4修复版.md": "15d03773a521b76e",
     "05_Content_Registry_Content_Pipeline施工图_V1.4修复版.md": "506ced9c97ae9a36",
-    "06_Actor_Player_NPC施工图_V1.4修复版.md": "a378ef92134110dc",
+    "06_Actor_Player_NPC施工图_V1.4修复版.md": "b723da2302d05f2f",
     "07_World_Time_Schedule施工图_V1.4修复版.md": "b77fe44bf36d59b0",
     "08_Relationship_Faction施工图_V1.4修复版.md": "01d5ca7b2deea751",
     "09_Item_Inventory_Equipment施工图_V1.4修复版.md": "63a68b48d7caefc0",
@@ -25,5 +25,5 @@
   "schema_versions": {
     "content_pack_manifest": "MISSING"
   },
-  "verified_revision": "8447005dbd71"
+  "verified_revision": "73066cc94ece"
 }

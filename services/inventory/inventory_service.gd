@@ -15,7 +15,9 @@ var material_slots: Array = []
 var quest_slots: Array = []
 var current_weight: float = 0.0
 var _dirty: bool = false
-var _next_iid: int = 1   # 实例 ID 发号器：全局自增，随存档恢复，杜绝同毫秒撞车
+var _next_iid: int = 1   # 兼容镜像（save 面导出用）；序号真源=_iid_alloc（06批1 ①/09 图 ID-1）
+var _iid_alloc := EntityIdAllocator.new()
+const IID_DOMAIN := &"ITEM"
 var _count_index: Dictionary = {}   # item_id -> 总数量（含锁定）缓存索引；P2-7 优化 get_item_count 全扫
 
 func _init() -> void:
@@ -191,11 +193,12 @@ func add_instance(inst: ItemInstance) -> bool:
 	EventBus.inventory_item_added.emit(inst.item_id, inst.count)
 	return true
 
-## 实例 ID 发号器：全局自增序号，随存档 save/load 恢复，保证永不重复
+## 实例 ID 发号（06 图批1 ①/09 图 ID-1：迁入 EntityId 分配器，iid=分配器 ITEM 域序列；
+## ID-3 禁再发明——本函数只是形态适配壳，序号真源=kernel 分配器，永不复用）
 func _new_instance_id(item_id: String) -> String:
-	var id := "%s#%d" % [item_id, _next_iid]
-	_next_iid += 1
-	return id
+	var serial := _iid_alloc.next_int(IID_DOMAIN)
+	_next_iid = _iid_alloc.watermark(IID_DOMAIN)   # 兼容面镜像：save 仍导出 next_iid（schema 稳定）
+	return "%s#%d" % [item_id, serial]
 
 ## 纯计算预检：count 个 item_id 能装入对应栏位多少个（不改任何状态，不发光）
 ## 返回 { "added": int, "overflow": int }；shop/forge/alchemy 产出前必调
@@ -695,9 +698,21 @@ func reset() -> void:
 	material_slots.clear(); material_slots.resize(MAX_MATERIAL_SLOTS)
 	quest_slots.clear(); quest_slots.resize(MAX_QUEST_SLOTS)
 	current_weight = 0.0
+	_iid_alloc.reset_domain(IID_DOMAIN)
 	_next_iid = 1
 	_count_index.clear()
 	_dirty = false
+
+## ID-2 推导面：现存全部实例的 serial（三栏扫描；解析 '#' 后段，无 '#' 视为 0）
+func _collect_live_serials() -> Array:
+	var serials: Array = []
+	for bag in [main_slots, material_slots, quest_slots]:
+		for inst in bag:
+			if inst != null and inst.instance_id != "":
+				var iid := str(inst.instance_id)
+				var pos := iid.rfind("#")
+				serials.append(int(iid.substr(pos + 1)) if pos >= 0 else 0)
+	return serials
 
 func get_save_key() -> String:
 	return "inventory"
@@ -729,7 +744,12 @@ func load(data: Dictionary) -> void:
 	_deserialize_bag(data.get("material", []), material_slots)
 	_deserialize_bag(data.get("quest", []), quest_slots)
 	current_weight = float(data.get("weight", 0.0))  # 显式 float() 避免 Variant→float 推断歧义
-	_next_iid = maxi(int(data.get("next_iid", 1)), 1)
+	# 09 图 ID-2 水位恢复：水位不入档、可从数据推导 = max(现存 serial)+1；
+	#   旧存档显式 next_iid 只作上界安全垫（覆盖已消费/已装备走、不在现存面内的 serial，
+	#   堵回滚档撞号 P-3）——取两者 max，水位绝不回拨（ID 永不复用红线）。
+	var saved_hint := maxi(int(data.get("next_iid", 1)), 1)
+	_iid_alloc.bootstrap(IID_DOMAIN, _collect_live_serials(), saved_hint)
+	_next_iid = _iid_alloc.watermark(IID_DOMAIN)
 	# 旧档不信任存档负重：配置可能已改物品重量，按当前配置重算
 	_recalculate_weight()
 	_rebuild_count_index()

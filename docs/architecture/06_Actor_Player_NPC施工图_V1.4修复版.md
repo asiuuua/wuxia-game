@@ -195,6 +195,8 @@
 
 ---
 
+> **06 批1 落地批注（2026-09-06 · AI-架构窗口/kernel）**：四件套骨架落地，05 批1 同款绞杀者路径（零破坏，存量生产路径未动）。**①EntityId 分配器**（09 图 ID-1/ID-2/ID-3）：`core/kernel/identity/entity_id_allocator.gd`（domain 序列单调发号/零填充 serial/next_entity_id 集成；水位不入档，`bootstrap`=max(现存 serial+1, persisted_hint, 旧水位) 绝不回拨）；Inventory 发号器 `_new_instance_id` 已 delegate（iid=分配器 ITEM 域序列，`<item_id>#<n>` 形态与 save 面 `next_iid` 导出保持 schema 稳定；load 侧 ID-2 水位推导=现存三栏 serial ∪ 旧档 hint 上界，堵回滚档撞号 P-3）。**②State Owner 落位**：`application/actor/npc_state_owner.gd`（§7「NPC Runtime State 唯一 Owner=NPC 模块」骨架；写入口=未来 Command 执行端形状；默认 ALIVE 防误判语义镜像；`_unit_runtime` 存量迁移仍按 §10 归 Phase2——faction→Faction Ref 组件、affinity→08 Relationship 域迁移时各归其主，不入本 Owner）。**③Materialization/VS-005 骨架**：`application/actor/actor_materializer.gd`（AM-1 四相循环于 RefCounted 记录面；AM-2 弃皮先回写 Owner；SV-3 State 先于皮；TownScene Node2D 实体化接线归 Phase2/AM-4）+ `actor_identity.gd`（AC-3 唯一事实锚，EntityId+类型+存活态最小面）。**④NPC 四态契约**：`npc_definition.gd`（NP-4 display_text_id 键化挂点/Binding 三件/spawn 保留）/`npc_state.gd`（NP-2 白名单六项构造即防+JSON 归一化）/`npc_save_dto.gd`（SV-1 持久化子集：position/status/schedule_ref/runtime_flags——health 归 Progression、quest_state 归 Quest，事实各归其主）/`npc_actor_runtime.gd`（NP-1 态四呈现记录，零 Node）。测试：`test_entity_id_allocator.gd`（6 项：单调/域隔离/水位推导/hint 上界/绝不回拨）+`test_actor_skeleton.gd`（8 项：白名单六键/快照镜像/DTO 往返/四相循环/A-R05 逐字段一致/SV-3 事实源/AC-3 最小面），80 套件全绿+verify_all 十六槽全绿（零基线新增）。Write Lease 补记：kernel 属 FROZEN_SCOPE，单窗模式（用户指令「全部处理」）claim→release 事后留痕。批2 预告：ActorScheduler 五态（SC-1~SC-4）+ Player 四件套挂点 + `_unit_runtime`/`_npc_nodes` 迁移接线（AC-2/Phase2 面）。
+
 ## 13. 完成定义（DoD，7 条）
 
 1. `ActorIdentity` + Owner 声明落地，`_unit_runtime` 迁入 NPC Owner 且经 Command 写入；
