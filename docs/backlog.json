@@ -310,10 +310,10 @@
           "module": "audit",
           "title": "D3：08 Relationship 批1 施工单",
           "type": "待办",
-          "status": "open",
+          "status": "resolved",
           "source": "08_Relationship_Faction施工图_V1.4修复版 冻结8件",
           "detail": "批1 范围=①RelationshipGraph 本体骨架（十型统一登记）②好感送礼事务化（0-C 事务收编同 ShopTradeTransaction 范式）③读模型 Query 化（SV-3 同族）。BondService 真源已落（前置 ✓）；bond 域主权=结缘窗，施工前 handoff 确认",
-          "suggestion": "独立大批次；与结缘窗协同排期"
+          "suggestion": "已完成（2026-09-06）：application/relationship/ 五件（relationship_type TY-1 十型冻结/TY-3 投影通道/TY-4 启用三件套 + relationship_edge RG-2 无序对复合键/DISSOLVED 软删除 + relationship_graph upsert/upsert_projection/失败码五枚/SV-1 图切片 to_save/from_save）+ gift_transaction 三 Effect 事务化（TX-1 全 Journal/失败逆序回滚，RF-R05 机制性达成——「扣了物品好感没加」由 TamperedInventory/TamperedBond 注错替身测试钉死不可能）+ relationship_service 构造注入清零 GameManager 直连（RM-2/DoD3 形状达成）；test_relationship_graph 10 项+test_gift_transaction 7 项，82 套件+verify_all 十六槽全绿，gate25 收编 set_gift_runtime_factory 后零基线新增；批2=Faction 九件套+Membership（MB-2 裸名与 F4/CP-2 联动）+Rank 双轨（RF-R07）+存量四系统数据迁入"
         },
         {
           "module": "audit",

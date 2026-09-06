@@ -158,7 +158,8 @@
     ],
     "services/bond/bond_service.gd": [
       "add_affection",
-      "set_affection"
+      "set_affection",
+      "set_gift_runtime_factory"
     ],
     "services/bond/romance_service.gd": [
       "set_spouse_rank",
@@ -297,5 +298,6 @@
   },
   "gate41_cross_module_writes": [
     "services/equipment/equipment_service.gd | player_state.equipment_bonuses"
-  ]
+  ],
+  "gate_st_r01_studio_writes": []
 }

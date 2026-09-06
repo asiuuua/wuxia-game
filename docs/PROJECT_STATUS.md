@@ -9,7 +9,7 @@
 | 槽 | 状态 | 说明 |
 |---|---|---|
 | GATE1 quit_check | ACTIVE | 含自愈缓存重建 |
-| GATE2 unit tests | ACTIVE | 80 套件（tests/unit + tests/integration）零 ✗ 零 M，flaky 防抖 D-07 |
+| GATE2 unit tests | ACTIVE | 82 套件（tests/unit + tests/integration）零 ✗ 零 M，flaky 防抖 D-07 |
 | GATE3 内容红线 | ACTIVE | JSON 铁律/硬编码路径扫描（基线模式） |
 | GATE4 战斗预设红线 | ACTIVE | |
 | GATE5 双写防线 | ACTIVE | |

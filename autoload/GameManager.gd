@@ -274,7 +274,7 @@ func _init_services() -> void:
 	romance_service = RomanceService.new()
 	sworn_service = SwornService.new()
 	master_service = MasterService.new()
-	relationship_service = RelationshipService.new()
+	relationship_service = RelationshipService.new(bond_service, romance_service, sworn_service, master_service)
 
 ## 表现层执行器（12 图 QD-R10 / P-Q10 收口 2026-09-06）：services 只产
 ## screen_shake_requested 指令，相机随机偏移 Tween 演出在此执行（装配层表现自由）。

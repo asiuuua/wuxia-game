@@ -191,6 +191,29 @@
 
 ---
 
+## 12.5 08 批1 落地批注（2026-09-06，AI-架构窗口(kernel)）
+
+> 本批注为施工留痕，非契约条款；条款以 §2~§13 冻结面为准。Write Lease 已 claim/release 留痕（bond 域主权知会卡 915abe506b6d 已 done）。
+
+**批1 三件套（绞杀者路径：新增 `application/relationship/`，存量生产路径零破坏）**：
+
+1. **RelationshipGraph 本体**（§2/§3 冻结项 1/8+2/8）：
+   - `relationship_type.gd`：TY-1 十型枚举冻结（FRIEND~FACTION，TYPE_COUNT=10）；RANGES 量程表（状态型 [0,0] 禁分值）；TY-4 启用三件套 ENABLED（四象限+SWORN+MASTER+DISCIPLE）；TY-3 投影通道 PROJECTION_ONLY=[ROMANCE,FACTION]（婚姻是投影不是事实）；DIRECTED_TYPES=[MASTER,DISCIPLE]。
+   - `relationship_edge.gd`：RG-2 无序对 `ordered_pair(a,b)` 字典序 + 复合键 `edge_key="min|max|type"`；State 三态 PENDING/ACTIVE/**DISSOLVED（软删除保留事实）**。
+   - `relationship_graph.gd`：`_upsert(...,allow_projection)` 内部面 + `upsert_projection` 公开口（先 TY-3 判定再入图）；失败码 REL_TYPE_DISABLED/REL_SELF_LOOP/REL_STATE_TYPE_SCORED/REL_SCORE_OUT_OF_RANGE/REL_NOT_PROJECTION；SV-1 图切片 `to_save/from_save` 往返契约；`dissolve` 软删除。
+2. **GiftTransaction**（§6 TX-1~TX-4，RF-R05）：
+   - 一事务三 Effect：GiftInstanceConsumeEffect（扣实例，undo=补 1 件）→ AffectionMutationEffect（静默变更，undo=恢复 before+日志截断）→ GiftCountEffect（+1，undo=−1）；TransactionRuntime begin→run→commit 全 Journal，失败逆序回滚（0-C.8）。
+   - TX-4 事件移 commit 后投影：BOND_GIFT_GIVEN 强类型载荷；bond_affection_changed→level_up→_check_affection_events→disliked→gift_given 信号序保真。
+   - GiftFacts/GiftGoldenInvariant 三侧等式（好感初值+增益=钳后终值，与执行端 clampi 同口径）。
+   - **RF-R05 机制性达成**：中间失败（扣了物品好感没加）回滚测试钉死，test_gift_transaction 7 项含 TamperedInventory/TamperedBond 注错替身。
+3. **RM-2/DoD3 直连清零**：`relationship_service.gd` 改 `_init(bond,romance,sworn,master)` 四必需参构造注入，GameManager.* 直连清零（余 3 处为注释）；装配点 GameManager L277 与 application_root L56 同步改单参→四参。
+
+**基线与验证**：gate25_owner_writers 收编新写入口 `set_gift_runtime_factory`（Runtime 工厂 lambda 注入，0-C 形状与 ShopTrade 同款）；82 套件全绿（新增 test_relationship_graph 10 项+test_gift_transaction 7 项）；verify_all 十六槽全绿。
+
+**批2 预告**：Faction 九件套（§4）+ Membership 契约（§5，MB-2 裸名 region 修复与 F4/CP-2 联动）+ Rank 双轨合一（RF-R07）+ 存量四系统数据迁入图切片（§10 迁移映射）。
+
+---
+
 ## 13. 完成定义（DoD，7 条）
 
 1. RelationshipGraph 落地：Edge 键/量程/规则三件套齐，存量四系统数据可完整迁入（GATE2 全绿）；

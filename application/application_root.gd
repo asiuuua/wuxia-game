@@ -53,7 +53,7 @@ func create() -> void:
 	romance_service = RomanceService.new()
 	sworn_service = SwornService.new()
 	master_service = MasterService.new()
-	relationship_service = RelationshipService.new()
+	relationship_service = RelationshipService.new(bond_service, romance_service, sworn_service, master_service)
 
 ## Inject：域级共享注册表注入（QD-2 收编口径；组装段禁业务事件/禁读档）
 func inject() -> void:
@@ -62,6 +62,8 @@ func inject() -> void:
 	# ADR-0007 批B 升表口：ShopTrade Runtime 工厂注入（每笔仍产新实例，0-C.12 合法形态）
 	trade_runtime_factory = func() -> TransactionRuntime: return TransactionRuntime.new()
 	shop_service.set_trade_runtime_factory(trade_runtime_factory)
+	# 08图批1 TX-1 升表口：GiftTransaction Runtime 工厂注入（同款形态）
+	bond_service.set_gift_runtime_factory(trade_runtime_factory)
 
 ## Register（ADR-0007 批B 移交）：服务 saveable 注册清单自 GameManager 移交本段；
 ## player_state / GameState 桥为时序敏感项，批C 随装配段整体移交（暂留 GameManager）。

@@ -116,6 +116,8 @@ func get_gift_reaction(npc_id: String, item_id: String) -> int:
 	return BondEnums.GiftReaction.NEUTRAL
 
 ## 送礼：消耗背包实例（按 iid），按 NPC 喜恶结算好感度，广播事件
+## 08图批1 TX-1：事务化——GiftTransaction 全量 Journal（扣物品+好感+计数捆绑，
+## 中途失败全量逆序回滚；RF-R05/GATE26）。公开 API/返回形状/信号序保真。
 ## 返回 { "ok": bool, "reason": String, "reaction": int, "affection_gain": int }
 func give_gift(npc_id: String, item_instance_id: String) -> Dictionary:
 	var npc: Dictionary = ConfigManager.get_relation(npc_id)
@@ -136,12 +138,21 @@ func give_gift(npc_id: String, item_instance_id: String) -> Dictionary:
 		_: gain = 3
 	var gc: int = int(gift_count.get(npc_id, 0))
 	if gc > 5:
-		gain = int(gain * 0.5)   # 送礼次数衰减：超过 5 次收益减半
-	# consume_instance 按实例扣 1（与用药同源），整堆移除的 remove_instance 不适用于送礼
-	if not GameManager.inventory_service.consume_instance(item_instance_id):
-		return {"ok": false, "reason": "REMOVE_FAILED", "reaction": reaction, "affection_gain": 0}
-	gift_count[npc_id] = gc + 1
-	add_affection(npc_id, gain, "gift:%s" % item_id)
+		gain = int(gain * 0.5)   # 送礼次数衰减：超过 5 次收益减半（TX-3 保留，触发挂 TimeConsumer 归批2）
+	# 事务段：Validation 已毕 → Transaction → Commit（失败已逆序回滚）
+	var trade := GiftTransaction.new(_rt_from_factory())
+	var res: Dictionary = trade.execute(self, GameManager.inventory_service, npc_id, item_instance_id, item_id, gain)
+	var cr: CommandResult = res["result"]
+	if cr.is_failed():
+		var code: StringName = cr.get_error().get_code()
+		return {"ok": false, "reason": GiftTransaction.tag_for(code), "reaction": reaction, "affection_gain": 0}
+	# 0-C.7 / 01 §60 第七步：Commit 后投影（事件触发+信号；TX-4——事务窗口内零事件写入）
+	var new_value: int = get_affection(npc_id)
+	var before_value: int = clampi(new_value - gain, 0, 100)
+	EventBus.bond_affection_changed.emit(npc_id, new_value, gain)
+	if _level_of(new_value) > _level_of(before_value):
+		EventBus.bond_affection_level_up.emit(npc_id, _level_of(new_value))
+	_check_affection_events(npc_id, new_value)
 	if reaction == BondEnums.GiftReaction.DISLIKED:
 		EventBus.bond_gift_disliked.emit(npc_id, item_id)
 	EventBus.bond_gift_given.emit(npc_id, item_id, gain, reaction)
@@ -231,6 +242,43 @@ func hold_wedding(npc_id: String) -> Dictionary:
 	EventBus.bond_wedding_started.emit(npc_id, wedding_type, scene_path)
 	EventBus.bond_relationship_changed.emit()
 	return {"ok": true, "reason": "SUCCESS", "wedding_type": wedding_type, "scene_path": scene_path}
+
+## ===== 事务化执行端（08图批1 TX-1/TX-2：GiftTransaction 专用，静默无事件无信号） =====
+## ADR-0007 批B 同款升表口：Runtime 工厂注入（每笔仍产新实例，0-C.12 合法形态）。
+var _gift_runtime_factory: Callable = Callable()
+
+func set_gift_runtime_factory(f: Callable) -> void:
+	_gift_runtime_factory = f
+
+func _rt_from_factory() -> TransactionRuntime:
+	if _gift_runtime_factory.is_valid():
+		return _gift_runtime_factory.call()
+	return null   # 未注入时 GiftTransaction 内部兜底（兼容旧构造，同 ShopService）
+
+## 事务内静默好感变更（TX-2 Effect 执行端：直改路径保留为 Effect 内部实现）。
+## 返回 { "before": int, "after": int, "log_size": int }（undo 快照面）。
+func apply_affection_mutation(npc_id: String, amount: int, source: String) -> Dictionary:
+	var before: int = get_affection(npc_id)
+	var log_size: int = interaction_log.size()
+	var new_value: int = clampi(before + amount, 0, 100)
+	affections[npc_id] = new_value
+	affection_levels[npc_id] = _level_of(new_value)
+	if amount != 0:
+		_add_log(npc_id, BondEnums.BondActionType.INTERACT, source, amount)
+	return {"before": before, "after": new_value, "log_size": log_size}
+
+## 事务回滚恢复（set_affection 恢复路径形态，静默；日志按快照截断）。
+func restore_affection_mutation(npc_id: String, value: int, log_size: int) -> void:
+	affections[npc_id] = clampi(value, 0, 100)
+	affection_levels[npc_id] = _level_of(clampi(value, 0, 100))
+	while interaction_log.size() > log_size:
+		interaction_log.pop_back()
+
+## 送礼计数增量（事务 Effect 执行端；undo=负 delta，不低于 0）。
+func adjust_gift_count(npc_id: String, delta: int) -> int:
+	var v: int = maxi(int(gift_count.get(npc_id, 0)) + delta, 0)
+	gift_count[npc_id] = v
+	return v
 
 ## ===== 重置 / 存档 =====
 func reset() -> void:

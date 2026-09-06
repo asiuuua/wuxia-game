@@ -11,6 +11,20 @@
 extends RefCounted
 class_name RelationshipService
 
+# === RM-2（08图批1 ③/DoD3）：构造注入清零 GameManager.<service> 直连（RF-R02） ===
+# 四域服务由 Composition Root（GameManager._create_services / ApplicationRoot.Create）
+# 构造注入；本类内禁再出现任何 GameManager.* 引用——跨模块只走公共契约（02 契约底线）。
+var _bond: BondService
+var _romance: RomanceService
+var _sworn: SwornService
+var _master: MasterService
+
+func _init(bond: BondService, romance: RomanceService, sworn: SwornService, master: MasterService) -> void:
+	_bond = bond
+	_romance = romance
+	_sworn = sworn
+	_master = master
+
 # === 整张关系图（UI 关系网视图 / 右上角面板直接消费） ===
 ## 聚合好感 + 配偶 + 子嗣 + 结义 + 师徒，返回统一关系图
 ## 返回 { nodes:Array, spouses:Array, children:Array, sworn:Array, masters:Array, apprentices:Array, summary:Dictionary }
@@ -19,18 +33,18 @@ func get_relationship_graph() -> Dictionary:
 	for npc_id in ConfigManager.get_all_relation_ids():
 		nodes.append(_node_of(npc_id))
 	var spouses_out: Array = []
-	for npc_id in GameManager.romance_service.get_spouses():
-		var rec: Dictionary = GameManager.romance_service.get_spouse_record(npc_id)
+	for npc_id in _romance.get_spouses():
+		var rec: Dictionary = _romance.get_spouse_record(npc_id)
 		spouses_out.append({
 			"npc_id": npc_id,
 			"name": _name_of(npc_id),
 			"stage": int(rec.get("stage", BondEnums.RomanceStage.COURTING)),
-			"stage_name": GameManager.romance_service.get_romance_stage_name(npc_id),
+			"stage_name": _romance.get_romance_stage_name(npc_id),
 			"children": rec.get("children", []),
-			"pregnant": GameManager.romance_service.is_pregnant(npc_id),
+			"pregnant": _romance.is_pregnant(npc_id),
 		})
 	var children_out: Array = []
-	for c in GameManager.romance_service.get_children_brief():
+	for c in _romance.get_children_brief():
 		children_out.append({
 			"child_id": String(c.get("child_id", "")),
 			"name": c.get("name", ""),
@@ -39,26 +53,26 @@ func get_relationship_graph() -> Dictionary:
 			"born_day": int(c.get("born_day", 0)),
 		})
 	var sworn_out: Array = []
-	for npc_id in GameManager.sworn_service.get_sworn_brothers():
+	for npc_id in _sworn.get_sworn_brothers():
 		sworn_out.append({
 			"npc_id": npc_id,
 			"name": _name_of(npc_id),
-			"ability": GameManager.sworn_service.get_sworn_ability(npc_id),
+			"ability": _sworn.get_sworn_ability(npc_id),
 		})
 	var masters_out: Array = []
-	for npc_id in GameManager.master_service.get_masters():
+	for npc_id in _master.get_masters():
 		masters_out.append({
 			"npc_id": npc_id,
 			"name": _name_of(npc_id),
-			"grade_level": GameManager.master_service.get_grade_level(npc_id),
-			"teachable_abilities": GameManager.master_service.get_teachable_abilities(npc_id),
+			"grade_level": _master.get_grade_level(npc_id),
+			"teachable_abilities": _master.get_teachable_abilities(npc_id),
 		})
 	var apprentices_out: Array = []
-	for npc_id in GameManager.master_service.get_apprentices():
+	for npc_id in _master.get_apprentices():
 		apprentices_out.append({
 			"npc_id": npc_id,
 			"name": _name_of(npc_id),
-			"grade_level": GameManager.master_service.get_grade_level(npc_id),
+			"grade_level": _master.get_grade_level(npc_id),
 		})
 	return {
 		"nodes": nodes,
@@ -91,7 +105,7 @@ func get_all_relations() -> Array:
 func get_marriageable_npc_ids() -> Array:
 	var out: Array = []
 	for npc_id in ConfigManager.get_all_relation_ids():
-		if GameManager.romance_service.can_propose(npc_id):
+		if _romance.can_propose(npc_id):
 			out.append(npc_id)
 	return out
 
@@ -99,15 +113,15 @@ func get_marriageable_npc_ids() -> Array:
 ## 返回所有配偶的 enriched 列表（name/stage/children/pregnant）
 func get_spouses_enriched() -> Array:
 	var out: Array = []
-	for npc_id in GameManager.romance_service.get_spouses():
-		var rec: Dictionary = GameManager.romance_service.get_spouse_record(npc_id)
+	for npc_id in _romance.get_spouses():
+		var rec: Dictionary = _romance.get_spouse_record(npc_id)
 		out.append({
 			"npc_id": npc_id,
 			"name": _name_of(npc_id),
 			"stage": int(rec.get("stage", BondEnums.RomanceStage.COURTING)),
-			"stage_name": GameManager.romance_service.get_romance_stage_name(npc_id),
+			"stage_name": _romance.get_romance_stage_name(npc_id),
 			"children": rec.get("children", []),
-			"pregnant": GameManager.romance_service.is_pregnant(npc_id),
+			"pregnant": _romance.is_pregnant(npc_id),
 		})
 	return out
 
@@ -115,7 +129,7 @@ func get_spouses_enriched() -> Array:
 ## 返回全部子嗣的 enriched 列表
 func get_children() -> Array:
 	var out: Array = []
-	for c in GameManager.romance_service.get_children_brief():
+	for c in _romance.get_children_brief():
 		out.append({
 			"child_id": String(c.get("child_id", "")),
 			"name": c.get("name", ""),
@@ -129,11 +143,11 @@ func get_children() -> Array:
 ## 返回所有结义兄弟的 enriched 列表
 func get_sworn_enriched() -> Array:
 	var out: Array = []
-	for npc_id in GameManager.sworn_service.get_sworn_brothers():
+	for npc_id in _sworn.get_sworn_brothers():
 		out.append({
 			"npc_id": npc_id,
 			"name": _name_of(npc_id),
-			"ability": GameManager.sworn_service.get_sworn_ability(npc_id),
+			"ability": _sworn.get_sworn_ability(npc_id),
 		})
 	return out
 
@@ -141,22 +155,22 @@ func get_sworn_enriched() -> Array:
 ## 返回所有师父的 enriched 列表（npc 是你的师父）
 func get_masters_enriched() -> Array:
 	var out: Array = []
-	for npc_id in GameManager.master_service.get_masters():
+	for npc_id in _master.get_masters():
 		out.append({
 			"npc_id": npc_id,
 			"name": _name_of(npc_id),
-			"grade_level": GameManager.master_service.get_grade_level(npc_id),
-			"teachable_abilities": GameManager.master_service.get_teachable_abilities(npc_id),
+			"grade_level": _master.get_grade_level(npc_id),
+			"teachable_abilities": _master.get_teachable_abilities(npc_id),
 		})
 	return out
 
 # === 内部：单个 NPC 关系节点 ===
 func _node_of(npc_id: String) -> Dictionary:
 	var npc: Dictionary = ConfigManager.get_relation(npc_id)
-	var is_sp: bool = GameManager.romance_service.is_spouse(npc_id)
-	var stage: int = GameManager.romance_service.get_romance_stage(npc_id)
-	var is_sw: bool = GameManager.sworn_service.is_sworn(npc_id)
-	var is_mt: bool = GameManager.master_service.is_master(npc_id)
+	var is_sp: bool = _romance.is_spouse(npc_id)
+	var stage: int = _romance.get_romance_stage(npc_id)
+	var is_sw: bool = _sworn.is_sworn(npc_id)
+	var is_mt: bool = _master.is_master(npc_id)
 	# 关系种类（统一归类，UI 直接展示）：此 NPC 与玩家当前成立的关系
 	var kinds: Array = []
 	if is_sp:
@@ -174,21 +188,21 @@ func _node_of(npc_id: String) -> Dictionary:
 			"swornable": bool(npc.get("is_swornable", false)),
 			"masterable": bool(npc.get("is_masterable", false)),
 		},
-		"affection": GameManager.bond_service.get_affection(npc_id),
-		"affection_level": GameManager.bond_service.get_affection_level(npc_id),
-		"affection_level_name": GameManager.bond_service.get_affection_level_name(npc_id),
+		"affection": _bond.get_affection(npc_id),
+		"affection_level": _bond.get_affection_level(npc_id),
+		"affection_level_name": _bond.get_affection_level_name(npc_id),
 		"relation_kinds": kinds,
 		"is_spouse": is_sp,
 		"romance_stage": stage,
-		"romance_stage_name": GameManager.romance_service.get_romance_stage_name(npc_id),
+		"romance_stage_name": _romance.get_romance_stage_name(npc_id),
 		"is_sworn": is_sw,
 		"is_master": is_mt,
-		"children": GameManager.romance_service.get_children_of(npc_id),
-		"pregnant": GameManager.romance_service.is_pregnant(npc_id),
-		"can_propose": GameManager.romance_service.can_propose(npc_id),
+		"children": _romance.get_children_of(npc_id),
+		"pregnant": _romance.is_pregnant(npc_id),
+		"can_propose": _romance.can_propose(npc_id),
 		"can_intimacy": is_sp and stage == BondEnums.RomanceStage.MARRIED,
-		"can_sworn": GameManager.sworn_service.can_sworn(npc_id),
-		"can_apprentice": GameManager.master_service.can_apprentice(npc_id),
+		"can_sworn": _sworn.can_sworn(npc_id),
+		"can_apprentice": _master.can_apprentice(npc_id),
 	}
 
 func _summary(nodes: Array) -> Dictionary:

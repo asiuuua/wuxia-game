@@ -9,7 +9,7 @@
     "05_Content_Registry_Content_Pipeline施工图_V1.4修复版.md": "506ced9c97ae9a36",
     "06_Actor_Player_NPC施工图_V1.4修复版.md": "b723da2302d05f2f",
     "07_World_Time_Schedule施工图_V1.4修复版.md": "b77fe44bf36d59b0",
-    "08_Relationship_Faction施工图_V1.4修复版.md": "01d5ca7b2deea751",
+    "08_Relationship_Faction施工图_V1.4修复版.md": "6f84d0079b047a56",
     "09_Item_Inventory_Equipment施工图_V1.4修复版.md": "63a68b48d7caefc0",
     "10_Economy_Shop_Crafting施工图_V1.4修复版.md": "a878a5fd4433d5bf",
     "11_Ability_Combat_CombatAI施工图_V1.4修复版.md": "f1f14e4a04bea881",
@@ -25,5 +25,5 @@
   "schema_versions": {
     "content_pack_manifest": "MISSING"
   },
-  "verified_revision": "73066cc94ece"
+  "verified_revision": "984c1bc1a3a3"
 }
