@@ -1,19 +1,24 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-scan_deps.py —— L1 自动依赖图扫描器（AI 工程操作系统 · 中期#2）
+scan_deps.py —— Code Graph（代码层依赖图）【Phase 5 双图分离：Code Graph / Content Graph】
 
 扫描工程内全部 .gd，按「五层架构」映射每个文件所属层，提取：
   - class_name（定义的类）
   - extends（继承：类名 或 "res://..." 路径）
   - preload / load("res://...")（资源/脚本引用）
-构建 节点(文件) + 边(依赖) 的依赖图，输出：
+构建 节点(文件) + 边(依赖) 的 Code Graph，输出：
   - JSON 报告（--out 指定；默认打印到 stdout）
   - Mermaid 图（--mermaid 指定输出文件）
 并依据「架构铁律：依赖只允许向下」标注**向上依赖违例**（高 layer 依赖低 layer）。
 
 五层（foundation rank 越小越基础/被依赖方）：core < data < services < autoload < scenes < resources/tests/tools
-（core 为最基础层，被全员依赖；依赖铁律：只允许「上层依赖更基础的层」，禁止基础层反向依赖上层）
+（core 为最基础层，被全员依赖；依赖铁律：只允许「上层依赖更基础的层」，禁止基础层反向依赖上层）。
+
+【与 Content Graph 的关系】（施工图 §9 / 硬约束 #3）：
+  · Code Graph = 代码层依赖（本文件，.gd 文件级）
+  · Content Graph = 数据实体层依赖（tools/ref_index.py，实体级）
+  · 两图分别输出、禁止混用；统一门面见 tools/dep_graph.py
 
 用法：
   python scan_deps.py [--root D:/武侠游戏] [--out deps.json] [--mermaid deps.mmd]
@@ -182,6 +187,63 @@ def main():
                 mm.append("    N%s --> N%s" % (abs(hash(e["from"])) % 100000, abs(hash(e["to"])) % 100000))
         open(args.mermaid, "w", encoding="utf-8").write("\n".join(mm))
         print("\nMermaid 图已写入:", args.mermaid)
+
+
+# ---- Code Graph：impact / reverse（基于 scan 结果，Phase 5 双图分离）----
+def _build_code_index(report):
+    """从 scan 报告构建 path->node 和前向/反向边索引。"""
+    nodes = {n["path"]: n for n in report["nodes"]}
+    forward = {}   # path -> [to_path]
+    backward = {}  # path -> [from_path]
+    for e in report["edges"]:
+        if not e["resolved"]:
+            continue
+        f, t = e["from"], e["to"]
+        forward.setdefault(f, []).append(t)
+        backward.setdefault(t, []).append(f)
+    return nodes, forward, backward
+
+
+def impact_of_file(file_path, root=None):
+    """Code Graph 影响分析（可传递）：改 file_path 会影响哪些文件（即谁依赖它）。
+    file_path 支持绝对路径、相对路径或 res:// 路径。返回 [path...]（去重排序）。
+    业务语义封装，等价于 reverse_deps_of_file（传递反向）。"""
+    return reverse_deps_of_file(file_path, root=root)
+
+
+def reverse_deps_of_file(file_path, root=None):
+    """Code Graph 反向依赖（可传递）：谁引用了 file_path（含间接引用）。
+    返回 [path...]（res:// 格式，去重排序）。"""
+    if root is None:
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    report = scan(root)
+    nodes, _fwd, backward = _build_code_index(report)
+    start = _normalize_path(file_path, root)
+    visited = set()
+    result = set()
+
+    def _walk(p):
+        if p in visited:
+            return
+        visited.add(p)
+        for f in backward.get(p, []):
+            result.add(f)
+            _walk(f)
+
+    if start in nodes:
+        _walk(start)
+    return sorted(result)
+
+
+def _normalize_path(file_path, root):
+    """把各种路径格式统一成 res:// 开头的标准形式。"""
+    if file_path.startswith("res://"):
+        return file_path
+    if os.path.isabs(file_path):
+        rel = os.path.relpath(file_path, root)
+    else:
+        rel = file_path
+    return "res://" + rel.replace("\\", "/")
 
 
 if __name__ == "__main__":

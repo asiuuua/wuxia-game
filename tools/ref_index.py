@@ -124,10 +124,12 @@ def build(root=None):
                 add_ref(nid, "quest", n["quest_id"], fp)
             if n.get("battle_id"):
                 add_ref(nid, "battle", n["battle_id"], fp)
-    # 任务 → 目标/奖励/前置旗标/回写旗标
+    # 任务 → 目标/奖励/前置旗标/回写旗标 + 关联对话
     for fp in quest_files:
         for q in _load(fp).get("quests", []):
             qid = q.get("id", "?")
+            if q.get("dialogue_id"):
+                add_ref(qid, "dialog", q["dialogue_id"], fp)
             for obj in q.get("objectives", []):
                 if obj.get("target_battle"):
                     add_ref(qid, "battle", obj["target_battle"], fp)
@@ -239,6 +241,103 @@ def validate_cascade(kind, eid, cascade, root=None):
     uncovered = sorted(bset - cset)
     invalid = sorted(cset - bset)
     return (not uncovered and not invalid), uncovered, invalid
+
+
+# ---- Content Graph：图遍历（Phase 5 Dependency Graph）----
+# 基于 Reference 三件套的实体级依赖图，支持 impact / 传递反查 / 环检测
+
+_CONTENT_KINDS_ORDER = ["npc", "quest", "item", "battle", "enemy", "dialog",
+                        "ability", "flag_def", "battle_layout", "line_jump"]
+
+
+def _kind_of_id(eid, defs):
+    """根据 id 反推实体类型（跨 kind 图遍历用）。
+    按 CONTENT_KINDS_ORDER 优先匹配更具体的域，line_jump 作用域化 id 单独判断。"""
+    eid_s = str(eid)
+    for k in _CONTENT_KINDS_ORDER:
+        if eid_s in defs.get(k, {}):
+            return k
+    # line_jump 是作用域化 id（dlg_id/lid），若含斜杠单独判断
+    if "/" in eid_s and eid_s in defs.get("line_jump", {}):
+        return "line_jump"
+    return None
+
+
+def impact(kind, eid, root=None):
+    """Content Graph 影响分析（可传递）：改 kind/eid 会波及哪些上游实体（即谁引用了它）。
+    返回 {kind: [ids...]}，不含起点自身。等价于 transitive_reverse 的业务语义封装。
+
+    例：impact("npc", "npc_001") → {dialog: [dlg_001], quest: [q_001]}
+    （改 npc_001 会影响引用它的 dlg_001，进而影响引用 dlg_001 的 q_001）
+    """
+    return transitive_reverse(kind, eid, root=root)
+
+
+def transitive_reverse(kind, eid, root=None):
+    """Content Graph 传递反向依赖：谁直接+间接引用了 kind/eid。
+    返回 {kind: [ids...]}，不含起点自身。
+
+    例：transitive_reverse("dialog", "dlg_001") → {npc: [npc_001], quest: [q_001]}
+    """
+    defs, refs = build(root)
+    start_key = (kind, str(eid))
+    visited = set()
+    result = {}
+
+    def _walk(k, e):
+        key = (k, e)
+        if key in visited:
+            return
+        visited.add(key)
+        for rk, rf, rt, _fp, _s in refs:
+            if rk == k and rt == e:
+                fk = _kind_of_id(rf, defs)
+                if fk:
+                    ref_key = (fk, rf)
+                    if ref_key != start_key:    # 跳过起点自身（双向绑定绕回）
+                        result.setdefault(fk, set()).add(rf)
+                        _walk(fk, rf)
+
+    _walk(kind, str(eid))
+    return {k: sorted(v) for k, v in result.items()}
+
+
+def find_cycles(root=None):
+    """Content Graph 环检测（DFS 三色法）。
+    返回 [cycle_list]，每个 cycle 是 [(kind, id), ...] 的节点列表。
+    同一环可能被多个起点发现，调用方可按需去重。"""
+    defs, refs = build(root)
+    # 建邻接表：(kind, id) -> [(kind, id)]
+    adj = {}
+    for rk, rf, rt, _fp, _s in refs:
+        if rt not in defs.get(rk, {}):
+            continue  # 跳过悬空边
+        fk = _kind_of_id(rf, defs)
+        if not fk:
+            continue
+        adj.setdefault((fk, rf), []).append((rk, rt))
+    # DFS 找环
+    WHITE, GRAY, BLACK = 0, 1, 2
+    color = {}
+    cycles = []
+
+    def _dfs(node, path):
+        color[node] = GRAY
+        path.append(node)
+        for nb in adj.get(node, []):
+            c = color.get(nb, WHITE)
+            if c == GRAY:
+                idx = path.index(nb)
+                cycles.append(list(path[idx:]))
+            elif c == WHITE:
+                _dfs(nb, path)
+        path.pop()
+        color[node] = BLACK
+
+    for node in sorted(adj.keys()):
+        if color.get(node, WHITE) == WHITE:
+            _dfs(node, [])
+    return cycles
 
 
 def main():
