@@ -14,10 +14,11 @@ verify_all.py — 一键验证入口（架构整改 P0-c 落地；逐步扩容�
   GATE8  工程结构兜底：核心目录/关键文件消失即拦（data/ 被外部 AI 工具误删事故的复盘产物）
   GATE9  JS 语法门禁：index.html 内联脚本逐块 node --check（防整页脚本失效回归）
   GATE10 工作室服务层架构（Phase 2）：业务零 save_json/save_text 直调 / Repository 边界
+  GATE11 Reference 三件套（Phase 4）：悬空拦截 / 删除保护 / 显式级联验证
 
 用法（Windows，任意终端）：
   python tools/verify_all.py            # 跑全部门禁
-  python tools/verify_all.py --gate 1   # 只跑某一门（1-10 / 17 / 21 / 22 / 32 / 41）
+  python tools/verify_all.py --gate 1   # 只跑某一门（1-11 / 17 / 21 / 22 / 32 / 41）
 
 退出码：0 = 全绿；1 = 有门禁未过（提交/合并前必须为 0）。
 
@@ -350,6 +351,19 @@ def gate10_studio_arch():
     return ok
 
 
+def gate11_reference_trio():
+    """GATE11：Reference 三件套回归（Phase 4）——
+    负向悬空 BLOCK / 删除保护 BLOCK / 显式级联验证 / 新引用边（speaker_id·layout）命中。"""
+    out, code = _run([sys.executable, os.path.join(HERE, "phase4_reference_tests.py")])
+    for ln in out.splitlines():
+        s = ln.strip()
+        if s.startswith("✓") or s.startswith("✗") or "结论" in s:
+            print("   " + s)
+    ok = code == 0
+    print("  GATE11 %s（Reference 三件套：悬空拦截 / 删除保护 / 级联验证）" % ("✓ 通过" if ok else "✗ 未过"))
+    return ok
+
+
 def gate40_benchmarks():
     """GATE40：Benchmark 性能基准（17图 SBP，可选 tier：--tier performance，不进默认全量）。
     门禁壳只做「跑基准→比对基线→报 PASS/FAIL」（SBP-4）；基线五字段格式 FATAL（SBP-R07）；
@@ -445,7 +459,7 @@ def gate43_localization():
 GATES = {1: gate1_quit_check, 2: gate2_unit_tests, 3: gate3_project_validate,
          4: gate4_preset_redline, 5: gate5_no_dual_write, 6: gate6_ref_index,
          7: gate7_studio_smoke, 8: gate8_structure, 9: gate9_js_lint,
-         10: gate10_studio_arch,
+         10: gate10_studio_arch, 11: gate11_reference_trio,
          17: gate17_assets_contract,
          21: gate21_type_policy, 22: gate22_forbidden_api, 32: gate32_foundation_freeze,
          41: gate41_arch_validators, 42: gate42_context_pack, 43: gate43_localization}
@@ -471,13 +485,13 @@ def main():
         print("══════ 结论：%s ══════" % ("全绿 ✓" if ok else "未过 ✗"))
         return 0 if ok else 1
     pick = [int(a) for a in sys.argv[sys.argv.index("--gate") + 1:]] if "--gate" in sys.argv else sorted(GATES)
-    print("══════ verify_all · 项目一键验证（九门禁+资产契约GATE17+架构Linter GATE21/22/32/41） ══════")
+    print("══════ verify_all · 项目一键验证（十门禁+资产契约GATE17+架构Linter GATE21/22/32/41） ══════")
     print("  工程: %s\n  Godot: %s" % (ROOT, GODOT))
     all_ok = True
     for g in pick:
         fn = GATES.get(g)
         if fn is None:
-            print("未知门禁编号: %s（可用 1-9 / 17 / 21 / 22 / 32 / 41）" % g)
+            print("未知门禁编号: %s（可用 1-11 / 17 / 21 / 22 / 32 / 41）" % g)
             return 1
         print("── GATE%d ──" % g)
         try:
