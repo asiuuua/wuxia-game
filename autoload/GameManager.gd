@@ -224,7 +224,9 @@ func _ready() -> void:
 	EventBus.game_saved.connect(_on_slot_event)
 	EventBus.game_loaded.connect(_on_slot_event)
 	# 时间推进 → 姻缘子嗣（怀胎十月）随天数推进（M3：接 TimeService/WeatherTimeService）
-	EventBus.world_day_advanced.connect(_on_world_day_advanced)
+	# B6（07图 W-R03）：姻缘子嗣按天推进改为 TimeConsumer 注册制分相消费（业务推进相 0），
+	# 不再私听 world_day_advanced 信号；信号保留对外广播（表现层可听）。
+	WeatherTimeService.register_day_consumer(0, _on_world_day_advanced)
 	# 婚礼演出：监听 bond_wedding_started 切到婚礼场景（M3：接 BondService.hold_wedding）
 	EventBus.bond_wedding_started.connect(_on_bond_wedding_started)
 	_sync_day_baseline()
@@ -406,7 +408,7 @@ func _on_slot_event(slot: int) -> void:
 	_sync_day_baseline()  # 读档后天数可能跳变，重设基线避免子嗣孕期被错误快进（M3）
 
 ## 时间推进时驱动姻缘子嗣（advance_days 随天数推进孕期）
-func _on_world_day_advanced(day: int) -> void:
+func _on_world_day_advanced(day: int) -> void:   # B6：现为 TimeConsumer 注册回调（非信号直连）
 	var delta: int = day - _last_known_day
 	if delta > 0 and romance_service != null:
 		romance_service.advance_days(delta)

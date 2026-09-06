@@ -25,11 +25,14 @@ func replace_for(transaction_id: StringName, entries: Array[JournalEntry]) -> vo
 		_entries.append(e)
 
 ## 指定事务的全部条目（sequence 升序副本，审计/查询用）。
+## K-R16：排序只认 sequence——B4 前实现漏排序（返回 append 序，注释与实现漂移），
+## GATE28 test_command_ordering 首跑抓获（2026-09-06），补显式升序。
 func entries_for(transaction_id: StringName) -> Array[JournalEntry]:
 	var out: Array[JournalEntry] = []
 	for e in _entries:
 		if e.transaction_id == transaction_id:
 			out.append(e)
+	out.sort_custom(func(a: JournalEntry, b: JournalEntry) -> bool: return a.sequence < b.sequence)
 	return out
 
 ## 指定事务的回滚视图：sequence 严格降序副本（01 §17 / K-R16）。

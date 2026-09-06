@@ -73,6 +73,25 @@ func get_time_of_day_phase() -> int:
 		return WorldEnums.TimeOfDay.DAY
 	return WorldEnums.TimeOfDay.DUSK
 
+# === TimeConsumer 注册制（07图 TX-2/W-R03，B6 2026-09-06）：消费面显式注册、分相消费 ===
+# 分相语义（07图 SD-5/0-C.15 消费相冻结）：0=业务推进相（姻缘/子嗣等按天推进的业务）
+#   → 1=派生刷新相（随天变化的派生数据）→ 2=通知相。注册消费先于广播信号（对外通知最后）。
+# 拉式读（get_day()）仍是首选消费形态；注册制供需要「按天回调」的业务使用，禁私听信号直改。
+const CONSUMER_PHASES := [0, 1, 2]
+var _day_consumers := {}   # phase -> Array[Callable(day: int)]（注册序即相内调用序）
+
+func register_day_consumer(phase: int, cb: Callable) -> void:
+	assert(CONSUMER_PHASES.has(phase), "TimeConsumer 相位必须 ∈ CONSUMER_PHASES")
+	if not _day_consumers.has(phase):
+		_day_consumers[phase] = []
+	if not _day_consumers[phase].has(cb):
+		_day_consumers[phase].append(cb)   # 幂等注册（防重复 connect 语义）
+
+func _notify_day_consumers(day: int) -> void:
+	for phase in CONSUMER_PHASES:
+		for cb in _day_consumers.get(phase, []):
+			cb.call(day)
+
 # === 推进 ===
 ## 推进若干小时；跨过 24 时自动进天（并重掷天气/季节）
 func advance_time(hours: float) -> void:
@@ -91,7 +110,8 @@ func advance_day(days: int = 1) -> void:
 	state.day += days
 	_update_season()
 	_roll_weather()
-	EventBus.world_day_advanced.emit(state.day)
+	_notify_day_consumers(state.day)   # B6：注册消费分相先行（W-R03 禁私听信号直改）
+	EventBus.world_day_advanced.emit(state.day)   # 广播相：对外通知（表现层/UI 可听）
 	EventBus.world_time_changed.emit(state.day, state.time_of_day, state.season, state.weather)
 
 ## 强制设定天气（调试 / 剧情事件用）

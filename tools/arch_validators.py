@@ -9,7 +9,12 @@
   ⑤ module_scope_validator   = 本文件 GATE41 ✓（Test Double 只准住 tests/doubles/）
   ⑥ naming_validator(test_*) = 本文件 GATE41 ✓（T-R02：tests/unit 套件必须 test_ 前缀）
   ⑦ changed_file_scope       = GATE23（多 AI 阶段，依赖 Write Lease 元数据，暂缓——不越界）
-  state_owner_validator（GATE25）= 本文件 REPORT 模式通报（T-4 追认：先观察噪音率再定阈值，不拦）
+  state_owner_validator（GATE25）= 本文件双模式（B1 收口 2026-09-06）：
+      ① scan_owner_writer_baseline —— 写入口基线禁新增（tools/arch_linter_baseline.json gate25_owner_writers）
+      ② report_state_owners —— 写入口密度 REPORT 观察保留（T-4 多写者阈值继续观察）
+  cross_module_write_validator（RULE 004/007，B2 上线 2026-09-06）= scan_cross_module_writes：
+      对 Owner 对象的跨模块属性直写扫描——Owner 自文件写豁免，跨模块直写基线禁新增
+      （tools/arch_linter_baseline.json gate41_cross_module_writes）
 
 层方向铁律（宪法 §85 / 工作记忆）：autoload → core → data → services → scenes → tests，单向。
 用法: python tools/arch_validators.py   （退出码 0=通过 1=违规）
@@ -21,6 +26,20 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
+BASELINE_PATH = os.path.join(HERE, "arch_linter_baseline.json")
+
+
+def _load_baseline():
+    try:
+        with open(BASELINE_PATH, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {}
+
+
+def _save_baseline(data):
+    with open(BASELINE_PATH, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2, sort_keys=True)
 
 violations = []
 notes = []
@@ -141,6 +160,139 @@ def scan_test_naming():
                 violations.append(("T-R02", rel, "测试套件文件名必须 test_ 前缀（U-4/T-R02）"))
 
 
+# --- Owner 写入口合法文件映射（Owner 自文件写豁免；跨模块直写进基线禁新增） ---
+OWNER_LEGAL_PREFIX = {
+    "player_state": ["data/runtime/player_state.gd", "autoload/GameManager.gd", "tests/"],
+    "game_state": ["autoload/game_state.gd", "tests/"],
+    "GameState": ["autoload/game_state.gd", "tests/"],
+    "inventory_service": ["services/inventory/", "autoload/GameManager.gd", "tests/"],
+    "quest_service": ["services/quest/", "autoload/GameManager.gd", "tests/"],
+    "ability_service": ["services/ability/", "autoload/GameManager.gd", "tests/"],
+    "equipment_service": ["services/equipment/", "autoload/GameManager.gd", "tests/"],
+    "alchemy_service": ["services/alchemy/", "autoload/GameManager.gd", "tests/"],
+    "forge_service": ["services/forge/", "autoload/GameManager.gd", "tests/"],
+    "shop_service": ["services/shop/", "autoload/GameManager.gd", "tests/"],
+    "sect_service": ["services/sect/", "autoload/GameManager.gd", "tests/"],
+    "combat_service": ["services/combat/", "autoload/GameManager.gd", "tests/"],
+    "bond_service": ["services/bond/", "autoload/GameManager.gd", "tests/"],
+    "romance_service": ["services/bond/", "autoload/GameManager.gd", "tests/"],
+    "sworn_service": ["services/bond/", "autoload/GameManager.gd", "tests/"],
+    "master_service": ["services/bond/", "autoload/GameManager.gd", "tests/"],
+    "dialogue_service": ["services/dialogue/", "autoload/GameManager.gd", "tests/"],
+    "effect_registry": ["core/effect_registry.gd", "autoload/GameManager.gd", "services/", "tests/"],
+    "weather_time_service": ["autoload/weather_time_service.gd", "tests/"],
+    "WeatherTimeService": ["autoload/weather_time_service.gd", "tests/"],
+    "settings_manager": ["autoload/settings_manager.gd", "tests/"],
+    "SettingsManager": ["autoload/settings_manager.gd", "tests/"],
+    "save_manager": ["autoload/SaveManager.gd", "tests/"],
+    "SaveManager": ["autoload/SaveManager.gd", "tests/"],
+}
+
+RE_CROSS_WRITE = re.compile(
+    r"\b(%s)\.(\w+)\s*(?:[+\-*/]?=(?!=)|\+\+|--)" % "|".join(sorted(OWNER_LEGAL_PREFIX, key=len, reverse=True)))
+
+SCAN_SKIP_TOPS = (".git", ".godot", ".workbuddy", "docs", "tools", "assets",
+                  "resources", "Godot", "_ai_export", "tests")
+
+
+def _gd_files_scan():
+    for dirpath, _dirs, files in os.walk(ROOT):
+        rel_dir = os.path.relpath(dirpath, ROOT).replace(os.sep, "/")
+        if rel_dir.split("/")[0] in SCAN_SKIP_TOPS or rel_dir == ".":
+            continue
+        for fn in files:
+            if fn.endswith(".gd"):
+                full = os.path.join(dirpath, fn)
+                rel = os.path.relpath(full, ROOT).replace(os.sep, "/")
+                yield rel, full
+
+
+def _owner_file_legal(owner: str, rel: str) -> bool:
+    for prefix in OWNER_LEGAL_PREFIX.get(owner, []):
+        if rel.startswith(prefix):
+            return True
+    return False
+
+
+def scan_cross_module_writes():
+    """RULE 004/RULE 007（B2 上线）：对 Owner 对象的属性直写扫描。
+    Owner 自文件写豁免；跨模块直写=基线禁新增（arch_linter_baseline.json gate41_cross_module_writes）。
+    已知静态盲区（局部变量中转持有后直写）不覆盖，登记于 PROJECT_STATUS。"""
+    baseline = _load_baseline()
+    known = set(baseline.get("gate41_cross_module_writes", []))
+    hits = []
+    for rel, full in _gd_files_scan():
+        code = re.sub(r"#[^\n]*", "", open(full, encoding="utf-8", errors="replace").read())
+        for i, ln in enumerate(code.split("\n"), 1):
+            for m in RE_CROSS_WRITE.finditer(ln):
+                owner, field = m.group(1), m.group(2)
+                if _owner_file_legal(owner, rel):
+                    continue
+                sig = "%s | %s.%s" % (rel, owner, field)
+                hits.append((sig, "%s:%d  %s" % (rel, i, ln.strip()[:90])))
+    new_hits = [h for h in hits if h[0] not in known]
+    if new_hits:
+        for sig, ctx in new_hits[:10]:
+            violations.append(("R004/007", sig.split(" | ")[0],
+                               "跨模块属性直写（未入基线）: %s —— %s" % (sig, ctx)))
+    notes.append("cross_module_writes: 存量基线 %d 条 / 本次命中 %d 处 / 新增 %d（基线禁新增）"
+                 % (len(known), len(hits), len(new_hits)))
+
+
+def _collect_owner_writers():
+    current = {}
+    for top in ("services", "autoload"):
+        d = os.path.join(ROOT, top)
+        for dirpath, _dirs, files in os.walk(d):
+            for fn in files:
+                if not fn.endswith(".gd"):
+                    continue
+                rel = os.path.relpath(os.path.join(dirpath, fn), ROOT).replace(os.sep, "/")
+                for ln in open(os.path.join(dirpath, fn), encoding="utf-8", errors="replace"):
+                    m = re.match(r"^func\s+((?:set|add|remove|clear|update)_\w+)\s*\(", ln.strip())
+                    if m:
+                        current.setdefault(rel, []).append(m.group(1))
+    return current
+
+
+def scan_owner_writer_baseline():
+    """RULE 007（B1 收口）：services/autoload 写入口（set_/add_/remove_/clear_/update_ 前缀方法）
+    按文件基线化——新增写入口（新方法）即红；T-4 多写者阈值另行观察（REPORT 保留）。"""
+    baseline = _load_baseline()
+    known = baseline.get("gate25_owner_writers", {})
+    current = _collect_owner_writers()
+    new_writers = []
+    for rel, methods in sorted(current.items()):
+        for meth in methods:
+            if meth not in known.get(rel, []):
+                new_writers.append("%s | %s" % (rel, meth))
+    if new_writers:
+        for w in new_writers[:10]:
+            violations.append(("R007", w.split(" | ")[0], "Owner 写入口新增（未入基线）: %s" % w))
+    total = sum(len(v) for v in current.values())
+    notes.append("state_owner baseline: %d 文件 / %d 写入口 / 新增 %d（基线禁新增）"
+                 % (len(current), total, len(new_writers)))
+
+
+def fix_baselines():
+    """--fix：把当前快照写回基线（仅供首次生成/收编时人工确认后使用）。"""
+    baseline = _load_baseline()
+    current = _collect_owner_writers()
+    baseline["gate25_owner_writers"] = dict(sorted(current.items()))
+    writes = []
+    for rel, full in _gd_files_scan():
+        code = re.sub(r"#[^\n]*", "", open(full, encoding="utf-8", errors="replace").read())
+        for m in RE_CROSS_WRITE.finditer(code):
+            owner, field = m.group(1), m.group(2)
+            if _owner_file_legal(owner, rel):
+                continue
+            writes.append("%s | %s.%s" % (rel, owner, field))
+    baseline["gate41_cross_module_writes"] = sorted(set(writes))
+    _save_baseline(baseline)
+    print("--fix 已写基线: gate25_owner_writers(%d 文件) / gate41_cross_module_writes(%d 条)"
+          % (len(baseline["gate25_owner_writers"]), len(baseline["gate41_cross_module_writes"])))
+
+
 def report_state_owners():
     """state_owner_validator REPORT 模式（T-4 追认：观察期，不拦）：
     扫 services/autoload 公开 set_ 方法计数，>8 者通报观察。"""
@@ -164,12 +316,17 @@ def report_state_owners():
 
 
 def main():
+    if "--fix" in sys.argv:
+        fix_baselines()
+        sys.exit(0)
     scan_dependency()
     scan_module_scope()
     scan_test_naming()
+    scan_cross_module_writes()
+    scan_owner_writer_baseline()
     report_state_owners()
 
-    print("arch_validators · 04图 GATE41（dependency/module_scope/test_naming + state_owner REPORT）")
+    print("arch_validators · 04图 GATE41（dependency/module_scope/test_naming + cross_write R004/007 + state_owner 基线+REPORT）")
     for n in notes:
         print("  ℹ " + n)
     if violations:

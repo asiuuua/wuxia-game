@@ -105,9 +105,9 @@
 | GATE22 | Forbidden API | arch_lint --rules api | Phase1 | E3/E4 |
 | GATE23 | Changed File Scope | changed_file_scope_validator | 多 AI 阶段 | E4 |
 | GATE24 | Contract Drift | contract_drift_validator + 契约测试（吸收 LN-G10/11） | Phase1 | E2/E3 |
-| GATE25 | State Ownership | state_owner_validator | Phase2 | E3 |
-| GATE26 | Transaction Atomicity | transaction_test（11 场景） | PARTIAL（Phase2） | E2 | 载体已落地：tests/unit/test_transaction_runtime.gd 13 项（01 §118 十一路+嵌套拒绝+Journal 审计，经 GATE2 run_all 执行）；独立点亮随 Phase2 收口（2026-09-06 架构窗） |
-| GATE27 | Rollback Recovery | transaction_test | PARTIAL（Phase2） | E2 | 同 GATE26 载体；逆序恢复/RECOVERY_REQUIRED 五元组/COMMITTED 终态拒绝已覆盖（2026-09-06 架构窗） |
+| GATE25 | State Ownership | state_owner_validator | **ACTIVE**（2026-09-06 B1 收口） | E3 | 载体=arch_validators 双模式：写入口基线禁新增（gate25_owner_writers，18 文件 43 入口）+ 跨模块直写扫描（gate41_cross_module_writes 基线 1 条）；REPORT 观察保留（T-4 多写者阈值继续） |
+| GATE26 | Transaction Atomicity | transaction_test（11 场景） | **ACTIVE**（2026-09-06 B3 点亮） | E2 | 载体=tests/unit/test_transaction_runtime.gd 13 项 + test_shop_trade_tx.gd 10 项（01 §118 十一路+嵌套拒绝+Journal 审计+0-C.19 Golden 不变式），进 GATE2 run_all 必过清单（73 套件）；点亮方式=经 GATE2 承载（verify_all 无独立物理槽，GATE2 全绿即本 Gate 绿） |
+| GATE27 | Rollback Recovery | transaction_test | **ACTIVE**（2026-09-06 B3 点亮） | E2 | 同 GATE26 载体；逆序恢复/RECOVERY_REQUIRED 五元组/COMMITTED 终态拒绝已覆盖（2026-09-06 架构窗） |
 | GATE28 | Command Ordering | command_ordering_test | Phase2 | E2 |
 | GATE29 | Vertical Slice | vs_replay 套件 | Phase2 | E2 |
 | GATE30 | Context Integrity & Freshness（原 Context Freshness，V1.4 扩义改名） | context_pack_validator | 多 AI 阶段 | E3 |
@@ -193,7 +193,7 @@
 | `module_scope_validator` | Test Double 只准住 `tests/doubles/`；生产代码禁 import `tests/`；模块私有目录禁外引 | GATE21 |
 | `changed_file_scope_validator` | git diff vs 任务卡 allowed_files（依赖 Write Lease 元数据，多 AI 阶段启用） | GATE23 |
 | `contract_drift_validator` | registry vs 代码（§4 C-4） | GATE24 |
-| `state_owner_validator` | 公共 setter 扫描；多写者启发式（阈值待 §11 T-4） | GATE25 |
+| `state_owner_validator` | 公共 setter 扫描 + 写入口基线禁新增（B1）；多写者启发式阈值待 §11 T-4（REPORT 保留） | GATE25 |
 | `naming_validator` | Event 过去时（K-R12）；ID 正则（03 §3 冻结正则）；错误判断禁比 message 字符串（K-R11） | GATE21/24 |
 
 ### 5.3 基线模式（沿用 audit_signal_baseline 成熟范式）
@@ -269,8 +269,8 @@
 
 | 规则 | 内容 | 严重度 | E 级 | 扫描器/测试 | Gate |
 |---|---|---|---|---|---|
-| T-R01 | 单测必须继承 TestBase，禁自造 runner | ERROR | E3 | arch_lint --rules test_shape（**未物理化**——2026-09-06 A3 核查：arch_linter 现仅 signals/forbidden_api/eventbus_freeze 三扫描器，GATE21 物理槽现承载 Type Policy 0-B.12；实测存量 73 套件 extends TestBase 全量合规，扫描器上线即零红项；补齐随 ACR 升表） | GATE21 |
-| T-R02 | `test_*` 命名法（U-4） | ERROR | E3 | naming_validator（**未物理化**——2026-09-06 A3 核查同 T-R01；补齐随 ACR 升表） | GATE21 |
+| T-R01 | 单测必须继承 TestBase，禁自造 runner | ERROR | E3 | arch_lint --rules test_shape（**未物理化**——2026-09-06 A3 核查+复查维持：arch_validators 已有 dependency/module_scope/test_naming/state_owner 四扫描器，test_shape（extends TestBase 校验）确缺；实测存量 73 套件全量合规，补齐随 ACR 升表） | GATE21 |
+| T-R02 | `test_*` 命名法（U-4） | ERROR | E3 | naming_validator（**已物理化**——2026-09-06 B 批复查更正 A3 误判：arch_validators `scan_test_naming` 即本规则载体，GATE41 槽执行；A3 首查 grep 模式未命中致误报未物理化） | GATE41 |
 | T-R03 | 单测禁真实磁盘/真实时钟/全局随机（宪法 §82） | FATAL | E3 | forbidden_api_validator | GATE22 |
 | T-R04 | Test Double 只准住 `tests/doubles/` | FATAL | E3 | module_scope_validator | GATE21 |
 | T-R05 | 生产代码禁引用 `tests/` | FATAL | E3/E4 | dependency_validator | GATE22 |

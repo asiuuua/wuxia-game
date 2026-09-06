@@ -132,7 +132,7 @@
 |---|---|---|---|---|---|
 | W-R01 | 时间域禁全局 `randi()/randf()`，必经 RandomProvider（WE-1） | FATAL | E3 | forbidden_api_validator | GATE22 |
 | W-R02 | 时间推进必经 AdvanceTimeCommand+事务（T-5/TX-1） | FATAL | E2 | transaction_test | GATE26 |
-| W-R03 | 消费面必走 TimeConsumer 注册制，禁私听信号直改（TX-2） | FATAL | E3 | module_scope_validator | GATE05 |
+| W-R03 | 消费面必走 TimeConsumer 注册制，禁私听信号直改（TX-2） | FATAL | E3 | module_scope_validator（静态面）+ test_time_consumer（行为面——B6 实装：WeatherTimeService.register_day_consumer 分相注册制 2026-09-06，消费面已收编拉式读真源+装配根注册回调） | GATE05 |
 | W-R04 | day 单调递增，禁生产倒流 API（T-2） | FATAL | E3 | naming/forbidden_api | GATE22 |
 | W-R05 | 天气 roll 纯函数化，同 seed 同输入必同输出（WE-2/SR-2） | FATAL | E2 | weather_replay_test | GATE29 |
 | W-R06 | 实体 serial 由分配器发放，禁 size()+1 类推导（TX-4） | FATAL | E3 | id_validator（静态模式扫描） | GATE07 |

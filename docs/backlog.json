@@ -125,10 +125,10 @@
         {
           "title": "RULE004 ui_write_validator（🔴）",
           "type": "未实现",
-          "status": "open",
+          "status": "resolved",
           "placeholder": false,
           "source": "宪法RULE004/GATE41扩展",
-          "detail": "scenes/ 对 Owner 状态直写零扫描",
+          "detail": "B2 上线：跨模块属性直写扫描（Owner 自文件豁免），scenes 层实测零直写，生产层存量 1 条基线（equipment→player_state.equipment_bonuses）；模拟新增当场红验证通过（2026-09-06 B 批销项）",
           "suggestion": "GATE41 新 rule，白名单 ViewModel 写入口"
         }
       ]
@@ -347,10 +347,10 @@
         {
           "title": "11图 AB-6 确定性快照",
           "type": "待办",
-          "status": "open",
+          "status": "resolved",
           "placeholder": false,
           "source": "11图 AB-6",
-          "detail": "随 Phase2~3 未启动",
+          "detail": "B7：3 用例（同seed轨迹逐位相等/异seed分叉/零随机稳定），只读不动生产（2026-09-06 B 批销项）",
           "suggestion": "战斗域收口件"
         }
       ]
@@ -402,10 +402,10 @@
         {
           "title": "RULE007 唯一Owner观察期收口（🔴）",
           "type": "待办",
-          "status": "open",
+          "status": "resolved",
           "placeholder": false,
           "source": "宪法RULE007/04图GATE25/T-4",
-          "detail": "state_owner 三处 REPORT 不拦（game_state 8/inventory 6/settings 4），T-4 追认两周将到期",
+          "detail": "B1 收口：写入口基线禁新增（gate25_owner_writers 18文件43入口）+REPORT 观察保留；模拟新增直写当场红验证通过（2026-09-06 B 批销项）",
           "suggestion": "定阈值转拦截+Owner白名单裁定"
         }
       ]
@@ -570,10 +570,10 @@
         {
           "title": "07图 TimeConsumer 注册制分相消费主体",
           "type": "未实现",
-          "status": "open",
+          "status": "resolved",
           "placeholder": false,
           "source": "07图 W-R 系列",
-          "detail": "上午审计半程判定未变",
+          "detail": "B6 最小闭环：分相注册制+GameManager 改注册消费+5 用例；主体此前已收编拉式读（2026-09-06 B 批销项）",
           "suggestion": "Phase2 收口批"
         }
       ]
@@ -665,19 +665,19 @@
         {
           "title": "GATE26/27 转 ACTIVE 进必过清单",
           "type": "待办",
-          "status": "open",
+          "status": "resolved",
           "placeholder": false,
           "source": "04图状态表",
-          "detail": "载体已齐（test_transaction_runtime 13项+test_shop_trade_tx 10项）仍 PARTIAL",
+          "detail": "B3 三同步：04图状态表 ACTIVE+PROJECT_STATUS.md 建立+A3 批注误判更正（T-R02 已物理化）（2026-09-06 B 批销项）",
           "suggestion": "按状态迁移纪律同步 Registry+PROJECT_STATUS+verify_all"
         },
         {
           "title": "GATE28 command_ordering_test 缺失",
           "type": "未实现",
-          "status": "open",
+          "status": "resolved",
           "placeholder": false,
           "source": "04图GATE28/02图顺序冻结",
-          "detail": "tests/ 零 command_ordering 文件",
+          "detail": "B4：7 用例落地；首跑抓获 K-R16 漂移（entries_for 漏排序）已修复（2026-09-06 B 批销项）",
           "suggestion": "Phase2 收口批补套件"
         },
         {
@@ -736,10 +736,10 @@
         {
           "title": "18图Phase2三件：RH-2 provenance启动行/RH-5 golden样本产物/RH-6 弹窗文案",
           "type": "待办",
-          "status": "open",
+          "status": "resolved",
           "placeholder": false,
           "source": "18图 RH-2/5/6 + P-RH9",
-          "detail": "迁移映射表 Phase2 行未销",
+          "detail": "B5 核实销项：三件均已落地（game_logger:79/error_handler:30/golden 6文件），登记滞后（2026-09-06 B 批销项）",
           "suggestion": "随 18 图批次"
         },
         {
