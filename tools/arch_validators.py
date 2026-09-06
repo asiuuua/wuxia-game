@@ -496,18 +496,26 @@ def report_state_owners():
 
 
 def scan_content_graph_cycles():
-    """Phase 5 Content Dependency Graph 环检测（REPORT 模式，不拦截）。
-    统计 Content Graph 中的环数量与类型，供后续细化规则时参考。
-    已知正常模式：NPC↔Dialog 双向绑定（NPC.dialog_id ↔ Dialog.npc_id 互指）。"""
+    """Phase 5 Content Dependency Graph 环检测（硬拦截 + 正常模式豁免）。
+    问题环（硬拦截）：line_jump 跳转死循环等。
+    正常模式环（豁免，仅记录）：
+      - NPC 自环（speaker_id 指向自己，NPC 自己说话）
+      - NPC↔Dialog 双向绑定（NPC.dialog_id ↔ Dialog.npc_id 互指）
+    """
     try:
         sys.path.insert(0, HERE)
         import dep_graph
+        import ref_index
         cycles = dep_graph.content_cycles()
+        classified = ref_index.classify_cycles(cycles)
     except Exception as e:
         notes.append("Content Graph 环检测不可用：%s" % e)
         return
+    normal = classified["normal"]
+    problematic = classified["problematic"]
+    # 正常模式环：REPORT
     type_counts = {}
-    for c in cycles:
+    for c in normal:
         key = tuple(sorted({k for k, _e in c}))
         type_counts[key] = type_counts.get(key, 0) + 1
     breakdown = ", ".join(
@@ -515,9 +523,17 @@ def scan_content_graph_cycles():
         for k, v in sorted(type_counts.items(), key=lambda x: -x[1])
     )
     notes.append(
-        "Content Graph 环检测（REPORT）：共 %d 个环（%s）；NPC↔Dialog 双向绑定属正常模式"
-        % (len(cycles), breakdown or "无")
+        "Content Graph 正常环（豁免）：%d 个（%s）"
+        % (len(normal), breakdown or "无")
     )
+    # 问题环：硬拦截
+    for c in problematic[:5]:
+        desc = " → ".join("%s/%s" % (k, e) for k, e in c)
+        violations.append(("CONTENT-CYCLE", desc,
+                           "Content Graph 问题环：%s（影响玩家体验/数据一致性，须修复）" % desc))
+    if len(problematic) > 5:
+        violations.append(("CONTENT-CYCLE", "...",
+                           "Content Graph 问题环共 %d 个，仅显示前 5 个" % len(problematic)))
 
 
 def main():

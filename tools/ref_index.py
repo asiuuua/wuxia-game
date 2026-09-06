@@ -340,6 +340,43 @@ def find_cycles(root=None):
     return cycles
 
 
+def classify_cycles(cycles=None, root=None):
+    """环分类：区分「正常模式环」与「问题环」。
+    返回 {'normal': [正常环列表], 'problematic': [问题环列表]}
+
+    正常模式环（豁免）：
+      1. NPC 自环：NPC 的 speaker_id 指向自己（NPC 自己说话）
+      2. NPC↔Dialog 双向绑定：NPC.dialog_id ↔ Dialog.npc_id 互指
+
+    问题环（硬拦截）：
+      1. line_jump 死循环：对话行跳转形成的环（玩家卡死在循环里）
+      2. 其他跨类型环（待细化规则）
+    """
+    if cycles is None:
+        cycles = find_cycles(root=root)
+    normal = []
+    problematic = []
+    for c in cycles:
+        kinds = {k for k, _e in c}
+        ids = {e for _k, e in c}
+        # 正常模式 1：NPC 自环（只有 npc 一种类型，且是 speaker 自己指自己）
+        if kinds == {"npc"} and len(ids) == 1:
+            normal.append(c)
+            continue
+        # 正常模式 2：NPC↔Dialog 双向绑定（只有 npc 和 dialog 两种类型，各一个节点）
+        if kinds == {"npc", "dialog"} and len(c) == 2:
+            normal.append(c)
+            continue
+        # 问题环：line_jump 死循环等
+        problematic.append(c)
+    return {"normal": normal, "problematic": problematic}
+
+
+def find_problematic_cycles(root=None):
+    """只返回问题环（硬拦截用）。"""
+    return classify_cycles(root=root)["problematic"]
+
+
 def main():
     defs, refs = build()
     args = sys.argv[1:]
