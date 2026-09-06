@@ -50,25 +50,41 @@ func _on_combat_finished(combat_id: String, victory: bool, _escaped: bool, _snap
 	if victory:
 		_enqueue_event({"type": "battle", "battle_id": combat_id})
 
-# ---- P3-c 目标/奖励 handler 注册表（2026-09-04）：新增目标/奖励类型 = 注册一个
+# ---- 目标 handler 注册表（P3-c 2026-09-04）：新增目标类型 = 注册一个
 # handler，不改本服务核心（整改路线 P3 验收标准）。类型推断：obj 显式 type 优先，
 # 否则 target_battle→battle、need_item→give_item（存量数据零迁移）。
+# 奖励/接交任务副作用已收编 EffectRegistry（12 图 QD-2 2026-09-06）：五类 kind 锁定，
+# 统一 handler 签名 func(payload, ctx)，由 attach_effects 注册进域级共享注册表。
 var _objective_handlers: Dictionary = {}   # type -> Callable(state, obj, event: Dictionary)
-var _reward_handlers: Dictionary = {}      # key -> Callable(value, quest_id)
+var effects: EffectRegistry = null         # 域级副作用注册表（_init 自足缺省；装配后换绑共享表）
 
 func _init() -> void:
 	register_objective_handler("battle", _objective_battle)
 	register_objective_handler("give_item", _objective_give_item)
-	register_reward_handler("exp", _reward_exp)
-	register_reward_handler("silver", _reward_silver)
-	register_reward_handler("items", _reward_items)
-	register_reward_handler("abilities", _reward_abilities)
+	# 自足缺省注册表：奖励发放为核心链路，禁依赖装配顺序（隔离测试/未装配场景奖励不丢）
+	var def := EffectRegistry.new()
+	_register_effects_into(def)
+	effects = def
 
 func register_objective_handler(type: String, handler: Callable) -> void:
 	_objective_handlers[type] = handler
 
-func register_reward_handler(key: String, handler: Callable) -> void:
-	_reward_handlers[key] = handler
+## QD-2 收编：换绑 GameManager 共享域表（与 DialogueEventExecutor 同一实例，
+## executor.apply_inline 的 quest_accept/quest_complete 才能路由到本服务）。
+## 重复 attach 同表时 register 返回 false（op 已在），无害。
+func attach_effects(reg: EffectRegistry) -> void:
+	_register_effects_into(reg)
+	effects = reg
+
+func _register_effects_into(reg: EffectRegistry) -> void:
+	reg.register("exp", EffectRegistry.KIND_REWARD, _reward_exp)
+	reg.register("silver", EffectRegistry.KIND_REWARD, _reward_silver)
+	reg.register("items", EffectRegistry.KIND_REWARD, _reward_items)
+	reg.register("abilities", EffectRegistry.KIND_REWARD, _reward_abilities)
+	reg.register("quest_accept", EffectRegistry.KIND_PROGRESS, _effect_quest_accept)
+	reg.register("quest_complete", EffectRegistry.KIND_PROGRESS, _effect_quest_complete)
+	# P-Q1 死命令修复：quest_complete 直连 turn_in（旧 executor has_method("complete_quest")
+	# 探测的对象方法不存在，端到端不可达=死命令，QD-R09 禁）。
 
 func _objective_type(obj: Dictionary) -> String:
 	var t := str(obj.get("type", ""))
@@ -226,13 +242,13 @@ func turn_in(quest_id: String) -> bool:
 	var then_set: Dictionary = data.get("then_set", {})
 	for k in then_set.keys():
 		_facts.set_flag(String(k), then_set[k])
-	# P3-c 奖励数据驱动分发：rewards 键 -> 注册表 handler（新奖励类型=注册，不改本函数）
+	# QD-2 奖励数据驱动分发：rewards 键 -> EffectRegistry（新奖励类型=注册，不改本函数）。
+	# apply 返回 false = 死命令（注册缺失，QD-R09 FATAL）或注册表未注入，告警不断链
+	# （奖励原子性由满包预检保证，单 key 缺失不中断其余奖励分发）。
 	for key in rewards.keys():
-		var h: Callable = _reward_handlers.get(String(key), Callable())
-		if h.is_valid():
-			h.call(rewards[key], quest_id)
-		else:
-			push_warning("[Quest] 未知奖励类型: %s（quest=%s）" % [key, quest_id])
+		if effects != null and effects.apply(String(key), rewards[key], {"quest_id": quest_id, "channel": "quest_rewards"}):
+			continue
+		push_warning("[Quest] 未知奖励类型: %s（quest=%s）" % [key, quest_id])
 	active_quests.erase(quest_id)
 	completed_quests[quest_id] = state
 	tracked_ids.erase(quest_id)
@@ -253,20 +269,46 @@ func retry_completed_turn_ins(_item_id: String = "", _count: int = 0) -> void:
 			turn_in(qid)
 	_retrying = false
 
-# ---- 内置奖励处理器（P3-c 注册表配对；P5 去定位器：经 ServiceGameFacts 适配器，不再直取 GameManager）----
-func _reward_exp(value: Variant, _quest_id: String) -> void:
-	_facts.gain_exp(int(value))
+# ---- 内置奖励处理器（QD-2 收编：统一签名 func(payload, ctx)，quest_id 经 ctx 传递；
+# P5 去定位器：经 ServiceGameFacts 适配器，不再直取 GameManager）----
+func _reward_exp(payload: Variant, _ctx: Dictionary) -> void:
+	_facts.gain_exp(int(payload))
 
-func _reward_silver(value: Variant, _quest_id: String) -> void:
-	_facts.add_silver(int(value))
+func _reward_silver(payload: Variant, _ctx: Dictionary) -> void:
+	_facts.add_silver(int(payload))
 
-func _reward_items(value: Variant, quest_id: String) -> void:
-	for item_reward in value:
+func _reward_items(payload: Variant, ctx: Dictionary) -> void:
+	var quest_id := String(ctx.get("quest_id", ""))
+	for item_reward in payload:
 		_facts.add_item(str(item_reward.get("item_id", "")), int(item_reward.get("count", 1)), "quest:%s" % quest_id)
 
-func _reward_abilities(value: Variant, _quest_id: String) -> void:
-	for ability_id in value:
+func _reward_abilities(payload: Variant, _ctx: Dictionary) -> void:
+	for ability_id in payload:
 		_facts.learn_ability(str(ability_id))
+
+# ---- 接/交任务效果（QD-2 收编 progress 类；DSL 尾段或字典 {quest_id} 双形态）----
+func _effect_quest_accept(payload: Variant, _ctx: Dictionary) -> void:
+	var quest_id := _quest_id_from_payload(payload)
+	if quest_id == "":
+		push_warning("[Quest] quest_accept 缺 quest_id: %s" % str(payload))
+		return
+	accept(quest_id)
+
+## P-Q1 死命令修复（QD-R09 端到端可达）：直连 turn_in——仅对已 COMPLETED 任务生效
+## （交付发奖）；未完成由 turn_in 内部拒绝（返回 false 不崩）。
+func _effect_quest_complete(payload: Variant, _ctx: Dictionary) -> void:
+	var quest_id := _quest_id_from_payload(payload)
+	if quest_id == "":
+		push_warning("[Quest] quest_complete 缺 quest_id: %s" % str(payload))
+		return
+	turn_in(quest_id)
+
+func _quest_id_from_payload(payload: Variant) -> String:
+	if payload is String:
+		return String(payload).strip_edges()
+	if payload is Dictionary:
+		return String(payload.get("quest_id", ""))
+	return ""
 
 func get_tracked() -> Array[QuestState]:
 	var out: Array[QuestState] = []

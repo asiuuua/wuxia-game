@@ -135,9 +135,10 @@ func select_option(jump_id: String) -> Dictionary:
 
 # === 行内命令（P2 区域分片协议 2026-09-04）===
 ## 行/选项可携带 effects: ["set_flag:xxx", "quest_accept:xxx"] 命令数组，
-## 委托 GameManager.dialogue_event_executor.apply_inline 执行。
+## 委托 GameManager.dialogue_event_executor.apply_inline 执行（12 图 QD-2 收编：
+## 命令统一落 EffectRegistry，旧 CommandDispatcher 已退役）。
 ## 与老 trigger_events（事件键查表）并存；未装配执行器时静默跳过，与
-## "事件未订阅仅不生效"哲学一致。P3 统一 CommandDispatcher 时归一。
+## "事件未订阅仅不生效"哲学一致。执行顺序冻结见 _present_current 注释。
 func _apply_inline_effects(effects: Array) -> void:
 	for eff in effects:
 		if eff is String and not String(eff).is_empty():
@@ -196,12 +197,13 @@ func _present_current() -> Dictionary:
 				return {"ended": true}
 			_current_id = nid
 			continue
-		# 触发本行绑定的剧情事件（配置化；事件未订阅仅不生效，不崩）
+		# 行内命令（新协议）先执行——执行顺序冻结（12 图 QD-2 2026-09-06）：
+		# 行 effects 先、选项 effects 次之（select_option 选择时）、trigger_events（老协议，兼容期）最后。
+		_apply_inline_effects(line.get("effects", []))
+		# 老协议剧情事件（兼容期垫尾，退役映射排 Phase4——QD-4；事件未订阅仅不生效，不崩）
 		for ev in line.get("trigger_events", []):
 			if ev is String and ev != "":
 				EventBus.dialogue_event_triggered.emit(ev)
-		# 行内命令（P2 区域分片协议）：行自身携带 effects 直接执行
-		_apply_inline_effects(line.get("effects", []))
 		return _render_line(line)
 	_terminate_session()
 	EventBus.dialogue_ended.emit(_dialog_id)

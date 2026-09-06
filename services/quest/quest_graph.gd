@@ -120,25 +120,40 @@ func _cond(cond) -> bool:
 	_cond_eval.facts = _store   # 每次求值对齐当前图的 store（测试可逐 run 注入内存存储）
 	return _cond_eval.evaluate(cond, "", false)
 
-# ---------- 副作用 ops ----------
+# ---------- 副作用 ops（12 图 QD-2 收编 2026-09-06：match 微内核 → EffectRegistry）----------
+# 图引擎自持注册表（op 名=数据协议名，与 QuestService/Executor 的共享域表隔离）；
+# 闭包活引用 _store 成员（run 每次可换注入 store，测试逐 run 注入内存存储仍成立）。
+# emit_event 不属五类副作用（引擎内部通信原语），留 _apply 特判——QD-5 接真 EventBus 时收编（P-Q12）。
+var _ops: EffectRegistry = null
+
+func _make_ops() -> EffectRegistry:
+	var reg := EffectRegistry.new()
+	var h_flag := func(payload: Variant, _ctx: Dictionary) -> void:
+		_store.set_flag(String(payload.get("key", "")), payload.get("value", true))
+	var h_favor := func(payload: Variant, _ctx: Dictionary) -> void:
+		_store.add_favor(String(payload.get("target", "")), float(payload.get("value", 0)))
+	var h_prog := func(payload: Variant, _ctx: Dictionary) -> void:
+		_store.set_progress(String(payload.get("quest", "")), int(payload.get("value", 1)))
+	reg.register(OP_FLAG_SET, EffectRegistry.KIND_STORY_FLAG, h_flag)
+	reg.register(OP_FAVOR_ADD, EffectRegistry.KIND_RELATIONSHIP, h_favor)
+	reg.register(OP_PROGRESS, EffectRegistry.KIND_PROGRESS, h_prog)
+	return reg
+
 func _apply(ops) -> void:
 	if ops == null:
 		return
+	if _ops == null:
+		_ops = _make_ops()
 	for op in ops:
 		if not (op is Dictionary):
 			continue
 		var o: Dictionary = op
-		match String(o.get("op", "")):
-			OP_FLAG_SET:
-				_store.set_flag(str(o.get("key", "")), o.get("value", true))
-			OP_FAVOR_ADD:
-				_store.add_favor(str(o.get("target", "")), float(o.get("value", 0)))
-			OP_PROGRESS:
-				_store.set_progress(str(o.get("quest", "")), int(o.get("value", 1)))
-			OP_EMIT:
-				_log.append("emit:" + str(o.get("event", "")))
-			_:
-				_log.append("op-skip:" + str(o.get("op", "")))
+		var op_name := String(o.get("op", ""))
+		if op_name == OP_EMIT:
+			_log.append("emit:" + str(o.get("event", "")))
+			continue
+		if not _ops.apply(op_name, o, {}):
+			_log.append("op-skip:" + op_name)
 
 # ---------- choice 分支：取首个满足 show 条件的选项 ----------
 func _resolve_choice(node: Dictionary) -> String:

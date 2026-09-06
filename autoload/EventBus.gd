@@ -119,6 +119,12 @@ signal dialogue_ended(dialogue_id: String)
 @warning_ignore("unused_signal")
 signal dialogue_event_triggered(event_key: String)
 
+# === 表现层指令通道（12 图 QD-R10/P-Q10 收口 2026-09-06）===
+# services 层禁 Node 演出：PresentationEffect 只经此通道产指令，
+# 相机/场景演出由装配层（GameManager）订阅执行。
+@warning_ignore("unused_signal")
+signal screen_shake_requested(intensity: float, duration: float)
+
 # === 游戏流程 ===
 @warning_ignore("unused_signal")
 signal game_started()

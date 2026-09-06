@@ -44,19 +44,13 @@
    "code": "\t\t\"timestamp\": Time.get_unix_time_from_system(),",
    "file": "autoload/SaveManager.gd",
    "gate": "GATE22-time",
-   "line": 456
+   "line": 602
   },
   {
    "code": "\t\tseed_val = int(Time.get_unix_time_from_system()) & 0x7FFFFFFF",
    "file": "services/combat/combat_core.gd",
    "gate": "GATE22-time",
    "line": 23
-  },
-  {
-   "code": "\t\t\tcam.offset = base + Vector2(randf_range(-intensity, intensity), randf_range(-intensity, intensity)),",
-   "file": "services/dialogue/dialogue_event_executor.gd",
-   "gate": "GATE22-rand",
-   "line": 109
   }
  ],
  "gate32_eventbus_signals": {
@@ -140,6 +134,7 @@
   "quest_phase_changed": "signal quest_phase_changed(phase: int)",
   "quest_turned_in": "signal quest_turned_in(quest_id: String)",
   "scene_changed": "signal scene_changed(scene_name: String)",
+  "screen_shake_requested": "signal screen_shake_requested(intensity: float, duration: float)",
   "ui_action_requested": "signal ui_action_requested(action_id: String)",
   "world_day_advanced": "signal world_day_advanced(day: int)",
   "world_time_changed": "signal world_time_changed(day: int, time_of_day: float, season: int, weather: int)",

@@ -20,6 +20,7 @@ var shop_service: ShopService = null
 var sect_service: SectService = null
 var dialogue_service: DialogueService = null
 var dialogue_event_executor: DialogueEventExecutor = null   # 订阅对话事件演出音效/震屏/接任务
+var effect_registry: EffectRegistry = null   # Quest/Dialogue 域级副作用注册表（12 图 QD-2：五类 kind 锁定）
 var bond_service: BondService = null
 var romance_service: RomanceService = null
 var sworn_service: SwornService = null          # 结义服务（M4：结义分支）
@@ -215,7 +216,10 @@ func _ready() -> void:
 	# 指令接线：任务/对话发出 cmd_start_combat 后自动开战（解耦战斗入口，消除空壳）
 	EventBus.cmd_start_combat.connect(_on_cmd_start_combat)
 	# 对话事件演出：到达某行 trigger_events 经 EventBus 派发，由执行器演出音效/震屏/接任务
-	dialogue_event_executor.setup()
+	# （12 图 QD-2 收编：executor 与 quest_service 共享同一 EffectRegistry 域表）
+	dialogue_event_executor.setup(effect_registry)
+	# 表现层指令：services 只产指令（QD-R10），相机演出在装配层执行
+	EventBus.screen_shake_requested.connect(_on_screen_shake_requested)
 	# 追踪当前存档槽位（读档/存档时更新），供 HELL 删档定点删除
 	EventBus.game_saved.connect(_on_slot_event)
 	EventBus.game_loaded.connect(_on_slot_event)
@@ -251,6 +255,9 @@ func _init_services() -> void:
 	forge_service = ForgeService.new()
 	shop_service = ShopService.new()
 	sect_service = SectService.new()
+	effect_registry = EffectRegistry.new()
+	quest_service = QuestService.new()
+	quest_service.attach_effects(effect_registry)   # QD-2：reward/progress 效果注册（quest_complete→turn_in 直连修 P-Q1）
 	dialogue_service = DialogueService.new()
 	dialogue_event_executor = DialogueEventExecutor.new()
 	bond_service = BondService.new()
@@ -258,6 +265,29 @@ func _init_services() -> void:
 	sworn_service = SwornService.new()
 	master_service = MasterService.new()
 	relationship_service = RelationshipService.new()
+
+## 表现层执行器（12 图 QD-R10 / P-Q10 收口 2026-09-06）：services 只产
+## screen_shake_requested 指令，相机随机偏移 Tween 演出在此执行（装配层表现自由）。
+func _on_screen_shake_requested(intensity: float, duration: float) -> void:
+	var tree := get_tree()
+	if tree == null or tree.get_current_scene() == null:
+		return
+	var cam := tree.get_current_scene().get_viewport().get_camera_2d()
+	if cam == null:
+		return
+	var base := cam.offset
+	var steps := int(max(1, round(duration / 0.05)))
+	var tw := tree.create_tween()
+	tw.set_loops(steps)
+	tw.tween_method(
+		func(_v: float) -> void:
+			if not is_instance_valid(cam):
+				return
+			cam.offset = base + Vector2(randf_range(-intensity, intensity), randf_range(-intensity, intensity)),
+		0.0, 1.0, 0.05)
+	tw.finished.connect(func() -> void:
+		if is_instance_valid(cam):
+			cam.offset = base)
 
 func _register_saveables() -> void:
 	SaveManager.register_saveable(player_state)
