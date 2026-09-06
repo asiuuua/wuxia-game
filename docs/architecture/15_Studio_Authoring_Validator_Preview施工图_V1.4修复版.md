@@ -106,6 +106,7 @@
 - **同名工具唯一化**：compress_textures 双份合并（方向见开放问题 ST-2），全 tools 禁同名双份。
 
 ### ST-6 校验器统一注册表契约（P-ST8 收口，承接 01 §92 / 04 图）
+> **D5 批1 落地批注（2026-09-06）**：ST-6 声明式注册表已建（tools/contract_registry.json，16 校验器+3 pre-commit 钩子+4 planned）+ 三方对账器（tools/registry_audit.py：注册表↔verify_all GATES↔PROJECT_STATUS，REPORT 模式运行）；ST-5 工具清单已建（tools/manifest.json，26 工具登记）。ST-2 DataSink 六步收口留批2。
 - 九个门禁/审计工具统一注册进 04 图 contract_registry / arch_lint 基线范式：每校验器声明 {名称, LN Gate 编号, tier, 输入域, REPORT 可用性}；verify_all 从注册表编排（物理槽 1~9 + 0a/b/c 冻结不动，新校验走注册表 + LN 编号，GATE40+ 物理槽）。
 - 01 §92 七校验器（dependency/forbidden_api/module_scope/changed_file_scope/contract_drift/state_owner/naming）以 py 侧 arch_lint.py 为统一宿主（04 图已规划，本图认领工具域宿主地位）；Phase0 REPORT 模式沿用 05 图测量纪律。
 

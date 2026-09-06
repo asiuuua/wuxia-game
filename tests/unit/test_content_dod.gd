@@ -123,3 +123,17 @@ func test_dod6_clean_mod_accepted() -> void:
 		if FileAccess.file_exists(f):
 			DirAccess.remove_absolute(f)
 	DirAccess.remove_absolute(mod_dir)
+
+
+# === 批C 收编核验：ConfigManager facade 与 Registry store 同源（ability 样例） ===
+func test_batchc_facade_reads_registry_store() -> void:
+	if not expect(ConfigManager.content_registry != null, "生产装配下 Registry 应就绪"):
+		return
+	var ab_ids: Array = ConfigManager.content_registry.all_ids(&"ability")
+	if not expect(ab_ids.size() > 0, "ability store 应非空（生产数据）"):
+		return
+	var probe: String = str(ab_ids[0])
+	var via_facade: Dictionary = ConfigManager.get_ability(probe)
+	var via_registry: Dictionary = ConfigManager.content_registry.adapter_store(&"ability").get(probe, {})
+	expect(str(via_facade.get("id", "")) == probe and via_facade == via_registry,
+		"facade get_ability 应与 Registry store 同源同值（%s）" % probe)

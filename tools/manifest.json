@@ -1,0 +1,32 @@
+{
+  "version": "1.0.0",
+  "_doc": "ST-5 工具清单 manifest（15 图批1）：门禁链与核心工具登记制。新工具入仓必须登记+声明 verify_all 归属（ST-5 契约）。长尾工具随用随登；一次性脚本迁 tools/_archive/。",
+  "tools": [
+    {"name": "verify_all.py",           "role": "一键验证总入口（十五槽编排 + --tier performance）", "gate": "GATE20"},
+    {"name": "arch_linter.py",          "role": "GATE21 类型政策 / GATE22 Forbidden API+§93完整矩阵 / GATE32 地基冻结", "gate": "GATE21/22/32"},
+    {"name": "arch_linter_baseline.json","role": "门禁基线（存量退役禁新增：gate21/22/25/32/41 五键）", "gate": "GATE21/22/25/32/41"},
+    {"name": "arch_validators.py",      "role": "GATE41 架构校验器组（dependency/module_scope/test_naming/cross_write/owner_baseline，--fix 收编）", "gate": "GATE41"},
+    {"name": "context_pack_validator.py","role": "GATE42：GATE30 Context Integrity（0-G.5/0-G.6 + 01§127 对账，--generate 刷新）", "gate": "GATE30/42"},
+    {"name": "registry_audit.py",       "role": "ST-6 校验器注册表三方对账（注册表/verify_all/PROJECT_STATUS）", "gate": "ST-6"},
+    {"name": "contract_registry.json",  "role": "ST-6 声明式校验器注册表", "gate": "ST-6"},
+    {"name": "manifest.json",           "role": "ST-5 工具清单（本文件）", "gate": "ST-5"},
+    {"name": "write_lease.py",          "role": "多 AI 并行写租约（宪法 0-G.8 FROZEN_SCOPE 载体）", "gate": "0-G.8"},
+    {"name": "id_validator.py",         "role": "ID 层校验（16 图 CP-5，基线 234 只减不增）", "gate": "GATE06"},
+    {"name": "ref_index.py",            "role": "引用索引与悬空校验", "gate": "GATE06"},
+    {"name": "pack_manifest_validator.py","role": "pack manifest 校验", "gate": "GATE06"},
+    {"name": "region_validator.py",     "role": "区域三同一致性校验", "gate": "GATE06"},
+    {"name": "schema_guard.py",         "role": "Schema 结构指纹（合法变更升版 --update-baseline）", "gate": "GATE06"},
+    {"name": "check_assets_contract.py","role": "资产契约校验 --strict（05 批1 挂槽）", "gate": "GATE17"},
+    {"name": "studio_smoke.py",         "role": "Studio 编辑闭环冒烟", "gate": "GATE16"},
+    {"name": "validate_project.gd",     "role": "工程规范批量校验（JSON/禁.tres/硬路径，基线模式）", "gate": "GATE3(物理)"},
+    {"name": "lint_mouse_filter.py",    "role": "mouse_filter 静默拦截扫描（pre-commit 0a）", "gate": "0a"},
+    {"name": "signal_audit.py",         "role": "EventBus 信号契约审计（pre-commit 0b/0c）", "gate": "0b/0c"},
+    {"name": "change_log.py",           "role": "更改日志登记工具（提交纪律）", "gate": "治理"},
+    {"name": "handoff.py",              "role": "跨窗口隐患传递板（派单/认领/交接，append-only）", "gate": "协同"},
+    {"name": "build_content_indexes.py","role": "Build 期内容索引生成（npc_by_region/dialogue_by_npc，CO-R03）", "gate": "ST-8/DoD4"},
+    {"name": "validate_content_rules.py","role": "五层校验规则表构建期校验（VA-4 双端同读）", "gate": "DoD3"},
+    {"name": "build_release.py",        "role": "发布脚本（RH-7：双闸门→Release Gate→provenance→导出）", "gate": "GATE18族"},
+    {"name": "gen_backlog.py",          "role": "backlog 看板重生成（待办清单.md + dashboard）", "gate": "治理"},
+    {"name": "audit_to_backlog.py",     "role": "审计发现归类进 backlog.json", "gate": "治理"}
+  ]
+}

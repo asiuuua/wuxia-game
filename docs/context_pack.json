@@ -14,9 +14,9 @@
     "10_Economy_Shop_Crafting施工图_V1.4修复版.md": "a878a5fd4433d5bf",
     "11_Ability_Combat_CombatAI施工图_V1.4修复版.md": "f1f14e4a04bea881",
     "12_Quest_Dialogue_Story施工图_V1.4修复版.md": "5df1b49ab288b439",
-    "13_Save_Persistence_Migration施工图_V1.4修复版.md": "53a6585b6c10bd16",
+    "13_Save_Persistence_Migration施工图_V1.4修复版.md": "d956fa0b13600929",
     "14_Presentation_Input_ViewModel施工图_V1.4修复版.md": "90c5c231e79bce24",
-    "15_Studio_Authoring_Validator_Preview施工图_V1.4修复版.md": "6b88a0a5c8fd98fe",
+    "15_Studio_Authoring_Validator_Preview施工图_V1.4修复版.md": "644c885a5c391277",
     "16_Content_Production施工图_V1.4修复版.md": "a56e94e9e979ccc8",
     "17_Simulation_Balance_Performance施工图_V1.4修复版.md": "d0ad9d894e9a9562",
     "18_Release_Hardening_Compatibility_Migration施工图_V1.4修复版.md": "a8b66c27d9613a61"
@@ -25,5 +25,5 @@
   "schema_versions": {
     "content_pack_manifest": "MISSING"
   },
-  "verified_revision": "9708aaf14efb"
+  "verified_revision": "a454682b474b"
 }

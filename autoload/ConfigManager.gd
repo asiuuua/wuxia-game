@@ -1,6 +1,9 @@
-﻿# autoload/ConfigManager.gd
+# autoload/ConfigManager.gd
 # 配置表管理器：启动时加载所有 JSON 配置，提供按 ID 查询能力
 # 设计：逻辑与数据分离，所有数值写在 data/configs，绝不硬编码进代码
+# ADR-0007 批C 收编声明（2026-09-06）：本类角色收敛为「ContentRegistry 装配器 + 薄代理 facade」——
+#   ability/item/dialog 三类已完全收编 Registry 体系（TypeAdapter/ShardCache，旧 _load_* 退役），
+#   get_ability/get_item 为 Registry store 的只读代理；其余 14 类随 05 图 Phase2~3 一次一类迁移。
 
 extends Node
 # 注：autoload 脚本不能写 class_name X 与 autoload 同名，会与单例冲突报错（已删除）
