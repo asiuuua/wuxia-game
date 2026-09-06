@@ -136,12 +136,25 @@ def remote_ahead(branch: str = "master") -> bool:
 
 
 def git_changed_files():
-    """返回当前工作树中相对仓库根、有改动（M/A/D/?? 等）的文件集合。"""
+    """返回当前工作树中相对仓库根、有改动（M/A/D/?? 等）的**文件**路径集合。
+
+    注意：porcelain 对未跟踪目录只输出目录级路径（`?? dir/`），若只收集该行，
+    队列中逐文件的条目会永远匹配不上而被误判 no-op（a89928a 五域 repositories
+    文件被静默漏提交的根因）。因此对未跟踪目录用 `git ls-files --others` 展开为
+    其中逐文件路径（自动遵循 .gitignore）。"""
     r = git("status", "--porcelain")
     out = set()
     for line in r.stdout.splitlines():
-        if len(line) >= 3:
-            out.add(line[3:].strip())
+        if len(line) < 3:
+            continue
+        p = line[3:].strip()
+        out.add(p)
+        if line.startswith("??") and p.endswith("/"):
+            sub = git("ls-files", "--others", "--exclude-standard", "--", p)
+            for f in sub.stdout.splitlines():
+                f = f.strip()
+                if f:
+                    out.add(f)
     return out
 
 
