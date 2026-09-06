@@ -88,8 +88,8 @@ def make_provenance():
         "build_id": "b" + time.strftime("%Y%m%d%H%M"),
         "source_revision": head,
         "game_version": game_version,
-        "constitution_version": "1.2",
-        "architecture_version": "1.2",
+        "constitution_version": "1.4",   # 18图 V1.4 修复版总注明文：写现行宪法版本（ADR-0005）
+        "architecture_version": "1.4",   # 现行=01 图 V1.4 修复版（ADR-0006 十七图升版）
         "content_version": content_fingerprint(),
         "schema_version": save_schema,
         "save_schema_version": save_schema,
@@ -128,7 +128,10 @@ def release_gate_golden():
     此处兜底检查夹具在位，防止夹具被误删后 Release Gate 名存实亡。"""
     print("── Release Gate 第4项：迁移 golden 对（13图 SV-3 Phase2）──")
     golden_dir = os.path.join(ROOT, "tests", "golden", "migrations")
-    required = ["migrate_1_0_0_to_1_1_0.input.json", "migrate_1_0_0_to_1_1_0.expected.json"]
+    required = ["migrate_1_0_0_to_1_1_0.input.json", "migrate_1_0_0_to_1_1_0.expected.json",
+                # F4 批新增：SV-2 模块级迁移链 golden 对（game_state 1.0.0→1.1.0，region_* 前缀改写）
+                "module_game_state_1_0_0_to_1_1_0.input.json",
+                "module_game_state_1_0_0_to_1_1_0.expected.json"]
     missing = [f for f in required if not os.path.isfile(os.path.join(golden_dir, f))]
     if missing:
         print("✗ golden 夹具缺失: %s（重跑生产器 tools/golden/gen_migration_golden.tscn 产出）" % missing)
