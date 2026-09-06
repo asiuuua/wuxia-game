@@ -29,6 +29,8 @@ func _ready() -> void:
 	# 批D 子批4：LocalizationManager 降级纯静态工具类（零实例状态，语言数据在 TranslationServer）——
 	# 静态 setup() 替代原 autoload _ready；须在 SettingsManager（仍为 autoload）就绪后调用。
 	LocalizationManager.setup()
+	# 批D 子批5：DifficultyManager 降级纯静态类（_current 缓存静态化）——订阅与初始刷新在 setup 保真。
+	DifficultyManager.setup()
 	# 先让场景树稳定一帧，确保 UIManager 的层级已就绪
 	await get_tree().process_frame
 	# 架构治理（2026-09-02）：UIManager 已 _ready 并连好 EventBus，此刻把图标解析器

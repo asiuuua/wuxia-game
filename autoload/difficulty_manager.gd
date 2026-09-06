@@ -3,15 +3,18 @@
 # 依赖：静态配置表(ConfigManager) + GameState全局状态 + EventBus事件总线。
 # 对外只输出系数与配置参数；任务系统、对话系统、存档修复器完全不感知难度内部细节。
 # 铁律：禁止任务/剧情逻辑按 difficulty_id 写 if 判断；一律调用本类对外 API。
+# 批D 子批5（ADR-0007 装配收敛）：原 autoload 降级为纯静态类（class_name+static 成员，
+# 唯一状态 _current 缓存静态化），setup() 由 Bootstrap 生命周期壳调用（订阅与初始刷新保真）；
+# 调用方（defeat_handler/combat_service）类静态调用写法不变。
 
-extends Node
-# 注：autoload 脚本不能写 class_name X 与 autoload 同名，会与单例冲突报错。
+class_name DifficultyManager
+extends RefCounted
 
 const FALLBACK_ID := "NORMAL"
 
-var _current: Dictionary = {}   # 当前难度配置副本（缓存）
+static var _current: Dictionary = {}   # 当前难度配置副本（缓存）
 
-func _ready() -> void:
+static func setup() -> void:
 	# 订阅指令事件：UI / 新游戏流程发出切换请求
 	EventBus.cmd_set_difficulty.connect(_on_cmd_set_difficulty)
 	# 读档后 GameState 难度可能变化，刷新缓存（避免用旧难度系数）
@@ -19,21 +22,21 @@ func _ready() -> void:
 	_refresh_current()
 
 # ===================== 当前难度推导 =====================
-func _current_id_from_state() -> String:
+static func _current_id_from_state() -> String:
 	var d: int = GameState.get_difficulty()
 	var keys: Array = CombatEnums.Difficulty.keys()
 	if d >= 0 and d < keys.size():
 		return keys[d]
 	return FALLBACK_ID
 
-func _refresh_current() -> void:
+static func _refresh_current() -> void:
 	_current = ConfigManager.get_difficulty(_current_id_from_state())
 
-func _on_game_loaded(_slot: int) -> void:
+static func _on_game_loaded(_slot: int) -> void:
 	_refresh_current()
 
 # ===================== 指令：设置难度 =====================
-func _on_cmd_set_difficulty(difficulty_id: String, is_new_game: bool) -> void:
+static func _on_cmd_set_difficulty(difficulty_id: String, is_new_game: bool) -> void:
 	var entry: Dictionary = ConfigManager.get_difficulty(difficulty_id)
 	if entry.is_empty():
 		GameLogger.error("DifficultyManager", "难度配置不存在: %s" % difficulty_id)
@@ -51,87 +54,87 @@ func _on_cmd_set_difficulty(difficulty_id: String, is_new_game: bool) -> void:
 	EventBus.notify_difficulty_changed.emit(difficulty_id)
 
 # ===================== 对外 API（战斗模块唯一入口，零 if 判断难度） =====================
-func get_current_difficulty_id() -> String:
+static func get_current_difficulty_id() -> String:
 	return _current_id_from_state()
 
 ## 玩家输出伤害倍率
-func get_player_damage_scale() -> float:
+static func get_player_damage_scale() -> float:
 	return float(_current.get("player_damage_mult", 1.0))
 
 ## 敌人伤害倍率
-func get_enemy_damage_scale() -> float:
+static func get_enemy_damage_scale() -> float:
 	return float(_current.get("enemy_damage_mult", 1.0))
 
 ## 敌人血量倍率
-func get_enemy_hp_scale() -> float:
+static func get_enemy_hp_scale() -> float:
 	return float(_current.get("enemy_hp_mult", 1.0))
 
 ## 敌人防御/抗性倍率
-func get_enemy_armor_scale() -> float:
+static func get_enemy_armor_scale() -> float:
 	return float(_current.get("enemy_armor_mult", 1.0))
 
 ## 逃跑成功率修正值（正数提升，负数降低；HELL 通过 allow_escape=false 直接禁止）
-func get_escape_bonus() -> float:
+static func get_escape_bonus() -> float:
 	return float(_current.get("escape_modifier", 0.0))
 
 ## 是否允许逃跑（HELL 关闭）
-func get_allow_escape() -> bool:
+static func get_allow_escape() -> bool:
 	return bool(_current.get("allow_escape", true))
 
 ## 是否允许非致命击倒（NIGHTMARE/HELL 关闭）
-func get_allow_non_lethal() -> bool:
+static func get_allow_non_lethal() -> bool:
 	return bool(_current.get("allow_non_lethal", true))
 
 ## 当前难度对应的敌方 AI 行为配置 ID（战斗据此加载不同 AI 模板）
-func get_enemy_ai_profile_id() -> String:
+static func get_enemy_ai_profile_id() -> String:
 	return String(_current.get("ai_behavior_profile", "default"))
 
 # ===================== 团灭死亡行为（消费端执行器在阶段2 接入，本步只给配置与 API） =====================
 ## 团灭基础动作（RESPAWN_CHECKPOINT / LOAD_LATEST_SAVE / DELETE_SAVE 等）
-func get_player_defeat_behaviour() -> int:
+static func get_player_defeat_behaviour() -> int:
 	var s: String = String(_current.get("defeat_behaviour", "LOAD_LATEST_SAVE"))
 	return CombatEnums.DefeatBehaviour.get(s, CombatEnums.DefeatBehaviour.LOAD_LATEST_SAVE)
 
 ## 团灭丢失银两数（0 表示不扣）
-func get_defeat_lose_money() -> int:
+static func get_defeat_lose_money() -> int:
 	return int(_current.get("defeat_lose_money", 0))
 
 ## 团灭是否丢失少量非稀有道具
-func get_defeat_lose_items() -> bool:
+static func get_defeat_lose_items() -> bool:
 	return bool(_current.get("defeat_lose_items", false))
 
 ## 没钱支付时是否转为负债
-func get_defeat_debt_if_broke() -> bool:
+static func get_defeat_debt_if_broke() -> bool:
 	return bool(_current.get("defeat_debt_if_broke", false))
 
 ## 团灭触发隐藏 CG / 对话的 text_id（空串表示无）
-func get_defeat_cg_text_id() -> String:
+static func get_defeat_cg_text_id() -> String:
 	return String(_current.get("defeat_cg_text_id", ""))
 
 ## 团灭丢失的非稀有物数量（0 表示不丢）
-func get_defeat_lose_item_count() -> int:
+static func get_defeat_lose_item_count() -> int:
 	return int(_current.get("defeat_lose_item_count", 0))
 
 ## 团灭可丢弃的稀有度档位（默认 ["common"]；空数组=全部保护，一件不丢）
-func get_defeat_lose_rarities() -> Array:
+static func get_defeat_lose_rarities() -> Array:
 	var r = _current.get("defeat_lose_rarities", ["common"])
 	if r is Array:
 		return r
 	return ["common"]
 
 ## 团灭是否可丢弃材料栏杂物（默认 false：材料栏不动，保护 crafting 资源）
-func get_defeat_lose_include_material() -> bool:
+static func get_defeat_lose_include_material() -> bool:
 	return bool(_current.get("defeat_lose_include_material", false))
 
 ## 团灭是否可丢弃任务栏物品（默认 false：任务栏不动，保护进度物）
-func get_defeat_lose_include_quest() -> bool:
+static func get_defeat_lose_include_quest() -> bool:
 	return bool(_current.get("defeat_lose_include_quest", false))
 
 ## 团灭 CG 是否仅在「没钱支付」分支触发（true 时只在 broke 时播 CG）
-func get_defeat_cg_when_broke_only() -> bool:
+static func get_defeat_cg_when_broke_only() -> bool:
 	return bool(_current.get("defeat_cg_when_broke_only", false))
 
 ## 某难度是否游戏内锁定（供 UI 决定是否灰显）
-func is_difficulty_locked(difficulty_id: String) -> bool:
+static func is_difficulty_locked(difficulty_id: String) -> bool:
 	var e: Dictionary = ConfigManager.get_difficulty(difficulty_id)
 	return not bool(e.get("can_change_in_game", true))
