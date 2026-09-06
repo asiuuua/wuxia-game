@@ -106,7 +106,8 @@
 - **同名工具唯一化**：compress_textures 双份合并（方向见开放问题 ST-2），全 tools 禁同名双份。
 
 ### ST-6 校验器统一注册表契约（P-ST8 收口，承接 01 §92 / 04 图）
-> **D5 批1 落地批注（2026-09-06）**：ST-6 声明式注册表已建（tools/contract_registry.json，16 校验器+3 pre-commit 钩子+4 planned）+ 三方对账器（tools/registry_audit.py：注册表↔verify_all GATES↔PROJECT_STATUS，REPORT 模式运行）；ST-5 工具清单已建（tools/manifest.json，26 工具登记）。ST-2 DataSink 六步收口留批2。
+> **D5 批1 落地批注（2026-09-06）**：ST-6 声明式注册表已建（tools/contract_registry.json，16 校验器+3 pre-commit 钩子+4 planned）+ 三方对账器（tools/registry_audit.py：注册表↔verify_all GATES↔PROJECT_STATUS，REPORT 模式运行）；ST-5 工具清单已建（tools/manifest.json，26 工具登记）。
+> **D5 批2 落地批注（2026-09-06）**：ST-2 DataSink 六步收口已实施——tools/data_sink.py（①ID=03§3.3 正则+ADR-0002 二级形态+退役名单 CP-R02 ②Schema=content_validation_rules.json 双端同读（VA1-REQ-ID/VA1-REQ-ADAPTER/VA4-BINDING，写侧从严：FATAL/ERROR 拒写）③_backup ④tmp+os.replace 原子写 ⑤ref_index 增量反查（仅拦本次新引入悬空，违例自动回滚；ref_index.build() 增 root 参数）⑥change_log 留痕）。studio_core.py save_json/save_text 为 Studio 唯一写口（19 处 JSON 写+2 处 CSV 写全量接线；frozen 旧包缺 data_sink 时降级直写+日志提示重打包；Studio 自身设施 settings/log/trash 不经本口）。ST-R01 扫描器上线（arch_validators.scan_studio_write_paths，基线禁新增 gate_st_r01_studio_writes，当前零基线=白名单外即红；已知局限=跨函数路径构造逃逸窗口分析，登记观察）。ST-2 开放问题同批销：compress_textures 111 行版退役删除（diff 确认零独有逻辑+全库零调用点），tools/compress_textures.py 223 行版为唯一真源，全 tools 禁同名双份达成。login_version 对齐 RH-1 版本真源迁移（project.godot+provenance.json）。验证：DataSink 十项自测全绿+安全自检+_test_login 集成自检全过（含 sink 留痕断言）。
 - 九个门禁/审计工具统一注册进 04 图 contract_registry / arch_lint 基线范式：每校验器声明 {名称, LN Gate 编号, tier, 输入域, REPORT 可用性}；verify_all 从注册表编排（物理槽 1~9 + 0a/b/c 冻结不动，新校验走注册表 + LN 编号，GATE40+ 物理槽）。
 - 01 §92 七校验器（dependency/forbidden_api/module_scope/changed_file_scope/contract_drift/state_owner/naming）以 py 侧 arch_lint.py 为统一宿主（04 图已规划，本图认领工具域宿主地位）；Phase0 REPORT 模式沿用 05 图测量纪律。
 

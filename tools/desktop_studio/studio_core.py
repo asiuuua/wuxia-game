@@ -25,6 +25,18 @@ import io
 import base64
 
 MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
+TOOLS_DIR = os.path.dirname(MODULE_DIR)          # tools/（data_sink 所在层）
+if TOOLS_DIR not in sys.path:
+    sys.path.insert(0, TOOLS_DIR)
+
+# 15 图 ST-2 批2：Studio 生产写唯一 DataSink 六步收口。
+# frozen exe（旧打包）缺 data_sink 时降级直写并记日志，源码模式/重打包后全量生效。
+try:
+    import data_sink as _sink
+    from data_sink import SinkRejected  # noqa: F401  （studio_server 可经此捕获提示用户）
+    _SINK_OK = True
+except Exception:  # pragma: no cover
+    _SINK_OK = False
 
 
 def _user_data_dir():
@@ -74,6 +86,8 @@ def load_settings():
 
 
 def save_settings(s):
+    # ST-2 边界：设置是 Studio 自身设施（safety_data），不经 DataSink；
+    # 且 discover_project_root ↔ save_settings 互调，走 save_json 会死递归。
     _ensure_dirs()
     with open(SETTINGS_PATH, "w", encoding="utf-8") as f:
         json.dump(s, f, ensure_ascii=False, indent=2)
@@ -368,11 +382,47 @@ def _backup(path):
         log_event("backup_error", path, str(e))
 
 
-def save_json(path, data):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
+def save_text(path, text, note="", encoding="utf-8"):
+    """ST-2 唯一写口（文本/CSV 版）：降级策略同 save_json。"""
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    if _SINK_OK:
+        try:
+            _sink.write_text(discover_project_root(), path, text,
+                             note=note or "Studio save_text", encoding=encoding)
+            return
+        except _sink.SinkRejected as e:
+            log_event("sink_rejected", path, "%s | %s" % (e.step, "；".join(e.problems[:5])))
+            raise
+        except Exception as e:
+            log_event("sink_error", path, str(e))
+    _backup(path)
+    with open(path, "w", encoding=encoding, newline="") as f:
+        f.write(text)
+    if not _SINK_OK:
+        log_event("sink_degraded", path, "data_sink 不可用，直写降级（请重打包或用源码模式）")
+
+
+def save_json(path, data, note=""):
+    """ST-2 唯一写口：Studio 生产 JSON 写统一经 DataSink 六步收口（15图批2）。
+
+    降级路径：frozen 旧包缺 data_sink 时按旧逻辑直写（③备份+④落盘仍在），
+    并写 studio 日志提示重打包。"""
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    if _SINK_OK:
+        try:
+            _sink.write_json(discover_project_root(), path, data, note=note or "Studio save_json")
+            return
+        except _sink.SinkRejected as e:
+            log_event("sink_rejected", path, "%s | %s" % (e.step, "；".join(e.problems[:5])))
+            raise
+        except Exception as e:
+            log_event("sink_error", path, str(e))
+            # 六步设施异常不阻断编辑器主流程：退回直写并留痕
     _backup(path)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
+    if not _SINK_OK:
+        log_event("sink_degraded", path, "data_sink 不可用，直写降级（请重打包或用源码模式）")
 
 
 # ============================ 任务流程图（QuestGraph） ============================
@@ -512,10 +562,9 @@ def i18n_upsert(key, zh_cn="", zh_tw="", en=""):
     if not found:
         rows.append([key, str(zh_cn), str(zh_tw), str(en)])
     path = _i18n_path()
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    _backup(path)
-    with open(path, "w", encoding="utf-8", newline="") as f:
-        csv.writer(f).writerows(rows)
+    buf = io.StringIO()
+    csv.writer(buf).writerows(rows)
+    save_text(path, buf.getvalue(), note="i18n_upsert %s" % key)
     log_event("i18n_save", key, "更新文案表")
     return True, "已保存文案 %s（多语言立即生效）" % key
 
@@ -1365,7 +1414,6 @@ def login_texts_update(rows):
     path = _login_strings_path()
     if not os.path.exists(path):
         return False, "未找到 strings.csv"
-    _backup(path)
     updates = {r.get("key"): r for r in rows if r.get("key")}
     with open(path, "r", encoding="utf-8-sig") as f:
         lines = f.readlines()
@@ -1382,22 +1430,36 @@ def login_texts_update(rows):
                 en = u.get("en", parts[3] if len(parts) > 3 else "")
                 line = "%s,%s,%s,%s\n" % (key, zh, tw, en)
         new_lines.append(line)
-    with open(path, "w", encoding="utf-8-sig") as f:
-        f.writelines(new_lines)
+    save_text(path, "".join(new_lines), note="login_texts_update %d 条" % len(rows),
+              encoding="utf-8-sig")
     log_event("login_texts", path, "更新 %d 条登录界面文案" % len(rows))
     return True, "已保存 %d 条文案" % len(rows)
 
 
 def login_version():
-    p = os.path.join(discover_project_root(), "scenes", "ui", "screens", "main_menu", "MainMenu.gd")
-    ver = "(未找到)"
-    if os.path.exists(p):
-        txt = open(p, "r", encoding="utf-8").read()
-        m = re.search(r'const\s+VERSION_TEXT\s*:?=\s*"([^"]*)"', txt)
+    """版本展示（18图 RH-1 对齐，2026-09-06）：真源=project.godot application/config/version；
+    Build 日期=build_release.py 产出的 provenance.json build_id；无 provenance=开发态 dev。只读。"""
+    root = discover_project_root()
+    ver = "0.5.0"
+    pg = os.path.join(root, "project.godot")
+    if os.path.exists(pg):
+        m = re.search(r'application/config/version\s*=\s*"([^"]*)"',
+                      open(pg, encoding="utf-8").read())
         if m:
             ver = m.group(1)
-    return {"version": ver, "editable": False,
-            "note": "版本号写死在 MainMenu.gd:16（const VERSION_TEXT）。你已选择“不动游戏代码”，此值只读；如需改请告诉我（低风险，会跑双闸门保证不出错）。"}
+    build_date = ""
+    prov_p = os.path.join(root, "provenance.json")
+    if os.path.exists(prov_p):
+        try:
+            bid = str(json.load(open(prov_p, encoding="utf-8")).get("build_id", ""))
+            if bid.startswith("b") and len(bid) >= 9:
+                build_date = bid[1:9]
+        except Exception:
+            pass
+    ver_text = ("v%s Build %s" % (ver, build_date)) if build_date else ("v%s dev" % ver)
+    return {"version": ver_text, "editable": False,
+            "note": "版本真源=project.godot application/config/version（18图 RH-1）；"
+                    "Build 日期由 build_release.py 写 provenance.json 注入，无则显示 dev。此值只读。"}
 
 
 def login_btn_bg_list():
@@ -1456,8 +1518,7 @@ def login_btn_bg_set(btn_id, src_path):
         data["map"] = {}
     data["map"][btn_id] = "res://assets/ui/main_menu_btn/%s" % fname
     data["_doc"] = "登录主菜单各按钮背景图映射。游戏代码已读取此表（MainMenu._load_btn_bg_map → MenuItem.set_background），上传图片后下次进主菜单即生效。扩展名由工具按文件头真实格式写入，勿手改。"
-    with open(cfg, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    save_json(cfg, data)
     log_event("login_btn_bg", btn_id, "存储按钮背景图（真实格式=%s，%dx%d）" % (ext, w, h))
     tip = ""
     if w > 0 and h > 0:
@@ -1511,8 +1572,7 @@ def login_bg_layout_update(d):
     for k in ("stretch_mode", "scrim_alpha", "edge_auto", "leaves_enabled", "edge_color"):
         if k in d:
             cur[k] = d[k]
-    with open(p, "w", encoding="utf-8") as f:
-        json.dump(cur, f, ensure_ascii=False, indent=2)
+    save_json(p, cur)
     log_event("login_bg_layout", p, "更新登录背景布局：%s" % cur.get("stretch_mode"))
     return True, "已保存登录背景布局（游戏内立即生效）"
 
@@ -1569,8 +1629,7 @@ def loading_layout_update(d):
                 spec[ck] = max(0.0, min(1.0, float(spec[ck])))
         data["elements"][k] = spec
     data["_doc"] = "加载界面元素布局（工作室「预加载界面」自由拖拽编辑写入）。坐标为视口归一化 0~1；progress_bar 用 w/h 控制条宽高。"
-    with open(p, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    save_json(p, data)
     log_event("loading_layout", p, "更新预加载界面布局")
     return True, "已保存预加载界面布局（游戏内下次启动生效）"
 
@@ -1648,8 +1707,7 @@ def main_menu_layout_update(d):
         data["elements"][k] = spec
     data["_doc"] = "主菜单(登录)界面元素布局（工作室「登录界面 → 主菜单布局」自由拖拽编辑写入）。" \
                    "menu_container 用 anchor 四值 + offset 定位，separation 为按钮间距(像素)；“bottom_*” 用 anchor + offset 定位。坐标为视口归一化 0~1。"
-    with open(p, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    save_json(p, data)
     log_event("main_menu_layout", p, "更新主菜单布局")
     return True, "已保存主菜单布局（游戏内下次启动生效）"
 
@@ -1731,8 +1789,7 @@ def hud_layout_update(d):
     data["_doc"] = "HUD 四面板默认位置（工作室「UI 模块 → HUD 布局」拖拽编辑写入）。坐标为参考分辨率 1920x1080 下的屏幕绝对坐标；游戏运行时按当前视口等比缩放。玩家拖拽偏好存 user://ui/hud_positions.json，优先于此默认。"
     data["reference_width"] = _HUD_REF_W
     data["reference_height"] = _HUD_REF_H
-    with open(p, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    save_json(p, data)
     log_event("hud_layout", p, "更新 HUD 布局")
     return True, "已保存 HUD 布局（游戏内下次启动生效）"
 
@@ -1799,8 +1856,7 @@ def settings_screen_layout_update(d):
     data["reference_width"] = _SETTINGS_SCREEN_LAYOUT_DEFAULT["reference_width"]
     data["reference_height"] = _SETTINGS_SCREEN_LAYOUT_DEFAULT["reference_height"]
     os.makedirs(os.path.dirname(p), exist_ok=True)
-    with open(p, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    save_json(p, data)
     log_event("settings_screen_layout", p, "更新设置弹窗布局")
     return True, "已保存设置弹窗布局（游戏内下次启动生效）"
 
@@ -1869,8 +1925,7 @@ def saveload_screen_layout_update(d):
     data["reference_width"] = _SAVELOAD_SCREEN_LAYOUT_DEFAULT()["reference_width"]
     data["reference_height"] = _SAVELOAD_SCREEN_LAYOUT_DEFAULT()["reference_height"]
     os.makedirs(os.path.dirname(p), exist_ok=True)
-    with open(p, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    save_json(p, data)
     log_event("saveload_screen_layout", p, "更新读档界面布局")
     return True, "已保存读档界面布局（游戏内下次启动生效）"
 
@@ -1955,8 +2010,7 @@ def ui_skin_save(kind, data):
         data = d
     os.makedirs(os.path.dirname(p), exist_ok=True)
     _backup(p)
-    with open(p, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    save_json(p, data)
     log_event("ui_skin", p, "保存 UI 皮肤：%s" % kind)
     return True, "已保存 %s（游戏内下次启动生效）" % kind
 
@@ -2066,8 +2120,7 @@ def main_menu_assets_update(paths):
     if "hover_shift_y" in paths:
         data["hover_shift_y"] = _clamp_hover_shift_y(paths["hover_shift_y"])
     data["_doc"] = "主菜单（登录界面）资源路径映射。标题 Logo、按钮悬停墨迹底板、5 个菜单图标、5 个按钮显示缩放（icon_scales，1=100%）、悬停浮动（hover_shift_x 负=左移/正=右移、hover_shift_y=上浮高度，像素）都在这里配置。工作室「登录界面 → 主菜单资源替换」可上传新图替换；「菜单按钮显示尺寸」可调显示大小；「悬停浮动」可调 hover 位移；游戏启动时 MainMenu.gd 会读取本配置。"
-    with open(p, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    save_json(p, data)
     log_event("main_menu_assets", p, "更新主菜单资源映射")
     return True, "已保存主菜单资源映射"
 
@@ -2321,8 +2374,7 @@ def battle_layout_save(layout_id, data):
             if 0 <= x < norm["width"] and 0 <= y < norm["height"]:
                 dep[str(uid)] = [x, y]
     norm["deployment"] = dep
-    with open(p, "w", encoding="utf-8") as f:
-        json.dump(norm, f, ensure_ascii=False, indent=2)
+    save_json(p, norm)
     log_event("battle_layout", lid, "保存战棋布局 %dx%d (%s)" % (norm["width"], norm["height"], norm["view_mode"]))
     return True, "已保存战棋布局「%s」" % norm["name"]
 
@@ -2624,8 +2676,7 @@ def login_btn_bg_clear(btn_id):
             data = {}
     if "map" in data and btn_id in data["map"]:
         del data["map"][btn_id]
-        with open(cfg, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
+        save_json(cfg, data)
     d = _login_btn_bg_dir()
     # 图片可能是 png/jpg/webp 任一真实格式，逐个清掉同名残留
     for ext in ("png", "jpg", "webp"):
@@ -2704,8 +2755,7 @@ def login_btn_bg_scan_fix():
         _backup(cfg)
         data["_doc"] = ("登录主菜单各按钮背景图映射。游戏代码已读取此表（MainMenu._load_btn_bg_map → "
                         "MenuItem.set_background），上传图片后下次进主菜单即生效。扩展名由工具按文件头真实格式写入，勿手改。")
-        with open(cfg, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
+        save_json(cfg, data)
     for it in fixed:
         if it["action"] == "renamed":
             log_event("btn_bg_fix", it["btn_id"], "修复扩展名错配：%s" % it["detail"])
@@ -2762,8 +2812,7 @@ def _save_variants(d):
     _backup(p)
     d["_doc"] = ("登录背景多分辨率变体。游戏按视口宽度挑选 min_width 最大且不超过视口宽的那一档；"
                  "配置缺失或文件不存在时回退主图 main_menu_bg.png，零破坏。由工作室「登录界面→清晰度」面板维护。")
-    with open(p, "w", encoding="utf-8") as f:
-        json.dump(d, f, ensure_ascii=False, indent=2)
+    save_json(p, d)
 
 
 def login_bg_variants():
@@ -2852,14 +2901,14 @@ def self_test(tmp_root):
     save_settings({"project_root": tmp_root, "port": 8799, "retention_days": 30, "safe_mode": True})
     msgs = []
     # NPC
-    ok, m = npc_upsert({"id": "test_npc", "name": "测试", "pos_x": 100, "pos_y": 200})
+    ok, m = npc_upsert({"id": "npc_smoke_test", "name": "测试", "pos_x": 100, "pos_y": 200})
     msgs.append(("npc_new", ok, m))
-    ok, m = npc_upsert({"id": "test_npc", "name": "测试2", "pos_x": 10, "pos_y": 20})
+    ok, m = npc_upsert({"id": "npc_smoke_test", "name": "测试2", "pos_x": 10, "pos_y": 20})
     msgs.append(("npc_update", ok, m))
-    assert npc_get("test_npc")["name"] == "测试2"
-    ok, m = npc_delete("test_npc")
+    assert npc_get("npc_smoke_test")["name"] == "测试2"
+    ok, m = npc_delete("npc_smoke_test")
     msgs.append(("npc_delete", ok, m))
-    assert npc_get("test_npc") is None
+    assert npc_get("npc_smoke_test") is None
     assert len(trash_list()) >= 1
     # dialog
     ok, m = dlg_new("dlg_test")
@@ -2878,11 +2927,11 @@ def self_test(tmp_root):
     tl = trash_list()
     restored = 0
     for rec in tl:
-        if rec["kind"] == "npc" and rec["id"] == "test_npc":
+        if rec["kind"] == "npc" and rec["id"] == "npc_smoke_test":
             ok, m = trash_restore(rec["_file"])
             msgs.append(("trash_restore_npc", ok, m))
             restored += 1
-    assert restored == 1 and npc_get("test_npc") is not None
+    assert restored == 1 and npc_get("npc_smoke_test") is not None
     msgs.append(("log_lines", len(read_log()), "条日志"))
     return msgs
 
@@ -2895,8 +2944,8 @@ if __name__ == "__main__":
     os.makedirs(os.path.join(d, "data", "configs", "npcs", "dialogs", "shards"), exist_ok=True)
     os.makedirs(os.path.join(d, "data", "configs", "bond"), exist_ok=True)
     json.dump({"npcs": []}, open(os.path.join(d, "data", "configs", "npcs", "town_npcs.json"), "w", encoding="utf-8"))  # verify-allow: town_npcs（自检夹具造临时工程，非生产写）
-    json.dump({"shards": {}}, open(os.path.join(d, "data", "configs", "npcs", "dialogs", "_index.json"), "w", encoding="utf-8"))
-    json.dump({}, open(os.path.join(d, "data", "configs", "bond", "celebrations.json"), "w", encoding="utf-8"))
+    json.dump({"shards": {}}, open(os.path.join(d, "data", "configs", "npcs", "dialogs", "_index.json"), "w", encoding="utf-8"))  # verify-allow: 自检夹具临时工程
+    json.dump({}, open(os.path.join(d, "data", "configs", "bond", "celebrations.json"), "w", encoding="utf-8"))  # verify-allow: 自检夹具临时工程
     for name, ok, msg in self_test(d):
         print("[%s] %s -> %s" % (name, "OK" if ok else "FAIL", msg))
     print("SELF_TEST_DONE")

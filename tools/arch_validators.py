@@ -274,6 +274,48 @@ def scan_owner_writer_baseline():
                  % (len(current), total, len(new_writers)))
 
 
+def scan_studio_write_paths():
+    """ST-R01（15 图批2 上线）：Studio 编辑器域 py 代码绕过 DataSink 直写 data/configs 扫描。
+    范围 = tools/{desktop_studio,config_editor,item_editor}/**.py；写基元（open w/json.dump/
+    write_text/shutil.copy 等）±3 行窗口出现 configs 路径即命中；`verify-allow:` 行内标记豁免
+    （自检夹具造临时工程）。基线禁新增（arch_linter_baseline.json gate_st_r01_studio_writes）。"""
+    baseline = _load_baseline()
+    known = set(baseline.get("gate_st_r01_studio_writes", []))
+    hits = []
+    write_re = re.compile(r"json\.dump\(|\.write_text\(|\.write_bytes\(|\.write\(|\.writelines\(|"
+                          r"open\([^)]*[\"']w[a-z+]*[\"']|shutil\.copy(?:2|tree)?\(|os\.replace\(")
+    scopes = ["desktop_studio", "config_editor", "item_editor"]
+    for top in scopes:
+        d = os.path.join(ROOT, "tools", top)
+        if not os.path.isdir(d):
+            continue
+        for dirpath, dirs, files in os.walk(d):
+            dirs[:] = [x for x in dirs if x not in ("__pycache__", "build", "projects", "safety_data")]
+            for fn in files:
+                if not fn.endswith(".py"):
+                    continue
+                rel = os.path.relpath(os.path.join(dirpath, fn), ROOT).replace(os.sep, "/")
+                lines = open(os.path.join(dirpath, fn), encoding="utf-8",
+                             errors="replace").read().split("\n")
+                for i, ln in enumerate(lines):
+                    if "verify-allow:" in ln:
+                        continue
+                    if not write_re.search(ln):
+                        continue
+                    window = "\n".join(lines[max(0, i - 3):i + 4])
+                    if "configs" not in window:
+                        continue
+                    sig = "%s | %s" % (rel, ln.strip()[:120])
+                    hits.append((sig, "%s:%d  %s" % (rel, i + 1, ln.strip()[:90])))
+    new_hits = [h for h in hits if h[0] not in known]
+    if new_hits:
+        for sig, ctx in new_hits[:10]:
+            violations.append(("ST-R01", sig.split(" | ")[0],
+                               "Studio 写路径绕过 DataSink 直写 configs（未入基线）: %s —— %s" % (sig, ctx)))
+    notes.append("st_r01 studio_writes: 存量基线 %d 条 / 本次命中 %d 处 / 新增 %d（基线禁新增）"
+                 % (len(known), len(hits), len(new_hits)))
+
+
 def fix_baselines():
     """--fix：把当前快照写回基线（仅供首次生成/收编时人工确认后使用）。"""
     baseline = _load_baseline()
@@ -288,9 +330,32 @@ def fix_baselines():
                 continue
             writes.append("%s | %s.%s" % (rel, owner, field))
     baseline["gate41_cross_module_writes"] = sorted(set(writes))
+    st_hits = []
+    write_re = re.compile(r"json\.dump\(|\.write_text\(|\.write_bytes\(|\.write\(|\.writelines\(|"
+                          r"open\([^)]*[\"']w[a-z+]*[\"']|shutil\.copy(?:2|tree)?\(|os\.replace\(")
+    for top in ("desktop_studio", "config_editor", "item_editor"):
+        d = os.path.join(ROOT, "tools", top)
+        if not os.path.isdir(d):
+            continue
+        for dirpath, dirs, files in os.walk(d):
+            dirs[:] = [x for x in dirs if x not in ("__pycache__", "build", "projects", "safety_data")]
+            for fn in files:
+                if not fn.endswith(".py"):
+                    continue
+                rel = os.path.relpath(os.path.join(dirpath, fn), ROOT).replace(os.sep, "/")
+                lines = open(os.path.join(dirpath, fn), encoding="utf-8",
+                             errors="replace").read().split("\n")
+                for i, ln in enumerate(lines):
+                    if "verify-allow:" in ln or not write_re.search(ln):
+                        continue
+                    if "configs" in "\n".join(lines[max(0, i - 3):i + 4]):
+                        st_hits.append("%s | %s" % (rel, ln.strip()[:120]))
+    baseline["gate_st_r01_studio_writes"] = sorted(set(st_hits))
     _save_baseline(baseline)
-    print("--fix 已写基线: gate25_owner_writers(%d 文件) / gate41_cross_module_writes(%d 条)"
-          % (len(baseline["gate25_owner_writers"]), len(baseline["gate41_cross_module_writes"])))
+    print("--fix 已写基线: gate25_owner_writers(%d 文件) / gate41_cross_module_writes(%d 条) / "
+          "gate_st_r01_studio_writes(%d 条)"
+          % (len(baseline["gate25_owner_writers"]), len(baseline["gate41_cross_module_writes"]),
+             len(baseline["gate_st_r01_studio_writes"])))
 
 
 def report_state_owners():
@@ -324,9 +389,10 @@ def main():
     scan_test_naming()
     scan_cross_module_writes()
     scan_owner_writer_baseline()
+    scan_studio_write_paths()
     report_state_owners()
 
-    print("arch_validators · 04图 GATE41（dependency/module_scope/test_naming + cross_write R004/007 + state_owner 基线+REPORT）")
+    print("arch_validators · 04图 GATE41（dependency/module_scope/test_naming + cross_write R004/007 + state_owner 基线+REPORT + ST-R01 studio_writes）")
     for n in notes:
         print("  ℹ " + n)
     if violations:

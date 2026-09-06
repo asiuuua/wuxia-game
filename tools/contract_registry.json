@@ -2,32 +2,194 @@
   "version": "1.0.0",
   "_doc": "ST-6 校验器统一注册表（15 图批1）：每校验器声明 {slot, name, ln_gate, tier, domain, report_only, host}。verify_all GATES 字典与 PROJECT_STATUS 物理槽表必须与本表一致（tools/registry_audit.py 三方对账）。新校验器入仓=先登记本表再挂槽。",
   "validators": [
-    {"slot": 1,  "name": "quit_check",           "ln_gate": "GATE01", "tier": "default", "domain": "compile",   "report_only": false, "host": "verify_all.gate1_quit_check"},
-    {"slot": 2,  "name": "unit_tests",           "ln_gate": "GATE02", "tier": "default", "domain": "test",      "report_only": false, "host": "tests/unit/run_all.tscn"},
-    {"slot": 3,  "name": "project_validate",     "ln_gate": "GATE03(内容红线,物理)", "tier": "default", "domain": "content", "report_only": false, "host": "tools/validate_project.gd"},
-    {"slot": 4,  "name": "preset_redline",       "ln_gate": "GATE04(预设红线,物理)", "tier": "default", "domain": "build",   "report_only": false, "host": "verify_all.gate4_preset_redline"},
-    {"slot": 5,  "name": "no_dual_write",        "ln_gate": "GATE05", "tier": "default", "domain": "arch",      "report_only": false, "host": "verify_all.gate5_no_dual_write"},
-    {"slot": 6,  "name": "ref_index",            "ln_gate": "GATE06", "tier": "default", "domain": "content",   "report_only": false, "host": "tools/ref_index.py + id_validator + schema_guard + pack_manifest + region_validator"},
-    {"slot": 7,  "name": "studio_smoke",         "ln_gate": "GATE16", "tier": "default", "domain": "studio",    "report_only": false, "host": "tools/studio_smoke.py"},
-    {"slot": 8,  "name": "structure_integrity",  "ln_gate": "GATE08", "tier": "default", "domain": "project",   "report_only": false, "host": "verify_all.gate8"},
-    {"slot": 9,  "name": "js_lint",              "ln_gate": "GATE09", "tier": "default", "domain": "web",       "report_only": false, "host": "tools/js_lint.py"},
-    {"slot": 17, "name": "assets_contract",      "ln_gate": "GATE17", "tier": "default", "domain": "asset",     "report_only": false, "host": "tools/check_assets_contract.py --strict"},
-    {"slot": 21, "name": "type_policy",          "ln_gate": "GATE21", "tier": "default", "domain": "arch",      "report_only": false, "host": "tools/arch_linter.py (signals_dict)"},
-    {"slot": 22, "name": "forbidden_api",        "ln_gate": "GATE22", "tier": "default", "domain": "arch",      "report_only": false, "host": "tools/arch_linter.py (forbidden_api + kernel93)"},
-    {"slot": 32, "name": "foundation_freeze",    "ln_gate": "GATE32", "tier": "default", "domain": "freeze",    "report_only": false, "host": "tools/arch_linter.py (eventbus_freeze)"},
-    {"slot": 40, "name": "performance_benchmark","ln_gate": "GATE19/40", "tier": "performance", "domain": "perf", "report_only": false, "host": "verify_all --tier performance"},
-    {"slot": 41, "name": "arch_validators",      "ln_gate": "GATE04/25/41", "tier": "default", "domain": "arch", "report_only": false, "host": "tools/arch_validators.py (dependency/module_scope/test_naming/cross_write/owner_baseline)"},
-    {"slot": 42, "name": "context_pack",         "ln_gate": "GATE30", "tier": "default", "domain": "governance","report_only": false, "host": "tools/context_pack_validator.py"}
+    {
+      "slot": 1,
+      "name": "quit_check",
+      "ln_gate": "GATE01",
+      "tier": "default",
+      "domain": "compile",
+      "report_only": false,
+      "host": "verify_all.gate1_quit_check"
+    },
+    {
+      "slot": 2,
+      "name": "unit_tests",
+      "ln_gate": "GATE02",
+      "tier": "default",
+      "domain": "test",
+      "report_only": false,
+      "host": "tests/unit/run_all.tscn"
+    },
+    {
+      "slot": 3,
+      "name": "project_validate",
+      "ln_gate": "GATE03(内容红线,物理)",
+      "tier": "default",
+      "domain": "content",
+      "report_only": false,
+      "host": "tools/validate_project.gd"
+    },
+    {
+      "slot": 4,
+      "name": "preset_redline",
+      "ln_gate": "GATE04(预设红线,物理)",
+      "tier": "default",
+      "domain": "build",
+      "report_only": false,
+      "host": "verify_all.gate4_preset_redline"
+    },
+    {
+      "slot": 5,
+      "name": "no_dual_write",
+      "ln_gate": "GATE05",
+      "tier": "default",
+      "domain": "arch",
+      "report_only": false,
+      "host": "verify_all.gate5_no_dual_write"
+    },
+    {
+      "slot": 6,
+      "name": "ref_index",
+      "ln_gate": "GATE06",
+      "tier": "default",
+      "domain": "content",
+      "report_only": false,
+      "host": "tools/ref_index.py + id_validator + schema_guard + pack_manifest + region_validator"
+    },
+    {
+      "slot": 7,
+      "name": "studio_smoke",
+      "ln_gate": "GATE16",
+      "tier": "default",
+      "domain": "studio",
+      "report_only": false,
+      "host": "tools/studio_smoke.py"
+    },
+    {
+      "slot": 8,
+      "name": "structure_integrity",
+      "ln_gate": "GATE08",
+      "tier": "default",
+      "domain": "project",
+      "report_only": false,
+      "host": "verify_all.gate8"
+    },
+    {
+      "slot": 9,
+      "name": "js_lint",
+      "ln_gate": "GATE09",
+      "tier": "default",
+      "domain": "web",
+      "report_only": false,
+      "host": "tools/js_lint.py"
+    },
+    {
+      "slot": 17,
+      "name": "assets_contract",
+      "ln_gate": "GATE17",
+      "tier": "default",
+      "domain": "asset",
+      "report_only": false,
+      "host": "tools/check_assets_contract.py --strict"
+    },
+    {
+      "slot": 21,
+      "name": "type_policy",
+      "ln_gate": "GATE21",
+      "tier": "default",
+      "domain": "arch",
+      "report_only": false,
+      "host": "tools/arch_linter.py (signals_dict)"
+    },
+    {
+      "slot": 22,
+      "name": "forbidden_api",
+      "ln_gate": "GATE22",
+      "tier": "default",
+      "domain": "arch",
+      "report_only": false,
+      "host": "tools/arch_linter.py (forbidden_api + kernel93)"
+    },
+    {
+      "slot": 32,
+      "name": "foundation_freeze",
+      "ln_gate": "GATE32",
+      "tier": "default",
+      "domain": "freeze",
+      "report_only": false,
+      "host": "tools/arch_linter.py (eventbus_freeze)"
+    },
+    {
+      "slot": 40,
+      "name": "performance_benchmark",
+      "ln_gate": "GATE19/40",
+      "tier": "performance",
+      "domain": "perf",
+      "report_only": false,
+      "host": "verify_all --tier performance"
+    },
+    {
+      "slot": 41,
+      "name": "arch_validators",
+      "ln_gate": "GATE04/25/41",
+      "tier": "default",
+      "domain": "arch",
+      "report_only": false,
+      "host": "tools/arch_validators.py (dependency/module_scope/test_naming/cross_write/owner_baseline/st_r01_studio_writes)"
+    },
+    {
+      "slot": 42,
+      "name": "context_pack",
+      "ln_gate": "GATE30",
+      "tier": "default",
+      "domain": "governance",
+      "report_only": false,
+      "host": "tools/context_pack_validator.py"
+    }
   ],
   "pre_commit_hooks": [
-    {"slot": "0a", "name": "mouse_filter_silent_block", "ln_gate": "GATE06族", "scope": ".tscn", "report_only": false},
-    {"slot": "0b", "name": "eventbus_signal_audit",     "ln_gate": "GATE10/24", "scope": ".gd", "report_only": false},
-    {"slot": "0c", "name": "signal_param_ambiguous",    "ln_gate": "GATE11族", "scope": ".gd", "report_only": true}
+    {
+      "slot": "0a",
+      "name": "mouse_filter_silent_block",
+      "ln_gate": "GATE06族",
+      "scope": ".tscn",
+      "report_only": false
+    },
+    {
+      "slot": "0b",
+      "name": "eventbus_signal_audit",
+      "ln_gate": "GATE10/24",
+      "scope": ".gd",
+      "report_only": false
+    },
+    {
+      "slot": "0c",
+      "name": "signal_param_ambiguous",
+      "ln_gate": "GATE11族",
+      "scope": ".gd",
+      "report_only": true
+    }
   ],
   "planned": [
-    {"ln_gate": "GATE23", "name": "changed_file_scope", "status": "PLANNED(Write Lease 元数据就绪后)"},
-    {"ln_gate": "GATE24", "name": "contract_drift",     "status": "PARTIAL(0b+GATE32 镜像承载)"},
-    {"ln_gate": "GATE18", "name": "localization",       "status": "PLANNED(F5)"},
-    {"ln_gate": "GATE13", "name": "god_object",         "status": "REPORT(state_owner 前身)"}
+    {
+      "ln_gate": "GATE23",
+      "name": "changed_file_scope",
+      "status": "PLANNED(Write Lease 元数据就绪后)"
+    },
+    {
+      "ln_gate": "GATE24",
+      "name": "contract_drift",
+      "status": "PARTIAL(0b+GATE32 镜像承载)"
+    },
+    {
+      "ln_gate": "GATE18",
+      "name": "localization",
+      "status": "PLANNED(F5)"
+    },
+    {
+      "ln_gate": "GATE13",
+      "name": "god_object",
+      "status": "REPORT(state_owner 前身)"
+    }
   ]
 }

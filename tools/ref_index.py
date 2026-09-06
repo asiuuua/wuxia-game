@@ -46,7 +46,9 @@ def _load(fp):
         return {}
 
 
-def build():
+def build(root=None):
+    # root 参数：DataSink 增量反查（15 图 ST-2 ⑤）对被编辑工程（可非本仓）建索引用
+    R = os.path.abspath(root) if root else ROOT
     defs = {k: {} for k in ["npc", "quest", "item", "battle", "enemy", "dialog", "ability", "flag_def"]}
     refs = []   # (kind, from_id, to_kind, to_id, file)
 
@@ -57,28 +59,28 @@ def build():
         refs.append((to_kind, str(from_id), str(to_id), file))
 
     # ---- 定义收集 ----
-    for fp in glob.glob(os.path.join(ROOT, "data", "configs", "regions", "*", "npcs.json")):
+    for fp in glob.glob(os.path.join(R, "data", "configs", "regions", "*", "npcs.json")):
         for n in _load(fp).get("npcs", []):
             add_def("npc", n.get("id"), fp)
-    for n in _load(os.path.join(ROOT, "data", "configs", "npcs", "town_npcs.json")).get("npcs", []):
+    for n in _load(os.path.join(R, "data", "configs", "npcs", "town_npcs.json")).get("npcs", []):
         add_def("npc", n.get("id"), "town_npcs.json(留档)")
-    quest_files = glob.glob(os.path.join(ROOT, "data", "configs", "regions", "*", "quests.json")) + \
-        glob.glob(os.path.join(ROOT, "data", "configs", "quests", "*.json"))
+    quest_files = glob.glob(os.path.join(R, "data", "configs", "regions", "*", "quests.json")) + \
+        glob.glob(os.path.join(R, "data", "configs", "quests", "*.json"))
     for fp in quest_files:
         d = _load(fp)
         for q in d.get("quests", []):
             add_def("quest", q.get("id"), fp)
-    for fp in glob.glob(os.path.join(ROOT, "data", "configs", "items", "*.json")) + \
-            glob.glob(os.path.join(ROOT, "data", "configs", "regions", "*", "items.json")):
+    for fp in glob.glob(os.path.join(R, "data", "configs", "items", "*.json")) + \
+            glob.glob(os.path.join(R, "data", "configs", "regions", "*", "items.json")):
         for it in _load(fp).get("items", []):
             add_def("item", it.get("id"), fp)
-    for fp in glob.glob(os.path.join(ROOT, "data", "configs", "regions", "*", "battles.json")):
+    for fp in glob.glob(os.path.join(R, "data", "configs", "regions", "*", "battles.json")):
         for b in _load(fp).get("battles", []):
             add_def("battle", b.get("id"), fp)
             for eid in b.get("enemy_ids", []):
                 refs.append(("enemy", str(b.get("id")), str(eid), fp))
-    for fp in glob.glob(os.path.join(ROOT, "data", "configs", "scenes", "*.json")) + \
-            glob.glob(os.path.join(ROOT, "data", "configs", "battles", "*.json")):
+    for fp in glob.glob(os.path.join(R, "data", "configs", "scenes", "*.json")) + \
+            glob.glob(os.path.join(R, "data", "configs", "battles", "*.json")):
         d = _load(fp)
         bl = d.get("battles", [])
         if not isinstance(bl, list):
@@ -88,25 +90,25 @@ def build():
                 add_def("battle", b["id"], fp)
                 for eid in b.get("enemy_ids", []):
                     refs.append(("enemy", str(b["id"]), str(eid), fp))
-    for fp in glob.glob(os.path.join(ROOT, "data", "configs", "regions", "*", "enemies.json")) + \
-            [os.path.join(ROOT, "data", "configs", "npcs", "enemies.json")]:
+    for fp in glob.glob(os.path.join(R, "data", "configs", "regions", "*", "enemies.json")) + \
+            [os.path.join(R, "data", "configs", "npcs", "enemies.json")]:
         for e in _load(fp).get("enemies", []):
             add_def("enemy", e.get("id"), fp)
-    for fp in glob.glob(os.path.join(ROOT, "data", "configs", "regions", "*", "index.json")):
+    for fp in glob.glob(os.path.join(R, "data", "configs", "regions", "*", "index.json")):
         for did in _load(fp).get("dialogs", []):
             add_def("dialog", did, fp)
-    gi = _load(os.path.join(ROOT, "data", "configs", "npcs", "dialogs", "_index.json"))
+    gi = _load(os.path.join(R, "data", "configs", "npcs", "dialogs", "_index.json"))
     for did in gi.get("shards", {}).keys():
         add_def("dialog", did, "npcs/dialogs/_index.json")
-    for fp in glob.glob(os.path.join(ROOT, "data", "configs", "npcs", "dialogs", "shards", "*.json")):
+    for fp in glob.glob(os.path.join(R, "data", "configs", "npcs", "dialogs", "shards", "*.json")):
         add_def("dialog", os.path.basename(fp)[:-5], fp)
-    for a in _load(os.path.join(ROOT, "data", "configs", "abilities", "skills.json")).get("skills", []):
+    for a in _load(os.path.join(R, "data", "configs", "abilities", "skills.json")).get("skills", []):
         add_def("ability", a.get("id"), "abilities/skills.json")
 
     # ---- 引用收集 ----
     # NPC → dialog/quest/battle
-    for fp in glob.glob(os.path.join(ROOT, "data", "configs", "regions", "*", "npcs.json")) + \
-            [os.path.join(ROOT, "data", "configs", "npcs", "town_npcs.json")]:
+    for fp in glob.glob(os.path.join(R, "data", "configs", "regions", "*", "npcs.json")) + \
+            [os.path.join(R, "data", "configs", "npcs", "town_npcs.json")]:
         for n in _load(fp).get("npcs", []):
             nid = n.get("id", "?")
             if n.get("dialog_id"):
@@ -134,8 +136,8 @@ def build():
             for k in q.get("then_set", {}).keys():
                 add_def("flag_def", k, fp)
     # 对话分片：行内命令 + 图内部跳转
-    shard_files = glob.glob(os.path.join(ROOT, "data", "configs", "npcs", "dialogs", "shards", "*.json")) + \
-        glob.glob(os.path.join(ROOT, "data", "configs", "regions", "*", "dialogs", "*.json"))
+    shard_files = glob.glob(os.path.join(R, "data", "configs", "npcs", "dialogs", "shards", "*.json")) + \
+        glob.glob(os.path.join(R, "data", "configs", "regions", "*", "dialogs", "*.json"))
     for fp in shard_files:
         d = _load(fp)
         did = d.get("id", os.path.basename(fp)[:-5])

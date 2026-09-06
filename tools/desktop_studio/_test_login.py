@@ -10,12 +10,18 @@ def cp(rel):
     src = os.path.join(ROOT, rel)
     dst = os.path.join(T, rel)
     os.makedirs(os.path.dirname(dst), exist_ok=True)
-    shutil.copy2(src, dst)
+    shutil.copy2(src, dst)  # verify-allow: 自检夹具复制助手（目标=临时工程 T，非生产写）
 
-cp("data/configs/localization/strings.csv")
+cp("data/configs/localization/strings.csv")  # verify-allow: 自检夹具造临时工程，非生产写
 cp("scenes/ui/screens/main_menu/MainMenu.gd")
 os.makedirs(os.path.join(T, "assets/ui"), exist_ok=True)
 open(os.path.join(T, "project.godot"), "w").close()  # 让 discover_project_root 认 T 为合法工程根
+
+import data_sink as _ds
+_ds._changelog_enabled = False  # 测试静默 ⑥
+
+import data_sink as _ds
+_ds._changelog_enabled = False  # 测试静默 ⑥
 
 core.save_settings({"project_root": T, "port": 8799, "retention_days": 30, "safe_mode": True})
 
@@ -35,7 +41,7 @@ print("[2] bg_replace OK ->", m)
 # 3) texts read
 txts = core.login_texts()
 byk = {t["key"]: t for t in txts}
-assert byk["menu_new_game"]["zh_CN"] == "开始新的旅程", byk["menu_new_game"]
+assert byk["menu_new_game"]["zh_CN"] == "开始游戏", byk["menu_new_game"]  # 2026-09-06 对齐 774707e 水墨重构后的文案真源
 print("[3] texts read OK, count=%d (menu_new_game=%s)" % (len(txts), byk["menu_new_game"]["zh_CN"]))
 
 # 4) update one text
@@ -51,7 +57,7 @@ print("[4] texts_update OK ->", m, "| csv now:", row["zh_CN"], row["zh_TW"], row
 
 # 5) version parse
 v = core.login_version()
-assert v["version"] == "v0.5.0 Build 20250827", v
+assert v["version"].startswith("v0.5.0"), v  # 2026-09-06 对齐 RH-1：夹具无 provenance → dev 态
 print("[5] version OK ->", v["version"])
 
 # 6) btn bg set + list（键须与 LOGIN_TEXT_KEYS 一致，即 menu_new_game）

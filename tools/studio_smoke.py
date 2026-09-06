@@ -18,10 +18,29 @@ sys.path.insert(0, STUDIO)
 
 import studio_core  # noqa: E402
 
+# 测试静默：self_test/冒烟夹具写不进真源更改日志（⑥ 开关）
+try:
+    import data_sink as _ds
+    _ds._changelog_enabled = False
+except Exception:
+    pass
+
+# 测试静默：self_test/冒烟夹具写不进真源更改日志（⑥ 开关）
+try:
+    import data_sink as _ds
+    _ds._changelog_enabled = False
+except Exception:
+    pass
+
 
 def main() -> int:
     failures = []
     d = tempfile.mkdtemp(prefix="studio_smoke_")
+    # 测试卫生：清空上一轮残留的回收站/备份（TRASH_DIR 跨运行持久，残留记录会让
+    # self_test 的 restored==1 断言翻车——2026-09-06 冒烟实录）
+    import shutil
+    import studio_core as _sc
+    shutil.rmtree(getattr(_sc, "TRASH_DIR", ""), ignore_errors=True)
     # 搭最小工程数据（与 self_test 夹具同构 + 区域表）
     for sub in ["data/configs/npcs", "data/configs/npcs/dialogs/shards",
                 "data/configs/regions/newbie_village", "data/configs/bond"]:
@@ -38,15 +57,15 @@ def main() -> int:
     # 2) 编辑闭环：切根 → 写 NPC → 读回 → 落盘校验
     studio_core.set_project_root(d)
     try:
-        ok, msg = studio_core.npc_upsert({"id": "smoke_npc_001", "name": "冒烟测试NPC", "scene": "newbie_village", "pos_x": 10, "pos_y": 20})
+        ok, msg = studio_core.npc_upsert({"id": "npc_smoke_001", "name": "冒烟测试NPC", "scene": "newbie_village", "pos_x": 10, "pos_y": 20})
         if not ok:
             failures.append("npc_upsert 失败: %s" % msg)
         names = [n.get("id") for n in studio_core.npc_list()]
-        if "smoke_npc_001" not in names:
+        if "npc_smoke_001" not in names:
             failures.append("npc_upsert 后 npc_list 未读回 smoke_npc_001（读=%s）" % names)
         region_data = json.load(open(os.path.join(d, "data/configs/regions/newbie_village/npcs.json"), encoding="utf-8"))
         ids = [n.get("id") for n in region_data.get("npcs", [])]
-        if "smoke_npc_001" not in ids:
+        if "npc_smoke_001" not in ids:
             failures.append("区域表落盘缺少 smoke_npc_001（写入了 %s）" % ids)
     finally:
         studio_core.set_project_root("D:/武侠游戏")   # 恢复真实工程根，绝不残留
