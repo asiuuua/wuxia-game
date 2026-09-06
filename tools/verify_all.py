@@ -13,10 +13,11 @@ verify_all.py — 一键验证入口（架构整改 P0-c 落地；逐步扩容�
   GATE7  工作室编辑流程冒烟：写入→区域表→读回闭环（临时目录）
   GATE8  工程结构兜底：核心目录/关键文件消失即拦（data/ 被外部 AI 工具误删事故的复盘产物）
   GATE9  JS 语法门禁：index.html 内联脚本逐块 node --check（防整页脚本失效回归）
+  GATE10 工作室服务层架构（Phase 2）：业务零 save_json/save_text 直调 / Repository 边界
 
 用法（Windows，任意终端）：
   python tools/verify_all.py            # 跑全部门禁
-  python tools/verify_all.py --gate 1   # 只跑某一门（1-9）
+  python tools/verify_all.py --gate 1   # 只跑某一门（1-10 / 17 / 21 / 22 / 32 / 41）
 
 退出码：0 = 全绿；1 = 有门禁未过（提交/合并前必须为 0）。
 
@@ -328,6 +329,19 @@ def gate9_js_lint():
     return ok
 
 
+def gate10_studio_arch():
+    """GATE10：工作室 Python 服务层架构（Phase 2 Repository 层）——
+    R1 业务层零 save_json/save_text 直调（落盘必须经域 Repository）；
+    R2 repositories/ 不得反向依赖业务 service（仅允许 persistence/_common/project_service）。"""
+    out, code = _run([sys.executable, os.path.join(HERE, "arch_studio_linter.py")])
+    for ln in out.splitlines():
+        if "✓" in ln or "✗" in ln:
+            print("   " + ln.strip())
+    ok = code == 0
+    print("  GATE10 %s（Studio 服务层架构：业务零直调 / Repository 边界）" % ("✓ 通过" if ok else "✗ 未过"))
+    return ok
+
+
 def gate40_benchmarks():
     """GATE40：Benchmark 性能基准（17图 SBP，可选 tier：--tier performance，不进默认全量）。
     门禁壳只做「跑基准→比对基线→报 PASS/FAIL」（SBP-4）；基线五字段格式 FATAL（SBP-R07）；
@@ -423,6 +437,7 @@ def gate43_localization():
 GATES = {1: gate1_quit_check, 2: gate2_unit_tests, 3: gate3_project_validate,
          4: gate4_preset_redline, 5: gate5_no_dual_write, 6: gate6_ref_index,
          7: gate7_studio_smoke, 8: gate8_structure, 9: gate9_js_lint,
+         10: gate10_studio_arch,
          17: gate17_assets_contract,
          21: gate21_type_policy, 22: gate22_forbidden_api, 32: gate32_foundation_freeze,
          41: gate41_arch_validators, 42: gate42_context_pack, 43: gate43_localization}

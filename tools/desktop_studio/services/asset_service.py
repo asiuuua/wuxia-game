@@ -2,7 +2,7 @@
 """资产/UI 域服务：登录界面背景·按钮·变体·布局、UI 皮肤、主菜单资源、战棋布局、
 演示立绘、.tscn 贴图槽位（经 tscn_assets 适配器）。
 
-写工程资源文件一律经 _common（DataSink 收口或备份直写）；
+写工程资源文件一律经 AssetRepository（DataSink 收口或备份直写）；
 .tscn 属 Godot 原生资源，按施工图 §21 走 tscn_assets 适配器接口。
 """
 
@@ -17,13 +17,13 @@ import configparser
 from services import _common
 from services._common import (  # noqa: F401  门面透传用
     _safe_id, _is_valid_id, _ensure_dirs, load_settings, save_settings,
-    load_json, save_json, save_text, _backup, _backup_dir,
+    load_json, _backup, _backup_dir,
     SAFETY_DIR, TRASH_DIR, BACKUP_DIR, SETTINGS_PATH, LOG_PATH,
     DEFAULT_PROJECT_ROOT, DEFAULT_PORT, DEFAULT_RETENTION_DAYS, DEFAULT_SAFE_MODE,
-    SinkRejected, _SINK_OK,
 )
 from services.project_service import _paths, discover_project_root
 from services.audit_service import log_event
+from services.repositories.asset_repository import asset_repo
 
 MODULE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -310,8 +310,8 @@ def login_texts_update(rows):
                 en = u.get("en", parts[3] if len(parts) > 3 else "")
                 line = "%s,%s,%s,%s\n" % (key, zh, tw, en)
         new_lines.append(line)
-    save_text(path, "".join(new_lines), note="login_texts_update %d 条" % len(rows),
-              encoding="utf-8-sig")
+    asset_repo.save_login_strings("".join(new_lines), note="login_texts_update %d 条" % len(rows),
+                                  encoding="utf-8-sig")
     log_event("login_texts", path, "更新 %d 条登录界面文案" % len(rows))
     return True, "已保存 %d 条文案" % len(rows)
 
@@ -398,7 +398,7 @@ def login_btn_bg_set(btn_id, src_path):
         data["map"] = {}
     data["map"][btn_id] = "res://assets/ui/main_menu_btn/%s" % fname
     data["_doc"] = "登录主菜单各按钮背景图映射。游戏代码已读取此表（MainMenu._load_btn_bg_map → MenuItem.set_background），上传图片后下次进主菜单即生效。扩展名由工具按文件头真实格式写入，勿手改。"
-    save_json(cfg, data)
+    asset_repo.save_login_btn_bg_cfg(data)
     log_event("login_btn_bg", btn_id, "存储按钮背景图（真实格式=%s，%dx%d）" % (ext, w, h))
     tip = ""
     if w > 0 and h > 0:
@@ -452,7 +452,7 @@ def login_bg_layout_update(d):
     for k in ("stretch_mode", "scrim_alpha", "edge_auto", "leaves_enabled", "edge_color"):
         if k in d:
             cur[k] = d[k]
-    save_json(p, cur)
+    asset_repo.save_login_bg_layout(cur)
     log_event("login_bg_layout", p, "更新登录背景布局：%s" % cur.get("stretch_mode"))
     return True, "已保存登录背景布局（游戏内立即生效）"
 
@@ -509,7 +509,7 @@ def loading_layout_update(d):
                 spec[ck] = max(0.0, min(1.0, float(spec[ck])))
         data["elements"][k] = spec
     data["_doc"] = "加载界面元素布局（工作室「预加载界面」自由拖拽编辑写入）。坐标为视口归一化 0~1；progress_bar 用 w/h 控制条宽高。"
-    save_json(p, data)
+    asset_repo.save_loading_layout(data)
     log_event("loading_layout", p, "更新预加载界面布局")
     return True, "已保存预加载界面布局（游戏内下次启动生效）"
 
@@ -587,7 +587,7 @@ def main_menu_layout_update(d):
         data["elements"][k] = spec
     data["_doc"] = "主菜单(登录)界面元素布局（工作室「登录界面 → 主菜单布局」自由拖拽编辑写入）。" \
                    "menu_container 用 anchor 四值 + offset 定位，separation 为按钮间距(像素)；“bottom_*” 用 anchor + offset 定位。坐标为视口归一化 0~1。"
-    save_json(p, data)
+    asset_repo.save_main_menu_layout(data)
     log_event("main_menu_layout", p, "更新主菜单布局")
     return True, "已保存主菜单布局（游戏内下次启动生效）"
 
@@ -667,7 +667,7 @@ def hud_layout_update(d):
     data["_doc"] = "HUD 四面板默认位置（工作室「UI 模块 → HUD 布局」拖拽编辑写入）。坐标为参考分辨率 1920x1080 下的屏幕绝对坐标；游戏运行时按当前视口等比缩放。玩家拖拽偏好存 user://ui/hud_positions.json，优先于此默认。"
     data["reference_width"] = _HUD_REF_W
     data["reference_height"] = _HUD_REF_H
-    save_json(p, data)
+    asset_repo.save_hud_layout(data)
     log_event("hud_layout", p, "更新 HUD 布局")
     return True, "已保存 HUD 布局（游戏内下次启动生效）"
 
@@ -733,8 +733,7 @@ def settings_screen_layout_update(d):
     data["_doc"] = _SETTINGS_SCREEN_LAYOUT_DEFAULT["_doc"]
     data["reference_width"] = _SETTINGS_SCREEN_LAYOUT_DEFAULT["reference_width"]
     data["reference_height"] = _SETTINGS_SCREEN_LAYOUT_DEFAULT["reference_height"]
-    os.makedirs(os.path.dirname(p), exist_ok=True)
-    save_json(p, data)
+    asset_repo.save_settings_screen_layout(data)
     log_event("settings_screen_layout", p, "更新设置弹窗布局")
     return True, "已保存设置弹窗布局（游戏内下次启动生效）"
 
@@ -802,8 +801,7 @@ def saveload_screen_layout_update(d):
     data["_doc"] = _SAVELOAD_SCREEN_LAYOUT_DEFAULT()["_doc"]
     data["reference_width"] = _SAVELOAD_SCREEN_LAYOUT_DEFAULT()["reference_width"]
     data["reference_height"] = _SAVELOAD_SCREEN_LAYOUT_DEFAULT()["reference_height"]
-    os.makedirs(os.path.dirname(p), exist_ok=True)
-    save_json(p, data)
+    asset_repo.save_saveload_screen_layout(data)
     log_event("saveload_screen_layout", p, "更新读档界面布局")
     return True, "已保存读档界面布局（游戏内下次启动生效）"
 
@@ -886,9 +884,7 @@ def ui_skin_save(kind, data):
         d["leaves_scale"] = max(0.2, min(5.0, float(data.get("leaves_scale", 1.6))))
         d["_doc"] = "主菜单（程序化水墨背景）视觉特效参数（工作室「UI 皮肤定制 → 视觉特效」面板可改）。"
         data = d
-    os.makedirs(os.path.dirname(p), exist_ok=True)
-    _backup(p)
-    save_json(p, data)
+    asset_repo.save_ui_skin(kind, data)
     log_event("ui_skin", p, "保存 UI 皮肤：%s" % kind)
     return True, "已保存 %s（游戏内下次启动生效）" % kind
 
@@ -998,7 +994,7 @@ def main_menu_assets_update(paths):
     if "hover_shift_y" in paths:
         data["hover_shift_y"] = _clamp_hover_shift_y(paths["hover_shift_y"])
     data["_doc"] = "主菜单（登录界面）资源路径映射。标题 Logo、按钮悬停墨迹底板、5 个菜单图标、5 个按钮显示缩放（icon_scales，1=100%）、悬停浮动（hover_shift_x 负=左移/正=右移、hover_shift_y=上浮高度，像素）都在这里配置。工作室「登录界面 → 主菜单资源替换」可上传新图替换；「菜单按钮显示尺寸」可调显示大小；「悬停浮动」可调 hover 位移；游戏启动时 MainMenu.gd 会读取本配置。"
-    save_json(p, data)
+    asset_repo.save_main_menu_assets(data)
     log_event("main_menu_assets", p, "更新主菜单资源映射")
     return True, "已保存主菜单资源映射"
 
@@ -1248,7 +1244,7 @@ def battle_layout_save(layout_id, data):
             if 0 <= x < norm["width"] and 0 <= y < norm["height"]:
                 dep[str(uid)] = [x, y]
     norm["deployment"] = dep
-    save_json(p, norm)
+    asset_repo.save_battle_layout(lid, norm)
     log_event("battle_layout", lid, "保存战棋布局 %dx%d (%s)" % (norm["width"], norm["height"], norm["view_mode"]))
     return True, "已保存战棋布局「%s」" % norm["name"]
 
@@ -1538,7 +1534,7 @@ def login_btn_bg_clear(btn_id):
             data = {}
     if "map" in data and btn_id in data["map"]:
         del data["map"][btn_id]
-        save_json(cfg, data)
+        asset_repo.save_login_btn_bg_cfg(data)
     d = _login_btn_bg_dir()
     # 图片可能是 png/jpg/webp 任一真实格式，逐个清掉同名残留
     for ext in ("png", "jpg", "webp"):
@@ -1617,7 +1613,7 @@ def login_btn_bg_scan_fix():
         _backup(cfg)
         data["_doc"] = ("登录主菜单各按钮背景图映射。游戏代码已读取此表（MainMenu._load_btn_bg_map → "
                         "MenuItem.set_background），上传图片后下次进主菜单即生效。扩展名由工具按文件头真实格式写入，勿手改。")
-        save_json(cfg, data)
+        asset_repo.save_login_btn_bg_cfg(data)
     for it in fixed:
         if it["action"] == "renamed":
             log_event("btn_bg_fix", it["btn_id"], "修复扩展名错配：%s" % it["detail"])
@@ -1667,12 +1663,9 @@ def _load_variants():
 
 
 def _save_variants(d):
-    p = _bg_variants_cfg_path()
-    os.makedirs(os.path.dirname(p), exist_ok=True)
-    _backup(p)
     d["_doc"] = ("登录背景多分辨率变体。游戏按视口宽度挑选 min_width 最大且不超过视口宽的那一档；"
                  "配置缺失或文件不存在时回退主图 main_menu_bg.png，零破坏。由工作室「登录界面→清晰度」面板维护。")
-    save_json(p, d)
+    asset_repo.save_bg_variants(d)
 
 
 def login_bg_variants():

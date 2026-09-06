@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """NPC 内容域服务：区域表感知的 NPC 读写 / 详细资料 / 半身立绘导入 / 欢庆内容。
 
-写操作一律经 _common.save_json（DataSink 六步收口）；删除走回收站（审计域）。
+写操作一律经 NPCRepository（DataSink 六步收口）；删除走回收站（审计域）。
 """
 
 import os
@@ -14,14 +14,14 @@ import datetime
 from services import _common
 from services._common import (  # noqa: F401  门面透传用
     _safe_id, _is_valid_id, _ensure_dirs, load_settings, save_settings,
-    load_json, save_json, save_text, _backup, _backup_dir,
+    load_json, _backup, _backup_dir,
     SAFETY_DIR, TRASH_DIR, BACKUP_DIR, SETTINGS_PATH, LOG_PATH,
     DEFAULT_PROJECT_ROOT, DEFAULT_PORT, DEFAULT_RETENTION_DAYS, DEFAULT_SAFE_MODE,
-    SinkRejected, _SINK_OK,
 )
 from services.project_service import _paths, _half_body_dir, discover_project_root
 from services.audit_service import log_event, trash_put
 from services.asset_service import _detect_image_ext
+from services.repositories.npc_repository import npc_repo
 
 
 # ============================ NPC 动态立绘一键导入 ============================
@@ -214,9 +214,9 @@ def _load_all_region_npcs():
 
 
 def _remove_npc_from_region(rid, nid):
-    p, data = _load_region_file(rid)
+    _, data = _load_region_file(rid)
     data["npcs"] = [n for n in data.get("npcs", []) if n.get("id") != nid]
-    save_json(p, data)
+    npc_repo.save_region(rid, data)
 
 
 def npc_list():
@@ -293,7 +293,7 @@ def npc_upsert(fields):
             break
     if not found:
         data["npcs"].append(entry)
-    save_json(p, data)
+    npc_repo.save_region(rid, data)
     log_event("npc_save", nid, "保存 NPC（区域 %s）" % rid)
     return True, ("更新" if found else "新建") + " NPC %s（区域 %s）" % (nid, rid)
 
@@ -353,12 +353,12 @@ def npc_rename(old_id, new_id, fields):
     if target_region == rid:
         kept.append(entry)
         data["npcs"] = kept
-        save_json(p, data)
+        npc_repo.save_region(rid, data)
     else:
-        save_json(p, {"npcs": kept})
+        npc_repo.save_region(rid, {"npcs": kept})
         tp, tdata = _load_region_file(target_region)
         tdata["npcs"].append(entry)
-        save_json(tp, tdata)
+        npc_repo.save_region(target_region, tdata)
     log_event("npc_rename", "%s->%s" % (old_id, new_id), "重命名 NPC（区域 %s）" % target_region)
     return True, "已将 %s 重命名为 %s（旧记录已进回收站，可恢复）" % (old_id, new_id)
 
@@ -407,7 +407,7 @@ def npc_stats_upsert(nid, fields):
     if "backpack_note" in fields:
         entry["backpack_note"] = str(fields.get("backpack_note", ""))
     data[nid] = entry
-    save_json(_paths()["npc_stats"], data)
+    npc_repo.save_npc_stats(data)
     log_event("npc_stats_save", nid, "保存 NPC 详细资料")
     return True, "已保存 NPC 详细资料 %s" % nid
 
@@ -437,7 +437,7 @@ def cel_upsert(npc_id, entry):
         return False, "NPC id 不能为空"
     data = load_json(_paths()["cel"], {})
     data[npc_id] = entry
-    save_json(_paths()["cel"], data)
+    npc_repo.save_celebrations(data)
     log_event("cel_save", npc_id, "保存欢庆内容")
     return True, "已保存 %s 的欢庆内容" % npc_id
 
@@ -449,7 +449,7 @@ def cel_delete(npc_id):
     removed = data[npc_id]
     s = load_settings()
     del data[npc_id]
-    save_json(_paths()["cel"], data)
+    npc_repo.save_celebrations(data)
     if s.get("safe_mode", True):
         trash_put("celebration", npc_id, removed,
                   {"type": "celebration", "npc_id": npc_id, "file": _paths()["cel"]})

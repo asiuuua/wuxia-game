@@ -2,7 +2,7 @@
 """任务（QuestGraph）内容域服务：任务流程图的读取 / 引用校验 / 写回。
 
 只处理 regions/<region>/quests.json 中 type == "quest_graph" 的节点；
-写回前校验节点引用（防止写坏运行时图），写操作经 _common.save_json 收口。
+写回前校验节点引用（防止写坏运行时图），写操作经 QuestRepository 收口。
 """
 
 import os
@@ -10,13 +10,13 @@ import os
 from services import _common
 from services._common import (  # noqa: F401  门面透传用
     _safe_id, _is_valid_id, _ensure_dirs, load_settings, save_settings,
-    load_json, save_json, save_text, _backup, _backup_dir,
+    load_json, _backup, _backup_dir,
     SAFETY_DIR, TRASH_DIR, BACKUP_DIR, SETTINGS_PATH, LOG_PATH,
     DEFAULT_PROJECT_ROOT, DEFAULT_PORT, DEFAULT_RETENTION_DAYS, DEFAULT_SAFE_MODE,
-    SinkRejected, _SINK_OK,
 )
 from services.project_service import discover_project_root
 from services.audit_service import log_event
+from services.repositories.quest_repository import quest_repo
 
 
 def quest_graph_list():
@@ -97,7 +97,7 @@ def quest_graph_save(region, qid, graph):
     for q in data["quests"]:
         if isinstance(q, dict) and q.get("id") == qid and q.get("type") == "quest_graph":
             q["quest_graph"] = graph
-            save_json(qs_path, data)
+            quest_repo.save_quests(region, data)
             log_event("quest_graph_save", qid, "区域 %s 保存任务流程图" % region)
             return True, "已保存任务图 %s（区域 %s）" % (qid, region)
     return False, "未找到 quest id=%s（type=quest_graph）" % qid

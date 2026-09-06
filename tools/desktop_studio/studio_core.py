@@ -5,7 +5,8 @@
 Phase 1 拆分后，全部业务逻辑已迁入 services/ 七域服务（施工图 §5.2）：
   npc_service / dialogue_service / quest_service / localization_service
   asset_service / audit_service / project_service
-共享基础设施（路径 / 设置 / ID 校验 / DataSink 写收口 / 备份 / 日志）在 services/_common.py。
+共享基础设施（路径 / 设置 / ID 校验 / 备份 / 日志）在 services/_common.py；
+写收口（save_json / save_text + DataSink 六步）在 services/persistence.py。
 
 本文件职责：
   1) 按域 import services 并在模块级转发全部对外函数与常量（保持旧调用方 core.xxx 兼容）；
@@ -24,10 +25,13 @@ if TOOLS_DIR not in sys.path:
 # ---------------- 共享基础设施（含常量，单一来源 services/_common） ----------------
 from services._common import (  # noqa: F401
     _user_data_dir, _ensure_dirs, load_settings, save_settings,
-    _safe_id, _is_valid_id, load_json, _backup, _backup_dir, save_text, save_json,
+    _safe_id, _is_valid_id, load_json, _backup, _backup_dir,
     SAFETY_DIR, TRASH_DIR, BACKUP_DIR, SETTINGS_PATH, LOG_PATH,
     DEFAULT_PROJECT_ROOT, DEFAULT_PORT, DEFAULT_RETENTION_DAYS, DEFAULT_SAFE_MODE,
 )
+
+# ---------------- 写收口（DataSink 六步，业务层唯一落盘通道） ----------------
+from services.persistence import save_text, save_json  # noqa: F401
 
 # ---------------- 工程域 ----------------
 from services.project_service import (  # noqa: F401

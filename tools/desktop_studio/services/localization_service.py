@@ -13,13 +13,13 @@ import io
 from services import _common
 from services._common import (  # noqa: F401  门面透传用
     _safe_id, _is_valid_id, _ensure_dirs, load_settings, save_settings,
-    load_json, save_json, save_text, _backup, _backup_dir,
+    load_json, _backup, _backup_dir,
     SAFETY_DIR, TRASH_DIR, BACKUP_DIR, SETTINGS_PATH, LOG_PATH,
     DEFAULT_PROJECT_ROOT, DEFAULT_PORT, DEFAULT_RETENTION_DAYS, DEFAULT_SAFE_MODE,
-    SinkRejected, _SINK_OK,
 )
 from services.project_service import discover_project_root
 from services.audit_service import log_event
+from services.repositories.localization_repository import localization_repo
 
 
 def _i18n_path():
@@ -70,6 +70,6 @@ def i18n_upsert(key, zh_cn="", zh_tw="", en=""):
     path = _i18n_path()
     buf = io.StringIO()
     csv.writer(buf).writerows(rows)
-    save_text(path, buf.getvalue(), note="i18n_upsert %s" % key)
+    localization_repo.save_csv(buf.getvalue(), note="i18n_upsert %s" % key)
     log_event("i18n_save", key, "更新文案表")
     return True, "已保存文案 %s（多语言立即生效）" % key

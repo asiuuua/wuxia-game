@@ -2,7 +2,7 @@
 """审计与运维域服务：操作日志 / 回收站 / 过期清理 / 自检（self_test）。
 
 职责边界：Studio 自身设施（safety_data 目录）的读写与核验；
-不直接写工程数据（恢复/清理走 _common.save_json 收口）。
+不直接写工程数据（恢复/清理走对应域 Repository 收口）。
 """
 
 import os
@@ -12,12 +12,13 @@ import datetime
 from services import _common
 from services._common import (  # noqa: F401  门面透传用
     _safe_id, _is_valid_id, _ensure_dirs, load_settings, save_settings,
-    load_json, save_json, save_text, _backup, _backup_dir,
+    load_json, _backup, _backup_dir,
     SAFETY_DIR, TRASH_DIR, BACKUP_DIR, SETTINGS_PATH, LOG_PATH,
     DEFAULT_PROJECT_ROOT, DEFAULT_PORT, DEFAULT_RETENTION_DAYS, DEFAULT_SAFE_MODE,
-    SinkRejected, _SINK_OK,
 )
 from services.project_service import _paths, _shard_path, discover_project_root
+from services.repositories.npc_repository import npc_repo
+from services.repositories.dialogue_repository import dialogue_repo
 
 
 # ============================ 日志 ============================
@@ -105,27 +106,28 @@ def trash_restore(fn):
             if "npcs" not in data:
                 data["npcs"] = []
             data["npcs"].append(rec["payload"])
-            save_json(r["file"], data)
+            rid = os.path.basename(os.path.dirname(r["file"]))
+            npc_repo.save_region(rid, data)
         elif kind == "dlg_line":
             shard_path = _shard_path(r["dlg_id"])
             data = load_json(shard_path, {"id": r["dlg_id"], "lines": []})
             if "lines" not in data:
                 data["lines"] = []
             data["lines"].append(rec["payload"])
-            save_json(shard_path, data)
+            dialogue_repo.save_shard(r["dlg_id"], data)
         elif kind == "celebration":
             data = load_json(r["file"], {})
             data[r["npc_id"]] = rec["payload"]
-            save_json(r["file"], data)
+            npc_repo.save_celebrations(data)
         elif kind == "dlg":
             shard = rec["payload"].get("shard", {})
             idx_entry = rec["payload"].get("index_entry", {})
-            save_json(_shard_path(r["dlg_id"]), shard)
+            dialogue_repo.save_shard(r["dlg_id"], shard)
             idx = load_json(r["file"], {"shards": {}})
             if "shards" not in idx:
                 idx["shards"] = {}
             idx["shards"][r["dlg_id"]] = idx_entry
-            save_json(r["file"], idx)
+            dialogue_repo.save_index(idx)
         else:
             return False, "未知的回收站类型"
         os.remove(p)

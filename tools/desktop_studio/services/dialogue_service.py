@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """对话/剧情内容域服务：对话分片（shard）与台词行的增删改查。
 
-写操作一律经 _common.save_json（DataSink 六步收口）；删除走回收站（审计域）。
+写操作一律经 DialogueRepository（DataSink 六步收口）；删除走回收站（审计域）。
 """
 
 import os
@@ -9,13 +9,13 @@ import os
 from services import _common
 from services._common import (  # noqa: F401  门面透传用
     _safe_id, _is_valid_id, _ensure_dirs, load_settings, save_settings,
-    load_json, save_json, save_text, _backup, _backup_dir,
+    load_json, _backup, _backup_dir,
     SAFETY_DIR, TRASH_DIR, BACKUP_DIR, SETTINGS_PATH, LOG_PATH,
     DEFAULT_PROJECT_ROOT, DEFAULT_PORT, DEFAULT_RETENTION_DAYS, DEFAULT_SAFE_MODE,
-    SinkRejected, _SINK_OK,
 )
 from services.project_service import _paths, _shard_path
 from services.audit_service import log_event, trash_put
+from services.repositories.dialogue_repository import dialogue_repo
 
 
 def dlg_list():
@@ -43,9 +43,9 @@ def dlg_new(dlg_id, npc_id=""):
     # npc_id 透传（C-3 主权：调用方提供才写入，工具不代填）；空置仍走 VA4-BINDING 登记放行
     if npc_id:
         shard["npc_id"] = str(npc_id)
-    save_json(_shard_path(dlg_id), shard)
+    dialogue_repo.save_shard(dlg_id, shard)
     idx["shards"][dlg_id] = {"file": file, "npc_id": str(npc_id or ""), "chapter": "custom"}
-    save_json(_paths()["dlg_index"], idx)
+    dialogue_repo.save_index(idx)
     log_event("dlg_new", dlg_id, "新建对话")
     return True, "已新建对话 %s" % dlg_id
 
@@ -100,7 +100,7 @@ def dlg_line_upsert(dlg_id, line):
         if "options" in line:
             rec["options"] = _norm_options(line["options"])
         data["lines"].append(rec)
-    save_json(p, data)
+    dialogue_repo.save_shard(dlg_id, data)
     log_event("dlg_line_save", "%s/%s" % (dlg_id, lid), "保存台词")
     return True, ("更新" if found else "新建") + " 台词 %s" % lid
 
@@ -117,7 +117,7 @@ def dlg_line_delete(dlg_id, lid):
     removed = next(ln for ln in lines if ln.get("id") == lid)
     s = load_settings()
     data["lines"] = kept
-    save_json(p, data)
+    dialogue_repo.save_shard(dlg_id, data)
     if s.get("safe_mode", True):
         trash_put("dlg_line", "%s/%s" % (dlg_id, lid), removed, {"type": "dlg_line", "dlg_id": dlg_id})
         return True, "已删除并放入回收站：%s" % lid
@@ -132,7 +132,7 @@ def dlg_delete(dlg_id):
     shard = load_json(_shard_path(dlg_id), {"id": dlg_id, "lines": []})
     s = load_settings()
     del idx["shards"][dlg_id]
-    save_json(_paths()["dlg_index"], idx)
+    dialogue_repo.save_index(idx)
     if s.get("safe_mode", True):
         trash_put("dlg", dlg_id, {"shard": shard, "index_entry": entry},
                   {"type": "dlg", "dlg_id": dlg_id, "file": _paths()["dlg_index"]})
