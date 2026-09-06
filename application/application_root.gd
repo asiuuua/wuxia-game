@@ -28,6 +28,8 @@ var sworn_service: SwornService = null
 var master_service: MasterService = null
 var relationship_service: RelationshipService = null
 
+var trade_runtime_factory: Callable = Callable()   # ADR-0007 批B 升表口：ShopTrade Runtime 工厂
+
 var _assembled := false
 
 func is_assembled() -> bool:
@@ -57,11 +59,28 @@ func create() -> void:
 func inject() -> void:
 	quest_service.attach_effects(effect_registry)          # QD-2：reward/progress 效果注册
 	dialogue_event_executor.setup(effect_registry)         # 12 图 QD-2：executor 与 quest 同源注册表
+	# ADR-0007 批B 升表口：ShopTrade Runtime 工厂注入（每笔仍产新实例，0-C.12 合法形态）
+	trade_runtime_factory = func() -> TransactionRuntime: return TransactionRuntime.new()
+	shop_service.set_trade_runtime_factory(trade_runtime_factory)
 
-## 组装入口（Create → Inject；装配完整性自检）
+## Register（ADR-0007 批B 移交）：服务 saveable 注册清单自 GameManager 移交本段；
+## player_state / GameState 桥为时序敏感项，批C 随装配段整体移交（暂留 GameManager）。
+func register_saveables() -> void:
+	SaveManager.register_saveable(inventory_service)
+	SaveManager.register_saveable(ability_service)
+	SaveManager.register_saveable(quest_service)
+	SaveManager.register_saveable(equipment_service)
+	SaveManager.register_saveable(sect_service)
+	SaveManager.register_saveable(bond_service)
+	SaveManager.register_saveable(romance_service)
+	SaveManager.register_saveable(sworn_service)
+	SaveManager.register_saveable(master_service)
+
+## 组装入口（Create → Inject → Register；01 §73 三段齐；装配完整性自检）
 func assemble() -> void:
 	create()
 	inject()
+	register_saveables()
 	_assembled = true
 	_assert_assembly_complete()
 

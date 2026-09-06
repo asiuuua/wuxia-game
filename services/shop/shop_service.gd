@@ -9,6 +9,18 @@
 extends RefCounted
 class_name ShopService
 
+## ADR-0007 批B（升表口）：TransactionRuntime 工厂由 Composition Root 注入
+## （D-10 备忘既定口：每笔 new → 装配注入；0-C.12 无 clock 合法形态保持——工厂每次产新实例）
+var _trade_runtime_factory: Callable = Callable()
+
+func set_trade_runtime_factory(cb: Callable) -> void:
+	_trade_runtime_factory = cb
+
+func _rt_from_factory() -> TransactionRuntime:
+	if _trade_runtime_factory.is_valid():
+		return _trade_runtime_factory.call()
+	return null   # 未注入时 ShopTradeTransaction 内部兜底（兼容旧构造）
+
 ## 找商店里某物品的库存条目；没有返回空 Dictionary
 func _find_stock(shop: Dictionary, item_id: String) -> Dictionary:
 	for s in shop.get("stock", []):
@@ -79,7 +91,7 @@ func buy(shop_id: String, item_id: String, count: int) -> int:
 
 	# 事务段（10 图 EC-5 / 0-C.19 / 01 §60）：Money Mutation → Inventory Mutation → Commit。
 	# 预检后理论上不可达的 run 失败也走统一回滚（0-C.8），绝不手工补偿。
-	var trade := ShopTradeTransaction.new()
+	var trade := ShopTradeTransaction.new(_rt_from_factory())
 	var out: Dictionary = trade.execute_buy(ps, inv, shop_id, item_id, total, count)
 	var cr: CommandResult = out["result"]
 	if cr.is_ok():
@@ -123,7 +135,7 @@ func sell(shop_id: String, item_id: String, count: int) -> int:
 	var total: int = sell_price(shop_id, item_id) * count
 	# 事务段：Inventory Mutation → Money Mutation（先扣货后给钱，10 图 P-E5 冻结序）。
 	# remove 失败（预检后理论不可达）走统一回滚，绝不加钱。
-	var trade := ShopTradeTransaction.new()
+	var trade := ShopTradeTransaction.new(_rt_from_factory())
 	var out: Dictionary = trade.execute_sell(ps, inv, shop_id, item_id, total, count)
 	var cr: CommandResult = out["result"]
 	if cr.is_ok():

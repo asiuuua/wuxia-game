@@ -248,7 +248,7 @@ func _process(delta: float) -> void:
 	_animate_loading_overlay(delta)
 
 ## ADR-0007 批A：装配收敛开关（默认 false=旧路径零行为；true=经 ApplicationRoot 组装后引用转发）
-const USE_APPLICATION_ROOT := false
+const USE_APPLICATION_ROOT := true   # ADR-0007 批B：新装配路径转正（回滚=revert 本常量）
 
 func _init_services() -> void:
 	if USE_APPLICATION_ROOT:
@@ -321,6 +321,12 @@ func _adopt_from(root: ApplicationRoot) -> void:
 
 
 func _register_saveables() -> void:
+	# ADR-0007 批B：服务 saveable 已由 ApplicationRoot.register_saveables() 注册（开关 true 路径）；
+	# player_state / GameState 桥为时序敏感项暂留本处（批C 随装配段整体移交）。
+	if USE_APPLICATION_ROOT:
+		SaveManager.register_saveable(player_state)
+		SaveManager.register_saveable(GameState.save_bridge())
+		return
 	SaveManager.register_saveable(player_state)
 	SaveManager.register_saveable(inventory_service)
 	SaveManager.register_saveable(ability_service)
