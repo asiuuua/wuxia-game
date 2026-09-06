@@ -166,6 +166,26 @@ def scan_test_naming():
                 violations.append(("T-R02", rel, "测试套件文件名必须 test_ 前缀（U-4/T-R02）"))
 
 
+def scan_test_shape():
+    """⑧ T-R01：tests/**/test_*.gd 必须继承 TestBase（禁自造 runner）。
+    扫描面=tests/ 递归下全部 test_*.gd（T-R02 命名法保证套件前缀唯一，此处只查基座）；
+    生成器（gen_*.gd）/运行器（run_all.gd，非 test_ 前缀）/下划线辅助天然不在扫描面。"""
+    tests_dir = os.path.join(ROOT, "tests")
+    for dirpath, _dirs, files in os.walk(tests_dir):
+        rel_dir = os.path.relpath(dirpath, ROOT).replace(os.sep, "/")
+        for fn in files:
+            if not (fn.startswith("test_") and fn.endswith(".gd")):
+                continue
+            fp = os.path.join(dirpath, fn)
+            rel = os.path.join(rel_dir, fn).replace(os.sep, "/")
+            try:
+                text = open(fp, encoding="utf-8").read()
+            except Exception:
+                continue
+            if not re.search(r"^extends\s+TestBase\b", text, re.M):
+                violations.append(("T-R01", rel, "单测必须继承 TestBase（04图 T-R01，禁自造 runner）"))
+
+
 # --- Owner 写入口合法文件映射（Owner 自文件写豁免；跨模块直写进基线禁新增） ---
 OWNER_LEGAL_PREFIX = {
     "player_state": ["data/runtime/player_state.gd", "autoload/GameManager.gd", "tests/"],
@@ -482,6 +502,7 @@ def main():
     scan_dependency()
     scan_module_scope()
     scan_test_naming()
+    scan_test_shape()
     scan_cross_module_writes()
     scan_owner_writer_baseline()
     scan_studio_write_paths()
@@ -490,7 +511,7 @@ def main():
     scan_view_model_hygiene()
     report_state_owners()
 
-    print("arch_validators · 04图 GATE41（dependency/module_scope/test_naming + cross_write R004/007 + state_owner 基线+REPORT + ST-R01 studio_writes + PV-R03 ui_flow + QD-R10 services_no_stage + PV-1 vm_hygiene）")
+    print("arch_validators · 04图 GATE41（dependency/module_scope/test_naming/test_shape + cross_write R004/007 + state_owner 基线+REPORT + ST-R01 studio_writes + PV-R03 ui_flow + QD-R10 services_no_stage + PV-1 vm_hygiene）")
     for n in notes:
         print("  ℹ " + n)
     if violations:
@@ -498,7 +519,7 @@ def main():
             print("  ✗ [%s] %s — %s" % (rule, f, ev))
         print("════ 结论：✗ %d 项违规 ════" % len(violations))
         sys.exit(1)
-    print("════ 结论：✓ 通过（层方向单向 / 生产零引 tests / Double 隔离 / 套件命名合规）════")
+    print("════ 结论：✓ 通过（层方向单向 / 生产零引 tests / Double 隔离 / 套件命名与基座合规）════")
     sys.exit(0)
 
 

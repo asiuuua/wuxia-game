@@ -360,6 +360,9 @@ func _load_adapter(adapter: ContentTypeAdapter) -> void:
 		for entry in data.get(adapter.array_key, []):
 			if not _is_valid_entry(entry, path, adapter.array_key, adapter.id_field):
 				continue
+			# 批C（05图 CT-4 绞杀者）：可选 Schema 校验挂点（ quests 等带校验类的行为保真通道）
+			if not adapter.schema_check.is_null():
+				adapter.schema_check.call(path, entry)
 			var id := str(entry[adapter.id_field]).strip_edges()
 			if adapter.store.has(id) and not _error_cb.is_null():
 				_error_cb.call("%s %s 重复定义，后者覆盖" % [adapter.display_label, id])

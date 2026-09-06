@@ -22,7 +22,7 @@
 | GATE21 Type Policy | ACTIVE | 0-B.12 禁裸信号载荷，存量退役禁新增 |
 | GATE22 Forbidden API | ACTIVE | core 禁 IO/JSON/随机；存量 3 条基线 |
 | GATE32 Foundation Freeze | ACTIVE | EventBus 86 信号基线 + save_body_registry 登记制 |
-| GATE41 架构校验器组 | ACTIVE | dependency 禁引矩阵+环 / module_scope / test_naming / state_owner（B 批收口）+ **PV-R03 ui_flow 白名单禁新增（14 批1，14 条只减不增）+ QD-R10 services_no_stage（14 批1 机器化，零容忍）+ PV-1 vm_hygiene 三禁（14 批1）**（见下） |
+| GATE41 架构校验器组 | ACTIVE | dependency 禁引矩阵+环 / module_scope / test_naming / **test_shape（T-R01 升表口批：test_*.gd 必须 extends TestBase，零基线）** / state_owner（B 批收口）+ **PV-R03 ui_flow 白名单禁新增（14 批1，14 条只减不增）+ QD-R10 services_no_stage（14 批1 机器化，零容忍）+ PV-1 vm_hygiene 三禁（14 批1）**（见下） |
 | GATE42 Context Pack | ACTIVE | GATE30（LN）物理槽：0-G.5 六字段+0-G.6 STALE 红线+01§127 对账（C2②） |
 | GATE43 Localization | ACTIVE（F5 物理化 2026-09-06） | GATE18（LN）物理槽：localization_validator——C-R12 硬编码中文基线禁新增（loc_baseline.json 330 条只减不增；F4 批收编 Schema 真源 8 条 title+搬移路径置换 4 条，362→330）+VA5 display 文本键核对 strings.csv（WARN 通报） |
 | GATE40 性能基准 | ACTIVE | --tier performance（17 图 SBP-6） |

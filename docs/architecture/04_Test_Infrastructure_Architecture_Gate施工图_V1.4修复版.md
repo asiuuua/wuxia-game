@@ -269,7 +269,7 @@
 
 | 规则 | 内容 | 严重度 | E 级 | 扫描器/测试 | Gate |
 |---|---|---|---|---|---|
-| T-R01 | 单测必须继承 TestBase，禁自造 runner | ERROR | E3 | arch_lint --rules test_shape（**未物理化**——2026-09-06 A3 核查+复查维持：arch_validators 已有 dependency/module_scope/test_naming/state_owner 四扫描器，test_shape（extends TestBase 校验）确缺；实测存量 73 套件全量合规，补齐随 ACR 升表） | GATE21 |
+| T-R01 | 单测必须继承 TestBase，禁自造 runner | ERROR | E3 | arch_lint --rules test_shape（**已物理化**——2026-09-06 升表口批：arch_validators `scan_test_shape` 上线（GATE41 槽承载，原登记 GATE21 属 LN 命名空间），扫描 tests/ 递归全部 test_*.gd 必须 `extends TestBase`；84 套件全量合规零基线 ACTIVE，命中即红；生成器/运行器天然不在扫描面） | GATE41 |
 | T-R02 | `test_*` 命名法（U-4） | ERROR | E3 | naming_validator（**已物理化**——2026-09-06 B 批复查更正 A3 误判：arch_validators `scan_test_naming` 即本规则载体，GATE41 槽执行；A3 首查 grep 模式未命中致误报未物理化） | GATE41 |
 | T-R03 | 单测禁真实磁盘/真实时钟/全局随机（宪法 §82） | FATAL | E3 | forbidden_api_validator | GATE22 |
 | T-R04 | Test Double 只准住 `tests/doubles/` | FATAL | E3 | module_scope_validator | GATE21 |

@@ -13,6 +13,7 @@ var array_key: String = ""            # JSON 中条目数组键（如 "skills"/"
 var id_field: String = "id"           # 条目 id 字段名
 var display_label: String = ""        # 错误文案用的中文名（保真原 _record_error 文案）
 var definition_class: String = ""     # 03 Definition 类名占位（Phase4 类型化时启用）
+var schema_check: Callable = Callable()  # 可选 Schema 校验挂点（批C：签名 func(path: String, entry: Dictionary) -> void；store 前调用）
 var store: Dictionary = {}            # id -> entry 真身（Registry 持有，运行期内容不可变 CA-4）
 
 func _init(p_kind: StringName, p_files: Array[String], p_array_key: String,

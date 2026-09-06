@@ -132,19 +132,9 @@ func _ready() -> void:
 	_config_errors.clear()
 	_load_dialogs()   # 提前：分片登记先行，供 Registry 收编建 DialogueByNPC（IX-4）
 	content_registry = ContentRegistry.new(_load_json, _record_error)
-	_setup_content_registry()   # ability/item 走 TypeAdapter（05 图 CT-4 绞杀者首批）
-	_load_enemies()
-	_load_battles()
-	_load_quests()
-	_load_npcs()
+	_setup_content_registry()   # 12 类走 TypeAdapter（05 图 CT-4 绞杀者：首批 2+批C 批1 10）
 	_load_dialog_events()
 	_load_player()
-	_load_difficulties()
-	_load_recipes()
-	_load_forge()
-	_load_shops()
-	_load_sects()
-	_load_relations()
 	_load_world()
 	_load_ui_anim()
 	_load_ui_sfx()
@@ -156,12 +146,36 @@ func _ready() -> void:
 	_is_loaded = true
 
 ## Content Registry 装配（05 图 CT-4：Registry 先建 + ConfigManager 保留旧签名 facade 委托）
-## attach 模式：store 引用直接回接 _abilities/_items，61 个调用方零改动
+## attach 模式：store 引用直接回接 _xxx 成员，调用方零改动。
+## 批C 批1（CT-4 绞杀者）：A 组 9 类标准同构 + quests（Schema 挂点）共 10 类迁 TypeAdapter，
+## 原 _load_* 函数退役；C 组 7 类特殊形态（world/ui_anim/ui_sfx/menus/dialog_events/
+## status_effects/regions/player/combat_attr）留 Phase2 后段。
 func _setup_content_registry() -> void:
 	var ability_adapter := ContentTypeAdapter.new(&"ability", ABILITY_FILES, "skills", "id", "技能")
 	var item_adapter := ContentTypeAdapter.new(&"item", ITEM_FILES, "items", "id", "物品")
+	var enemy_adapter := ContentTypeAdapter.new(&"enemies", ENEMY_FILES, "enemies", "id", "敌人")
+	var battle_adapter := ContentTypeAdapter.new(&"battles", BATTLE_FILES, "battles", "id", "战斗")
+	var quest_adapter := ContentTypeAdapter.new(&"quests", QUEST_FILES, "quests", "id", "任务")
+	quest_adapter.schema_check = func(path: String, entry: Dictionary) -> void: _record_schema_violations(_schema_rel_of(path), entry, "任务")
+	var npc_adapter := ContentTypeAdapter.new(&"npcs", NPC_FILES, "npcs", "id", "NPC")
+	var difficulty_adapter := ContentTypeAdapter.new(&"difficulties", DIFFICULTY_FILES, "difficulties", "difficulty_id", "难度")
+	var recipe_adapter := ContentTypeAdapter.new(&"recipes", RECIPE_FILES, "recipes", "id", "配方")
+	var forge_adapter := ContentTypeAdapter.new(&"forge", FORGE_FILES, "recipes", "id", "锻造配方")
+	var shop_adapter := ContentTypeAdapter.new(&"shops", SHOP_FILES, "shops", "id", "商店")
+	var sect_adapter := ContentTypeAdapter.new(&"sects", SECT_FILES, "sects", "id", "门派")
+	var relation_adapter := ContentTypeAdapter.new(&"relations", RELATION_FILES, "relations", "id", "关系 NPC")
 	content_registry.register_adapter(ability_adapter)
 	content_registry.register_adapter(item_adapter)
+	content_registry.register_adapter(enemy_adapter)
+	content_registry.register_adapter(battle_adapter)
+	content_registry.register_adapter(quest_adapter)
+	content_registry.register_adapter(npc_adapter)
+	content_registry.register_adapter(difficulty_adapter)
+	content_registry.register_adapter(recipe_adapter)
+	content_registry.register_adapter(forge_adapter)
+	content_registry.register_adapter(shop_adapter)
+	content_registry.register_adapter(sect_adapter)
+	content_registry.register_adapter(relation_adapter)
 	content_registry.load_schemas(_content_schemas)   # Phase 3：Schema 真源注入（双端同源，同一份 JSON）
 	content_registry.attach_shard_registry(_dialog_index)
 	content_registry.set_ready_callback(func(fp: String) -> void:
@@ -174,10 +188,21 @@ func _setup_content_registry() -> void:
 	if lr.is_failed():
 		push_error("[Config] Content Registry 装载失败: %s" % lr.get_error().get_message())
 		return
+	# store 引用回接（facade attach：成员即真身，61 调用方零改动）
 	_abilities = content_registry.adapter_store(&"ability")
 	_items = content_registry.adapter_store(&"item")
+	_enemies = content_registry.adapter_store(&"enemies")
+	_battles = content_registry.adapter_store(&"battles")
+	_quests = content_registry.adapter_store(&"quests")
+	_npcs = content_registry.adapter_store(&"npcs")
+	_difficulties = content_registry.adapter_store(&"difficulties")
+	_recipes = content_registry.adapter_store(&"recipes")
+	_forge = content_registry.adapter_store(&"forge")
+	_shops = content_registry.adapter_store(&"shops")
+	_sects = content_registry.adapter_store(&"sects")
+	_relations = content_registry.adapter_store(&"relations")
 	_shard_cache = content_registry.shard_cache()
-	# version「最后者胜」保真：ability→item 段落抓取结果回写（其余 14 类按原逻辑继续覆盖）
+	# version「最后者胜」保真：ability→item 段落抓取结果回写（未迁类按原逻辑继续覆盖）
 	_config_version = content_registry.source_version(&"item")
 
 ## 配置是否加载完成（Bootstrap 启动序列查询）
@@ -214,59 +239,9 @@ func _record_schema_violations(rel: String, entry: Dictionary, ctx: String) -> v
 
 # === 各系统配置加载（含条目级容错守卫）===
 # 守卫规则：每条必须是对象且含非空 id；否则记录并跳过，绝不崩溃
-# （ability/item 两类已由 ContentRegistry TypeAdapter 接管，05 图 CT-4 首批）
+# （12 类已由 ContentRegistry TypeAdapter 接管：ability/item 首批+批C 批1 十类；
+#   C 组特殊形态 9 类保留原加载逻辑，见 _setup_content_registry 头注）
 
-func _load_enemies() -> void:
-	for path in ENEMY_FILES:
-		var data: Dictionary = _load_json(path)
-		_config_version = data.get("version", _config_version)
-		for entry in data.get("enemies", []):
-			if not _is_valid_entry(entry, path, "enemies"):
-				continue
-			var id: String = str(entry["id"])
-			if _enemies.has(id):
-				_record_error("敌人 %s 重复定义，后者覆盖" % id)
-			_enemies[id] = entry
-
-func _load_battles() -> void:
-	for path in BATTLE_FILES:
-		var data: Dictionary = _load_json(path)
-		_config_version = data.get("version", _config_version)
-		for entry in data.get("battles", []):
-			if not _is_valid_entry(entry, path, "battles"):
-				continue
-			var id: String = str(entry["id"])
-			if _battles.has(id):
-				_record_error("战斗 %s 重复定义，后者覆盖" % id)
-			_battles[id] = entry
-
-func _load_quests() -> void:
-	for path in QUEST_FILES:
-		var data: Dictionary = _load_json(path)
-		_config_version = data.get("version", _config_version)
-		var rel := _schema_rel_of(path)
-		for entry in data.get("quests", []):
-			if not _is_valid_entry(entry, path, "quests"):
-				continue
-			_record_schema_violations(rel, entry, "任务")
-			var id: String = str(entry["id"])
-			if _quests.has(id):
-				_record_error("任务 %s 重复定义，后者覆盖" % id)
-			_quests[id] = entry
-
-func _load_npcs() -> void:
-	for path in NPC_FILES:
-		var data: Dictionary = _load_json(path)
-		_config_version = data.get("version", _config_version)
-		for entry in data.get("npcs", []):
-			if not _is_valid_entry(entry, path, "npcs"):
-				continue
-			var id: String = str(entry["id"])
-			if _npcs.has(id):
-				_record_error("NPC %s 重复定义，后者覆盖" % id)
-			_npcs[id] = entry
-
-# 启动只加载全局索引（KB 级常驻）；分片内容按需懒加载
 func _load_dialogs() -> void:
 	var data: Dictionary = _load_json(DIALOG_INDEX_FILE)
 	if data.is_empty():
@@ -296,79 +271,6 @@ func _load_dialog_events() -> void:
 			if _dialog_events.has(key):
 				_record_error("对话事件 %s 重复定义，后者覆盖" % key)
 			_dialog_events[key] = lst
-
-func _load_difficulties() -> void:
-	for path in DIFFICULTY_FILES:
-		var data: Dictionary = _load_json(path)
-		_config_version = data.get("version", _config_version)
-		for entry in data.get("difficulties", []):
-			if not _is_valid_entry(entry, path, "difficulties", "difficulty_id"):
-				continue
-			var id: String = str(entry["difficulty_id"])
-			if _difficulties.has(id):
-				_record_error("难度 %s 重复定义，后者覆盖" % id)
-			_difficulties[id] = entry
-
-func _load_recipes() -> void:
-	for path in RECIPE_FILES:
-		var data: Dictionary = _load_json(path)
-		_config_version = data.get("version", _config_version)
-		for entry in data.get("recipes", []):
-			if not _is_valid_entry(entry, path, "recipes"):
-				continue
-			var id: String = str(entry["id"])
-			if _recipes.has(id):
-				_record_error("配方 %s 重复定义，后者覆盖" % id)
-			_recipes[id] = entry
-
-func _load_forge() -> void:
-	for path in FORGE_FILES:
-		var data: Dictionary = _load_json(path)
-		_config_version = data.get("version", _config_version)
-		for entry in data.get("recipes", []):
-			if not _is_valid_entry(entry, path, "forge_recipes"):
-				continue
-			var id: String = str(entry["id"])
-			if _forge.has(id):
-				_record_error("锻造配方 %s 重复定义，后者覆盖" % id)
-			_forge[id] = entry
-
-func _load_shops() -> void:
-	for path in SHOP_FILES:
-		var data: Dictionary = _load_json(path)
-		_config_version = data.get("version", _config_version)
-		for entry in data.get("shops", []):
-			if not _is_valid_entry(entry, path, "shops"):
-				continue
-			var id: String = str(entry["id"])
-			if _shops.has(id):
-				_record_error("商店 %s 重复定义，后者覆盖" % id)
-			_shops[id] = entry
-
-func _load_sects() -> void:
-	for path in SECT_FILES:
-		var data: Dictionary = _load_json(path)
-		_config_version = data.get("version", _config_version)
-		for entry in data.get("sects", []):
-			if not _is_valid_entry(entry, path, "sects"):
-				continue
-			var id: String = str(entry["id"])
-			if _sects.has(id):
-				_record_error("门派 %s 重复定义，后者覆盖" % id)
-			_sects[id] = entry
-
-# === 结缘系统 NPC 关系配置（模块18 · M1） ===
-func _load_relations() -> void:
-	for path in RELATION_FILES:
-		var data: Dictionary = _load_json(path)
-		_config_version = data.get("version", _config_version)
-		for entry in data.get("relations", []):
-			if not _is_valid_entry(entry, path, "relations"):
-				continue
-			var id: String = str(entry["id"])
-			if _relations.has(id):
-				_record_error("关系 NPC %s 重复定义，后者覆盖" % id)
-			_relations[id] = entry
 
 func _load_world() -> void:
 	for path in WORLD_FILES:
