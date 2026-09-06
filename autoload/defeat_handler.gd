@@ -4,6 +4,9 @@
 # 基础动作 → 扣钱 → 掉物(记抵押物) → 没钱则负债 → 播对应 CG。
 
 extends Node
+# 批D 子批3（ADR-0007 装配收敛）：原 autoload 降级为普通 Node——由 Bootstrap（生命周期壳）
+# 挂载，_ready 订阅团灭通知语义保真（add_child 后 _ready 照常触发）。
+class_name DefeatHandler
 
 func _ready() -> void:
 	# 订阅团灭通知（combat_service.finalize 在 DEFEAT 时发出）

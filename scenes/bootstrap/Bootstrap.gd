@@ -21,6 +21,11 @@ func _ready() -> void:
 	# 批D 子批1（ADR-0007 装配收敛）：性能监控器原为 autoload，降级为由本生命周期壳挂载
 	# （debug 构建自毁语义在 monitor._ready 保真）；观察器零业务调用方，此处=唯一生命周期接线。
 	add_child(PerformanceMonitor.new())
+	# 批D 子批2+3：PatchManager / SaveValidator / DefeatHandler 三个零调用方自驱型降级——
+	# _ready 订阅/扫描逻辑在 add_child 后照常触发（autoload 语义等价），调用方零改动。
+	add_child(PatchManager.new())
+	add_child(SaveValidator.new())
+	add_child(DefeatHandler.new())
 	# 先让场景树稳定一帧，确保 UIManager 的层级已就绪
 	await get_tree().process_frame
 	# 架构治理（2026-09-02）：UIManager 已 _ready 并连好 EventBus，此刻把图标解析器

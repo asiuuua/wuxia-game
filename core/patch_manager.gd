@@ -4,6 +4,9 @@
 # 注：autoload 脚本不写 class_name（与单例名冲突），通过全局单例名调用。
 
 extends Node
+# 批D 子批2（ADR-0007 装配收敛）：原 autoload 降级为普通 Node——由 Bootstrap（生命周期壳）
+# 挂载，_ready 扫描/应用补丁语义保真（add_child 后 _ready 照常触发）。
+class_name PatchManager
 
 var _applied_patches: Array[String] = []
 var _patch_dir: String = ""

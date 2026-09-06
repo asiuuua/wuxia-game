@@ -5,7 +5,9 @@
 # 触发：订阅 EventBus.game_loaded（SaveManager.load_from_slot 读档后发出）。
 
 extends Node
-# 注：autoload 脚本不能写 class_name X 与 autoload 同名，会与单例冲突报错。
+# 批D 子批3（ADR-0007 装配收敛）：原 autoload 降级为普通 Node——由 Bootstrap（生命周期壳）
+# 挂载，_ready 订阅 game_loaded 语义保真（add_child 后 _ready 照常触发）。
+class_name SaveValidator
 
 var last_repair_log: Array = []   # 最近一次修复记录（便于调试 / UI 展示）
 
