@@ -32,7 +32,6 @@ AudioManager="*res://autoload/AudioManager.gd"
 GameManager="*res://autoload/GameManager.gd"
 UIManager="*res://autoload/ui_manager.gd"
 SettingsManager="*res://autoload/settings_manager.gd"
-LocalizationManager="*res://autoload/localization_manager.gd"
 ErrorHandler="*res://autoload/error_handler.gd"
 TransitionManager="*res://autoload/transition_manager.gd"
 

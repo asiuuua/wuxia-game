@@ -1,21 +1,25 @@
 # autoload/localization_manager.gd
-# 本地化管理器（无 class_name）：加载 data/configs/localization/strings.csv，
+# 本地化管理器：加载 data/configs/localization/strings.csv，
 # 为每种语言构建 Translation 并注册到 TranslationServer；按设置切换 locale。
 # 之后全局 tr(key) 即返回当前语言的文案。设计稿 §11.2
+# 批D 子批4（ADR-0007 装配收敛）：原 autoload 降级为纯静态工具类——零实例状态
+# （全部语言数据在 TranslationServer 全局单例），setup() 由 Bootstrap 生命周期壳调用。
 
-extends Node
+class_name LocalizationManager
+extends RefCounted
 
 const CSV_PATH := "res://data/configs/localization/strings.csv"
 const LOCALES := ["zh_CN", "zh_TW", "en"]
 
-func _ready() -> void:
+## 启动初始化（Bootstrap 生命周期壳调用）：加载 CSV + 按设置恢复语言
+static func setup() -> void:
 	_load_csv()
 	if SettingsManager != null and SettingsManager.has_method("get_language"):
 		set_locale(SettingsManager.get_language())
 	else:
 		set_locale("zh_CN")
 
-func _load_csv() -> void:
+static func _load_csv() -> void:
 	if not FileAccess.file_exists(CSV_PATH):
 		GameLogger.warn("Localization", "本地化文件缺失: %s" % CSV_PATH)
 		return
@@ -56,7 +60,7 @@ func _load_csv() -> void:
 		TranslationServer.add_translation(translations[loc])
 	GameLogger.info("Localization", "已加载 %d 种语言，%d 条文案" % [translations.size(), lines.size() - 1])
 
-func set_locale(locale: String) -> void:
+static func set_locale(locale: String) -> void:
 	if not LOCALES.has(locale):
 		locale = "zh_CN"
 	TranslationServer.set_locale(locale)

@@ -381,8 +381,8 @@ func _build_language_panel() -> void:
 		elif v == "English":
 			locale = "en"
 		SettingsManager.set_language(locale)
-		if LocalizationManager != null and LocalizationManager.has_method("set_locale"):
-			LocalizationManager.set_locale(locale)
+		# 批D 子批4：LocalizationManager 已降级纯静态类——类静态调用替代原 autoload 单例引用
+		LocalizationManager.set_locale(locale)
 		call_deferred("_rebuild_ui")
 	)
 
